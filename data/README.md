@@ -12,7 +12,7 @@ Runtime data for Swing Screener.
   - `intelligence/intelligence_metrics.json`: append-only per-analysis metrics log (capped at 500 entries, regenerable, gitignored). Each entry: `{ts, ticker, tokens}`. Written by `intelligence/metrics.py` after every analysis. A `tokens: null` entry means a call did not complete; use it to spot SEC blackouts or LLM failures.
 - `backtest/jobs/`: background event-study run jobs (one JSON per job; not committed, gitignored). Created on API start; interrupted `queued`/`running` jobs are recovered as `error` on restart.
 
-**Removed files (branch feat/catalyst-evidence-improvements):** `intelligence/catalyst_reports/` (top-down catalyst pipeline output), `intelligence/ir_feeds.json` (hand-seeded IR RSS map), and `intelligence/discovered_feeds_cache.json` (auto-discovered IR feed cache) were all deleted. The IR RSS collector and its auto-discovery layer were removed; SEC EDGAR is now the sole deterministic evidence source.
+**Removed files (branch feat/intelligence-hardening):** `intelligence/catalyst_reports/` (top-down catalyst pipeline output), `intelligence/ir_feeds.json` (hand-seeded IR RSS map), and `intelligence/discovered_feeds_cache.json` (auto-discovered IR feed cache) were all deleted. The IR RSS collector and its auto-discovery layer were removed; SEC EDGAR is now the sole deterministic evidence source.
 
 User-authored configuration no longer lives under `data/`. Shared configuration is stored in:
 - `config/user.yaml`

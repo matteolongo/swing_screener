@@ -44,7 +44,8 @@ def test_client_built_with_timeout_and_retries(monkeypatch):
     captured = {}
     real = sa.OpenAI
     def spy(**kw):
-        captured.update(kw); return real(**kw)
+        captured.update(kw)
+        return real(**kw)
     monkeypatch.setattr(sa, "OpenAI", spy)
     monkeypatch.setenv("OPENAI_API_KEY", "test")
     sa.SymbolAnalyzer()
@@ -70,9 +71,11 @@ def test_analyze_uses_two_calls(monkeypatch):
         )
 
     def fake_create(**kw):
-        calls.append(("create", kw)); return _Resp()
+        calls.append(("create", kw))
+        return _Resp()
     def fake_parse(**kw):
-        calls.append(("parse", kw)); return _Parsed()
+        calls.append(("parse", kw))
+        return _Parsed()
 
     monkeypatch.setenv("OPENAI_API_KEY", "test")
     analyzer = sa.SymbolAnalyzer()
@@ -370,7 +373,6 @@ def test_prompt_no_past_trades_block_when_empty():
 
 
 def test_analyzer_parses_new_fields():
-    import json
     from unittest.mock import MagicMock, patch
     from swing_screener.intelligence.models import SymbolIntelligenceRequest
 

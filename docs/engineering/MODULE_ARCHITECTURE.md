@@ -112,11 +112,10 @@ The single cross-domain enumeration (`id → provider class`) lives in
 `api/services/datasources_service.py` (`_PROBEABLE`). There is no central
 registry in core; to add or remove a probeable source, update `_PROBEABLE` only.
 
-`intelligence/evidence/` adds two probeable collectors registered in `_PROBEABLE`:
+`intelligence/evidence/` adds one probeable collector registered in `_PROBEABLE`:
 - `sec_edgar_catalysts` → `SecEdgarCatalystCollector`
-- `company_ir_rss` → `CompanyIrRssCollector`
 
-These appear on the Data Sources page with a live Test button. `INTELLIGENCE_SOURCES` is now empty: the inert placeholders (`yahoo_finance`, `earnings_calendar`, `financial_news_rss`) and the venue-wide `exchange_announcements` collector were dropped as adding no symbol-specific signal beyond `web_search`.
+This appears on the Data Sources page with a live Test button. `INTELLIGENCE_SOURCES` is now empty: the inert placeholders (`yahoo_finance`, `earnings_calendar`, `financial_news_rss`), the venue-wide `exchange_announcements` collector, and the `company_ir_rss` IR RSS collector were all dropped. SEC EDGAR is now the sole deterministic evidence source.
 
 ## Universe Registry Data Sources
 

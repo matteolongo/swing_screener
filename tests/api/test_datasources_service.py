@@ -1,5 +1,5 @@
 from api.services.datasources_service import DatasourcesService
-from swing_screener.data.source_health import SourceDescriptor, ProbeResult
+from swing_screener.data.source_health import ProbeResult
 from swing_screener.settings import get_settings_manager
 
 
