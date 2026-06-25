@@ -4,6 +4,7 @@ Deterministic, stdlib-only (zoneinfo). Holiday handling is best-effort:
 weekends are excluded; market holidays are not — a qualitative pre-open read
 on a holiday simply finds no fresh tape, which degrades gracefully.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta
@@ -35,7 +36,11 @@ def is_us_pre_market(
     et = now_utc.astimezone(ZoneInfo(tz))
     if not _is_weekday(et):
         return False
-    return _parse_hhmm(window_start) <= et.timetz().replace(tzinfo=None) < _parse_hhmm(market_open)
+    return (
+        _parse_hhmm(window_start)
+        <= et.timetz().replace(tzinfo=None)
+        < _parse_hhmm(market_open)
+    )
 
 
 def previous_session_close(

@@ -6,6 +6,7 @@ Each successful analysis appends a compact entry to
 exposed to the UI timeline. All operations degrade-soft: a read/write failure
 never propagates into the analysis flow.
 """
+
 from __future__ import annotations
 
 import json
@@ -79,4 +80,6 @@ def append_history(
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps([e.model_dump() for e in updated], indent=2))
     except OSError:
-        logger.warning("Failed to append intelligence history for %r", ticker, exc_info=True)
+        logger.warning(
+            "Failed to append intelligence history for %r", ticker, exc_info=True
+        )

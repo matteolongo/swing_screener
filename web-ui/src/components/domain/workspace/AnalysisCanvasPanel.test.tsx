@@ -22,6 +22,7 @@ vi.mock('@/features/fundamentals/hooks', () => ({
 vi.mock('@/features/intelligence/hooks', () => ({
   useIntelligenceAnalysisMutation: vi.fn(),
   useIntelligenceLatestQuery: vi.fn(),
+  useIntelligenceHistoryQuery: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
 vi.mock('@/features/intelligence/catalysts/hooks', () => ({
