@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from swing_screener.intelligence.catalysts.models import SourceEvidence
+from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 
 

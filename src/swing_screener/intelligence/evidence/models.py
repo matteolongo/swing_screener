@@ -5,6 +5,16 @@ the AI catalyst-report path share one evidence shape.
 """
 from __future__ import annotations
 
-from swing_screener.intelligence.catalysts.models import SourceEvidence
+from pydantic import BaseModel
+
+
+class SourceEvidence(BaseModel):
+    title: str
+    url: str
+    publisher: str | None = None
+    published_at: str | None = None
+    quote_or_summary: str
+    relevance: str
+
 
 __all__ = ["SourceEvidence"]
