@@ -11,7 +11,6 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from swing_screener.data.providers.yfinance_provider import YfinanceProvider
-from swing_screener.data.providers.stooq_provider import StooqDataProvider
 from swing_screener.data.providers.alpaca_provider import AlpacaDataProvider
 from swing_screener.fundamentals.providers.sec_edgar import SecEdgarFundamentalsProvider
 from swing_screener.fundamentals.providers.yfinance import YfinanceFundamentalsProvider
@@ -26,9 +25,12 @@ from swing_screener.intelligence.evidence.collectors.sec_edgar import SecEdgarCa
 logger = logging.getLogger(__name__)
 
 # id -> provider class exposing describe()/probe() classmethods
+# NOTE: stooq dropped from diagnostics — stooq.com now gates its CSV endpoint
+# behind a JS proof-of-work anti-bot wall, so server-side fetch always returns
+# an empty (HTML) response. It remains an inert emergency fallback in
+# YfinanceProvider but is no longer surfaced as a probeable source.
 _PROBEABLE: dict[str, type] = {
     "yfinance": YfinanceProvider,
-    "stooq": StooqDataProvider,
     "alpaca": AlpacaDataProvider,
     "sec_edgar": SecEdgarFundamentalsProvider,
     "yfinance_fundamentals": YfinanceFundamentalsProvider,
