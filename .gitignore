@@ -119,3 +119,13 @@ config/intelligence.lock
 # Superpowers tooling
 .superpowers/
 docs/superpowers/
+
+# Claude Code worktrees (local, never committed)
+.claude/worktrees/
+
+# Build output
+out/
+
+# Editor / CI scaffolding kept local
+.github/copilot-instructions.md
+.github/BRANCH_PROTECTION.md
