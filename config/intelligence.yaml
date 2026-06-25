@@ -33,6 +33,7 @@ config:
     education_learn_system_prompt: ''
     education_learn_user_prompt_template: ''
     web_search_model: gpt-4o
+    format_model: gpt-4o-mini  # tool-free 2nd call: structures the write-up into the schema
     web_search_max_tokens: 4000  # raised for multi-hop news + catalyst search
   sources:
     enabled:

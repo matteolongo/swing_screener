@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-import json
 import os
-import re
 from datetime import datetime, timezone
 
 from openai import OpenAI
+from pydantic import BaseModel
 
 from swing_screener.intelligence.cache import write_to_cache
 from swing_screener.intelligence.history import HistoryEntry, append_history, read_history
 from swing_screener.intelligence.market_hours import is_us_pre_market, previous_session_close
 from swing_screener.data.currency import detect_currency
 from swing_screener.intelligence.models import (
+    IntelligenceEvent,
+    KeyNumber,
+    PositionMoveExplanation,
+    PositionOutlook,
+    PositionSignal,
+    PredictionBullet,
     PreOpenOutlook,
     SymbolIntelligence,
     SymbolIntelligenceRequest,
@@ -49,97 +54,97 @@ In that case you MUST:
     holding window, citing live news / earnings / sector moves since the entry date, and account
     for the sign and size of the current P&L (R).
 
-Return ONLY a JSON block (fenced with ```json) with exactly these fields:
-- action: one of BUY_NOW | BUY_ON_PULLBACK | WAIT_FOR_BREAKOUT | WATCH | TACTICAL_ONLY | AVOID | MANAGE_ONLY
-- conviction: one of high | medium | low
-- catalyst_urgency: one of high | medium | low | none
-- summary_line: one sentence synthetic read (max 120 chars)
-- narrative: flowing prose in Markdown. Start with the actionable read: **What to do:** and **Watch for:** in the first two short paragraphs. Then add the supporting technical, fundamental, and catalyst rationale. No H1/H2 headings. Max 400 words.
-  When writing the narrative, always include:
-  - **When to act:** Explain the specific timing for order placement — after market close today, on a confirmed pullback to the entry level, or on a breakout above a key level. Be concrete about the condition.
-  - **Expected growth:** Using the target price and fair value context, state the expected upside as a percentage and how long it might take to play out (days/weeks).
-  - **Take profit reasoning:** Explain why the target price was set where it is — R-multiple from stop, resistance level, or fair value estimate.
-  Keep the narrative flowing and discursive, integrating the screener decision context naturally rather than listing fields mechanically.
-- upcoming_events: array of objects {type, date, direction, summary} for events that could move the price.
-  type: earnings | macro | dividend | product_launch | regulatory | other
-  date: ISO date string or null if unknown
-  direction: bullish | bearish | neutral
-  summary: one sentence description
-- position_signal: null unless position context is provided — then:
-  {action: HOLD | TRIM | EXIT, reason: one sentence,
-   trim_pct: fraction to trim if TRIM (e.g. 0.5 for 50%), else null,
-   trim_price: suggested execution price if TRIM (near current price or resistance), else null,
-   re_entry_zone: {"low": <price>, "high": <price>} if TRIM or EXIT and a re-entry level exists, else null}
-  HOLD = thesis intact, no change needed
-  TRIM = take partial profit or reduce risk, thesis weakening
-  EXIT = thesis broken or clearly better use of capital
-- position_move_explanation: null unless position context is provided — then an object with:
-  direction: up | down | flat (how price moved from entry to now)
-  summary: one sentence — net reason the price is where it is versus the entry, consistent with the P&L sign
-  drivers: array of 1-4 objects {label, detail}, most material first. label = short tag
-    (e.g. "Q1 earnings beat", "sector selloff", "guidance cut"); detail = one sentence.
-    Ground drivers in news/events since the entry date, not generic commentary.
-- position_outlook: null unless position context is provided — then an object with:
-  expected_holding_period: days | 1-2_weeks | 2-6_weeks | unknown
-  hold_until: plain-English condition for staying in the trade, not a guaranteed date
-  next_review_trigger: the next event, price action, or time condition that should force reassessment
-  thesis_status: intact | weakening | broken | unclear
-  invalidation_signals: 2-4 concrete price/news/catalyst signals that would weaken or break the trade
-  profit_management: hold_full | consider_trim | trail_stop | protect_breakeven | exit
-  opportunity_cost: low | medium | high
-  confidence_decay: one sentence explaining when the idea becomes stale if nothing changes
-- sources: list of URLs you cited (may be empty)
-- price_hook: one sentence — why this symbol, why now (max 140 chars).
-- key_numbers: array of 4–8 objects {label, value, sentiment}. Pick the most decision-relevant numbers: SMAs relative to price, momentum, revenue growth, valuation label, relative strength vs benchmark, 52-week high proximity. sentiment must be one of: bullish | bearish | neutral based on what the value implies for the trade.
-- risk_factors: array of 3–5 strings. Each is a concrete, specific risk to the thesis. No generic filler.
-- prediction_bullets: array of 2–5 objects {direction, reason, reference}. direction: bullish | bearish | neutral. reason: one sentence. reference: short label for the data point or event (e.g. "SMA20 support", "Q1 earnings", "fair value range", "prior stop-out level"). If past trades are provided, at least one bullet must reference them.
-- past_trades_context: null unless a "Past trades" block is in the input. If past trades are present, write one paragraph: what the pattern tells us about this setup — name the levels, outcomes, and what they imply for stop placement or conviction. Use this analysis to calibrate conviction.
-- pre_open_outlook: null UNLESS a "Pre-open outlook" block is present. When it is, return an object:
-  {gap_direction: gap_up | gap_down | flat,
-   magnitude: minor | moderate | large (a bucket — never a precise %),
-   primary_driver: {summary: one sentence, source_url: cited URL or null},
-   action_at_open: concrete instruction for the open,
-   stop_gap_plan: what to do if it gaps through the stop,
-   confidence: high | medium | low}
-  Base it only on news since the previous session close.
-- thesis_delta: null UNLESS a "Prior analyses" block is present. When it is, return an object:
-  {status: new | confirmed | weakening | invalidated,
-   summary: one sentence on what changed since the last analysis,
-   what_played_out: array of strings — previously-flagged items that did or did not happen}
-  Use status=confirmed if the prior read still holds, weakening if it is eroding, invalidated if broken.
+OUTPUT — ANALYST WRITE-UP:
+Write a flowing analyst write-up in English (Markdown prose, no H1/H2 headings, max ~400 words),
+then end with a `Sources:` list of every URL you cited (one per line). A second pass converts
+your write-up into a structured record, so cover ALL of the following in the prose:
+- The action: one of BUY_NOW | BUY_ON_PULLBACK | WAIT_FOR_BREAKOUT | WATCH | TACTICAL_ONLY | AVOID | MANAGE_ONLY.
+- Your conviction (high | medium | low) and catalyst urgency (high | medium | low | none).
+- A one-sentence synthetic read (max 120 chars) and a one-sentence "why this symbol, why now" hook (max 140 chars).
+- The narrative itself: start with the actionable read — **What to do:** and **Watch for:** in the
+  first two short paragraphs — then add the supporting technical, fundamental, and catalyst rationale.
+  Always include:
+  - **When to act:** the specific timing for order placement — after market close today, on a confirmed
+    pullback to the entry level, or on a breakout above a key level. Be concrete about the condition.
+  - **Expected growth:** using the target price and fair value context, the expected upside as a
+    percentage and how long it might take to play out (days/weeks).
+  - **Take profit reasoning:** why the target price was set where it is — R-multiple from stop,
+    resistance level, or fair value estimate.
+  Keep the narrative flowing and discursive, integrating the screener decision context naturally.
+- Upcoming events that could move the price (type: earnings | macro | dividend | product_launch |
+  regulatory | other; an ISO date or unknown; direction bullish | bearish | neutral; a one-sentence summary).
+- 4–8 decision-relevant key numbers, each with a bullish | bearish | neutral read: SMAs relative to
+  price, momentum, revenue growth, valuation label, relative strength vs benchmark, 52-week high proximity.
+- 3–5 concrete, specific risk factors to the thesis. No generic filler.
+- 2–5 prediction bullets (direction bullish | bearish | neutral; a one-sentence reason; a short
+  reference label e.g. "SMA20 support", "Q1 earnings", "fair value range", "prior stop-out level").
+  If past trades are provided, at least one bullet must reference them.
+
+POSITION-MODE OUTPUT (only when position context is provided):
+- A position signal: HOLD (thesis intact, no change) | TRIM (take partial profit / reduce risk,
+  thesis weakening) | EXIT (thesis broken or better use of capital), with a one-sentence reason, the
+  fraction and execution price to trim, and a re-entry zone if TRIM or EXIT and one exists.
+- A position move explanation: the direction (up | down | flat) the price moved from entry to now, a
+  one-sentence net reason consistent with the P&L sign, and 1-4 drivers (short label + one sentence,
+  most material first) grounded in news/events since the entry date — not generic commentary.
+- A position outlook: expected holding period (days | 1-2_weeks | 2-6_weeks | unknown); a plain-English
+  hold-until condition (not a guaranteed date); the next review trigger; thesis status (intact |
+  weakening | broken | unclear); 2-4 concrete invalidation signals; profit management (hold_full |
+  consider_trim | trail_stop | protect_breakeven | exit); opportunity cost (low | medium | high); and a
+  one-sentence note on when the idea goes stale if nothing changes.
 
 PAST TRADES RULE:
 If a "Past trades" block is present in the input:
   • Analyse entries, exits, stop levels, and R outcomes.
-  • If 2+ stop-outs occurred, lower conviction one step (high→medium, medium→low) and flag the pattern in past_trades_context.
+  • If 2+ stop-outs occurred, lower conviction one step (high→medium, medium→low) and flag the pattern.
   • If there is a prior win on this ticker, note setup similarity or difference.
-  • Always set past_trades_context (not null) when past trades are present.
+  • Always write a past-trades paragraph: what the pattern tells us about this setup — name the levels,
+    outcomes, and what they imply for stop placement or conviction. Use it to calibrate conviction.
 
-Do not include any text outside the JSON block.\
+PRE-OPEN RULE:
+Only when a "Pre-open outlook" block is present, give a pre-open outlook: gap direction (gap_up |
+gap_down | flat); magnitude as a bucket (minor | moderate | large — never a precise %); the single
+overnight item most likely to move the open and its cited URL; a concrete action at the open; what to
+do if it gaps through the stop; and confidence (high | medium | low). Base it only on news since the
+previous session close.
+
+THESIS-DELTA RULE:
+Only when a "Prior analyses" block is present, compare today's read against it: state whether the prior
+read is confirmed (still holds), weakening (eroding), invalidated (broken), or new; a one-sentence note
+on what changed since the last analysis; and which previously-flagged items did or did not happen.
+
+End the write-up with a `Sources:` section listing every URL you cited. Do not assert news without a citation.\
 """
 
 
-def _safe_submodel(model_cls, data):
-    """Validate an optional LLM-emitted sub-object into `model_cls`, degrading to
-    None (with a warning) if the model returns a malformed/partial dict. Keeps a
-    bad optional field from failing the whole analysis."""
-    if not data:
-        return None
-    try:
-        return model_cls.model_validate(data)
-    except Exception:
-        logger.warning("Discarding malformed %s from LLM output", model_cls.__name__, exc_info=True)
-        return None
+class _LLMAnalysis(BaseModel):
+    """The LLM-emitted fields only. `symbol`, `generated_at` and `inputs_used` are
+    set server-side and are NOT part of the structured-output schema."""
+
+    action: str
+    conviction: str
+    catalyst_urgency: str = "none"
+    summary_line: str
+    narrative: str
+    upcoming_events: list[IntelligenceEvent] = []
+    position_signal: PositionSignal | None = None
+    position_outlook: PositionOutlook | None = None
+    position_move_explanation: PositionMoveExplanation | None = None
+    sources: list[str] = []
+    price_hook: str | None = None
+    key_numbers: list[KeyNumber] = []
+    risk_factors: list[str] = []
+    prediction_bullets: list[PredictionBullet] = []
+    past_trades_context: str | None = None
+    pre_open_outlook: PreOpenOutlook | None = None
+    thesis_delta: ThesisDelta | None = None
 
 
-def _extract_json(text: str) -> dict:
-    match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
-    if match:
-        return json.loads(match.group(1))
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        return json.loads(match.group(0))
-    raise ValueError(f"No JSON found in LLM response: {text[:300]}")
+_FORMAT_PROMPT = (
+    "Convert the analyst write-up below into the structured schema. Use only "
+    "information present in the write-up. Copy every URL from its Sources section "
+    "into `sources`. Do not invent fields."
+)
 
 
 def _format_past_trades(ticker: str, past_positions: list[dict]) -> str | None:
@@ -222,7 +227,7 @@ def _build_user_prompt(
             "Explain why the price moved from the entry to now over the holding window: "
             "use live news, earnings and sector moves since the entry date to account for the "
             "sign and size of the current P&L (R). Put this in position_move_explanation.",
-            "Include position_signal, position_outlook and position_move_explanation in your JSON output.",
+            "Cover position_signal, position_outlook and position_move_explanation in your write-up.",
         ]
     else:
         currency = req.currency or ""
@@ -442,7 +447,7 @@ def _build_user_prompt(
     lines.append(
         f"\nSearch broadly for recent news, earnings results, catalysts, and analyst views for {ticker}, "
         "then follow the most material leads with further searches and run a forward-looking catalyst pass. "
-        "Cite every source. Finally produce the structured JSON analysis."
+        "Cite every source. Finally write the analyst write-up, ending with a Sources list of every URL you cited."
     )
     return "\n".join(lines)
 
@@ -453,6 +458,7 @@ class SymbolAnalyzer:
         cfg = doc.get("config", {})
         llm_cfg = cfg.get("llm", {})
         self._model = llm_cfg.get("web_search_model", "gpt-4o")
+        self._format_model = llm_cfg.get("format_model", "gpt-4o-mini")
         self._max_tokens = int(llm_cfg.get("web_search_max_tokens", 2000))
         history_cfg = cfg.get("analysis_history", {})
         self._history_max_entries = int(history_cfg.get("max_entries", 50))
@@ -602,34 +608,40 @@ class SymbolAnalyzer:
             pre_open_since=pre_open_since,
             prior_digest=prior_digest,
         )
-        response = self._client.responses.create(
+        search = self._client.responses.create(
             model=self._model,
             tools=[{"type": "web_search_preview"}],
             instructions=_SYSTEM_PROMPT,
             input=user_prompt,
             max_output_tokens=self._max_tokens,
         )
-        raw = _extract_json(response.output_text)
+        parsed = self._client.responses.parse(
+            model=self._format_model,
+            instructions=_FORMAT_PROMPT,
+            input=search.output_text,
+            text_format=_LLMAnalysis,
+        )
+        draft: _LLMAnalysis = parsed.output_parsed
         result = SymbolIntelligence(
             symbol=ticker,
             generated_at=datetime.now(timezone.utc).isoformat(),
-            action=raw["action"],
-            conviction=raw["conviction"],
-            catalyst_urgency=raw.get("catalyst_urgency", "none"),
-            summary_line=raw["summary_line"],
-            narrative=raw["narrative"],
-            upcoming_events=raw.get("upcoming_events", []),
-            position_signal=raw.get("position_signal"),
-            position_outlook=raw.get("position_outlook"),
-            position_move_explanation=raw.get("position_move_explanation"),
-            sources=raw.get("sources", []),
-            price_hook=raw.get("price_hook"),
-            key_numbers=raw.get("key_numbers", []),
-            risk_factors=raw.get("risk_factors", []),
-            prediction_bullets=raw.get("prediction_bullets", []),
-            past_trades_context=raw.get("past_trades_context"),
-            pre_open_outlook=_safe_submodel(PreOpenOutlook, raw.get("pre_open_outlook")) if pre_open else None,
-            thesis_delta=_safe_submodel(ThesisDelta, raw.get("thesis_delta")) if prior_digest else None,
+            action=draft.action,
+            conviction=draft.conviction,
+            catalyst_urgency=draft.catalyst_urgency,
+            summary_line=draft.summary_line,
+            narrative=draft.narrative,
+            upcoming_events=draft.upcoming_events,
+            position_signal=draft.position_signal,
+            position_outlook=draft.position_outlook,
+            position_move_explanation=draft.position_move_explanation,
+            sources=draft.sources,
+            price_hook=draft.price_hook,
+            key_numbers=draft.key_numbers,
+            risk_factors=draft.risk_factors,
+            prediction_bullets=draft.prediction_bullets,
+            past_trades_context=draft.past_trades_context,
+            pre_open_outlook=draft.pre_open_outlook if pre_open else None,
+            thesis_delta=draft.thesis_delta if prior_digest else None,
         )
         result = result.model_copy(update={"inputs_used": inputs_used})
         try:

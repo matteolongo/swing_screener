@@ -83,7 +83,9 @@ def test_move_explanation_omitted_without_position_context():
 
 
 def test_system_prompt_documents_move_explanation_schema():
-    assert "position_move_explanation" in _SYSTEM_PROMPT
+    # The write-up prompt no longer names the JSON field, but the position move
+    # explanation guidance (direction + grounded drivers) must survive.
+    assert "position move explanation" in _SYSTEM_PROMPT.lower()
     assert "up | down | flat" in _SYSTEM_PROMPT
 
 

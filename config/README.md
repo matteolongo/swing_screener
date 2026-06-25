@@ -56,6 +56,11 @@ Dedicated intelligence configuration envelope:
 `config.llm.web_search_max_tokens` is `4000` (raised from 2000) to fit the multi-hop
 news + forward-catalyst search the intelligence prompt now performs.
 
+The symbol analyzer runs two calls: `config.llm.web_search_model` (default `gpt-4o`) does
+the web-search write-up, then a tool-free `config.llm.format_model` (default `gpt-4o-mini`)
+structures that write-up into the schema via the Responses structured-output API. Decoupling
+search from formatting keeps the structured output from truncating mid-JSON.
+
 `config.evidence` controls the evidence collector pipeline:
 
 | Key | Default | Purpose |
