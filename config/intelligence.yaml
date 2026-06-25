@@ -35,6 +35,8 @@ config:
     web_search_model: gpt-4o
     format_model: gpt-4o-mini  # tool-free 2nd call: structures the write-up into the schema
     web_search_max_tokens: 4000  # raised for multi-hop news + catalyst search
+    request_timeout_seconds: 60
+    max_retries: 2
   sources:
     enabled:
     - yahoo_finance

@@ -460,11 +460,17 @@ class SymbolAnalyzer:
         self._model = llm_cfg.get("web_search_model", "gpt-4o")
         self._format_model = llm_cfg.get("format_model", "gpt-4o-mini")
         self._max_tokens = int(llm_cfg.get("web_search_max_tokens", 2000))
+        self._timeout = float(llm_cfg.get("request_timeout_seconds", 60.0))
+        self._max_retries = int(llm_cfg.get("max_retries", 2))
         history_cfg = cfg.get("analysis_history", {})
         self._history_max_entries = int(history_cfg.get("max_entries", 50))
         self._history_digest_size = int(history_cfg.get("digest_size", 5))
         self._pre_open_cfg = cfg.get("pre_open", {})
-        self._client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        self._client = OpenAI(
+            api_key=os.environ.get("OPENAI_API_KEY"),
+            timeout=self._timeout,
+            max_retries=self._max_retries,
+        )
 
     def _is_us_listed(self, ticker: str, req: SymbolIntelligenceRequest) -> bool:
         """US-listed proxy. Prefer the ticker-based `detect_currency` (knows e.g.

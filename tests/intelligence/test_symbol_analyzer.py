@@ -39,6 +39,19 @@ def test_prompt_omits_patterns_when_absent():
     assert "Recent candlestick patterns" not in prompt
 
 
+def test_client_built_with_timeout_and_retries(monkeypatch):
+    from swing_screener.intelligence import symbol_analyzer as sa
+    captured = {}
+    real = sa.OpenAI
+    def spy(**kw):
+        captured.update(kw); return real(**kw)
+    monkeypatch.setattr(sa, "OpenAI", spy)
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    sa.SymbolAnalyzer()
+    assert captured.get("timeout") is not None
+    assert captured.get("max_retries") is not None
+
+
 def test_analyze_uses_two_calls(monkeypatch):
     from swing_screener.intelligence import symbol_analyzer as sa
     from swing_screener.intelligence.models import SymbolIntelligenceRequest, SymbolIntelligence

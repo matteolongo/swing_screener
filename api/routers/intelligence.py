@@ -21,6 +21,15 @@ from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 
+_analyzer: SymbolAnalyzer | None = None
+
+
+def _get_analyzer() -> SymbolAnalyzer:
+    global _analyzer
+    if _analyzer is None:
+        _analyzer = SymbolAnalyzer()
+    return _analyzer
+
 
 def _require_api_key() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
@@ -54,7 +63,7 @@ class AnalysisHistoryResponse(BaseModel):
 def sweep(request: SweepRequest) -> SweepResponse:
     """Run intelligence analysis for a batch of symbols, caching each result."""
     _require_api_key()
-    analyzer = SymbolAnalyzer()
+    analyzer = _get_analyzer()
     analyzed: list[str] = []
     failed: list[SweepFailure] = []
     for item in request.symbols:
@@ -107,8 +116,7 @@ def analyze_symbol(
     )
     try:
         past_positions, _ = positions_repo.list_positions(status="closed")
-        analyzer = SymbolAnalyzer()
-        return analyzer.analyze(upper, request, past_positions=past_positions)
+        return _get_analyzer().analyze(upper, request, past_positions=past_positions)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -158,7 +166,6 @@ def analyze_position(
     except Exception:
         logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
     try:
-        analyzer = SymbolAnalyzer()
-        return analyzer.analyze(pos.ticker.upper(), request)
+        return _get_analyzer().analyze(pos.ticker.upper(), request)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
