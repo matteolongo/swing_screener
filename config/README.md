@@ -60,7 +60,7 @@ news + forward-catalyst search the intelligence prompt now performs.
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `enabled_sources` | `[sec_edgar_catalysts, company_ir_rss, exchange_announcements]` | Collectors to fan-out to |
+| `enabled_sources` | `[sec_edgar_catalysts, company_ir_rss]` | Collectors to fan-out to |
 | `recency_window_days` | `30` | Discard items older than this many days |
 | `max_items_per_symbol` | `8` | Max curated items returned per ticker |
 | `sec_forms` | `[8-K, 6-K]` | SEC form types to include in EDGAR search |

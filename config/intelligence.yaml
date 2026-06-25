@@ -75,9 +75,8 @@ config:
   evidence:
     # Collectors to fan-out to when building catalyst evidence for the LLM prompt.
     enabled_sources:
-    - sec_edgar_catalysts   # SEC EDGAR full-text search for 8-K/6-K filings
-    - company_ir_rss        # Company IR RSS via SEC CIK lookup
-    - exchange_announcements  # Euronext announcement RSS (EU MICs only)
+    - sec_edgar_catalysts   # SEC EDGAR submissions API: recent 8-K/6-K filings (US)
+    - company_ir_rss        # Official IR RSS from the ir_feeds.json seed map
     recency_window_days: 30   # Discard items older than this many days
     max_items_per_symbol: 8   # Max curated items per ticker after dedup + sort
     sec_forms:

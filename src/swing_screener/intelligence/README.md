@@ -101,15 +101,15 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 | `evidence/collect.py` | `collect_evidence(ticker, *, asof_date, cfg, cache_root)` — per-date cache, fan-out across enabled collectors (fail-soft), curate |
 | `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR submissions API (`data.sec.gov/submissions/CIK…json`), 8-K/6-K filings |
 | `evidence/collectors/company_ir.py` | `CompanyIrRssCollector` — official IR RSS feeds from the `ir_feeds.json` seed (unmapped ticker → empty) |
-| `evidence/collectors/exchange.py` | `ExchangeAnnouncementsCollector` — exchange RSS from `source_catalog.json` keyed by MIC (EU MICs only) |
 
 ### Collectors
 
-All three implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py`.
+Both implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py`.
 
 - **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent 8-K/6-K filings for US tickers. Fail-soft — returns empty on HTTP errors and records a fallback event.
-- **`company_ir_rss`** (`CompanyIrRssCollector`): fetches the company's official IR RSS feed from the seed map `data/intelligence/ir_feeds.json` (unmapped ticker → empty). Fail-soft.
-- **`exchange_announcements`** (`ExchangeAnnouncementsCollector`): resolves the symbol's MIC (`instrument_enrichment`) and fetches exchange RSS from `data/intelligence/source_catalog.json` for EU MICs only. No-op for US/unresolved MICs; fail-soft.
+- **`company_ir_rss`** (`CompanyIrRssCollector`): fetches the company's official IR RSS feed from the seed map `data/intelligence/ir_feeds.json` (unmapped ticker → empty). The seed is limited to companies that still publish a working RSS feed (currently AAPL, MSFT, NVDA, SAP.DE, SIE.DE). Fail-soft.
+
+A third venue-wide `exchange_announcements` collector was removed: every seeded EU exchange RSS endpoint (Euronext, CNMV, Borsa Italiana, SIX, Nasdaq Nordic) is dead or no longer serves parseable RSS, and venue-wide notices are not symbol-specific, so it added no information beyond the `web_search` pass.
 
 ### Curation defaults
 
