@@ -24,10 +24,9 @@ def test_inventory_includes_market_fundamentals_intelligence():
     ids = {d.id for d in svc.inventory()}
     assert {"yfinance", "stooq", "alpaca"} <= ids               # market
     assert {"sec_edgar", "yfinance_fundamentals", "finnhub"} <= ids  # fundamentals + enrichment
-    # 2 intelligence sources: both real, working collectors (probeable). The
-    # inert placeholders and the venue-wide exchange collector were dropped.
+    # 1 intelligence source: SEC EDGAR only (Company IR RSS dropped, ~0% hit rate).
     intel = [d for d in svc.inventory() if d.domain == "intelligence"]
-    assert {d.id for d in intel} == {"sec_edgar_catalysts", "company_ir_rss"}
+    assert {d.id for d in intel} == {"sec_edgar_catalysts"}
     assert all(d.probeable for d in intel)
     assert all(d.note for d in intel)
 

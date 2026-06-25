@@ -22,7 +22,6 @@ from swing_screener.data.source_health import (
 )
 from swing_screener.settings import get_settings_manager
 from swing_screener.intelligence.evidence.collectors.sec_edgar import SecEdgarCatalystCollector
-from swing_screener.intelligence.evidence.collectors.company_ir import CompanyIrRssCollector
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +35,10 @@ _PROBEABLE: dict[str, type] = {
     "degiro": DegiroFundamentalsProvider,
     "finnhub": FinnhubEnrichmentClient,
     "sec_edgar_catalysts": SecEdgarCatalystCollector,
-    "company_ir_rss": CompanyIrRssCollector,
 }
 
-# Intelligence catalyst evidence ships only the two collectors that carry
-# unique, working signal: SEC EDGAR 8-K/6-K filings and company IR RSS. The
-# earlier inert placeholders (yahoo_finance, earnings_calendar,
-# financial_news_rss) and the venue-wide exchange_announcements collector were
-# dropped: they added no symbol-specific information beyond the web_search pass.
+# Intelligence catalyst evidence ships only SEC EDGAR 8-K/6-K filings (the sole
+# deterministic source after Company IR RSS was dropped for ~0% hit rate).
 INTELLIGENCE_SOURCES: list[SourceDescriptor] = []
 
 _DEFAULT_CANARY = {"us": "AAPL", "eu": "ASML.AS"}
