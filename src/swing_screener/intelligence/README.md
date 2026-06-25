@@ -99,17 +99,18 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 | `evidence/rss.py` | `parse_feed`/`fetch_feed` — hardened lxml RSS/Atom parser (XXE-safe) + httpx fetch |
 | `evidence/curation.py` | `curate(items, *, window_days, max_items, asof_date)` — recency-window filter + dedup (normalized title+url) + newest-first + cap |
 | `evidence/collect.py` | `collect_evidence(ticker, *, asof_date, cfg, cache_root)` — per-date cache, fan-out across enabled collectors (fail-soft), curate |
-| `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR submissions API (`data.sec.gov/submissions/CIK…json`), 8-K/6-K filings |
-| `evidence/collectors/company_ir.py` | `CompanyIrRssCollector` — official IR RSS feeds from the `ir_feeds.json` seed (unmapped ticker → empty) |
-| `evidence/collectors/exchange.py` | `ExchangeAnnouncementsCollector` — exchange RSS from `source_catalog.json` keyed by MIC (EU MICs only) |
+| `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR submissions API (`data.sec.gov/submissions/CIK…json`), material-event filings (8-K, 6-K, SC 13D/G, 424B, DEF 14A) |
+| `evidence/collectors/company_ir.py` | `CompanyIrRssCollector` — official IR RSS: `ir_feeds.json` seed first, then `evidence/discovery.py` auto-discovery on a seed miss |
+| `evidence/discovery.py` | `discover_ir_feed`/`cached_discover` — resolve company site via yfinance `.info`, find + validate its RSS feed, cache long-term in `discovered_feeds_cache.json` |
 
 ### Collectors
 
-All three implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py`.
+Both implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py`.
 
-- **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent 8-K/6-K filings for US tickers. Fail-soft — returns empty on HTTP errors and records a fallback event.
-- **`company_ir_rss`** (`CompanyIrRssCollector`): fetches the company's official IR RSS feed from the seed map `data/intelligence/ir_feeds.json` (unmapped ticker → empty). Fail-soft.
-- **`exchange_announcements`** (`ExchangeAnnouncementsCollector`): resolves the symbol's MIC (`instrument_enrichment`) and fetches exchange RSS from `data/intelligence/source_catalog.json` for EU MICs only. No-op for US/unresolved MICs; fail-soft.
+- **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent material-event filings for US tickers. Forms are matched by prefix (`config.evidence.sec_forms`, default `8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A`, so `424B` catches `424B5` and `SC 13D` catches `SC 13D/A`), and each item carries a per-form relevance label. Fail-soft — returns empty on HTTP errors and records a fallback event.
+- **`company_ir_rss`** (`CompanyIrRssCollector`): resolves the company's IR RSS feed in priority order: the hand-verified `data/intelligence/ir_feeds.json` seed first, then `evidence/discovery.py` auto-discovery (resolve the company site via yfinance `.info` `website`/`irWebsite`, parse the advertised `<link rel="alternate" type="application/rss+xml">`, else probe a short bounded path list, validate via `parse_feed`). Discovered feed URLs are cached long-term in `data/intelligence/discovered_feeds_cache.json` (found TTL 30d, negative TTL 7d). Auto-discovery is gated by `config.evidence.discovery_enabled`. Fail-soft throughout.
+
+A third venue-wide `exchange_announcements` collector was removed: every seeded EU exchange RSS endpoint (Euronext, CNMV, Borsa Italiana, SIX, Nasdaq Nordic) is dead or no longer serves parseable RSS, and venue-wide notices are not symbol-specific, so it added no information beyond the `web_search` pass.
 
 ### Curation defaults
 

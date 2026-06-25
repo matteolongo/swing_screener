@@ -56,8 +56,6 @@ config:
     - earnings_calendar
     - sec_edgar
     - company_ir_rss
-    - exchange_announcements
-    - financial_news_rss
     scraping_enabled: false
     allowed_domains: []
     rate_limits:
@@ -75,14 +73,27 @@ config:
   evidence:
     # Collectors to fan-out to when building catalyst evidence for the LLM prompt.
     enabled_sources:
-    - sec_edgar_catalysts   # SEC EDGAR full-text search for 8-K/6-K filings
-    - company_ir_rss        # Company IR RSS via SEC CIK lookup
-    - exchange_announcements  # Euronext announcement RSS (EU MICs only)
+    - sec_edgar_catalysts   # SEC EDGAR submissions API: recent 8-K/6-K filings (US)
+    - company_ir_rss        # Official IR RSS from the ir_feeds.json seed map
     recency_window_days: 30   # Discard items older than this many days
     max_items_per_symbol: 8   # Max curated items per ticker after dedup + sort
+    discovery_enabled: true       # auto-discover IR feeds for tickers not in the seed
+    discovery_found_ttl_days: 30  # re-validate a discovered feed after N days
+    discovery_negative_ttl_days: 7  # re-attempt discovery after N days of no feed
+    discovery_paths:              # bounded path probes when no <link> is advertised
+    - /rss
+    - /feed
+    - /news/rss
+    - /newsroom/rss
+    - /investors/rss
+    - /en/rss
     sec_forms:
     - 8-K
     - 6-K
+    - SC 13D
+    - SC 13G
+    - 424B
+    - DEF 14A
     http:
       user_agent: swing-screener-intelligence-bot/1.0
       connect_timeout_seconds: 5.0
