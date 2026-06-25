@@ -10,7 +10,13 @@ from openai import OpenAI
 from swing_screener.intelligence.cache import write_to_cache
 from swing_screener.intelligence.history import HistoryEntry, append_history, read_history
 from swing_screener.intelligence.market_hours import is_us_pre_market, previous_session_close
-from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
+from swing_screener.data.currency import detect_currency
+from swing_screener.intelligence.models import (
+    PreOpenOutlook,
+    SymbolIntelligence,
+    SymbolIntelligenceRequest,
+    ThesisDelta,
+)
 from swing_screener.settings import get_settings_manager
 from swing_screener.utils.logging_config import get_logger
 
@@ -111,6 +117,19 @@ If a "Past trades" block is present in the input:
 
 Do not include any text outside the JSON block.\
 """
+
+
+def _safe_submodel(model_cls, data):
+    """Validate an optional LLM-emitted sub-object into `model_cls`, degrading to
+    None (with a warning) if the model returns a malformed/partial dict. Keeps a
+    bad optional field from failing the whole analysis."""
+    if not data:
+        return None
+    try:
+        return model_cls.model_validate(data)
+    except Exception:
+        logger.warning("Discarding malformed %s from LLM output", model_cls.__name__, exc_info=True)
+        return None
 
 
 def _extract_json(text: str) -> dict:
@@ -450,10 +469,24 @@ class SymbolAnalyzer:
         self._pre_open_cfg = cfg.get("pre_open", {})
         self._client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-    def _pre_open_state(self, req: SymbolIntelligenceRequest, now: datetime) -> tuple[bool, str | None]:
+    def _is_us_listed(self, ticker: str, req: SymbolIntelligenceRequest) -> bool:
+        """US-listed proxy. Prefer the ticker-based `detect_currency` (knows e.g.
+        `ASML.AS` -> EUR), falling back to the request currency only when the
+        ticker is unresolved (so a US candidate missing from the instrument
+        master still qualifies via its request currency)."""
+        detected = detect_currency(ticker)
+        if detected == "USD":
+            return True
+        if detected == "UNKNOWN":
+            return (req.currency or "").upper() == "USD"
+        return False  # known non-US currency (EUR/GBP/...)
+
+    def _pre_open_state(
+        self, ticker: str, req: SymbolIntelligenceRequest, now: datetime
+    ) -> tuple[bool, str | None]:
         if not bool(self._pre_open_cfg.get("enabled", True)):
             return False, None
-        if (req.currency or "USD").upper() != "USD":
+        if not self._is_us_listed(ticker, req):
             return False, None
         tz = self._pre_open_cfg.get("timezone", "America/New_York")
         active = is_us_pre_market(
@@ -479,7 +512,7 @@ class SymbolAnalyzer:
     ) -> SymbolIntelligence:
         inputs_used: dict = {}
         now = now or datetime.now(timezone.utc)
-        pre_open, pre_open_since = self._pre_open_state(req, now)
+        pre_open, pre_open_since = self._pre_open_state(ticker, req, now)
         prior_digest = read_history(ticker, limit=self._history_digest_size)
 
         trade_plan: dict = {}
@@ -607,13 +640,16 @@ class SymbolAnalyzer:
             risk_factors=raw.get("risk_factors", []),
             prediction_bullets=raw.get("prediction_bullets", []),
             past_trades_context=raw.get("past_trades_context"),
-            pre_open_outlook=raw.get("pre_open_outlook") if pre_open else None,
-            thesis_delta=raw.get("thesis_delta"),
+            pre_open_outlook=_safe_submodel(PreOpenOutlook, raw.get("pre_open_outlook")) if pre_open else None,
+            thesis_delta=_safe_submodel(ThesisDelta, raw.get("thesis_delta")) if prior_digest else None,
         )
         result = result.model_copy(update={"inputs_used": inputs_used})
         try:
             write_to_cache(ticker, result)
         except Exception:
             logger.warning("Failed to write intelligence cache for %r; result will not be cached", ticker, exc_info=True)
-        append_history(ticker, result, max_entries=self._history_max_entries)
+        try:
+            append_history(ticker, result, max_entries=self._history_max_entries)
+        except Exception:
+            logger.warning("Failed to append intelligence history for %r", ticker, exc_info=True)
         return result

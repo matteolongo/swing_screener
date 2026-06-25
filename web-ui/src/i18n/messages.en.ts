@@ -755,6 +755,8 @@ export const messagesEn = {
           timeline: {
             title: 'Analysis history',
             empty: 'No prior analyses recorded for this symbol yet.',
+            loading: 'Loading analysis history…',
+            error: 'Could not load analysis history.',
           },
         },
         decisionWhy: {

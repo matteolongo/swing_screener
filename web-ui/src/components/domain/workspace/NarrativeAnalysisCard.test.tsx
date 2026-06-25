@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { renderWithProviders as render, screen, waitFor } from '@/test/utils';
+import { renderWithProviders as render, screen, waitFor, fireEvent } from '@/test/utils';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
 import NarrativeAnalysisCard from './NarrativeAnalysisCard';
@@ -326,6 +326,18 @@ describe('NarrativeAnalysisCard — pre-open outlook & thesis delta', () => {
   });
 });
 
+// jsdom doesn't toggle <details> on summary click, so drive the toggle event
+// the component listens to (onToggle) directly.
+function openTimeline() {
+  const detailsEls = Array.from(document.querySelectorAll('details'));
+  const timeline = detailsEls.find((d) =>
+    d.querySelector('summary')?.textContent ===
+    t('workspacePage.panels.analysis.intelligence.timeline.title'),
+  ) as HTMLDetailsElement;
+  timeline.open = true;
+  fireEvent(timeline, new Event('toggle', { bubbles: true }));
+}
+
 describe('NarrativeAnalysisCard — analysis timeline', () => {
   it('renders prior analyses from the history endpoint, newest-first', async () => {
     server.use(
@@ -353,16 +365,16 @@ describe('NarrativeAnalysisCard — analysis timeline', () => {
       ),
     );
     render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
-    expect(
-      screen.getByText(t('workspacePage.panels.analysis.intelligence.timeline.title')),
-    ).toBeInTheDocument();
+    // Fetch is gated on opening the timeline disclosure.
+    openTimeline();
     expect(await screen.findByText('Hold into the open.')).toBeInTheDocument();
     expect(screen.getByText('Initial breakout entry.')).toBeInTheDocument();
-    expect(screen.getByText('2026-06-25')).toBeInTheDocument();
+    expect(screen.getByText('Jun 25, 2026')).toBeInTheDocument();
   });
 
   it('shows the empty state when there is no history', async () => {
     render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+    openTimeline();
     await waitFor(() =>
       expect(
         screen.getByText(t('workspacePage.panels.analysis.intelligence.timeline.empty')),

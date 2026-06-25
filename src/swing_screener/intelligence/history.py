@@ -30,13 +30,22 @@ class HistoryEntry(BaseModel):
     pre_open_outlook: PreOpenOutlook | None = None
 
 
+def _watch_for(result: SymbolIntelligence) -> list[str]:
+    """The forward-looking claims a future run should check against. Prefer the
+    model's prediction_bullets (time-bound, checkable) over generic risk_factors,
+    which are standing thesis risks rather than 'what to watch'."""
+    if result.prediction_bullets:
+        return [pb.reason for pb in result.prediction_bullets[:2]]
+    return list(result.risk_factors[:2])
+
+
 def entry_from_result(result: SymbolIntelligence) -> HistoryEntry:
     return HistoryEntry(
         generated_at=result.generated_at,
         action=str(result.action),
         conviction=str(result.conviction),
         summary_line=result.summary_line,
-        watch_for=list(result.risk_factors[:2]),
+        watch_for=_watch_for(result),
         pre_open_outlook=result.pre_open_outlook,
     )
 
@@ -58,9 +67,19 @@ def read_history(
         return []
     try:
         raw = json.loads(path.read_text())
-        entries = [HistoryEntry.model_validate(d) for d in raw]
-    except (json.JSONDecodeError, OSError, ValueError, TypeError):
+    except (json.JSONDecodeError, OSError):
         return []
+    if not isinstance(raw, list):
+        return []
+    # Validate per-entry so one corrupt / old-schema row doesn't discard the
+    # whole file (a ValidationError is a ValueError subclass).
+    entries: list[HistoryEntry] = []
+    for d in raw:
+        try:
+            entries.append(HistoryEntry.model_validate(d))
+        except (ValueError, TypeError):
+            logger.warning("Skipping malformed history entry for %r", ticker)
+            continue
     return entries[:limit] if limit is not None else entries
 
 
@@ -71,14 +90,27 @@ def append_history(
     max_entries: int,
     history_root: Path | None = None,
 ) -> None:
-    """Prepend an entry derived from `result`, capping the list at `max_entries`."""
+    """Prepend an entry derived from `result`, capping the list at `max_entries`.
+
+    A re-run on the same calendar day replaces that day's entry rather than
+    stacking, so the digest stays a cross-day record instead of filling with
+    same-session reruns.
+    """
     root = history_root or data_dir() / "intelligence"
     path = _history_path(root, ticker)
     try:
-        existing = read_history(ticker, history_root=history_root)
-        updated = [entry_from_result(result), *existing][: max(0, max_entries)]
+        new_entry = entry_from_result(result)
+        new_day = new_entry.generated_at[:10]
+        existing = [
+            e
+            for e in read_history(ticker, history_root=history_root)
+            if e.generated_at[:10] != new_day
+        ]
+        updated = [new_entry, *existing][: max(0, max_entries)]
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps([e.model_dump() for e in updated], indent=2))
+        path.write_text(
+            json.dumps([e.model_dump(mode="json") for e in updated], indent=2)
+        )
     except OSError:
         logger.warning(
             "Failed to append intelligence history for %r", ticker, exc_info=True

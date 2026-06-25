@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
+import { formatDate } from '@/utils/formatters';
 import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection, GapDirection, GapMagnitude, PreOpenConfidence, ThesisDeltaStatus } from '@/features/intelligence/types';
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
@@ -96,20 +98,20 @@ const MOVE_DIRECTION_ARROW: Record<PriceMoveDirection, string> = {
   flat: '→',
 };
 
-function moveDirectionClass(direction: PriceMoveDirection): string {
-  switch (direction) {
-    case 'up': return 'border-success/40 bg-success/10 text-success';
-    case 'down': return 'border-danger/40 bg-danger/10 text-danger';
+function toneClass(tone: 'positive' | 'negative' | 'neutral'): string {
+  switch (tone) {
+    case 'positive': return 'border-success/40 bg-success/10 text-success';
+    case 'negative': return 'border-danger/40 bg-danger/10 text-danger';
     default: return 'border-border bg-foreground/5 text-muted';
   }
 }
 
+function moveDirectionClass(direction: PriceMoveDirection): string {
+  return toneClass(direction === 'up' ? 'positive' : direction === 'down' ? 'negative' : 'neutral');
+}
+
 function gapDirectionClass(direction: GapDirection): string {
-  switch (direction) {
-    case 'gap_up': return 'border-success/40 bg-success/10 text-success';
-    case 'gap_down': return 'border-danger/40 bg-danger/10 text-danger';
-    default: return 'border-border bg-foreground/5 text-muted';
-  }
+  return toneClass(direction === 'gap_up' ? 'positive' : direction === 'gap_down' ? 'negative' : 'neutral');
 }
 
 function gapDirectionLabel(direction: GapDirection): string {
@@ -157,7 +159,10 @@ export default function NarrativeAnalysisCard({
   const moveExplanation = intelligence.positionMoveExplanation ?? null;
   const preOpen = intelligence.preOpenOutlook ?? null;
   const thesisDelta = intelligence.thesisDelta ?? null;
-  const historyQuery = useIntelligenceHistoryQuery(symbol, Boolean(symbol));
+  // Only fetch history once the timeline disclosure is opened — it lives in a
+  // collapsed <details> the user may never expand.
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const historyQuery = useIntelligenceHistoryQuery(symbol, Boolean(symbol) && timelineOpen);
   const historyEntries = historyQuery.data ?? [];
 
   const decisionHighlights = [
@@ -455,11 +460,22 @@ export default function NarrativeAnalysisCard({
         )}
 
         {/* Analysis timeline — past analyses for this symbol */}
-        <details className="rounded-md border border-border bg-surface p-3">
+        <details
+          className="rounded-md border border-border bg-surface p-3"
+          onToggle={(e) => setTimelineOpen((e.currentTarget as HTMLDetailsElement).open)}
+        >
           <summary className="cursor-pointer text-xs font-medium text-muted select-none">
             {t('workspacePage.panels.analysis.intelligence.timeline.title')}
           </summary>
-          {historyEntries.length > 0 ? (
+          {historyQuery.isLoading ? (
+            <p className="mt-2 text-sm text-muted">
+              {t('workspacePage.panels.analysis.intelligence.timeline.loading')}
+            </p>
+          ) : historyQuery.isError ? (
+            <p className="mt-2 text-sm text-danger">
+              {t('workspacePage.panels.analysis.intelligence.timeline.error')}
+            </p>
+          ) : historyEntries.length > 0 ? (
             <ul className="mt-3 space-y-2">
               {historyEntries.map((entry, index) => (
                 <li
@@ -467,7 +483,7 @@ export default function NarrativeAnalysisCard({
                   className="flex items-start gap-2 text-sm border-l-2 border-border pl-2"
                 >
                   <span className="shrink-0 text-[11px] text-muted tabular-nums">
-                    {entry.generatedAt.slice(0, 10)}
+                    {formatDate(entry.generatedAt)}
                   </span>
                   <Badge variant={convictionVariant(entry.conviction)}>{actionLabel(entry.action)}</Badge>
                   <span className="flex-1 text-foreground">{entry.summaryLine}</span>

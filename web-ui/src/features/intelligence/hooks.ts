@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   candidateToPayload,
   getIntelligenceHistory,
@@ -12,6 +12,7 @@ import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/type
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
 export function useIntelligenceAnalysisMutation() {
+  const queryClient = useQueryClient();
   return useMutation<
     SymbolIntelligence,
     Error,
@@ -22,6 +23,11 @@ export function useIntelligenceAnalysisMutation() {
       if (!payload) throw new Error('No technical context available for this symbol');
       const api = await postIntelligenceAnalysis(ticker, payload);
       return transformIntelligence(api);
+    },
+    onSuccess: (_data, { ticker }) => {
+      // A fresh analysis is appended to history server-side; refresh the timeline.
+      queryClient.invalidateQueries({ queryKey: ['intelligence', 'history', ticker] });
+      queryClient.invalidateQueries({ queryKey: ['intelligence', 'latest', ticker] });
     },
   });
 }

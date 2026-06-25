@@ -81,10 +81,15 @@ export interface PreOpenDriver {
   sourceUrl: string | null;
 }
 
+export interface PreOpenDriverAPI {
+  summary: string;
+  source_url: string | null;
+}
+
 export interface PreOpenOutlookAPI {
   gap_direction: GapDirection;
   magnitude: GapMagnitude;
-  primary_driver: { summary: string; source_url: string | null };
+  primary_driver: PreOpenDriverAPI;
   action_at_open: string;
   stop_gap_plan: string;
   confidence: PreOpenConfidence;
