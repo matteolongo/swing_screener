@@ -7,6 +7,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from swing_screener.intelligence.cache import write_to_cache
+from swing_screener.intelligence.metrics import record_analysis_metrics
 from swing_screener.intelligence.history import HistoryEntry, append_history, read_history
 from swing_screener.intelligence.market_hours import is_us_pre_market, previous_session_close
 from swing_screener.data.currency import detect_currency
@@ -628,6 +629,26 @@ class SymbolAnalyzer:
             text_format=_LLMAnalysis,
         )
         draft: _LLMAnalysis = parsed.output_parsed
+
+        # Token observability: sum total_tokens from both calls where available.
+        _u1 = getattr(search, "usage", None)
+        _u2 = getattr(parsed, "usage", None)
+        _t1 = getattr(_u1, "total_tokens", None)
+        _t2 = getattr(_u2, "total_tokens", None)
+        tokens: int | None = None
+        if _t1 is not None or _t2 is not None:
+            tokens = (_t1 or 0) + (_t2 or 0)
+
+        # Source coverage: group catalyst evidence by publisher.
+        _pub_counts: dict[str, int] = {}
+        for _ev in req.catalyst_evidence:
+            if _ev.publisher:
+                _pub_counts[_ev.publisher] = _pub_counts.get(_ev.publisher, 0) + 1
+        inputs_used["sources"] = {
+            "attempted": sorted(_pub_counts),
+            "returned": _pub_counts,
+        }
+
         result = SymbolIntelligence(
             symbol=ticker,
             generated_at=datetime.now(timezone.utc).isoformat(),
@@ -658,4 +679,8 @@ class SymbolAnalyzer:
             append_history(ticker, result, max_entries=self._history_max_entries)
         except Exception:
             logger.warning("Failed to append intelligence history for %r", ticker, exc_info=True)
+        try:
+            record_analysis_metrics(ticker, tokens=tokens)
+        except Exception:
+            logger.warning("Failed to record analysis metrics for %r", ticker, exc_info=True)
         return result
