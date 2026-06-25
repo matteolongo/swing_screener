@@ -591,24 +591,66 @@ export default function NarrativeAnalysisCard({
               {t('workspacePage.panels.analysis.intelligence.dataInputs')}
             </summary>
             <div className="mt-3 space-y-2">
-              {Object.entries(intelligence.inputsUsed).map(([group, fields]) => (
-                <div key={group}>
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted mb-1">
-                    {group.replace(/_/g, ' ')}
+              {Object.entries(intelligence.inputsUsed).map(([group, fields]) => {
+                const entries = fields as Record<string, unknown>;
+                // The `sources` group carries provider-coverage telemetry as a list
+                // (`attempted`) and a publisher→count map (`returned`), both object-typed,
+                // so the generic scalar renderer below skips them and the group reads empty.
+                // Render them explicitly: attempted sources stay visible even on a blackout
+                // where nothing was returned.
+                if (group === 'sources') {
+                  const attempted = Array.isArray(entries.attempted) ? (entries.attempted as string[]) : [];
+                  const returned =
+                    entries.returned && typeof entries.returned === 'object'
+                      ? (entries.returned as Record<string, number>)
+                      : {};
+                  return (
+                    <div key={group}>
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted mb-1">
+                        {group.replace(/_/g, ' ')}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {attempted.map((src) => (
+                          <span
+                            key={`attempted-${src}`}
+                            className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted"
+                          >
+                            <span className="font-medium text-muted">attempted:</span>
+                            <span>{src}</span>
+                          </span>
+                        ))}
+                        {Object.entries(returned).map(([publisher, count]) => (
+                          <span
+                            key={`returned-${publisher}`}
+                            className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2.5 py-0.5 text-xs text-success"
+                          >
+                            <span className="font-medium">{publisher}:</span>
+                            <span>{count}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={group}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted mb-1">
+                      {group.replace(/_/g, ' ')}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(entries).filter(([, v]) => v != null && typeof v !== 'object').map(([key, value]) => (
+                        <span
+                          key={key}
+                          className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted"
+                        >
+                          <span className="font-medium text-muted">{key.replace(/_/g, ' ')}:</span>
+                          <span>{typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(2)) : String(value)}</span>
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(fields as Record<string, unknown>).filter(([, v]) => v != null && typeof v !== 'object').map(([key, value]) => (
-                      <span
-                        key={key}
-                        className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted"
-                      >
-                        <span className="font-medium text-muted">{key.replace(/_/g, ' ')}:</span>
-                        <span>{typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(2)) : String(value)}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </details>
         )}
