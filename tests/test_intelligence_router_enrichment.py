@@ -54,11 +54,16 @@ def test_analyze_enriches_request_before_calling_llm(monkeypatch):
             past_trades_context=None,
         )
 
+    analyzer_instance = type("_FakeAnalyzer", (), {"analyze": _fake_analyze})()
+
     app.dependency_overrides[get_fundamentals_service] = lambda: _Fund()
     app.dependency_overrides[get_portfolio_service] = lambda: _Port()
     app.dependency_overrides[get_positions_repo] = lambda: _Repo()
     try:
-        with patch("api.routers.intelligence.SymbolAnalyzer.analyze", _fake_analyze):
+        with (
+            patch("api.routers.intelligence._get_analyzer", return_value=analyzer_instance),
+            patch("api.routers.intelligence.read_from_cache", return_value=None),
+        ):
             client = TestClient(app)
             resp = client.post("/api/intelligence/AAPL", json={"close": 100.0, "signal": "breakout"})
         assert resp.status_code == 200, resp.text
