@@ -192,7 +192,7 @@ def test_symbol_analyzer_raises_on_invalid_action():
         mock_client.responses.parse.side_effect = ValueError("action: literal_error")
 
         analyzer = SymbolAnalyzer()
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             analyzer.analyze("XYZ", request)
 
 
