@@ -10,15 +10,12 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 
 | File | Purpose |
 |------|---------|
-| `symbol_analyzer.py` | Entry point. Assembles context → LLM prompt → parses `SymbolIntelligence`. |
+| `symbol_analyzer.py` | Entry point. Assembles context → two-call LLM flow → parses `SymbolIntelligence`. |
 | `models.py` | `SymbolIntelligence`, `SymbolIntelligenceRequest` data contracts. |
 | `cache.py` | Per-ticker JSON cache (today's latest). Reads/writes to `data/intelligence/`. |
 | `history.py` | Durable per-symbol analysis history (newest-first, capped). Feeds the thesis-drift digest + UI timeline. |
 | `market_hours.py` | Minimal zoneinfo US market-hours helper. Decides pre-open mode + previous session close. |
-| `catalysts/generator.py` | AI-assisted catalyst report generation. |
-| `catalysts/models.py` | Catalyst data models. |
-| `catalysts/prompts.py` | Prompt templates for catalyst analysis. |
-| `catalysts/store.py` | Catalyst persistence (`data/intelligence/`). |
+| `metrics.py` | Append-only per-analysis metrics log (`data/intelligence/intelligence_metrics.json`). |
 
 ## API Surface
 
@@ -96,16 +93,44 @@ returns a `thesis_delta` (`status`: new/confirmed/weakening/invalidated,
 `summary`, `what_played_out`) comparing today's read to the prior ones. The full
 history is exposed via `GET /api/intelligence/{ticker}/history` for the UI timeline.
 
+## Two-call analyzer
+
+The symbol analyzer runs two sequential LLM calls to keep web-search from truncating structured output mid-JSON:
+
+1. **Call 1 (search)** — `config.llm.web_search_model` (default `gpt-4o`) performs the multi-hop web search, writes a prose narrative with cited source URLs, and returns free-text.
+2. **Call 2 (format)** — `config.llm.format_model` (default `gpt-4o-mini`) receives the prose and structures it into the validated `SymbolIntelligence` schema via the Responses structured-output API (`responses.parse`). No tool use in call 2.
+
+The split preserves full reasoning in call 1 while using a cheaper model for deterministic schema extraction in call 2. Phase 2 (Tavily evidence injection) will feed additional structured evidence into call 1 at the `--- Catalyst evidence ---` seam.
+
 ## Configuration
 
 `config/intelligence.yaml` — LLM provider (OpenAI), model, temperature, signal type toggles,
 plus `analysis_history` (history cap + digest size) and `pre_open` (timezone + session bounds).
+
+Key LLM settings:
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `llm.web_search_model` | `gpt-4o` | Call 1: web search + narrative |
+| `llm.format_model` | `gpt-4o-mini` | Call 2: tool-free structured output |
+| `llm.web_search_max_tokens` | `4000` | Token budget for call 1 |
+| `llm.request_timeout_seconds` | `60` | Per-call HTTP timeout |
+| `llm.max_retries` | `2` | Retry count for transient errors |
+| `llm.analyzer_enabled` | `true` | Kill-switch: `false` → endpoints return 503 |
 
 API keys go in environment variables, not the config file.
 
 ## Caching
 
 Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is set in `config/intelligence.yaml`. `cache.py` exposes `get_cached_analysis(ticker)` → returns `None` on miss or expiry.
+
+`POST /api/intelligence/{ticker}` checks the cache first and returns the same-day result unless `force=true` is passed. `/sweep` applies the same cache-before-spend logic per symbol.
+
+## Observability
+
+`data/intelligence/intelligence_metrics.json` — append-only log (capped at 500 entries) written by `metrics.py` after each analysis. Each entry: `{ts, ticker, tokens}`. A sudden `tokens: null` run pinpoints a call that did not complete; a gap in SEC coverage is visible by diffing evidence counts in the logged evidence cache.
+
+Phase 3 (calibration scorer) will extend each history entry's `predictions` list (`{direction, reason, reference}`) to score outcomes against prior calls; the persistence seam is already in place.
 
 ## Action Types
 
@@ -123,23 +148,19 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 
 | Path | Purpose |
 |------|---------|
-| `evidence/models.py` | re-exports `SourceEvidence` (pydantic) from `catalysts.models` — `title, url, publisher, published_at, quote_or_summary, relevance` |
+| `evidence/models.py` | `SourceEvidence` (pydantic) — `title, url, publisher, published_at, quote_or_summary, relevance` |
 | `evidence/config.py` | `EvidenceConfig` + `load_evidence_config()` — reads `config.evidence` from the intelligence document |
-| `evidence/rss.py` | `parse_feed`/`fetch_feed` — hardened lxml RSS/Atom parser (XXE-safe) + httpx fetch |
 | `evidence/curation.py` | `curate(items, *, window_days, max_items, asof_date)` — recency-window filter + dedup (normalized title+url) + newest-first + cap |
 | `evidence/collect.py` | `collect_evidence(ticker, *, asof_date, cfg, cache_root)` — per-date cache, fan-out across enabled collectors (fail-soft), curate |
 | `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR submissions API (`data.sec.gov/submissions/CIK…json`), material-event filings (8-K, 6-K, SC 13D/G, 424B, DEF 14A) |
-| `evidence/collectors/company_ir.py` | `CompanyIrRssCollector` — official IR RSS: `ir_feeds.json` seed first, then `evidence/discovery.py` auto-discovery on a seed miss |
-| `evidence/discovery.py` | `discover_ir_feed`/`cached_discover` — resolve company site via yfinance `.info`, find + validate its RSS feed, cache long-term in `discovered_feeds_cache.json` |
 
 ### Collectors
 
-Both implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py`.
+`SecEdgarCatalystCollector` implements the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py` as `sec_edgar_catalysts`.
 
-- **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent material-event filings for US tickers. Forms are matched by prefix (`config.evidence.sec_forms`, default `8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A`, so `424B` catches `424B5` and `SC 13D` catches `SC 13D/A`), and each item carries a per-form relevance label. Fail-soft — returns empty on HTTP errors and records a fallback event.
-- **`company_ir_rss`** (`CompanyIrRssCollector`): resolves the company's IR RSS feed in priority order: the hand-verified `data/intelligence/ir_feeds.json` seed first, then `evidence/discovery.py` auto-discovery (resolve the company site via yfinance `.info` `website`/`irWebsite`, parse the advertised `<link rel="alternate" type="application/rss+xml">`, else probe a short bounded path list, validate via `parse_feed`). Discovered feed URLs are cached long-term in `data/intelligence/discovered_feeds_cache.json` (found TTL 30d, negative TTL 7d). Auto-discovery is gated by `config.evidence.discovery_enabled`. Fail-soft throughout.
+- **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent material-event filings for US tickers. Forms are matched by prefix (`config.evidence.sec_forms`, default `8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A`, so `424B` catches `424B5` and `SC 13D` catches `SC 13D/A`), and each item carries a per-form relevance label. The HTTP User-Agent declares a contact email (`config.evidence.http.user_agent`) as required by SEC EDGAR fair-use policy. Fail-soft — returns empty on HTTP errors and records a fallback event.
 
-A third venue-wide `exchange_announcements` collector was removed: every seeded EU exchange RSS endpoint (Euronext, CNMV, Borsa Italiana, SIX, Nasdaq Nordic) is dead or no longer serves parseable RSS, and venue-wide notices are not symbol-specific, so it added no information beyond the `web_search` pass.
+The `company_ir_rss` collector (IR RSS feed auto-discovery) and the `exchange_announcements` collector (EU venue-wide RSS) were removed: IR feeds were unreliable and symbol-IR coverage was incomplete; exchange-wide notices are not symbol-specific and add no signal beyond the web-search pass.
 
 ### Curation defaults
 

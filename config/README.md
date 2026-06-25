@@ -61,21 +61,28 @@ the web-search write-up, then a tool-free `config.llm.format_model` (default `gp
 structures that write-up into the schema via the Responses structured-output API. Decoupling
 search from formatting keeps the structured output from truncating mid-JSON.
 
+Key LLM settings (under `config.llm`):
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `web_search_model` | `gpt-4o` | Call 1: web search + prose narrative |
+| `format_model` | `gpt-4o-mini` | Call 2: tool-free structured output (`responses.parse`) |
+| `web_search_max_tokens` | `4000` | Token budget for call 1 |
+| `request_timeout_seconds` | `60` | Per-call HTTP timeout |
+| `max_retries` | `2` | Retry count for transient errors |
+| `analyzer_enabled` | `true` | Kill-switch: `false` → `/intelligence/*` endpoints return 503 |
+
 `config.evidence` controls the evidence collector pipeline:
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `enabled_sources` | `[sec_edgar_catalysts, company_ir_rss]` | Collectors to fan-out to |
+| `enabled_sources` | `[sec_edgar_catalysts]` | Collectors to fan-out to (SEC EDGAR only) |
 | `recency_window_days` | `30` | Discard items older than this many days |
 | `max_items_per_symbol` | `8` | Max curated items returned per ticker |
 | `sec_forms` | `[8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A]` | SEC form prefixes kept (prefix match: `424B` catches `424B5`, `SC 13D` catches `SC 13D/A`) |
-| `http.user_agent` | `swing-screener-intelligence-bot/1.0` | User-Agent header sent by all collectors |
+| `http.user_agent` | `swing-screener-intelligence-bot/1.0 (email)` | User-Agent sent by all collectors; must declare a contact email per SEC EDGAR policy |
 | `http.connect_timeout_seconds` | `5.0` | TCP connect timeout |
 | `http.read_timeout_seconds` | `20.0` | Read/response timeout |
-| `discovery_enabled` | `true` | Auto-discover IR feeds for tickers not in the seed map |
-| `discovery_found_ttl_days` | `30` | Re-validate a discovered feed after N days |
-| `discovery_negative_ttl_days` | `7` | Re-attempt discovery after N days of no feed found |
-| `discovery_paths` | `[/rss, /feed, /news/rss, /newsroom/rss, /investors/rss, /en/rss]` | Bounded path probes when no `<link rel=alternate>` is advertised |
 
 `config.analysis_history` controls per-symbol analysis memory:
 
