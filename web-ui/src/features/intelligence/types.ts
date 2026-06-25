@@ -24,6 +24,13 @@ export interface PredictionBullet {
   reference: string;
 }
 
+export interface NewsItem {
+  headline: string;
+  url: string | null;
+  date: string | null;
+  sentiment: 'bullish' | 'bearish' | 'neutral';
+}
+
 export interface IntelligenceEvent {
   type: IntelligenceEventType;
   date: string | null;
@@ -134,6 +141,7 @@ export interface SymbolIntelligenceAPI {
   key_numbers?: KeyNumber[];
   risk_factors?: string[];
   prediction_bullets?: PredictionBullet[];
+  news?: NewsItem[];
   past_trades_context?: string | null;
   pre_open_outlook?: PreOpenOutlookAPI | null;
   thesis_delta?: ThesisDeltaAPI | null;
@@ -157,6 +165,7 @@ export interface SymbolIntelligence {
   keyNumbers?: KeyNumber[];
   riskFactors?: string[];
   predictionBullets?: PredictionBullet[];
+  news?: NewsItem[];
   pastTradesContext?: string | null;
   preOpenOutlook?: PreOpenOutlook | null;
   thesisDelta?: ThesisDelta | null;
@@ -219,6 +228,7 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     keyNumbers: api.key_numbers ?? [],
     riskFactors: api.risk_factors ?? [],
     predictionBullets: api.prediction_bullets ?? [],
+    news: api.news ?? [],
     pastTradesContext: api.past_trades_context ?? null,
     preOpenOutlook: transformPreOpenOutlook(api.pre_open_outlook),
     thesisDelta: transformThesisDelta(api.thesis_delta),

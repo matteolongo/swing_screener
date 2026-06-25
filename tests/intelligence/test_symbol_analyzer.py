@@ -623,3 +623,32 @@ def test_llm_analysis_strict_schema_has_no_open_objects():
 
     walk(schema, "")
     assert offenders == [], f"open object schemas rejected by strict mode: {offenders}"
+
+
+def test_llm_analysis_rejects_out_of_vocab_news_sentiment():
+    with pytest.raises(ValueError):
+        _LLMAnalysis(
+            action="WATCH", conviction="medium", summary_line="s", narrative="n",
+            news=[{"headline": "h", "sentiment": "spicy"}],
+        )
+
+
+def test_analyze_round_trips_news_into_intelligence():
+    body = {
+        **_FAKE_RESPONSE_JSON,
+        "news": [
+            {"headline": "Q4 beat", "url": "https://x/n", "date": "2026-02-01", "sentiment": "bullish"},
+            {"headline": "Buyback authorized", "sentiment": "bullish"},
+        ],
+    }
+    request = SymbolIntelligenceRequest(close=48.5, signal="breakout")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, body)
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("APAM", request)
+
+    assert [n.headline for n in result.news] == ["Q4 beat", "Buyback authorized"]
+    assert result.news[0].sentiment == "bullish"
+    assert result.news[1].url is None

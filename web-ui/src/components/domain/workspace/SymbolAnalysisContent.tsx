@@ -220,6 +220,7 @@ export default function SymbolAnalysisContent({
                   <NarrativeAnalysisCard
                     intelligence={displayedIntelligence}
                     candidate={candidate}
+                    isPosition={Boolean(position)}
                   />
                 );
               }

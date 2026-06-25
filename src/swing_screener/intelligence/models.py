@@ -72,6 +72,13 @@ class PredictionBullet(BaseModel):
     reference: str
 
 
+class NewsItem(BaseModel):
+    headline: str
+    url: str | None = None
+    date: str | None = None  # ISO date or null
+    sentiment: Literal["bullish", "bearish", "neutral"] = "neutral"
+
+
 class PreOpenDriver(BaseModel):
     summary: str
     source_url: str | None = None
@@ -179,6 +186,7 @@ class SymbolIntelligence(BaseModel):
     key_numbers: list[KeyNumber] = Field(default_factory=list)
     risk_factors: list[str] = Field(default_factory=list)
     prediction_bullets: list[PredictionBullet] = Field(default_factory=list)
+    news: list[NewsItem] = Field(default_factory=list)
     past_trades_context: str | None = None
     pre_open_outlook: PreOpenOutlook | None = None
     thesis_delta: ThesisDelta | None = None

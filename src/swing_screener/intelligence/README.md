@@ -189,3 +189,22 @@ result also populates:
 - `position_move_explanation` — backward look: why price moved from entry to now (`direction`
   up/down/flat, `summary`, and `drivers[]` of `{label, detail}` grounded in news since the entry
   date), explaining the sign and size of the current R. `null` outside position context.
+
+## Distilled fields and UI panels
+
+The narrative is the long-form reasoning; the web UI keeps it collapsed and leads with distilled,
+structured fields the call-2 formatter extracts from the prose. The card renders a **fixed,
+status-aware panel skeleton** so the layout does not silently vary with which fields the model filled:
+
+- **Screened candidate**: Decision focus (`summary_line` + `price_hook` "why now") · Key numbers
+  (`key_numbers`) · What to expect (`prediction_bullets` + `upcoming_events`) · News (`news`) · Risks
+  (`risk_factors`) · Full rationale (collapsed).
+- **Open position** (action `MANAGE_ONLY`): Decision focus + Position signal (`position_signal`) · Why
+  it moved (`position_move_explanation`) · Outlook (`position_outlook`) · Key numbers · What to expect ·
+  News · Full rationale (collapsed).
+
+`news` is a list of `NewsItem` (`{headline, url, date, sentiment}`) — recent, already-happened items
+the model surfaced in search, distinct from `upcoming_events` (forward-looking). Additive and
+backward-compatible: results from before this field default to `[]`. The prompt is responsible for
+filling each panel for the active status; a genuinely empty panel renders a muted placeholder rather
+than disappearing.

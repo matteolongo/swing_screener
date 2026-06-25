@@ -14,6 +14,7 @@ from swing_screener.data.currency import detect_currency
 from swing_screener.intelligence.models import (
     IntelligenceEvent,
     KeyNumber,
+    NewsItem,
     PositionMoveExplanation,
     PositionOutlook,
     PositionSignal,
@@ -80,6 +81,10 @@ your write-up into a structured record, so cover ALL of the following in the pro
 - 2–5 prediction bullets (direction bullish | bearish | neutral; a one-sentence reason; a short
   reference label e.g. "SMA20 support", "Q1 earnings", "fair value range", "prior stop-out level").
   If past trades are provided, at least one bullet must reference them.
+- 2–5 recent NEWS items that actually surfaced in your search: a one-line headline, the source URL,
+  an ISO date when known, and a bullish | bearish | neutral read. These are RECENT/already-happened
+  items (distinct from `upcoming_events`, which are forward-looking). For an open position, bias the
+  news to items dated since the entry date.
 
 POSITION-MODE OUTPUT (only when position context is provided):
 - A position signal: HOLD (thesis intact, no change) | TRIM (take partial profit / reduce risk,
@@ -136,6 +141,7 @@ class _LLMAnalysis(BaseModel):
     key_numbers: list[KeyNumber] = []
     risk_factors: list[str] = []
     prediction_bullets: list[PredictionBullet] = []
+    news: list[NewsItem] = []
     past_trades_context: str | None = None
     pre_open_outlook: PreOpenOutlook | None = None
     thesis_delta: ThesisDelta | None = None
@@ -674,6 +680,7 @@ class SymbolAnalyzer:
             key_numbers=draft.key_numbers,
             risk_factors=draft.risk_factors,
             prediction_bullets=draft.prediction_bullets,
+            news=draft.news,
             past_trades_context=draft.past_trades_context,
             pre_open_outlook=draft.pre_open_outlook if pre_open else None,
             thesis_delta=draft.thesis_delta if prior_digest else None,

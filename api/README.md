@@ -81,7 +81,7 @@ Daily Review (`/api/daily-review`):
 - `POST /api/daily-review/compute`
 
 Intelligence (`/api/intelligence`):
-- `POST /api/intelligence/{ticker}?force=false` — enriches with full data (fundamentals + Finnhub + earnings + SEC evidence, server-side blocking) then runs the two-call LLM analysis. Same-day cache is returned unless `force=true`. Responses carry nullable `pre_open_outlook` (US pre-market) and `thesis_delta` (when prior analyses exist). Returns 503 when `llm.analyzer_enabled: false` or `OPENAI_API_KEY` is unset.
+- `POST /api/intelligence/{ticker}?force=false` — enriches with full data (fundamentals + Finnhub + earnings + SEC evidence, server-side blocking) then runs the two-call LLM analysis. Same-day cache is returned unless `force=true`. Responses carry nullable `pre_open_outlook` (US pre-market) and `thesis_delta` (when prior analyses exist), plus a `news` list (`{headline, url, date, sentiment}`, additive; defaults to `[]` for pre-existing cached results). Returns 503 when `llm.analyzer_enabled: false` or `OPENAI_API_KEY` is unset.
 - `GET /api/intelligence/{ticker}/latest`
 - `GET /api/intelligence/{ticker}/history` — per-symbol analysis history, newest-first, capped at `analysis_history.max_entries`. Returns `{entries: HistoryEntry[]}`; empty list (not 404) when none.
 - `POST /api/intelligence/sweep` — same full enrich + two-call analysis as the single-symbol endpoint, applied to each symbol in the request. No batch cap; cost scales linearly. Per-symbol cache-before-spend applies unless `force=true` per symbol. Returns 503 on the same kill-switch conditions.

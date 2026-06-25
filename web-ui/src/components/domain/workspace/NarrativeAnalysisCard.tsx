@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
 import { formatDate } from '@/utils/formatters';
-import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection, GapDirection, GapMagnitude, PreOpenConfidence, ThesisDeltaStatus } from '@/features/intelligence/types';
+import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection, GapDirection, GapMagnitude, PreOpenConfidence, ThesisDeltaStatus, PositionSignalAction, ThesisStatus, ProfitManagement, OpportunityCost, ExpectedHoldingPeriod } from '@/features/intelligence/types';
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useIntelligenceHistoryQuery } from '@/features/intelligence/hooks';
@@ -11,6 +11,9 @@ import { t } from '@/i18n/t';
 interface NarrativeAnalysisCardProps {
   intelligence: SymbolIntelligence;
   candidate?: SymbolAnalysisCandidate | null;
+  /** True when analysing an open position (management view) vs a screened candidate.
+   *  Defaults to deriving from the MANAGE_ONLY action when not provided. */
+  isPosition?: boolean;
 }
 
 function actionLabel(action: DecisionAction): string {
@@ -73,6 +76,14 @@ function sentimentChipClass(sentiment: KeyNumber['sentiment']): string {
     case 'bullish': return 'bg-success/10 border-success/40 text-success';
     case 'bearish': return 'bg-danger/10 border-danger/40 text-danger';
     default: return 'bg-foreground/5 border-border text-muted';
+  }
+}
+
+function sentimentDotClass(sentiment: KeyNumber['sentiment']): string {
+  switch (sentiment) {
+    case 'bullish': return 'bg-success';
+    case 'bearish': return 'bg-danger';
+    default: return 'bg-muted';
   }
 }
 
@@ -143,18 +154,59 @@ function thesisStatusVariant(status: ThesisDeltaStatus): 'default' | 'success' |
   }
 }
 
+function positionSignalLabel(action: PositionSignalAction): string {
+  const map: Record<PositionSignalAction, string> = {
+    HOLD: t('workspacePage.panels.analysis.intelligence.positionSignal.hold'),
+    TRIM: t('workspacePage.panels.analysis.intelligence.positionSignal.trim'),
+    EXIT: t('workspacePage.panels.analysis.intelligence.positionSignal.exit'),
+  };
+  return map[action];
+}
+
+function positionSignalVariant(action: PositionSignalAction): 'success' | 'warning' | 'error' {
+  switch (action) {
+    case 'TRIM': return 'warning';
+    case 'EXIT': return 'error';
+    default: return 'success';
+  }
+}
+
+function outlookThesisLabel(status: ThesisStatus): string {
+  return t(`workspacePage.panels.analysis.intelligence.positionOutlook.thesisStatusValue.${status}`);
+}
+
+function profitManagementLabel(value: ProfitManagement): string {
+  return t(`workspacePage.panels.analysis.intelligence.positionOutlook.profitManagementValue.${value}`);
+}
+
+function opportunityCostLabel(value: OpportunityCost): string {
+  return t(`workspacePage.panels.analysis.intelligence.positionOutlook.opportunityCostValue.${value}`);
+}
+
+function holdingPeriodLabel(value: ExpectedHoldingPeriod): string {
+  return t(`workspacePage.panels.analysis.intelligence.positionOutlook.expectedHoldingPeriodValue.${value}`);
+}
+
 export default function NarrativeAnalysisCard({
   intelligence,
   candidate,
+  isPosition,
 }: NarrativeAnalysisCardProps) {
   const { action, conviction, summaryLine, narrative, symbol } = intelligence;
   const summary = candidate?.decisionSummary;
   const warnings = (summary?.explanation?.confidenceNotes ?? summary?.drivers.warnings ?? []).filter(Boolean);
 
-  const hasNewFields = Boolean(intelligence.priceHook);
-  const hasKeyNumbers = (intelligence.keyNumbers?.length ?? 0) > 0;
-  const hasPrediction = (intelligence.predictionBullets?.length ?? 0) > 0;
-  const hasRisks = (intelligence.riskFactors?.length ?? 0) > 0;
+  // Position vs screened drives the fixed panel skeleton. Prefer the explicit prop;
+  // fall back to the MANAGE_ONLY action the analyzer forces for open positions.
+  const positionMode = isPosition ?? action === 'MANAGE_ONLY';
+
+  const keyNumbers = intelligence.keyNumbers ?? [];
+  const predictionBullets = intelligence.predictionBullets ?? [];
+  const upcomingEvents = intelligence.upcomingEvents ?? [];
+  const riskFactors = intelligence.riskFactors ?? [];
+  const news = intelligence.news ?? [];
+  const positionSignal = intelligence.positionSignal ?? null;
+  const positionOutlook = intelligence.positionOutlook ?? null;
   const hasPastTrades = Boolean(intelligence.pastTradesContext);
   const moveExplanation = intelligence.positionMoveExplanation ?? null;
   const preOpen = intelligence.preOpenOutlook ?? null;
@@ -266,8 +318,27 @@ export default function NarrativeAnalysisCard({
           )}
         </div>
 
+        {/* POSITION SIGNAL — fixed (open positions) */}
+        {positionMode && (
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+              {t('workspacePage.panels.analysis.intelligence.positionSignal.title')}
+            </div>
+            {positionSignal ? (
+              <div className="flex items-start gap-2">
+                <Badge variant={positionSignalVariant(positionSignal.action)}>
+                  {positionSignalLabel(positionSignal.action)}
+                </Badge>
+                <p className="flex-1 text-sm text-foreground">{positionSignal.reason}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.emptyPanel')}</p>
+            )}
+          </div>
+        )}
+
         {/* Why it moved since entry (open positions) */}
-        {moveExplanation && (
+        {positionMode && moveExplanation && (
           <div className={`rounded-md border p-3 ${moveDirectionClass(moveExplanation.direction)}`}>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wide">
@@ -291,6 +362,53 @@ export default function NarrativeAnalysisCard({
           </div>
         )}
 
+        {/* OUTLOOK — fixed (open positions) */}
+        {positionMode && (
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+              {t('workspacePage.panels.analysis.intelligence.positionOutlook.title')}
+            </div>
+            {positionOutlook ? (
+              <div className="space-y-2 text-sm text-foreground">
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge variant="default">
+                    {t('workspacePage.panels.analysis.intelligence.positionOutlook.thesisStatus')}: {outlookThesisLabel(positionOutlook.thesisStatus)}
+                  </Badge>
+                  <Badge variant="default">
+                    {t('workspacePage.panels.analysis.intelligence.positionOutlook.expectedHoldingPeriod')}: {holdingPeriodLabel(positionOutlook.expectedHoldingPeriod)}
+                  </Badge>
+                  <Badge variant="default">
+                    {t('workspacePage.panels.analysis.intelligence.positionOutlook.profitManagement')}: {profitManagementLabel(positionOutlook.profitManagement)}
+                  </Badge>
+                  <Badge variant="default">
+                    {t('workspacePage.panels.analysis.intelligence.positionOutlook.opportunityCost')}: {opportunityCostLabel(positionOutlook.opportunityCost)}
+                  </Badge>
+                </div>
+                <p>
+                  <span className="font-medium">{t('workspacePage.panels.analysis.intelligence.positionOutlook.holdUntil')}:</span>{' '}
+                  {positionOutlook.holdUntil}
+                </p>
+                <p>
+                  <span className="font-medium">{t('workspacePage.panels.analysis.intelligence.positionOutlook.nextReviewTrigger')}:</span>{' '}
+                  {positionOutlook.nextReviewTrigger}
+                </p>
+                {positionOutlook.invalidationSignals.length > 0 && (
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                      {t('workspacePage.panels.analysis.intelligence.positionOutlook.invalidationSignals')}
+                    </div>
+                    <ul className="mt-1 space-y-1 list-disc list-inside text-muted">
+                      {positionOutlook.invalidationSignals.map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.positionOutlook.empty')}</p>
+            )}
+          </div>
+        )}
+
         {/* Warnings */}
         {warnings.length > 0 && (
           <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
@@ -303,24 +421,28 @@ export default function NarrativeAnalysisCard({
           </div>
         )}
 
-        {/* WHY NOW */}
-        {hasNewFields && intelligence.priceHook && (
+        {/* WHY NOW — fixed (screened) */}
+        {!positionMode && (
           <div className="rounded-md bg-surface border border-border p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
               {t('workspacePage.panels.analysis.intelligence.priceHook')}
             </div>
-            <p className="text-sm text-foreground">{intelligence.priceHook}</p>
+            {intelligence.priceHook ? (
+              <p className="text-sm text-foreground">{intelligence.priceHook}</p>
+            ) : (
+              <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.emptyPanel')}</p>
+            )}
           </div>
         )}
 
-        {/* KEY NUMBERS */}
-        {hasKeyNumbers && (
-          <div className="rounded-md bg-surface border border-border p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
-              {t('workspacePage.panels.analysis.intelligence.keyNumbers')}
-            </div>
+        {/* KEY NUMBERS — fixed (both) */}
+        <div className="rounded-md bg-surface border border-border p-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+            {t('workspacePage.panels.analysis.intelligence.keyNumbers')}
+          </div>
+          {keyNumbers.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
-              {(intelligence.keyNumbers ?? []).map((kn, i) => (
+              {keyNumbers.map((kn, i) => (
                 <span
                   key={i}
                   className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${sentimentChipClass(kn.sentiment)}`}
@@ -331,39 +453,108 @@ export default function NarrativeAnalysisCard({
                 </span>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.emptyPanel')}</p>
+          )}
+        </div>
 
-        {/* PREDICTION */}
-        {hasPrediction && (
-          <div className="rounded-md bg-surface border border-border p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
-              {t('workspacePage.panels.analysis.intelligence.prediction')}
+        {/* WHAT TO EXPECT — fixed (both): predictions + upcoming events */}
+        <div className="rounded-md bg-surface border border-border p-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+            {t('workspacePage.panels.analysis.intelligence.whatToExpect.title')}
+          </div>
+          {predictionBullets.length > 0 || upcomingEvents.length > 0 ? (
+            <div className="space-y-2">
+              {predictionBullets.length > 0 && (
+                <ul className="space-y-2">
+                  {predictionBullets.map((pb, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <span className={`font-bold text-base leading-tight shrink-0 ${directionClass(pb.direction)}`}>
+                        {directionArrow(pb.direction)}
+                      </span>
+                      <span className="flex-1 text-foreground">{pb.reason}</span>
+                      <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[10px] text-muted font-medium">
+                        {pb.reference}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {upcomingEvents.length > 0 && (
+                <ul className="space-y-1 text-sm">
+                  {upcomingEvents.map((ev, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className={`font-bold text-base leading-tight shrink-0 ${directionClass(ev.direction)}`}>
+                        {directionArrow(ev.direction)}
+                      </span>
+                      <span className="flex-1 text-foreground">{ev.summary}</span>
+                      {ev.date && (
+                        <span className="shrink-0 text-[11px] text-muted tabular-nums">{ev.date}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
+          ) : (
+            <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.whatToExpect.empty')}</p>
+          )}
+        </div>
+
+        {/* NEWS — fixed (both) */}
+        <div className="rounded-md bg-surface border border-border p-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+            {t('workspacePage.panels.analysis.intelligence.news.title')}
+          </div>
+          {news.length > 0 ? (
             <ul className="space-y-2">
-              {(intelligence.predictionBullets ?? []).map((pb, i) => (
+              {news.map((n, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className={`font-bold text-base leading-tight shrink-0 ${directionClass(pb.direction)}`}>
-                    {directionArrow(pb.direction)}
-                  </span>
-                  <span className="flex-1 text-foreground">{pb.reason}</span>
-                  <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[10px] text-muted font-medium">
-                    {pb.reference}
-                  </span>
+                  <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${sentimentDotClass(n.sentiment)}`} />
+                  <div className="flex-1">
+                    {n.url ? (
+                      <a href={n.url} target="_blank" rel="noreferrer" className="text-foreground underline">
+                        {n.headline}
+                      </a>
+                    ) : (
+                      <span className="text-foreground">{n.headline}</span>
+                    )}
+                    {n.date && <span className="ml-2 text-[11px] text-muted tabular-nums">{n.date}</span>}
+                  </div>
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.news.empty')}</p>
+          )}
+        </div>
 
-        {/* RISKS */}
-        {hasRisks && (
+        {/* RISKS — fixed (screened); present-gated (position) */}
+        {!positionMode ? (
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+              {t('workspacePage.panels.analysis.intelligence.riskFactors')}
+            </div>
+            {riskFactors.length > 0 ? (
+              <ul className="space-y-1">
+                {riskFactors.map((rf, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-muted">
+                    <span className="text-muted shrink-0 mt-0.5">•</span>
+                    <span>{rf}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.emptyPanel')}</p>
+            )}
+          </div>
+        ) : riskFactors.length > 0 ? (
           <div className="rounded-md bg-surface border border-border p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
               {t('workspacePage.panels.analysis.intelligence.riskFactors')}
             </div>
             <ul className="space-y-1">
-              {(intelligence.riskFactors ?? []).map((rf, i) => (
+              {riskFactors.map((rf, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-muted">
                   <span className="text-muted shrink-0 mt-0.5">•</span>
                   <span>{rf}</span>
@@ -371,7 +562,7 @@ export default function NarrativeAnalysisCard({
               ))}
             </ul>
           </div>
-        )}
+        ) : null}
 
         {/* PAST TRADES */}
         {hasPastTrades && (
@@ -383,26 +574,15 @@ export default function NarrativeAnalysisCard({
           </div>
         )}
 
-        {/* Full rationale — collapsible when new structured fields are present; always visible otherwise */}
-        {hasNewFields ? (
-          <details className="rounded-md bg-surface border border-border p-3">
-            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted select-none">
-              {t('workspacePage.panels.analysis.intelligence.fullRationale')}
-            </summary>
-            <div className="prose prose-sm prose-invert mt-2 max-w-none">
-              <ReactMarkdown>{narrative}</ReactMarkdown>
-            </div>
-          </details>
-        ) : (
-          <div className="rounded-md bg-surface border border-border p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('workspacePage.panels.analysis.intelligence.fullRationale')}
-            </div>
-            <div className="prose prose-sm prose-invert mt-2 max-w-none">
-              <ReactMarkdown>{narrative}</ReactMarkdown>
-            </div>
+        {/* Full rationale — always collapsed; available on expand */}
+        <details className="rounded-md bg-surface border border-border p-3">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted select-none">
+            {t('workspacePage.panels.analysis.intelligence.fullRationale')}
+          </summary>
+          <div className="prose prose-sm prose-invert mt-2 max-w-none">
+            <ReactMarkdown>{narrative}</ReactMarkdown>
           </div>
-        )}
+        </details>
 
         {/* Data inputs */}
         {intelligence.inputsUsed && Object.keys(intelligence.inputsUsed).length > 0 && (
