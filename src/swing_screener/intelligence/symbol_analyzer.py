@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from openai import OpenAI
 
 from swing_screener.intelligence.cache import write_to_cache
+from swing_screener.intelligence.history import HistoryEntry, append_history, read_history
+from swing_screener.intelligence.market_hours import is_us_pre_market, previous_session_close
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.settings import get_settings_manager
 from swing_screener.utils.logging_config import get_logger
@@ -86,6 +88,19 @@ Return ONLY a JSON block (fenced with ```json) with exactly these fields:
 - risk_factors: array of 3–5 strings. Each is a concrete, specific risk to the thesis. No generic filler.
 - prediction_bullets: array of 2–5 objects {direction, reason, reference}. direction: bullish | bearish | neutral. reason: one sentence. reference: short label for the data point or event (e.g. "SMA20 support", "Q1 earnings", "fair value range", "prior stop-out level"). If past trades are provided, at least one bullet must reference them.
 - past_trades_context: null unless a "Past trades" block is in the input. If past trades are present, write one paragraph: what the pattern tells us about this setup — name the levels, outcomes, and what they imply for stop placement or conviction. Use this analysis to calibrate conviction.
+- pre_open_outlook: null UNLESS a "Pre-open outlook" block is present. When it is, return an object:
+  {gap_direction: gap_up | gap_down | flat,
+   magnitude: minor | moderate | large (a bucket — never a precise %),
+   primary_driver: {summary: one sentence, source_url: cited URL or null},
+   action_at_open: concrete instruction for the open,
+   stop_gap_plan: what to do if it gaps through the stop,
+   confidence: high | medium | low}
+  Base it only on news since the previous session close.
+- thesis_delta: null UNLESS a "Prior analyses" block is present. When it is, return an object:
+  {status: new | confirmed | weakening | invalidated,
+   summary: one sentence on what changed since the last analysis,
+   what_played_out: array of strings — previously-flagged items that did or did not happen}
+  Use status=confirmed if the prior read still holds, weakening if it is eroding, invalidated if broken.
 
 PAST TRADES RULE:
 If a "Past trades" block is present in the input:
@@ -136,7 +151,32 @@ def _format_past_trades(ticker: str, past_positions: list[dict]) -> str | None:
     return "\n".join(lines)
 
 
-def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positions: list[dict] | None = None) -> str:
+def _format_prior_digest(digest: list[HistoryEntry]) -> str | None:
+    """Compact most-recent-first summary of past analyses for the prompt."""
+    if not digest:
+        return None
+    lines = ["--- Prior analyses (most recent first) ---"]
+    for e in digest:
+        watch = f" | watched for: {'; '.join(e.watch_for)}" if e.watch_for else ""
+        lines.append(
+            f"  {e.generated_at} | {e.action} ({e.conviction}) | {e.summary_line}{watch}"
+        )
+    lines.append(
+        "Compare today's read against these. Set thesis_delta.status to confirmed, weakening, "
+        "or invalidated, and note in what_played_out which previously-flagged items did or did not happen."
+    )
+    return "\n".join(lines)
+
+
+def _build_user_prompt(
+    ticker: str,
+    req: SymbolIntelligenceRequest,
+    past_positions: list[dict] | None = None,
+    *,
+    pre_open: bool = False,
+    pre_open_since: str | None = None,
+    prior_digest: list[HistoryEntry] | None = None,
+) -> str:
     def fmt(v: float | None) -> str:
         return f"{v:.2f}" if v is not None else "N/A"
 
@@ -360,6 +400,35 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
         lines.append("")
         lines.append(past_block)
 
+    # Prior-analyses digest (thesis drift) — most recent first
+    digest_block = _format_prior_digest(prior_digest or [])
+    if digest_block:
+        lines.append("")
+        lines.append(digest_block)
+
+    # Pre-open mode — US symbol analyzed before the regular-session open
+    if pre_open:
+        since = f" (since the previous session close at {pre_open_since})" if pre_open_since else ""
+        framing = (
+            "Frame action_at_open and stop_gap_plan around the OPEN POSITION and its current stop."
+            if has_position
+            else "Frame action_at_open and stop_gap_plan around the PLANNED entry/stop — judge whether "
+            "the setup still holds if the stock gaps away from the planned entry at the open."
+        )
+        lines += [
+            "",
+            "--- Pre-open outlook (US market not yet open) ---",
+            f"The US regular session has NOT opened yet. Read the overnight tape{since}: "
+            "search index/sector futures (S&P 500, Nasdaq) and this stock's pre-market move and "
+            "overnight headlines, then call the opening gap.",
+            framing,
+            "Produce pre_open_outlook with: gap_direction (gap_up | gap_down | flat); "
+            "magnitude as a bucket (minor | moderate | large) — do NOT invent a precise %; "
+            "primary_driver {summary, source_url} = the single overnight item most likely to move the open; "
+            "action_at_open = concrete instruction at the bell; stop_gap_plan = what to do if it gaps "
+            "through the stop; confidence (high | medium | low). Use only news since the previous close.",
+        ]
+
     lines.append(
         f"\nSearch broadly for recent news, earnings results, catalysts, and analyst views for {ticker}, "
         "then follow the most material leads with further searches and run a forward-looking catalyst pass. "
@@ -371,13 +440,47 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
 class SymbolAnalyzer:
     def __init__(self) -> None:
         doc = get_settings_manager().load_intelligence_document()
-        llm_cfg = doc.get("config", {}).get("llm", {})
+        cfg = doc.get("config", {})
+        llm_cfg = cfg.get("llm", {})
         self._model = llm_cfg.get("web_search_model", "gpt-4o")
         self._max_tokens = int(llm_cfg.get("web_search_max_tokens", 2000))
+        history_cfg = cfg.get("analysis_history", {})
+        self._history_max_entries = int(history_cfg.get("max_entries", 50))
+        self._history_digest_size = int(history_cfg.get("digest_size", 5))
+        self._pre_open_cfg = cfg.get("pre_open", {})
         self._client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-    def analyze(self, ticker: str, req: SymbolIntelligenceRequest, past_positions: list[dict] | None = None) -> SymbolIntelligence:
+    def _pre_open_state(self, req: SymbolIntelligenceRequest, now: datetime) -> tuple[bool, str | None]:
+        if not bool(self._pre_open_cfg.get("enabled", True)):
+            return False, None
+        if (req.currency or "USD").upper() != "USD":
+            return False, None
+        tz = self._pre_open_cfg.get("timezone", "America/New_York")
+        active = is_us_pre_market(
+            now,
+            market_open=self._pre_open_cfg.get("market_open", "09:30"),
+            window_start=self._pre_open_cfg.get("window_start", "00:00"),
+            tz=tz,
+        )
+        if not active:
+            return False, None
+        since = previous_session_close(
+            now, session_close=self._pre_open_cfg.get("session_close", "16:00"), tz=tz
+        ).isoformat()
+        return True, since
+
+    def analyze(
+        self,
+        ticker: str,
+        req: SymbolIntelligenceRequest,
+        past_positions: list[dict] | None = None,
+        *,
+        now: datetime | None = None,
+    ) -> SymbolIntelligence:
         inputs_used: dict = {}
+        now = now or datetime.now(timezone.utc)
+        pre_open, pre_open_since = self._pre_open_state(req, now)
+        prior_digest = read_history(ticker, limit=self._history_digest_size)
 
         trade_plan: dict = {}
         if req.entry is not None:
@@ -465,7 +568,19 @@ class SymbolAnalyzer:
         if req.recent_patterns:
             inputs_used["candles"] = {"patterns": ", ".join(req.recent_patterns)}
 
-        user_prompt = _build_user_prompt(ticker, req, past_positions=past_positions or [])
+        if pre_open:
+            inputs_used["pre_open"] = {"window": "us_pre_market", "since": pre_open_since}
+        if prior_digest:
+            inputs_used["history"] = {"prior_runs": len(prior_digest)}
+
+        user_prompt = _build_user_prompt(
+            ticker,
+            req,
+            past_positions=past_positions or [],
+            pre_open=pre_open,
+            pre_open_since=pre_open_since,
+            prior_digest=prior_digest,
+        )
         response = self._client.responses.create(
             model=self._model,
             tools=[{"type": "web_search_preview"}],
@@ -492,10 +607,13 @@ class SymbolAnalyzer:
             risk_factors=raw.get("risk_factors", []),
             prediction_bullets=raw.get("prediction_bullets", []),
             past_trades_context=raw.get("past_trades_context"),
+            pre_open_outlook=raw.get("pre_open_outlook") if pre_open else None,
+            thesis_delta=raw.get("thesis_delta"),
         )
         result = result.model_copy(update={"inputs_used": inputs_used})
         try:
             write_to_cache(ticker, result)
         except Exception:
             logger.warning("Failed to write intelligence cache for %r; result will not be cached", ticker, exc_info=True)
+        append_history(ticker, result, max_entries=self._history_max_entries)
         return result
