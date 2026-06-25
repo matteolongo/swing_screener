@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { transformIntelligence } from './types';
-import type { SymbolIntelligenceAPI } from './types';
+import { transformIntelligence, transformHistoryEntry } from './types';
+import type { SymbolIntelligenceAPI, HistoryEntryAPI } from './types';
 
 describe('transformIntelligence', () => {
   it('converts snake_case API shape to camelCase', () => {
@@ -97,6 +97,63 @@ describe('transformIntelligence with new fields', () => {
       profitManagement: 'trail_stop',
       opportunityCost: 'medium',
       confidenceDecay: 'Confidence fades if price stalls for two weeks.',
+    });
+  });
+
+  it('maps pre_open_outlook and thesis_delta to camelCase', () => {
+    const api = makeBase();
+    api.pre_open_outlook = {
+      gap_direction: 'gap_up',
+      magnitude: 'moderate',
+      primary_driver: { summary: 'Overnight beat.', source_url: 'https://x' },
+      action_at_open: 'Let it open.',
+      stop_gap_plan: 'Exit if it gaps below the stop.',
+      confidence: 'medium',
+    };
+    api.thesis_delta = {
+      status: 'confirmed',
+      summary: 'Intact since last run.',
+      what_played_out: ['Beat as flagged'],
+    };
+    const result = transformIntelligence(api);
+    expect(result.preOpenOutlook).toEqual({
+      gapDirection: 'gap_up',
+      magnitude: 'moderate',
+      primaryDriver: { summary: 'Overnight beat.', sourceUrl: 'https://x' },
+      actionAtOpen: 'Let it open.',
+      stopGapPlan: 'Exit if it gaps below the stop.',
+      confidence: 'medium',
+    });
+    expect(result.thesisDelta).toEqual({
+      status: 'confirmed',
+      summary: 'Intact since last run.',
+      whatPlayedOut: ['Beat as flagged'],
+    });
+  });
+
+  it('defaults pre_open_outlook and thesis_delta to null when absent', () => {
+    const result = transformIntelligence(makeBase());
+    expect(result.preOpenOutlook).toBeNull();
+    expect(result.thesisDelta).toBeNull();
+  });
+
+  it('transformHistoryEntry maps snake_case entry to camelCase', () => {
+    const api: HistoryEntryAPI = {
+      generated_at: '2026-06-25T08:00:00Z',
+      action: 'MANAGE_ONLY',
+      conviction: 'medium',
+      summary_line: 'Hold.',
+      watch_for: ['gap risk'],
+      pre_open_outlook: null,
+    };
+    const result = transformHistoryEntry(api);
+    expect(result).toEqual({
+      generatedAt: '2026-06-25T08:00:00Z',
+      action: 'MANAGE_ONLY',
+      conviction: 'medium',
+      summaryLine: 'Hold.',
+      watchFor: ['gap risk'],
+      preOpenOutlook: null,
     });
   });
 
