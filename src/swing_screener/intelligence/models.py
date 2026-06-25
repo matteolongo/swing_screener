@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from swing_screener.intelligence.catalysts.models import SourceEvidence
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 
 
@@ -116,6 +117,7 @@ class SymbolIntelligenceRequest(BaseModel):
     technical_label: str | None = None
     fundamentals_label: str | None = None
     catalyst_summary: str | None = None
+    catalyst_evidence: list[SourceEvidence] = Field(default_factory=list)
     # Finnhub enrichment signals
     insider_net_shares_90d: int | None = None
     insider_transaction_count_90d: int | None = None

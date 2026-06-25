@@ -340,6 +340,20 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
             "(Build on this context. Do not repeat it verbatim.)",
         ]
 
+    # Deterministic catalyst evidence (source-attributed), in addition to web search
+    if req.catalyst_evidence:
+        lines.append("")
+        lines.append("--- Recent catalyst evidence (source-attributed) ---")
+        for ev in req.catalyst_evidence:
+            head = " · ".join(p for p in (ev.published_at, ev.publisher, ev.title) if p)
+            quote = (
+                f' — "{ev.quote_or_summary}"'
+                if ev.quote_or_summary and ev.quote_or_summary != ev.title
+                else ""
+            )
+            lines.append(f"{head}{quote} · {ev.url}")
+        lines.append("(Corroborate against your own web search. Cite these URLs when you use them.)")
+
     # Inject past trades block before the web-search instruction
     past_block = _format_past_trades(ticker, past_positions or [])
     if past_block:
@@ -429,6 +443,12 @@ class SymbolAnalyzer:
 
         if req.catalyst_summary:
             inputs_used["catalyst"] = {"summary_available": True}
+
+        if req.catalyst_evidence:
+            inputs_used["catalyst_evidence"] = {
+                "count": len(req.catalyst_evidence),
+                "sources": sorted({ev.publisher for ev in req.catalyst_evidence if ev.publisher}),
+            }
 
         finnhub_signals: dict = {}
         if req.insider_net_shares_90d is not None:

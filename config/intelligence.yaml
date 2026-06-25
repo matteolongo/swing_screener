@@ -72,6 +72,21 @@ config:
       require_tos_allow_flag: true
       user_agent: swing-screener-intelligence-bot/1.0
       max_robots_cache_hours: 24
+  evidence:
+    # Collectors to fan-out to when building catalyst evidence for the LLM prompt.
+    enabled_sources:
+    - sec_edgar_catalysts   # SEC EDGAR full-text search for 8-K/6-K filings
+    - company_ir_rss        # Company IR RSS via SEC CIK lookup
+    - exchange_announcements  # Euronext announcement RSS (EU MICs only)
+    recency_window_days: 30   # Discard items older than this many days
+    max_items_per_symbol: 8   # Max curated items per ticker after dedup + sort
+    sec_forms:
+    - 8-K
+    - 6-K
+    http:
+      user_agent: swing-screener-intelligence-bot/1.0
+      connect_timeout_seconds: 5.0
+      read_timeout_seconds: 20.0
   scoring_v2:
     enabled: true
     weights:

@@ -996,7 +996,22 @@ export const handlers = [
   }),
 
   // Datasources endpoints
-  http.get(`${API_BASE_URL}/api/datasources`, () => HttpResponse.json({ sources: [] })),
+  http.get(`${API_BASE_URL}/api/datasources`, () => HttpResponse.json({
+    sources: [
+      { id: 'sec_edgar_catalysts', display_name: 'SEC EDGAR (catalysts)', domain: 'intelligence', role: 'primary',
+        requires: null, configured: true, probeable: true, canary_market: null, note: null, last_probe: null },
+      { id: 'company_ir_rss', display_name: 'Company IR RSS', domain: 'intelligence', role: 'primary',
+        requires: null, configured: true, probeable: true, canary_market: null, note: null, last_probe: null },
+      { id: 'exchange_announcements', display_name: 'Exchange Announcements', domain: 'intelligence', role: 'primary',
+        requires: null, configured: true, probeable: true, canary_market: null, note: null, last_probe: null },
+      { id: 'yahoo_finance', display_name: 'Yahoo Finance (catalysts)', domain: 'intelligence', role: 'primary',
+        requires: null, configured: false, probeable: false, canary_market: null, note: 'declared — no runtime adapter', last_probe: null },
+      { id: 'earnings_calendar', display_name: 'Earnings Calendar', domain: 'intelligence', role: 'primary',
+        requires: null, configured: false, probeable: false, canary_market: null, note: 'covered by days_to_earnings / next_earnings_date', last_probe: null },
+      { id: 'financial_news_rss', display_name: 'Financial News RSS', domain: 'intelligence', role: 'primary',
+        requires: null, configured: false, probeable: false, canary_market: null, note: 'out of v1 scope — overlaps web_search', last_probe: null },
+    ],
+  })),
   http.get(`${API_BASE_URL}/api/datasources/events`, () => HttpResponse.json({ events: [] })),
   http.post(`${API_BASE_URL}/api/datasources/probe`, () => HttpResponse.json([])),
   http.post(`${API_BASE_URL}/api/datasources/:id/probe`, () => HttpResponse.json({ id: 'x', status: 'ok', latency_ms: 1, detail: null, sample: null, error: null })),

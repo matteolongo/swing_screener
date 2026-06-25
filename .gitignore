@@ -75,6 +75,7 @@ data/intelligence/opportunities_*.json
 data/intelligence/themes_*.json
 data/intelligence/education_*.json
 data/intelligence/sweep_*.json
+data/intelligence/evidence/
 data/screener_history.json
 
 # =========================
