@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field, field_validator
 from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 
+CatalystUrgency = Literal["high", "medium", "low", "none"]
+
 
 class IntelligenceEventType(str, Enum):
     earnings = "earnings"
@@ -173,7 +175,7 @@ class SymbolIntelligence(BaseModel):
     generated_at: str
     action: DecisionAction
     conviction: DecisionConviction
-    catalyst_urgency: Literal["high", "medium", "low", "none"] = "none"
+    catalyst_urgency: CatalystUrgency = "none"
     summary_line: str
     narrative: str
     upcoming_events: list[IntelligenceEvent] = []

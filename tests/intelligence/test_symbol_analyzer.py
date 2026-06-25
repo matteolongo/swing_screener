@@ -570,6 +570,16 @@ def test_llm_analysis_rejects_out_of_vocab_action():
         _LLMAnalysis(action="NONSENSE", conviction="medium", summary_line="s", narrative="n")
 
 
+def test_llm_analysis_rejects_out_of_vocab_catalyst_urgency():
+    import pytest
+    from swing_screener.intelligence.symbol_analyzer import _LLMAnalysis
+    with pytest.raises(ValueError):
+        _LLMAnalysis(
+            action="WATCH", conviction="medium", catalyst_urgency="normal",
+            summary_line="s", narrative="n",
+        )
+
+
 def test_analyze_writes_to_cache(tmp_path, monkeypatch):
     import json
     from unittest.mock import MagicMock, patch
