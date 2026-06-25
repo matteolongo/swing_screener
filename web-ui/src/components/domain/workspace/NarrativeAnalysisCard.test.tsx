@@ -153,6 +153,31 @@ describe('NarrativeAnalysisCard', () => {
     expect(screen.queryByText('sector rotation context:')).toBeNull();
   });
 
+  it('renders the sources telemetry as attempted + returned chips', () => {
+    const intelligenceWithSources: SymbolIntelligence = {
+      ...baseIntelligence,
+      inputsUsed: {
+        sources: { attempted: ['sec_edgar_catalysts'], returned: { 'SEC EDGAR': 3 } },
+      },
+    };
+    render(<NarrativeAnalysisCard intelligence={intelligenceWithSources} />);
+    expect(screen.getByText('attempted:')).toBeInTheDocument();
+    expect(screen.getByText('sec_edgar_catalysts')).toBeInTheDocument();
+    expect(screen.getByText('SEC EDGAR:')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.queryByText('[object Object]')).toBeNull();
+  });
+
+  it('shows attempted sources even when none were returned (blackout)', () => {
+    const intelligenceBlackout: SymbolIntelligence = {
+      ...baseIntelligence,
+      inputsUsed: { sources: { attempted: ['sec_edgar_catalysts'], returned: {} } },
+    };
+    render(<NarrativeAnalysisCard intelligence={intelligenceBlackout} />);
+    expect(screen.getByText('attempted:')).toBeInTheDocument();
+    expect(screen.getByText('sec_edgar_catalysts')).toBeInTheDocument();
+  });
+
   it('does not render "Data used by AI" panel when inputsUsed is empty', () => {
     const intelligenceEmptyInputs: SymbolIntelligence = {
       ...baseIntelligence,
