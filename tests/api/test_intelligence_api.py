@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import date
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
@@ -52,7 +52,10 @@ def test_latest_returns_cached_entry(tmp_path, monkeypatch):
 
 
 def _make_sweep_dep_overrides(app, monkeypatch, tmp_path):
-    """Install dependency overrides for sweep's three new Depends and return teardown fn."""
+    """Install dependency overrides for the three common Depends (positions_repo, fundamentals, portfolio).
+
+    Returns (mock_positions_repo, mock_fundamentals, mock_portfolio).
+    """
     from unittest.mock import MagicMock
     from api.dependencies import get_positions_repo, get_fundamentals_service, get_portfolio_service
 
@@ -76,6 +79,7 @@ def test_sweep_returns_analyzed_and_failed(tmp_path, monkeypatch):
     monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
+    from api.routers import intelligence as r
     from swing_screener.intelligence.models import SymbolIntelligence
     from api.main import app as _app
     ok_result = SymbolIntelligence(
@@ -91,18 +95,18 @@ def test_sweep_returns_analyzed_and_failed(tmp_path, monkeypatch):
                 raise RuntimeError("API error")
             return ok_result
 
-        with patch("api.routers.intelligence.SymbolAnalyzer") as MockAnalyzer:
-            instance = MagicMock()
-            instance.analyze.side_effect = fake_analyze
-            MockAnalyzer.return_value = instance
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.side_effect = fake_analyze
+        monkeypatch.setattr(r, "_get_analyzer", lambda: mock_analyzer)
+        monkeypatch.setattr(r, "read_from_cache", lambda t: None)
 
-            payload = {
-                "symbols": [
-                    {"ticker": "AAPL", "request": {"close": 180.0, "signal": "breakout"}},
-                    {"ticker": "FAIL", "request": {"close": 10.0, "signal": "pullback"}},
-                ]
-            }
-            response = client.post("/api/intelligence/sweep", json=payload)
+        payload = {
+            "symbols": [
+                {"ticker": "AAPL", "request": {"close": 180.0, "signal": "breakout"}},
+                {"ticker": "FAIL", "request": {"close": 10.0, "signal": "pullback"}},
+            ]
+        }
+        response = client.post("/api/intelligence/sweep", json=payload)
 
         assert response.status_code == 200
         data = response.json()
@@ -216,3 +220,103 @@ def test_analyze_returns_503_when_kill_switch_off(monkeypatch):
     resp = client.post("/api/intelligence/AAA", json={"close": 1.0, "signal": "x"})
     assert resp.status_code == 503
     assert "disabled" in resp.json()["detail"].lower()
+
+
+def test_analyze_force_bypasses_cache(tmp_path, monkeypatch):
+    """force=true must call analyzer even when cache has a same-day entry."""
+    from api.routers import intelligence as r
+    from api.main import app as _app
+    from swing_screener.intelligence.models import SymbolIntelligence
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+
+    cached = SymbolIntelligence(
+        symbol="AAA", generated_at="2026-06-25T00:00:00+00:00",
+        action="WATCH", conviction="low", catalyst_urgency="none",
+        summary_line="cached", narrative="n",
+    )
+    fresh = SymbolIntelligence(
+        symbol="AAA", generated_at="2026-06-25T10:00:00+00:00",
+        action="BUY_NOW", conviction="high", catalyst_urgency="none",
+        summary_line="fresh", narrative="n",
+    )
+
+    monkeypatch.setattr(r, "read_from_cache", lambda t: cached)
+    monkeypatch.setattr(r, "enrich_intelligence_request", lambda ticker, req, **kwargs: req)
+
+    mock_analyzer = MagicMock()
+    mock_analyzer.analyze.return_value = fresh
+    monkeypatch.setattr(r, "_get_analyzer", lambda: mock_analyzer)
+
+    _make_sweep_dep_overrides(_app, monkeypatch, tmp_path)
+    try:
+        resp = client.post("/api/intelligence/AAA?force=true", json={"close": 1.0, "signal": "x"})
+        assert resp.status_code == 200
+        assert mock_analyzer.analyze.called, "analyzer must be called when force=true"
+        assert resp.json()["summary_line"] == "fresh"
+    finally:
+        from api.dependencies import get_positions_repo, get_fundamentals_service, get_portfolio_service
+        _app.dependency_overrides.pop(get_positions_repo, None)
+        _app.dependency_overrides.pop(get_fundamentals_service, None)
+        _app.dependency_overrides.pop(get_portfolio_service, None)
+
+
+def test_sweep_cache_hit_skips_enrichment(tmp_path, monkeypatch):
+    """Cached ticker skipped for enrichment/analysis; uncached ticker enriched+analyzed."""
+    from api.routers import intelligence as r
+    from api.main import app as _app
+    from swing_screener.intelligence.models import SymbolIntelligence
+
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    cached = SymbolIntelligence(
+        symbol="AAPL", generated_at="2026-06-25T00:00:00+00:00",
+        action="WATCH", conviction="low", catalyst_urgency="none",
+        summary_line="cached", narrative="n",
+    )
+    fresh = SymbolIntelligence(
+        symbol="TSLA", generated_at="2026-06-25T10:00:00Z",
+        action="BUY_NOW", conviction="high", catalyst_urgency="none",
+        summary_line="fresh", narrative="Text.", sources=[],
+    )
+
+    monkeypatch.setattr(r, "read_from_cache", lambda t: cached if t == "AAPL" else None)
+
+    enrich_calls: list[str] = []
+
+    def fake_enrich(ticker, req, **kwargs):
+        enrich_calls.append(ticker)
+        return req
+
+    monkeypatch.setattr(r, "enrich_intelligence_request", fake_enrich)
+    monkeypatch.setattr(r, "enrich_with_technicals", lambda t, req, ohlcv: req)
+
+    mock_analyzer = MagicMock()
+    mock_analyzer.analyze.return_value = fresh
+    monkeypatch.setattr(r, "_get_analyzer", lambda: mock_analyzer)
+
+    _make_sweep_dep_overrides(_app, monkeypatch, tmp_path)
+    try:
+        payload = {
+            "symbols": [
+                {"ticker": "AAPL", "request": {"close": 180.0, "signal": "breakout"}},
+                {"ticker": "TSLA", "request": {"close": 200.0, "signal": "breakout"}},
+            ]
+        }
+        response = client.post("/api/intelligence/sweep", json=payload)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "AAPL" in data["analyzed"]
+        assert "TSLA" in data["analyzed"]
+        assert data["failed"] == []
+        assert "AAPL" not in enrich_calls, "cached ticker must not be enriched"
+        assert "TSLA" in enrich_calls, "uncached ticker must be enriched"
+        assert mock_analyzer.analyze.call_count == 1, "analyzer called only for uncached ticker"
+    finally:
+        from api.dependencies import get_positions_repo, get_fundamentals_service, get_portfolio_service
+        _app.dependency_overrides.pop(get_positions_repo, None)
+        _app.dependency_overrides.pop(get_fundamentals_service, None)
+        _app.dependency_overrides.pop(get_portfolio_service, None)
