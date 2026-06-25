@@ -24,8 +24,14 @@ def record_analysis_metrics(
     root = metrics_root or data_dir() / "intelligence"
     path = root / "intelligence_metrics.json"
     try:
-        existing = json.loads(path.read_text()) if path.exists() else []
-        if not isinstance(existing, list):
+        if path.exists():
+            try:
+                existing = json.loads(path.read_text())
+                if not isinstance(existing, list):
+                    existing = []
+            except (OSError, ValueError):
+                existing = []
+        else:
             existing = []
         existing.append({"ts": datetime.now(timezone.utc).isoformat(), "ticker": ticker.upper(), "tokens": tokens})
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -118,6 +118,57 @@ def test_open_positions_intelligence_empty_when_no_open_positions(client):
     assert response.json() == []
 
 
+def test_analyze_position_returns_cache_without_calling_analyzer(client):
+    from swing_screener.intelligence.models import (
+        SymbolIntelligence,
+        PositionSignal,
+        PositionSignalAction,
+    )
+
+    pos = _mock_position()
+    positions_resp = MagicMock()
+    positions_resp.positions = [pos]
+
+    cached = SymbolIntelligence(
+        symbol="BESI.AS",
+        generated_at="2026-06-25T00:00:00+00:00",
+        action="MANAGE_ONLY",
+        conviction="low",
+        catalyst_urgency="none",
+        summary_line="Cached result.",
+        narrative="...",
+        upcoming_events=[],
+        position_signal=PositionSignal(action=PositionSignalAction.HOLD, reason="From cache."),
+        sources=[],
+        inputs_used={},
+    )
+
+    def override_portfolio():
+        svc = MagicMock()
+        svc.list_positions.return_value = positions_resp
+        return svc
+
+    class _NeverCalledAnalyzer:
+        def analyze(self, *a, **k):
+            raise AssertionError("analyzer must not be called on a cache hit")
+
+    app.dependency_overrides[get_portfolio_service] = override_portfolio
+    try:
+        with (
+            patch("api.routers.intelligence.read_from_cache", return_value=cached),
+            patch("api.routers.intelligence._get_analyzer", return_value=_NeverCalledAnalyzer()),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}),
+        ):
+            response = client.post("/api/intelligence/position/pos-1")
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["summary_line"] == "Cached result."
+    assert data["position_signal"]["action"] == "HOLD"
+
+
 def test_analyze_position_503_without_api_key(client):
     import os
     env_backup = os.environ.pop("OPENAI_API_KEY", None)

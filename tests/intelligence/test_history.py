@@ -93,6 +93,29 @@ def test_read_skips_bad_entry_keeps_good(tmp_path):
     assert [e.summary_line for e in entries] == ["good"]
 
 
+def test_read_skips_nonsense_action_keeps_valid(tmp_path):
+    """Row with out-of-vocab action is skipped; file is not discarded."""
+    (tmp_path / "history").mkdir(parents=True)
+    valid = {
+        "generated_at": "2026-06-25T08:00:00Z",
+        "action": "BUY_NOW",
+        "conviction": "high",
+        "summary_line": "valid entry",
+        "watch_for": [],
+    }
+    bad_action = {
+        "generated_at": "2026-06-24T08:00:00Z",
+        "action": "NONSENSE",
+        "conviction": "low",
+        "summary_line": "bad entry",
+        "watch_for": [],
+    }
+    (tmp_path / "history" / "AAPL.json").write_text(json.dumps([valid, bad_action]))
+    entries = read_history("AAPL", history_root=tmp_path)
+    assert len(entries) == 1
+    assert entries[0].summary_line == "valid entry"
+
+
 def test_append_same_day_replaces_not_stacks(tmp_path):
     append_history("AAPL", _result("morning", generated_at="2026-06-25T08:00:00Z"), max_entries=50, history_root=tmp_path)
     append_history("AAPL", _result("midday", generated_at="2026-06-25T14:00:00Z"), max_entries=50, history_root=tmp_path)
