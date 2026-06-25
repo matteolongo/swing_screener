@@ -6,7 +6,6 @@ from datetime import date
 from pathlib import Path
 
 from swing_screener.data.source_health import record_fallback
-from swing_screener.intelligence.evidence.collectors.company_ir import CompanyIrRssCollector
 from swing_screener.intelligence.evidence.collectors.sec_edgar import SecEdgarCatalystCollector
 from swing_screener.intelligence.evidence.config import EvidenceConfig, load_evidence_config
 from swing_screener.intelligence.evidence.curation import curate
@@ -18,7 +17,6 @@ _CACHE_ROOT = Path("data/intelligence/evidence")
 
 _COLLECTORS = {
     SecEdgarCatalystCollector.SOURCE_ID: SecEdgarCatalystCollector,
-    CompanyIrRssCollector.SOURCE_ID: CompanyIrRssCollector,
 }
 
 

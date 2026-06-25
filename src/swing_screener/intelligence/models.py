@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from swing_screener.intelligence.catalysts.models import SourceEvidence
+from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 
 
@@ -42,7 +42,6 @@ class PositionSignal(BaseModel):
     reason: str
     trim_pct: float | None = None
     trim_price: float | None = None
-    re_entry_zone: dict | None = None
 
 
 class PriceMoveDriver(BaseModel):
@@ -71,6 +70,13 @@ class PredictionBullet(BaseModel):
     direction: Literal["bullish", "bearish", "neutral"]
     reason: str
     reference: str
+
+
+class NewsItem(BaseModel):
+    headline: str
+    url: str | None = None
+    date: str | None = None  # ISO date or null
+    sentiment: Literal["bullish", "bearish", "neutral"] = "neutral"
 
 
 class PreOpenDriver(BaseModel):
@@ -136,7 +142,6 @@ class SymbolIntelligenceRequest(BaseModel):
     decision_conviction: str | None = None
     technical_label: str | None = None
     fundamentals_label: str | None = None
-    catalyst_summary: str | None = None
     catalyst_evidence: list[SourceEvidence] = Field(default_factory=list)
     # Finnhub enrichment signals
     insider_net_shares_90d: int | None = None
@@ -181,6 +186,7 @@ class SymbolIntelligence(BaseModel):
     key_numbers: list[KeyNumber] = Field(default_factory=list)
     risk_factors: list[str] = Field(default_factory=list)
     prediction_bullets: list[PredictionBullet] = Field(default_factory=list)
+    news: list[NewsItem] = Field(default_factory=list)
     past_trades_context: str | None = None
     pre_open_outlook: PreOpenOutlook | None = None
     thesis_delta: ThesisDelta | None = None

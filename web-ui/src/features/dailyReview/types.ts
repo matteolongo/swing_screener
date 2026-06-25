@@ -330,8 +330,6 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
             negatives: api.decision_summary.drivers?.negatives ?? [],
             warnings: api.decision_summary.drivers?.warnings ?? [],
           },
-          catalystSummary: api.decision_summary.catalyst_summary ?? null,
-          catalystSources: api.decision_summary.catalyst_sources ?? [],
         }
       : undefined,
     sameSymbol: api.same_symbol

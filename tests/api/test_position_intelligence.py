@@ -169,21 +169,21 @@ def test_analyze_position_returns_intelligence(client):
         svc.get_snapshot.return_value = None
         return svc
 
-    with (
-        patch("api.routers.intelligence.SymbolAnalyzer") as mock_analyzer_cls,
-        patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}),
-    ):
-        analyzer_instance = MagicMock()
-        analyzer_instance.analyze.return_value = mock_intelligence
-        mock_analyzer_cls.return_value = analyzer_instance
+    analyzer_instance = MagicMock()
+    analyzer_instance.analyze.return_value = mock_intelligence
 
-        app.dependency_overrides[get_portfolio_service] = override_portfolio
-        app.dependency_overrides[get_fundamentals_service] = override_fundamentals
-        try:
+    app.dependency_overrides[get_portfolio_service] = override_portfolio
+    app.dependency_overrides[get_fundamentals_service] = override_fundamentals
+    try:
+        with (
+            patch("api.routers.intelligence._get_analyzer", return_value=analyzer_instance),
+            patch("api.routers.intelligence.read_from_cache", return_value=None),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}),
+        ):
             response = client.post("/api/intelligence/position/pos-1")
-        finally:
-            app.dependency_overrides.pop(get_portfolio_service, None)
-            app.dependency_overrides.pop(get_fundamentals_service, None)
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+        app.dependency_overrides.pop(get_fundamentals_service, None)
 
     assert response.status_code == 200
     data = response.json()

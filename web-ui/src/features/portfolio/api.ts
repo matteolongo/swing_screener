@@ -650,8 +650,11 @@ export async function fetchOpenPositionsIntelligence(): Promise<OpenPositionInte
   return data.map(transformOpenPositionIntelligence);
 }
 
-export async function triggerPositionAnalyze(positionId: string): Promise<void> {
-  await fetchJson<void>(API_ENDPOINTS.analyzePosition(positionId), {
+export async function triggerPositionAnalyze(positionId: string, force = false): Promise<void> {
+  const endpoint = force
+    ? `${API_ENDPOINTS.analyzePosition(positionId)}?force=true`
+    : API_ENDPOINTS.analyzePosition(positionId);
+  await fetchJson<void>(endpoint, {
     method: 'POST',
     errorMessage: 'Position analysis failed',
   });

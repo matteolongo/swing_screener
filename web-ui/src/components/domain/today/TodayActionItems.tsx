@@ -307,11 +307,6 @@ function candidateModeBadge(item: DailyReviewCandidate, isAddOn?: boolean) {
 }
 
 export function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps) {
-  const showCatalyst =
-    !isAddOn &&
-    item.decisionSummary?.catalystLabel === 'active' &&
-    !!item.decisionSummary.catalystSummary;
-
   return (
     <div>
       <button
@@ -339,35 +334,6 @@ export function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateIt
           <span className="text-xs text-muted truncate flex-1">{item.name}</span>
         )}
       </button>
-      {showCatalyst && (
-        <div className="mt-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm">
-          <p className="font-semibold text-success text-xs uppercase tracking-wide mb-1">
-            {t('todayPage.candidateCard.catalystContext')}
-          </p>
-          <p className="text-success">{item.decisionSummary!.catalystSummary}</p>
-          {item.decisionSummary!.catalystSources.length > 0 && (
-            <details className="mt-1">
-              <summary className="text-xs text-success cursor-pointer select-none">
-                {t('todayPage.candidateCard.catalystSources')} ({item.decisionSummary!.catalystSources.length})
-              </summary>
-              <ul className="mt-1 space-y-0.5">
-                {item.decisionSummary!.catalystSources.map((url) => (
-                  <li key={url}>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-success hover:underline break-all"
-                    >
-                      {url}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-        </div>
-      )}
     </div>
   );
 }

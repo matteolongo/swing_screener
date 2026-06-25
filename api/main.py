@@ -19,7 +19,6 @@ from swing_screener.runtime_env import ensure_runtime_env_loaded
 from api.routers import (
     backtest,
     calendar,
-    catalysts,
     config,
     daily_review,
     datasources,
@@ -314,7 +313,6 @@ app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"]
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 app.include_router(fundamentals.router, prefix="/api/fundamentals", tags=["fundamentals"])
 app.include_router(intelligence.router, prefix="/api", tags=["intelligence"])
-app.include_router(catalysts.router, prefix="/api", tags=["catalysts"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
 app.include_router(datasources.router, prefix="/api/datasources", tags=["datasources"])
 app.include_router(market_data.router, prefix="/api", tags=["market-data"])

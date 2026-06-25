@@ -1296,25 +1296,6 @@ def test_screener_require_weekly_uptrend_overrides_strategy(monkeypatch):
     assert captured[0].universe.filt.require_weekly_uptrend is True
 
 
-def test_screener_candidate_does_not_use_stale_catalyst(tmp_path, monkeypatch):
-    """Candidate remains catalyst_label='weak' when only yesterday's opportunity exists."""
-    from swing_screener.intelligence.catalysts.store import CatalystStore
-    from swing_screener.intelligence.catalysts.models import CatalystOpportunity, CatalystOpportunityState
-    from datetime import datetime, timezone, timedelta
-    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
-    store = CatalystStore()
-    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date()
-    opp = CatalystOpportunity(
-        ticker="AAPL", state=CatalystOpportunityState.CATALYST_ACTIVE, catalyst_strength=9.0,
-        thesis="Big AI news.", key_risks=[], sources=[], report_id="r1",
-        generated_at="2026-05-23T10:00:00Z",
-    )
-    store.save_symbol_index(yesterday, [opp])
-    # Today's index is empty — load_symbol_index() returns {} → opportunity=None
-    today_index = CatalystStore().load_symbol_index()  # defaults to today
-    assert "AAPL" not in today_index
-
-
 def test_screener_preview_order_route_removed():
     client = TestClient(app)
     response = client.post(

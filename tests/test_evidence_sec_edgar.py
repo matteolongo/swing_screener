@@ -99,3 +99,9 @@ def test_prefix_matches_and_labels():
     assert any("DEF 14A" in e.relevance and "proxy" in e.relevance for e in out)
     # routine 10-Q excluded
     assert all("10-Q" not in e.relevance for e in out)
+
+
+def test_evidence_config_user_agent_has_contact():
+    from swing_screener.intelligence.evidence.config import load_evidence_config
+    ua = load_evidence_config().user_agent
+    assert "matteolongo0@gmail.com" in ua

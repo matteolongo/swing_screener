@@ -81,10 +81,10 @@ Daily Review (`/api/daily-review`):
 - `POST /api/daily-review/compute`
 
 Intelligence (`/api/intelligence`):
-- `POST /api/intelligence/{ticker}` — enriches the request with full data (fundamentals + Finnhub + earnings, fetched server-side and blocking) before running the analysis. Request body fields stay optional, so this is not a breaking change. Responses now also carry nullable `pre_open_outlook` (US symbols analyzed pre-market) and `thesis_delta` (when prior analyses exist).
+- `POST /api/intelligence/{ticker}?force=false` — enriches with full data (fundamentals + Finnhub + earnings + SEC evidence, server-side blocking) then runs the two-call LLM analysis. Same-day cache is returned unless `force=true`. Responses carry nullable `pre_open_outlook` (US pre-market) and `thesis_delta` (when prior analyses exist), plus a `news` list (`{headline, url, date, sentiment}`, additive; defaults to `[]` for pre-existing cached results). Returns 503 when `llm.analyzer_enabled: false` or `OPENAI_API_KEY` is unset.
 - `GET /api/intelligence/{ticker}/latest`
 - `GET /api/intelligence/{ticker}/history` — per-symbol analysis history, newest-first, capped at `analysis_history.max_entries`. Returns `{entries: HistoryEntry[]}`; empty list (not 404) when none.
-- `POST /api/intelligence/sweep`
+- `POST /api/intelligence/sweep` — same full enrich + two-call analysis as the single-symbol endpoint, applied to each symbol in the request. No batch cap; cost scales linearly. Per-symbol cache-before-spend applies unless `force=true` per symbol. Returns 503 on the same kill-switch conditions.
 
 Fundamentals (`/api/fundamentals`):
 - `GET /api/fundamentals/config`
@@ -111,14 +111,8 @@ Weekly Reviews (`/api/weekly-reviews`):
 - `GET /api/weekly-reviews/{week_id}`
 - `PUT /api/weekly-reviews/{week_id}`
 
-Catalysts (`/api/catalysts`):
-- `POST /api/catalysts/manual`
-- `POST /api/catalysts/daily-scan`
-- `GET /api/catalysts/latest`
-- `GET /api/catalysts/symbol/{ticker}`
-
 Data Sources (`/api/datasources`) — read-only diagnostics, no config mutation:
-- `GET /api/datasources` — inventory of all known sources. Response: `{sources: [SourceDescriptorOut, ...]}`. Each `SourceDescriptorOut` has `id`, `display_name`, `domain`, `role` (`primary`/`fallback`/`enrichment`), `requires` (env var or pkg name; null if unconditional), `configured` (bool), `probeable` (bool), `canary_market` (`us`/`eu`/null), `note` (null or a free-text annotation), and `last_probe` (null or `ProbeResultOut` from the most recent probe run). Two intelligence collectors (`sec_edgar_catalysts`, `company_ir_rss`) appear with `probeable=true`. The enrichment pipeline populates `catalyst_evidence` on the analysis payload from those collectors via `collect.py` (no new endpoint).
+- `GET /api/datasources` — inventory of all known sources. Response: `{sources: [SourceDescriptorOut, ...]}`. Each `SourceDescriptorOut` has `id`, `display_name`, `domain`, `role` (`primary`/`fallback`/`enrichment`), `requires` (env var or pkg name; null if unconditional), `configured` (bool), `probeable` (bool), `canary_market` (`us`/`eu`/null), `note` (null or a free-text annotation), and `last_probe` (null or `ProbeResultOut` from the most recent probe run). One intelligence collector (`sec_edgar_catalysts`) appears with `probeable=true`. The enrichment pipeline injects curated SEC filings into the LLM prompt via `collect.py` (no new endpoint).
 - `POST /api/datasources/probe` — probe all probeable sources concurrently. Response: `[ProbeResultOut, ...]`. `ProbeResultOut` has `id`, `status` (`ok`/`down`/`not_configured`), `latency_ms`, `detail`, `sample` (small dict of live data), `error`.
 - `POST /api/datasources/{source_id}/probe` — probe one source by id. Response: `ProbeResultOut` (same shape). Returns `not_configured` status (no exception) for unknown or non-probeable ids.
 - `GET /api/datasources/events?limit=N` — most recent fallback/stale-cache events recorded at runtime (default 100, max 200). Response: `{events: [FallbackEventOut, ...]}`. Each `FallbackEventOut` has `ts` (ISO-8601 UTC), `domain`, `from_provider`, `reason`, `fell_back_to` (null or id), `tickers` (list), `stale_asof` (null or date string). Events are in-memory only (not persisted; reset on server restart).

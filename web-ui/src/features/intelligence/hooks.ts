@@ -16,12 +16,12 @@ export function useIntelligenceAnalysisMutation() {
   return useMutation<
     SymbolIntelligence,
     Error,
-    { ticker: string; candidate: SymbolAnalysisCandidate | null | undefined; position?: PositionWithMetrics | null }
+    { ticker: string; candidate: SymbolAnalysisCandidate | null | undefined; position?: PositionWithMetrics | null; force?: boolean }
   >({
-    mutationFn: async ({ ticker, candidate, position }) => {
+    mutationFn: async ({ ticker, candidate, position, force }) => {
       const payload = candidateToPayload(candidate, position);
       if (!payload) throw new Error('No technical context available for this symbol');
-      const api = await postIntelligenceAnalysis(ticker, payload);
+      const api = await postIntelligenceAnalysis(ticker, payload, force);
       return transformIntelligence(api);
     },
     onSuccess: (_data, { ticker }) => {

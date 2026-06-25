@@ -7,19 +7,13 @@ from swing_screener.settings import get_settings_manager
 
 @dataclass(frozen=True)
 class EvidenceConfig:
-    enabled_sources: tuple[str, ...] = ("sec_edgar_catalysts", "company_ir_rss")
+    enabled_sources: tuple[str, ...] = ("sec_edgar_catalysts",)
     recency_window_days: int = 30
     max_items_per_symbol: int = 8
     sec_forms: tuple[str, ...] = ("8-K", "6-K", "SC 13D", "SC 13G", "424B", "DEF 14A")
-    user_agent: str = "swing-screener-intelligence-bot/1.0"
+    user_agent: str = "swing-screener-intelligence-bot/1.0 (matteolongo0@gmail.com)"
     connect_timeout_seconds: float = 5.0
     read_timeout_seconds: float = 20.0
-    discovery_enabled: bool = True
-    discovery_found_ttl_days: int = 30
-    discovery_negative_ttl_days: int = 7
-    discovery_paths: tuple[str, ...] = (
-        "/rss", "/feed", "/news/rss", "/newsroom/rss", "/investors/rss", "/en/rss",
-    )
 
 
 def load_evidence_config() -> EvidenceConfig:
@@ -37,8 +31,4 @@ def load_evidence_config() -> EvidenceConfig:
         user_agent=str(http.get("user_agent", EvidenceConfig.user_agent)),
         connect_timeout_seconds=float(http.get("connect_timeout_seconds", 5.0)),
         read_timeout_seconds=float(http.get("read_timeout_seconds", 20.0)),
-        discovery_enabled=bool(cfg.get("discovery_enabled", True)),
-        discovery_found_ttl_days=int(cfg.get("discovery_found_ttl_days", 30)),
-        discovery_negative_ttl_days=int(cfg.get("discovery_negative_ttl_days", 7)),
-        discovery_paths=tuple(cfg.get("discovery_paths") or EvidenceConfig.discovery_paths),
     )

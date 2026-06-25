@@ -5,7 +5,7 @@ import pytest
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.intelligence.symbol_analyzer import (
     SymbolAnalyzer,
-    _extract_json,
+    _LLMAnalysis,
     _build_user_prompt,
 )
 
@@ -39,23 +39,56 @@ def test_prompt_omits_patterns_when_absent():
     assert "Recent candlestick patterns" not in prompt
 
 
-# --- unit tests for JSON extraction ---
+def test_client_built_with_timeout_and_retries(monkeypatch):
+    from swing_screener.intelligence import symbol_analyzer as sa
+    captured = {}
+    real = sa.OpenAI
+    def spy(**kw):
+        captured.update(kw)
+        return real(**kw)
+    monkeypatch.setattr(sa, "OpenAI", spy)
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    sa.SymbolAnalyzer()
+    assert captured.get("timeout") is not None
+    assert captured.get("max_retries") is not None
 
-def test_extract_json_from_fenced_block():
-    text = '```json\n{"action": "BUY_NOW", "conviction": "high"}\n```'
-    result = _extract_json(text)
-    assert result["action"] == "BUY_NOW"
 
+def test_analyze_uses_two_calls(monkeypatch):
+    from swing_screener.intelligence import symbol_analyzer as sa
+    from swing_screener.intelligence.models import SymbolIntelligenceRequest, SymbolIntelligence
 
-def test_extract_json_from_bare_object():
-    text = 'Some prose before {"action": "WATCH", "conviction": "low"} some prose after'
-    result = _extract_json(text)
-    assert result["action"] == "WATCH"
+    calls = []
 
+    class _Resp:  # call-1 shape
+        output_text = "Apple is strong. Sources: https://x.com/a"
 
-def test_extract_json_raises_when_missing():
-    with pytest.raises(ValueError, match="No JSON found"):
-        _extract_json("no json here at all")
+    class _Parsed:  # call-2 shape
+        output_parsed = sa._LLMAnalysis(
+            action="WATCH", conviction="medium", catalyst_urgency="none",
+            summary_line="ok", narrative="**What to do:** wait", upcoming_events=[],
+            sources=["https://x.com/a"], key_numbers=[], risk_factors=["r1", "r2", "r3"],
+            prediction_bullets=[],
+        )
+
+    def fake_create(**kw):
+        calls.append(("create", kw))
+        return _Resp()
+    def fake_parse(**kw):
+        calls.append(("parse", kw))
+        return _Parsed()
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    analyzer = sa.SymbolAnalyzer()
+    monkeypatch.setattr(analyzer._client.responses, "create", fake_create)
+    monkeypatch.setattr(analyzer._client.responses, "parse", fake_parse)
+
+    result = analyzer.analyze("AAPL", SymbolIntelligenceRequest(close=200.0, signal="x"))
+    assert isinstance(result, SymbolIntelligence)
+    assert [c[0] for c in calls] == ["create", "parse"]
+    # call 1 has the web_search tool, call 2 does not
+    assert calls[0][1]["tools"] == [{"type": "web_search_preview"}]
+    assert "tools" not in calls[1][1]
+    assert result.action == "WATCH"
 
 
 # --- integration test with mocked OpenAI client ---
@@ -72,21 +105,29 @@ _FAKE_RESPONSE_JSON = {
     "sources": ["https://aperam.com/q1-2026"],
 }
 
-_FAKE_RESPONSE_TEXT = (
-    "```json\n"
-    + __import__("json").dumps(_FAKE_RESPONSE_JSON)
-    + "\n```"
-)
 
-
-def _make_fake_openai_response(text: str):
+def _make_fake_openai_response(text: str = "write-up. Sources: https://x"):
+    """Call-1 (web search) stub: an object exposing `.output_text` (prose)."""
     resp = MagicMock()
     resp.output_text = text
     return resp
 
 
+def _make_parsed(body: dict):
+    """Call-2 (responses.parse) stub: an object exposing `.output_parsed` =
+    a validated `_LLMAnalysis` built from the given field dict."""
+    parsed = MagicMock()
+    parsed.output_parsed = _LLMAnalysis.model_validate(body)
+    return parsed
+
+
+def _wire_two_calls(mock_client, body: dict, prose: str = "write-up. Sources: https://x"):
+    """Wire a mocked OpenAI client for the two-call flow."""
+    mock_client.responses.create.return_value = _make_fake_openai_response(prose)
+    mock_client.responses.parse.return_value = _make_parsed(body)
+
+
 def test_symbol_analyzer_returns_intelligence():
-    fake_response = _make_fake_openai_response(_FAKE_RESPONSE_TEXT)
     request = SymbolIntelligenceRequest(
         close=48.5,
         signal="breakout",
@@ -104,7 +145,7 @@ def test_symbol_analyzer_returns_intelligence():
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = fake_response
+        _wire_two_calls(mock_client, _FAKE_RESPONSE_JSON)
 
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("APAM", request)
@@ -119,7 +160,6 @@ def test_symbol_analyzer_returns_intelligence():
 
 
 def test_inputs_used_includes_recent_candle_patterns():
-    fake_response = _make_fake_openai_response(_FAKE_RESPONSE_TEXT)
     request = SymbolIntelligenceRequest(
         close=48.5,
         signal="breakout",
@@ -129,7 +169,7 @@ def test_inputs_used_includes_recent_candle_patterns():
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = fake_response
+        _wire_two_calls(mock_client, _FAKE_RESPONSE_JSON)
 
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("APAM", request)
@@ -140,20 +180,21 @@ def test_inputs_used_includes_recent_candle_patterns():
 
 
 def test_symbol_analyzer_raises_on_invalid_action():
-    bad_json = __import__("json").dumps({
+    # An out-of-enum action survives the call-2 `_LLMAnalysis` (action: str) but
+    # is rejected when mapped into `SymbolIntelligence.action` (DecisionAction).
+    bad_body = {
         "action": "TOTALLY_WRONG",
         "conviction": "high",
         "summary_line": "x",
         "narrative": "x",
         "sources": [],
-    })
-    fake_response = _make_fake_openai_response(f"```json\n{bad_json}\n```")
+    }
     request = SymbolIntelligenceRequest(close=10.0, signal="pullback")
 
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = fake_response
+        _wire_two_calls(mock_client, bad_body)
 
         analyzer = SymbolAnalyzer()
         with pytest.raises(Exception):
@@ -203,11 +244,10 @@ def test_prompt_and_inputs_include_sector_rotation_context():
     assert "Sector rotation:" in prompt
     assert "in rotation: True" in prompt
 
-    fake_response = _make_fake_openai_response(_FAKE_RESPONSE_TEXT)
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = fake_response
+        _wire_two_calls(mock_client, _FAKE_RESPONSE_JSON)
 
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("AAPL", req)
@@ -221,8 +261,6 @@ def test_prompt_and_inputs_include_sector_rotation_context():
 
 
 def test_symbol_analyzer_maps_position_outlook():
-    import json
-
     fake_json = {
         "action": "MANAGE_ONLY",
         "conviction": "medium",
@@ -243,7 +281,6 @@ def test_symbol_analyzer_maps_position_outlook():
         },
         "sources": [],
     }
-    fake_response = _make_fake_openai_response(f"```json\n{json.dumps(fake_json)}\n```")
     request = SymbolIntelligenceRequest(
         close=50.0, signal="position",
         entry_price=48.0, r_now=1.5, days_open=7,
@@ -252,7 +289,7 @@ def test_symbol_analyzer_maps_position_outlook():
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = fake_response
+        _wire_two_calls(mock_client, fake_json)
 
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("AAPL", request)
@@ -336,7 +373,6 @@ def test_prompt_no_past_trades_block_when_empty():
 
 
 def test_analyzer_parses_new_fields():
-    import json
     from unittest.mock import MagicMock, patch
     from swing_screener.intelligence.models import SymbolIntelligenceRequest
 
@@ -361,15 +397,12 @@ def test_analyzer_parses_new_fields():
         ],
         "past_trades_context": "One prior stop at €247.",
     }
-    fake_text = "```json\n" + json.dumps(fake_json) + "\n```"
-    resp = MagicMock()
-    resp.output_text = fake_text
 
     req = SymbolIntelligenceRequest(close=286.0, signal="breakout")
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = resp
+        _wire_two_calls(mock_client, fake_json)
         from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("BESI.AS", req, past_positions=[])
@@ -408,10 +441,10 @@ _PRE_OPEN_FIELDS = {
 }
 
 
-def _fake_resp_with(**extra):
-    import json
-    body = {**_FAKE_RESPONSE_JSON, **extra}
-    return _make_fake_openai_response("```json\n" + json.dumps(body) + "\n```")
+def _wire_with(mock_client, **extra):
+    """Wire the two-call flow with `_FAKE_RESPONSE_JSON` plus the given overrides
+    as the call-2 parsed `_LLMAnalysis`."""
+    _wire_two_calls(mock_client, {**_FAKE_RESPONSE_JSON, **extra})
 
 
 def test_pre_open_outlook_populated_in_window_for_us_symbol():
@@ -419,7 +452,7 @@ def test_pre_open_outlook_populated_in_window_for_us_symbol():
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = _fake_resp_with(**_PRE_OPEN_FIELDS)
+        _wire_with(mock_client, **_PRE_OPEN_FIELDS)
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("AAPL", req, now=_PRE_OPEN_NOW)
 
@@ -437,7 +470,7 @@ def test_pre_open_outlook_dropped_when_market_open():
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = _fake_resp_with(**_PRE_OPEN_FIELDS)
+        _wire_with(mock_client, **_PRE_OPEN_FIELDS)
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("AAPL", req, now=_REGULAR_NOW)
 
@@ -451,7 +484,7 @@ def test_pre_open_outlook_dropped_for_non_us_symbol():
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = _fake_resp_with(**_PRE_OPEN_FIELDS)
+        _wire_with(mock_client, **_PRE_OPEN_FIELDS)
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("ASML.AS", req, now=_PRE_OPEN_NOW)
 
@@ -464,7 +497,7 @@ def test_thesis_delta_parsed_only_with_prior_history(tmp_path, monkeypatch):
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = _fake_resp_with(**_PRE_OPEN_FIELDS)
+        _wire_with(mock_client, **_PRE_OPEN_FIELDS)
         analyzer = SymbolAnalyzer()
         # First run: no prior history → thesis_delta gated to None even though the
         # model emitted one.
@@ -478,21 +511,16 @@ def test_thesis_delta_parsed_only_with_prior_history(tmp_path, monkeypatch):
     assert second.thesis_delta.what_played_out == ["Beat as flagged"]
 
 
-def test_malformed_pre_open_outlook_degrades_to_none(tmp_path, monkeypatch):
-    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
-    req = SymbolIntelligenceRequest(close=180.0, signal="breakout", currency="USD")
-    # pre_open_outlook missing required action_at_open / stop_gap_plan.
-    bad = {"pre_open_outlook": {"gap_direction": "gap_up", "magnitude": "moderate"}}
-    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
-        mock_client = MagicMock()
-        MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = _fake_resp_with(**bad)
-        analyzer = SymbolAnalyzer()
-        result = analyzer.analyze("AAPL", req, now=_PRE_OPEN_NOW)
-
-    # Analysis succeeds; the malformed sub-object is dropped rather than 500-ing.
-    assert result.pre_open_outlook is None
-    assert result.action == "BUY_NOW"
+def test_malformed_pre_open_outlook_rejected_by_structured_output():
+    # With the two-call decouple, call 2 (`responses.parse`) is the validation
+    # boundary: a partial pre_open_outlook (missing required action_at_open /
+    # stop_gap_plan) can no longer reach the server as a degraded-to-None field —
+    # it fails `_LLMAnalysis` validation outright. The old `_safe_submodel`
+    # graceful-degradation path is gone by design.
+    bad = {**_FAKE_RESPONSE_JSON,
+           "pre_open_outlook": {"gap_direction": "gap_up", "magnitude": "moderate"}}
+    with pytest.raises(Exception):
+        _LLMAnalysis.model_validate(bad)
 
 
 def test_history_appended_and_fed_back_as_digest(tmp_path, monkeypatch):
@@ -503,7 +531,7 @@ def test_history_appended_and_fed_back_as_digest(tmp_path, monkeypatch):
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = _fake_resp_with()
+        _wire_with(mock_client)
         analyzer = SymbolAnalyzer()
         # First run: no prior history → no digest block in the prompt.
         analyzer.analyze("AAPL", req, now=_REGULAR_NOW)
@@ -517,6 +545,27 @@ def test_history_appended_and_fed_back_as_digest(tmp_path, monkeypatch):
     # Both runs land on the same calendar day, so same-day dedup keeps one entry.
     stored = read_history("AAPL")
     assert len(stored) == 1
+
+
+def test_sources_attempted_non_empty_on_blackout(monkeypatch):
+    """Regression guard: sources.attempted must list configured sources even when
+    catalyst_evidence is empty (SEC blackout). Both attempted and returned must be
+    distinguishable: attempted is non-empty, returned is {}."""
+    req = SymbolIntelligenceRequest(close=50.0, signal="breakout")
+    # catalyst_evidence defaults to [] — simulates a SEC blackout.
+    assert req.catalyst_evidence == []
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, _FAKE_RESPONSE_JSON)
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", req)
+
+    sources = result.inputs_used["sources"]
+    assert sources["attempted"], "attempted must be non-empty even on a blackout"
+    assert "sec_edgar_catalysts" in sources["attempted"]
+    assert sources["returned"] == {}
 
 
 def test_analyze_writes_to_cache(tmp_path, monkeypatch):
@@ -536,15 +585,12 @@ def test_analyze_writes_to_cache(tmp_path, monkeypatch):
         "position_outlook": None,
         "sources": [],
     }
-    fake_text = "```json\n" + json.dumps(fake_json) + "\n```"
-    resp = MagicMock()
-    resp.output_text = fake_text
 
     req = SymbolIntelligenceRequest(close=50.0, signal="breakout")
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.responses.create.return_value = resp
+        _wire_two_calls(mock_client, fake_json)
         analyzer = SymbolAnalyzer()
         analyzer.analyze("AAPL", req)
 
@@ -553,3 +599,56 @@ def test_analyze_writes_to_cache(tmp_path, monkeypatch):
     data = json.loads(cache_files[0].read_text())
     assert "AAPL" in data
     assert data["AAPL"]["action"] == "BUY_NOW"
+
+
+def test_llm_analysis_strict_schema_has_no_open_objects():
+    """OpenAI Responses strict structured output rejects any object schema whose
+    `additionalProperties` is not literally false (free-form `dict` fields). Walk
+    the strict schema of `_LLMAnalysis` and assert no object node is left open,
+    so a bare `dict` can never silently break call 2 again."""
+    from openai.lib._pydantic import to_strict_json_schema
+
+    schema = to_strict_json_schema(_LLMAnalysis)
+    offenders: list[str] = []
+
+    def walk(node: object, path: str) -> None:
+        if isinstance(node, dict):
+            if node.get("type") == "object" and node.get("additionalProperties") is not False:
+                offenders.append(path or "<root>")
+            for key, value in node.items():
+                walk(value, f"{path}.{key}")
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                walk(value, f"{path}[{index}]")
+
+    walk(schema, "")
+    assert offenders == [], f"open object schemas rejected by strict mode: {offenders}"
+
+
+def test_llm_analysis_rejects_out_of_vocab_news_sentiment():
+    with pytest.raises(ValueError):
+        _LLMAnalysis(
+            action="WATCH", conviction="medium", summary_line="s", narrative="n",
+            news=[{"headline": "h", "sentiment": "spicy"}],
+        )
+
+
+def test_analyze_round_trips_news_into_intelligence():
+    body = {
+        **_FAKE_RESPONSE_JSON,
+        "news": [
+            {"headline": "Q4 beat", "url": "https://x/n", "date": "2026-02-01", "sentiment": "bullish"},
+            {"headline": "Buyback authorized", "sentiment": "bullish"},
+        ],
+    }
+    request = SymbolIntelligenceRequest(close=48.5, signal="breakout")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, body)
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("APAM", request)
+
+    assert [n.headline for n in result.news] == ["Q4 beat", "Buyback authorized"]
+    assert result.news[0].sentiment == "bullish"
+    assert result.news[1].url is None

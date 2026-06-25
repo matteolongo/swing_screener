@@ -3,14 +3,12 @@
 Fundamentals snapshot loading, decision-summary context, recommendation rebuild
 keyed off the decision action, and decision-priority ranking. These operate on
 API models (``ScreenerCandidate``/``Recommendation``) and call into fundamentals
-storage, the catalyst store and the risk engine, so they live in the API layer
-rather than core. Extracted from ``screener_service`` to keep that module a thin
-orchestrator.
+storage and the risk engine, so they live in the API layer rather than core.
+Extracted from ``screener_service`` to keep that module a thin orchestrator.
 """
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import datetime, timezone
 import logging
 
 from api.models.screener import ScreenerCandidate
@@ -35,20 +33,6 @@ DECISION_CONVICTION_PRIORITY = {
     "medium": 1,
     "low": 0,
 }
-
-_CATALYST_STALE_DAYS = 2
-
-
-def is_stale(opportunity: object | None) -> bool:
-    if opportunity is None:
-        return True
-    try:
-        generated_at = datetime.fromisoformat(str(getattr(opportunity, "generated_at", "")))
-        if generated_at.tzinfo is None:
-            generated_at = generated_at.replace(tzinfo=timezone.utc)
-        return (datetime.now(timezone.utc) - generated_at).days > _CATALYST_STALE_DAYS
-    except (ValueError, TypeError):
-        return True
 
 
 def fundamentals_summary(snapshot) -> str | None:
@@ -121,14 +105,6 @@ def apply_decision_summary_context(
     if not candidates:
         return candidates
 
-    # Load today's catalyst opportunity index once for all candidates
-    catalyst_index: dict = {}
-    try:
-        from swing_screener.intelligence.catalysts.store import CatalystStore
-        catalyst_index = CatalystStore().load_symbol_index()
-    except Exception as exc:
-        logger.warning("Failed to load catalyst index: %s", exc)
-
     snapshot_cache = (
         snapshots
         if snapshots is not None
@@ -139,8 +115,7 @@ def apply_decision_summary_context(
     for candidate in candidates:
         fund_snap = snapshot_cache.get(candidate.ticker)
         fund_asof = getattr(fund_snap, "asof_date", None) if fund_snap is not None else None
-        raw_opportunity = catalyst_index.get(candidate.ticker.upper())
-        opportunity = None if is_stale(raw_opportunity) else raw_opportunity
+        opportunity = None
         enriched.append(
             candidate.model_copy(
                 update={

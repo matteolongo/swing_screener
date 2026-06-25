@@ -17,9 +17,19 @@ from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.history import HistoryEntry, read_history
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
+from swing_screener.settings import get_settings_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
+
+_analyzer: SymbolAnalyzer | None = None
+
+
+def _get_analyzer() -> SymbolAnalyzer:
+    global _analyzer
+    if _analyzer is None:
+        _analyzer = SymbolAnalyzer()
+    return _analyzer
 
 
 def _require_api_key() -> None:
@@ -27,9 +37,16 @@ def _require_api_key() -> None:
         raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured")
 
 
+def _require_analyzer_enabled() -> None:
+    cfg = get_settings_manager().load_intelligence_document().get("config", {}).get("llm", {})
+    if not bool(cfg.get("analyzer_enabled", True)):
+        raise HTTPException(status_code=503, detail="Symbol intelligence analyzer is disabled")
+
+
 class SweepSymbol(BaseModel):
     ticker: str
     request: SymbolIntelligenceRequest
+    force: bool = False
 
 
 class SweepRequest(BaseModel):
@@ -51,16 +68,41 @@ class AnalysisHistoryResponse(BaseModel):
 
 
 @router.post("/sweep", response_model=SweepResponse)
-def sweep(request: SweepRequest) -> SweepResponse:
+def sweep(
+    request: SweepRequest,
+    positions_repo: PositionsRepository = Depends(get_positions_repo),
+    fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
+) -> SweepResponse:
     """Run intelligence analysis for a batch of symbols, caching each result."""
     _require_api_key()
-    analyzer = SymbolAnalyzer()
+    _require_analyzer_enabled()
+    analyzer = _get_analyzer()
+    past_positions, _ = positions_repo.list_positions(status="closed")
     analyzed: list[str] = []
     failed: list[SweepFailure] = []
     for item in request.symbols:
         try:
-            analyzer.analyze(item.ticker.upper(), item.request)
-            analyzed.append(item.ticker.upper())
+            upper = item.ticker.upper()
+            if not item.force:
+                cached = read_from_cache(upper)
+                if cached is not None:
+                    analyzed.append(upper)
+                    continue
+            item_req = enrich_intelligence_request(
+                upper,
+                item.request,
+                fundamentals=fundamentals_service,
+                earnings=lambda t: (lambda ep: (ep.days_until, ep.next_earnings_date))(portfolio_service.get_earnings_proximity(t)),
+                evidence=lambda t: collect_evidence(t),
+            )
+            try:
+                ohlcv = portfolio_service.fetch_recent_ohlcv(upper)
+                item_req = enrich_with_technicals(upper, item_req, ohlcv)
+            except Exception:
+                logger.warning("Sweep technical enrichment skipped for %r", item.ticker, exc_info=True)
+            analyzer.analyze(upper, item_req, past_positions=past_positions)
+            analyzed.append(upper)
         except Exception as exc:
             logger.warning("Sweep failed for %s: %s", item.ticker, exc)
             failed.append(SweepFailure(ticker=item.ticker.upper(), error=str(exc)))
@@ -86,13 +128,19 @@ def get_latest(ticker: str) -> SymbolIntelligence:
 def analyze_symbol(
     ticker: str,
     request: SymbolIntelligenceRequest,
+    force: bool = False,
     positions_repo: PositionsRepository = Depends(get_positions_repo),
     fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
 ) -> SymbolIntelligence:
     """Generate a web-search-grounded LLM analysis for a symbol, after enriching with full data."""
     _require_api_key()
+    _require_analyzer_enabled()
     upper = ticker.upper()
+    if not force:
+        cached = read_from_cache(upper)
+        if cached is not None:
+            return cached
 
     def _earnings(t: str) -> tuple[int | None, str | None]:
         ep = portfolio_service.get_earnings_proximity(t)
@@ -107,8 +155,7 @@ def analyze_symbol(
     )
     try:
         past_positions, _ = positions_repo.list_positions(status="closed")
-        analyzer = SymbolAnalyzer()
-        return analyzer.analyze(upper, request, past_positions=past_positions)
+        return _get_analyzer().analyze(upper, request, past_positions=past_positions)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -116,6 +163,7 @@ def analyze_symbol(
 @router.post("/position/{position_id}", response_model=SymbolIntelligence)
 def analyze_position(
     position_id: str,
+    force: bool = False,
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
     fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
 ) -> SymbolIntelligence:
@@ -125,10 +173,15 @@ def analyze_position(
     so the model has real data to manage the position instead of just entry/stop.
     """
     _require_api_key()
+    _require_analyzer_enabled()
     result = portfolio_service.list_positions(status="open", time_stop_days=None, time_stop_min_r=None)
     pos = next((p for p in result.positions if p.position_id == position_id), None)
     if pos is None:
         raise HTTPException(status_code=404, detail=f"No open position with id {position_id!r}")
+    if not force:
+        cached = read_from_cache(pos.ticker.upper())
+        if cached is not None:
+            return cached
     stop = portfolio_service.suggest_position_stop(position_id)
     request = SymbolIntelligenceRequest(
         close=float(pos.current_price if pos.current_price is not None else pos.entry_price),
@@ -158,7 +211,6 @@ def analyze_position(
     except Exception:
         logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
     try:
-        analyzer = SymbolAnalyzer()
-        return analyzer.analyze(pos.ticker.upper(), request)
+        return _get_analyzer().analyze(pos.ticker.upper(), request)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

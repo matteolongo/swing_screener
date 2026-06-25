@@ -39,8 +39,6 @@ const baseCandidate: SymbolAnalysisCandidate = {
     valuationContext: { method: 'earnings_multiple' },
     drivers: { positives: [], negatives: [], warnings: ['Watch China exposure'] },
     explanation: undefined,
-    catalystSummary: null,
-    catalystSources: [],
   },
 };
 
@@ -218,9 +216,11 @@ describe('NarrativeAnalysisCard — new structured fields', () => {
     expect(screen.getByText('Valuation')).toBeInTheDocument();
   });
 
-  it('renders prediction bullets with direction', () => {
+  it('renders prediction bullets under the What to expect panel', () => {
     render(<NarrativeAnalysisCard intelligence={richIntelligence} />);
-    expect(screen.getByText(/Prediction/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.whatToExpect.title')),
+    ).toBeInTheDocument();
     expect(screen.getByText('SMA20 absorbs pullback.')).toBeInTheDocument();
     expect(screen.getByText('SMA20 support')).toBeInTheDocument();
   });
@@ -237,17 +237,25 @@ describe('NarrativeAnalysisCard — new structured fields', () => {
     expect(screen.getByText('Prior stop at €247 — that level is now key support.')).toBeInTheDocument();
   });
 
-  it('does not render new sections when fields absent (old cache)', () => {
+  it('renders the fixed screened panels with empty states when fields absent (old cache)', () => {
     render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
-    expect(screen.queryByText(/Why now/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Key numbers/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Prediction/i)).not.toBeInTheDocument();
+    // Fixed skeleton: Why now / Key numbers / What to expect render even when empty.
+    expect(screen.getByText(/Why now/i)).toBeInTheDocument();
+    expect(screen.getByText(/Key numbers/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.whatToExpect.title')),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(t('workspacePage.panels.analysis.intelligence.emptyPanel')).length,
+    ).toBeGreaterThan(0);
+    // Present-gated panels stay hidden.
     expect(screen.queryByText(/Past trades on/i)).not.toBeInTheDocument();
   });
 
   it('renders the position move explanation when present', () => {
     render(
       <NarrativeAnalysisCard
+        isPosition
         intelligence={{
           ...baseIntelligence,
           positionMoveExplanation: {
@@ -380,5 +388,68 @@ describe('NarrativeAnalysisCard — analysis timeline', () => {
         screen.getByText(t('workspacePage.panels.analysis.intelligence.timeline.empty')),
       ).toBeInTheDocument(),
     );
+  });
+});
+
+describe('NarrativeAnalysisCard — status-aware skeleton', () => {
+  const positionIntelligence: SymbolIntelligence = {
+    ...baseIntelligence,
+    action: 'MANAGE_ONLY',
+    positionSignal: { action: 'TRIM', reason: 'Up 1.9R, momentum cooling.' },
+    positionOutlook: {
+      expectedHoldingPeriod: '2-6_weeks',
+      holdUntil: 'Hold until the 50-day SMA breaks.',
+      nextReviewTrigger: 'Next earnings.',
+      thesisStatus: 'intact',
+      invalidationSignals: ['Close below 50-day SMA.'],
+      profitManagement: 'trail_stop',
+      opportunityCost: 'low',
+      confidenceDecay: 'Stale in ~3 weeks.',
+    },
+    news: [
+      { headline: 'Q4 beat on net sales', url: 'https://x/q4', date: '2026-02-01', sentiment: 'bullish' },
+      { headline: 'Buyback authorized', url: null, date: null, sentiment: 'bullish' },
+    ],
+  };
+
+  it('renders the position signal and outlook panels in position mode', () => {
+    render(<NarrativeAnalysisCard isPosition intelligence={positionIntelligence} />);
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.positionSignal.title')),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Up 1.9R, momentum cooling.')).toBeInTheDocument();
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.positionOutlook.title')),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Hold until the 50-day SMA breaks.')).toBeInTheDocument();
+    expect(screen.getByText('Close below 50-day SMA.')).toBeInTheDocument();
+  });
+
+  it('does not render the Why now panel in position mode', () => {
+    render(<NarrativeAnalysisCard isPosition intelligence={positionIntelligence} />);
+    expect(screen.queryByText(/Why now/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the News panel with items and links', () => {
+    render(<NarrativeAnalysisCard isPosition intelligence={positionIntelligence} />);
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.news.title')),
+    ).toBeInTheDocument();
+    const link = screen.getByText('Q4 beat on net sales');
+    expect(link).toHaveAttribute('href', 'https://x/q4');
+    expect(screen.getByText('Buyback authorized')).toBeInTheDocument();
+  });
+
+  it('shows the News empty state when there is no news', () => {
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.news.empty')),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the full rationale inside a collapsed details element', () => {
+    const { container } = render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+    const summaries = Array.from(container.querySelectorAll('details > summary')).map((s) => s.textContent);
+    expect(summaries).toContain(t('workspacePage.panels.analysis.intelligence.fullRationale'));
   });
 });
