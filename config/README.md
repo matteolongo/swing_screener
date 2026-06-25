@@ -72,6 +72,23 @@ news + forward-catalyst search the intelligence prompt now performs.
 | `discovery_negative_ttl_days` | `7` | Re-attempt discovery after N days of no feed found |
 | `discovery_paths` | `[/rss, /feed, /news/rss, /newsroom/rss, /investors/rss, /en/rss]` | Bounded path probes when no `<link rel=alternate>` is advertised |
 
+`config.analysis_history` controls per-symbol analysis memory:
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `max_entries` | `50` | Per-symbol history entries kept on disk (`data/intelligence/history/{TICKER}.json`) |
+| `digest_size` | `5` | Most-recent runs fed back to the LLM as the thesis-drift digest (must be `<= max_entries`) |
+
+`config.pre_open` controls the pre-open gap-outlook window (US equities):
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `enabled` | `true` | Master switch for pre-open mode |
+| `timezone` | `America/New_York` | Exchange timezone used to evaluate the window |
+| `market_open` | `"09:30"` | ET regular-session open; pre-open window ends here |
+| `window_start` | `"00:00"` | ET lower bound of the pre-open window (overnight tape) |
+| `session_close` | `"16:00"` | ET regular-session close; bounds the overnight news window |
+
 ### `mcp.yaml`
 
 MCP feature flags and server metadata.

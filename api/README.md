@@ -81,8 +81,9 @@ Daily Review (`/api/daily-review`):
 - `POST /api/daily-review/compute`
 
 Intelligence (`/api/intelligence`):
-- `POST /api/intelligence/{ticker}` — enriches the request with full data (fundamentals + Finnhub + earnings, fetched server-side and blocking) before running the analysis. Request body fields stay optional, so this is not a breaking change.
+- `POST /api/intelligence/{ticker}` — enriches the request with full data (fundamentals + Finnhub + earnings, fetched server-side and blocking) before running the analysis. Request body fields stay optional, so this is not a breaking change. Responses now also carry nullable `pre_open_outlook` (US symbols analyzed pre-market) and `thesis_delta` (when prior analyses exist).
 - `GET /api/intelligence/{ticker}/latest`
+- `GET /api/intelligence/{ticker}/history` — per-symbol analysis history, newest-first, capped at `analysis_history.max_entries`. Returns `{entries: HistoryEntry[]}`; empty list (not 404) when none.
 - `POST /api/intelligence/sweep`
 
 Fundamentals (`/api/fundamentals`):

@@ -12,7 +12,9 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 |------|---------|
 | `symbol_analyzer.py` | Entry point. Assembles context → LLM prompt → parses `SymbolIntelligence`. |
 | `models.py` | `SymbolIntelligence`, `SymbolIntelligenceRequest` data contracts. |
-| `cache.py` | Per-ticker JSON cache. Reads/writes to `data/intelligence/`. |
+| `cache.py` | Per-ticker JSON cache (today's latest). Reads/writes to `data/intelligence/`. |
+| `history.py` | Durable per-symbol analysis history (newest-first, capped). Feeds the thesis-drift digest + UI timeline. |
+| `market_hours.py` | Minimal zoneinfo US market-hours helper. Decides pre-open mode + previous session close. |
 | `catalysts/generator.py` | AI-assisted catalyst report generation. |
 | `catalysts/models.py` | Catalyst data models. |
 | `catalysts/prompts.py` | Prompt templates for catalyst analysis. |
@@ -21,9 +23,10 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 ## API Surface
 
 ```
-POST /api/intelligence/{ticker}        — run analysis; cache result
-GET  /api/intelligence/{ticker}/latest — return most-recent cached result
-POST /api/intelligence/sweep           — batch run across watchlist + open positions
+POST /api/intelligence/{ticker}         — run analysis; cache result
+GET  /api/intelligence/{ticker}/latest  — return most-recent cached result
+GET  /api/intelligence/{ticker}/history — return per-symbol analysis history (newest-first, capped)
+POST /api/intelligence/sweep            — batch run across watchlist + open positions
 ```
 
 Router: `api/routers/intelligence.py`
@@ -68,9 +71,35 @@ existing Finnhub signal fields). The web-search instruction is multi-hop — sea
 broadly, follow the material leads, then run a dedicated forward-looking catalyst
 pass — and every news claim must cite its source URL.
 
+## Pre-open gap outlook
+
+When analysis runs for a **US symbol** (`currency == "USD"`) during the US
+pre-market window (ET, weekday, before the 09:30 open — see `market_hours.py`),
+the analyzer enters pre-open mode and asks the model for a `pre_open_outlook`:
+`gap_direction` (gap_up/gap_down/flat), `magnitude` bucket (minor/moderate/large —
+never a fake %), `primary_driver` (the overnight item most likely to move the
+open, source-cited), `action_at_open`, `stop_gap_plan` (what to do if it gaps
+through the stop), and `confidence`. Sourcing is web-search only (index/sector
+futures + the stock's pre-market print + overnight headlines since the previous
+session close). Outside the window, or for non-US symbols, the field is `None`
+and behavior is unchanged. Applies to held positions (framed on the real stop)
+and screener candidates (framed on the planned entry/stop).
+
+## Analysis memory (thesis drift)
+
+Every successful analysis appends a compact entry to
+`data/intelligence/history/{TICKER}.json` (newest-first, capped at
+`analysis_history.max_entries`, default 50). Before each run the analyzer reads
+the last `analysis_history.digest_size` entries (default 5) and feeds them into
+the prompt as a `--- Prior analyses (most recent first) ---` digest. The model
+returns a `thesis_delta` (`status`: new/confirmed/weakening/invalidated,
+`summary`, `what_played_out`) comparing today's read to the prior ones. The full
+history is exposed via `GET /api/intelligence/{ticker}/history` for the UI timeline.
+
 ## Configuration
 
-`config/intelligence.yaml` — LLM provider (OpenAI), model, temperature, signal type toggles.
+`config/intelligence.yaml` — LLM provider (OpenAI), model, temperature, signal type toggles,
+plus `analysis_history` (history cap + digest size) and `pre_open` (timezone + session bounds).
 
 API keys go in environment variables, not the config file.
 
