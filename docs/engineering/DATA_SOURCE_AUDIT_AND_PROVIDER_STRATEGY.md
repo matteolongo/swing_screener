@@ -175,6 +175,8 @@ For paid data, the cleanest production path remains a split stack:
 
 **Known gap — XETR:** Deutsche Börse has no publicly accessible RSS for company announcements. German issuers (SAP.DE, SIE.DE) are covered via their SEC EDGAR ADR cross-listings and seeded IR RSS feeds until a paid BaFin or Bundesanzeiger feed is sourced (Tier 2).
 
+> **Superseded (2026-06-25):** A live re-check on the Data Sources page found every seeded EU exchange feed dead or serving non-parseable HTML (Euronext now encrypts its payload, CNMV bot-blocks, Borsa Italiana / SIX 404, Nasdaq Nordic / Investegate no longer serve RSS). Venue-wide notices are also not symbol-specific. The `exchange_announcements` collector and `source_catalog.json` were therefore removed, and `ir_feeds.json` pruned to verified-live feeds (AAPL, MSFT, NVDA, SAP.DE, SIE.DE). Broad EU per-symbol coverage now comes from IR-feed auto-discovery (`intelligence/evidence/discovery.py`) instead of a static exchange catalog.
+
 ---
 
 ## Tier 2: Low-cost / Practical — NOT STARTED

@@ -165,8 +165,6 @@ strategy:
         - earnings_calendar
         - sec_edgar
         - company_ir_rss
-        - exchange_announcements
-        - financial_news_rss
       scraping_enabled: false
       allowed_domains: []
       rate_limits:
@@ -268,8 +266,6 @@ intelligence:
       - earnings_calendar
       - sec_edgar
       - company_ir_rss
-      - exchange_announcements
-      - financial_news_rss
     scraping_enabled: false
     allowed_domains: []
     rate_limits:
@@ -406,7 +402,7 @@ low_level:
   # Stooq fallback, optional Alpaca validation).  This is separate from
   # `sources.enabled` above, which controls the evidence-adapter chain used by
   # the market-intelligence / catalyst system (yahoo_finance, earnings_calendar,
-  # sec_edgar, company_ir_rss, exchange_announcements, financial_news_rss).
+  # sec_edgar, company_ir_rss).
   # Fundamentals providers (sec_edgar → yfinance) are configured independently
   # via `FundamentalsConfig` and are NOT listed here.
   # ---------------------------------------------------------------------------
