@@ -24,6 +24,7 @@ from swing_screener.intelligence.models import (
     SymbolIntelligenceRequest,
     ThesisDelta,
 )
+from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 from swing_screener.settings import get_settings_manager
 from swing_screener.utils.logging_config import get_logger
 
@@ -127,8 +128,8 @@ class _LLMAnalysis(BaseModel):
     """The LLM-emitted fields only. `symbol`, `generated_at` and `inputs_used` are
     set server-side and are NOT part of the structured-output schema."""
 
-    action: str
-    conviction: str
+    action: DecisionAction
+    conviction: DecisionConviction
     catalyst_urgency: str = "none"
     summary_line: str
     narrative: str
