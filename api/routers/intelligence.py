@@ -17,6 +17,7 @@ from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.history import HistoryEntry, read_history
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
+from swing_screener.settings import get_settings_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
@@ -34,6 +35,12 @@ def _get_analyzer() -> SymbolAnalyzer:
 def _require_api_key() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
         raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured")
+
+
+def _require_analyzer_enabled() -> None:
+    cfg = get_settings_manager().load_intelligence_document().get("config", {}).get("llm", {})
+    if not bool(cfg.get("analyzer_enabled", True)):
+        raise HTTPException(status_code=503, detail="Symbol intelligence analyzer is disabled")
 
 
 class SweepSymbol(BaseModel):
@@ -69,6 +76,7 @@ def sweep(
 ) -> SweepResponse:
     """Run intelligence analysis for a batch of symbols, caching each result."""
     _require_api_key()
+    _require_analyzer_enabled()
     analyzer = _get_analyzer()
     past_positions, _ = positions_repo.list_positions(status="closed")
     analyzed: list[str] = []
@@ -127,6 +135,7 @@ def analyze_symbol(
 ) -> SymbolIntelligence:
     """Generate a web-search-grounded LLM analysis for a symbol, after enriching with full data."""
     _require_api_key()
+    _require_analyzer_enabled()
     upper = ticker.upper()
     if not force:
         cached = read_from_cache(upper)
@@ -164,6 +173,7 @@ def analyze_position(
     so the model has real data to manage the position instead of just entry/stop.
     """
     _require_api_key()
+    _require_analyzer_enabled()
     result = portfolio_service.list_positions(status="open", time_stop_days=None, time_stop_min_r=None)
     pos = next((p for p in result.positions if p.position_id == position_id), None)
     if pos is None:

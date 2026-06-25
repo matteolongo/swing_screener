@@ -199,3 +199,21 @@ def test_sweep_enriches_uncached_symbol(tmp_path, monkeypatch):
         _app.dependency_overrides.pop(get_positions_repo, None)
         _app.dependency_overrides.pop(get_fundamentals_service, None)
         _app.dependency_overrides.pop(get_portfolio_service, None)
+
+
+def test_analyze_returns_503_when_kill_switch_off(monkeypatch):
+    """When config.llm.analyzer_enabled=False the endpoint must return 503."""
+    from unittest.mock import MagicMock
+    import api.routers.intelligence as r
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    fake_mgr = MagicMock()
+    fake_mgr.load_intelligence_document.return_value = {
+        "config": {"llm": {"analyzer_enabled": False}}
+    }
+    monkeypatch.setattr(r, "get_settings_manager", lambda: fake_mgr)
+
+    resp = client.post("/api/intelligence/AAA", json={"close": 1.0, "signal": "x"})
+    assert resp.status_code == 503
+    assert "disabled" in resp.json()["detail"].lower()
