@@ -12,6 +12,7 @@ from swing_screener.intelligence.history import HistoryEntry, append_history, re
 from swing_screener.intelligence.market_hours import is_us_pre_market, previous_session_close
 from swing_screener.data.currency import detect_currency
 from swing_screener.intelligence.models import (
+    CatalystUrgency,
     IntelligenceEvent,
     KeyNumber,
     NewsItem,
@@ -24,6 +25,7 @@ from swing_screener.intelligence.models import (
     SymbolIntelligenceRequest,
     ThesisDelta,
 )
+from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 from swing_screener.settings import get_settings_manager
 from swing_screener.utils.logging_config import get_logger
 
@@ -127,9 +129,9 @@ class _LLMAnalysis(BaseModel):
     """The LLM-emitted fields only. `symbol`, `generated_at` and `inputs_used` are
     set server-side and are NOT part of the structured-output schema."""
 
-    action: str
-    conviction: str
-    catalyst_urgency: str = "none"
+    action: DecisionAction
+    conviction: DecisionConviction
+    catalyst_urgency: CatalystUrgency = "none"
     summary_line: str
     narrative: str
     upcoming_events: list[IntelligenceEvent] = []

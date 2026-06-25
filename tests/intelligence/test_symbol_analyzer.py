@@ -180,24 +180,19 @@ def test_inputs_used_includes_recent_candle_patterns():
 
 
 def test_symbol_analyzer_raises_on_invalid_action():
-    # An out-of-enum action survives the call-2 `_LLMAnalysis` (action: str) but
-    # is rejected when mapped into `SymbolIntelligence.action` (DecisionAction).
-    bad_body = {
-        "action": "TOTALLY_WRONG",
-        "conviction": "high",
-        "summary_line": "x",
-        "narrative": "x",
-        "sources": [],
-    }
+    # _LLMAnalysis now validates action: DecisionAction at call-2 decode.
+    # Simulate responses.parse raising (as the real API would) and confirm
+    # analyze() propagates the exception rather than swallowing it.
     request = SymbolIntelligenceRequest(close=10.0, signal="pullback")
 
     with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        _wire_two_calls(mock_client, bad_body)
+        mock_client.responses.create.return_value = _make_fake_openai_response()
+        mock_client.responses.parse.side_effect = ValueError("action: literal_error")
 
         analyzer = SymbolAnalyzer()
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             analyzer.analyze("XYZ", request)
 
 
@@ -566,6 +561,23 @@ def test_sources_attempted_non_empty_on_blackout(monkeypatch):
     assert sources["attempted"], "attempted must be non-empty even on a blackout"
     assert "sec_edgar_catalysts" in sources["attempted"]
     assert sources["returned"] == {}
+
+
+def test_llm_analysis_rejects_out_of_vocab_action():
+    import pytest
+    from swing_screener.intelligence.symbol_analyzer import _LLMAnalysis
+    with pytest.raises(ValueError):
+        _LLMAnalysis(action="NONSENSE", conviction="medium", summary_line="s", narrative="n")
+
+
+def test_llm_analysis_rejects_out_of_vocab_catalyst_urgency():
+    import pytest
+    from swing_screener.intelligence.symbol_analyzer import _LLMAnalysis
+    with pytest.raises(ValueError):
+        _LLMAnalysis(
+            action="WATCH", conviction="medium", catalyst_urgency="normal",
+            summary_line="s", narrative="n",
+        )
 
 
 def test_analyze_writes_to_cache(tmp_path, monkeypatch):

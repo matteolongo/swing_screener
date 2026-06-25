@@ -40,10 +40,18 @@ def test_record_analysis_metrics_none_tokens(tmp_path):
     assert data[-1]["tokens"] is None
 
 
-def test_record_analysis_metrics_degrade_soft_corrupt_file(tmp_path):
+def test_record_self_heals_corrupt_file(tmp_path):
     from swing_screener.intelligence.metrics import record_analysis_metrics
 
-    path = tmp_path / "intelligence_metrics.json"
-    path.write_text("not json{{{")
-    # must not raise
-    record_analysis_metrics("ERR", tokens=5, metrics_root=tmp_path)
+    (tmp_path / "intelligence_metrics.json").write_text("{ this is not json")
+    record_analysis_metrics("AAA", tokens=5, metrics_root=tmp_path)
+    data = json.loads((tmp_path / "intelligence_metrics.json").read_text())
+    assert isinstance(data, list) and data[-1]["ticker"] == "AAA"
+
+
+def test_record_analysis_metrics_soft_degrades_on_write_failure(tmp_path, monkeypatch):
+    from swing_screener.intelligence.metrics import record_analysis_metrics
+
+    monkeypatch.setattr("pathlib.Path.write_text", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("disk full")))
+    # must not raise — degrade soft
+    record_analysis_metrics("AAA", tokens=1, metrics_root=tmp_path)
