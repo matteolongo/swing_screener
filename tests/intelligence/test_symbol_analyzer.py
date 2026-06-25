@@ -180,17 +180,20 @@ def test_inputs_used_includes_recent_candle_patterns():
 
 
 def test_symbol_analyzer_raises_on_invalid_action():
-    # Since _LLMAnalysis now types action: DecisionAction, an out-of-vocab action
-    # is rejected at call-2 decode (_LLMAnalysis.model_validate), not at SymbolIntelligence.
-    bad_body = {
-        "action": "TOTALLY_WRONG",
-        "conviction": "high",
-        "summary_line": "x",
-        "narrative": "x",
-        "sources": [],
-    }
-    with pytest.raises(Exception):
-        _LLMAnalysis.model_validate(bad_body)
+    # _LLMAnalysis now validates action: DecisionAction at call-2 decode.
+    # Simulate responses.parse raising (as the real API would) and confirm
+    # analyze() propagates the exception rather than swallowing it.
+    request = SymbolIntelligenceRequest(close=10.0, signal="pullback")
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = _make_fake_openai_response()
+        mock_client.responses.parse.side_effect = ValueError("action: literal_error")
+
+        analyzer = SymbolAnalyzer()
+        with pytest.raises(Exception):
+            analyzer.analyze("XYZ", request)
 
 
 # --- tests for extended prompt and cache ---

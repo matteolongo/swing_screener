@@ -40,18 +40,9 @@ def test_record_analysis_metrics_none_tokens(tmp_path):
     assert data[-1]["tokens"] is None
 
 
-def test_record_analysis_metrics_degrade_soft_corrupt_file(tmp_path):
-    from swing_screener.intelligence.metrics import record_analysis_metrics
-
-    path = tmp_path / "intelligence_metrics.json"
-    path.write_text("not json{{{")
-    # must not raise
-    record_analysis_metrics("ERR", tokens=5, metrics_root=tmp_path)
-
-
 def test_record_self_heals_corrupt_file(tmp_path):
-    import json
     from swing_screener.intelligence.metrics import record_analysis_metrics
+
     (tmp_path / "intelligence_metrics.json").write_text("{ this is not json")
     record_analysis_metrics("AAA", tokens=5, metrics_root=tmp_path)
     data = json.loads((tmp_path / "intelligence_metrics.json").read_text())
