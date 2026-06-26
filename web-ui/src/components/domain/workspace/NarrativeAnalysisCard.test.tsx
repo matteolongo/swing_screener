@@ -499,7 +499,7 @@ describe('NarrativeAnalysisCard second opinion', () => {
       technicalLabel: 'neutral',
       fundamentalsLabel: 'neutral',
       valuationLabel: 'fair',
-      catalystLabel: 'none',
+      catalystLabel: 'neutral',
       whyNow: 'Hold.',
       whatToDo: 'Manage.',
       mainRisk: 'None.',
