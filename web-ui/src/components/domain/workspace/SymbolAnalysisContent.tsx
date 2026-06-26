@@ -11,6 +11,7 @@ import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCa
 import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
 import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
+import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -111,10 +112,23 @@ export default function SymbolAnalysisContent({
     computeAnalysisMutation.mutate({ tickers: [ticker], top: 1, includeHeld: true });
   }, [ticker, position, candidate, computeAnalysisMutation]);
 
+  const heldMode = Boolean(position);
+  const canAddOn = ['BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT'].includes(
+    candidate?.decisionSummary?.action ?? '',
+  );
+
+  useEffect(() => {
+    if (activeTab === 'order' && heldMode && !canAddOn) {
+      onTabChange('overview');
+    }
+  }, [activeTab, heldMode, canAddOn, onTabChange]);
+
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
-    { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
+    ...(!heldMode || canAddOn
+      ? [{ id: 'order' as const, label: t('workspacePage.panels.analysis.tabs.order') }]
+      : []),
     { id: 'backtest', label: t('workspacePage.panels.analysis.tabs.backtest') },
   ];
   const watchedTickers = new Set((watchlistQuery.data ?? []).map((item) => item.ticker.toUpperCase()));
@@ -187,6 +201,7 @@ export default function SymbolAnalysisContent({
               grossMargin={fundamentalsQuery.data?.grossMargin ?? null}
               valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
             />
+            {heldMode && position && <ManagePositionPanel position={position} candidate={candidate} />}
             {!candidate && (
               <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
                 <p className="text-sm text-muted">
