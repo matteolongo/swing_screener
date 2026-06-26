@@ -3,6 +3,11 @@ import datetime as dt
 import time
 import pytest
 from fastapi.testclient import TestClient
+from swing_screener.selection.screening_window import (
+    resolve_fetch_start_date,
+    resolve_default_asof_date,
+    resolve_data_freshness,
+)
 from unittest.mock import MagicMock
 from types import SimpleNamespace
 
@@ -820,7 +825,7 @@ def test_screener_loads_each_fundamentals_snapshot_once(monkeypatch):
 
 
 def test_resolve_fetch_start_date_covers_min_history():
-    start = screener_service._resolve_fetch_start_date("2026-03-02", 260)
+    start = resolve_fetch_start_date("2026-03-02", 260)
     asof = dt.date.fromisoformat("2026-03-02")
     window_days = (asof - dt.date.fromisoformat(start)).days
     # Enough calendar days to yield >= 260 trading bars, but no multi-year window
@@ -829,8 +834,8 @@ def test_resolve_fetch_start_date_covers_min_history():
 
 
 def test_resolve_fetch_start_date_grows_with_min_history():
-    short = screener_service._resolve_fetch_start_date("2026-03-02", 260)
-    long = screener_service._resolve_fetch_start_date("2026-03-02", 400)
+    short = resolve_fetch_start_date("2026-03-02", 260)
+    long = resolve_fetch_start_date("2026-03-02", 400)
     assert dt.date.fromisoformat(long) < dt.date.fromisoformat(short)
 
 
@@ -863,7 +868,7 @@ def test_screener_fetches_rolling_window_not_fixed_start(monkeypatch):
 
     assert captured["start_dates"]
     for start in captured["start_dates"]:
-        assert start == screener_service._resolve_fetch_start_date("2026-03-02", 260)
+        assert start == resolve_fetch_start_date("2026-03-02", 260)
 
 
 def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
@@ -1007,19 +1012,19 @@ def test_screener_invalid_currency_rejected():
 
 def test_default_asof_uses_previous_day_before_eur_close():
     now_utc = dt.datetime(2026, 2, 19, 15, 0, tzinfo=dt.timezone.utc)
-    resolved = screener_service._resolve_default_asof_date(now_utc, ["EUR"])
+    resolved = resolve_default_asof_date(now_utc, ["EUR"])
     assert resolved.isoformat() == "2026-02-18"
 
 
 def test_default_asof_uses_same_day_after_eur_close():
     now_utc = dt.datetime(2026, 2, 19, 18, 0, tzinfo=dt.timezone.utc)
-    resolved = screener_service._resolve_default_asof_date(now_utc, ["EUR"])
+    resolved = resolve_default_asof_date(now_utc, ["EUR"])
     assert resolved.isoformat() == "2026-02-19"
 
 
 def test_data_freshness_is_intraday_for_today_before_close():
     now_utc = dt.datetime(2026, 2, 19, 15, 0, tzinfo=dt.timezone.utc)
-    freshness = screener_service._resolve_data_freshness("2026-02-19", now_utc, ["EUR"])
+    freshness = resolve_data_freshness("2026-02-19", now_utc, ["EUR"])
     assert freshness == "intraday"
 
 

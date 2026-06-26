@@ -4,11 +4,9 @@ from __future__ import annotations
 from dataclasses import replace, asdict, dataclass, field
 from typing import Optional
 import datetime as dt
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
-import math
 import os
-from zoneinfo import ZoneInfo
 
 import pandas as pd
 from swing_screener.errors import (
@@ -42,7 +40,6 @@ from swing_screener.data.universe import (
     UniverseConfig as DataUniverseConfig,
     get_universe_benchmark,
 )
-from swing_screener.data.market_data import MarketDataConfig
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.data.currency import detect_currency
 from swing_screener.data.ticker_info import get_multiple_ticker_info
@@ -85,6 +82,12 @@ from swing_screener.selection.ranking import RankingConfig
 from swing_screener.selection.entries import EntrySignalConfig
 from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.selection.eval_cache import EvalCache
+from swing_screener.selection.screening_window import (
+    resolve_screening_currencies,
+    resolve_default_asof_date,
+    resolve_data_freshness,
+    resolve_fetch_start_date,
+)
 
 # Map of removed universe ids to their replacements (or None if dropped with no replacement).
 _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
@@ -132,12 +135,6 @@ _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
 from api.services.screener_run_manager import get_screener_run_manager
 
 logger = logging.getLogger(__name__)
-SUPPORTED_CURRENCIES = {"USD", "EUR"}
-MARKET_CLOSE_BY_CURRENCY: dict[str, tuple[str, int, int]] = {
-    # (IANA timezone, close hour, close minute), with a small post-close buffer.
-    "USD": ("America/New_York", 16, 10),
-    "EUR": ("Europe/Amsterdam", 17, 40),
-}
 
 
 def _min_days_to_earnings_default() -> int:
@@ -173,129 +170,6 @@ def _fetch_ohlcv_chunked(
     for df in frames[1:]:
         out = merge_ohlcv(out, df)
     return out
-
-
-def _normalize_currency_codes(values: list[str] | tuple[str, ...] | None) -> list[str]:
-    if not values:
-        return []
-    cleaned = []
-    for value in values:
-        code = str(value).strip().upper()
-        if code in SUPPORTED_CURRENCIES:
-            cleaned.append(code)
-    return list(dict.fromkeys(cleaned))
-
-
-def _previous_weekday(day: dt.date) -> dt.date:
-    cursor = day - dt.timedelta(days=1)
-    while cursor.weekday() >= 5:
-        cursor -= dt.timedelta(days=1)
-    return cursor
-
-
-def _market_effective_date(currency: str, now_utc: dt.datetime) -> tuple[dt.date, bool]:
-    tz_name, close_hour, close_minute = MARKET_CLOSE_BY_CURRENCY.get(
-        currency,
-        MARKET_CLOSE_BY_CURRENCY["USD"],
-    )
-    tz = ZoneInfo(tz_name)
-    local_now = now_utc.astimezone(tz)
-    local_date = local_now.date()
-
-    if local_date.weekday() >= 5:
-        return _previous_weekday(local_date), True
-
-    close_local = dt.datetime.combine(
-        local_date,
-        dt.time(hour=close_hour, minute=close_minute),
-        tzinfo=tz,
-    )
-    is_closed = local_now >= close_local
-    if is_closed:
-        return local_date, True
-    return _previous_weekday(local_date), False
-
-
-def _infer_currencies_from_tickers(tickers: list[str]) -> list[str]:
-    inferred: list[str] = []
-    for ticker in tickers:
-        rec = get_instrument_record(ticker)
-        if not rec:
-            continue
-        currency = str(rec.get("currency") or "").strip().upper()
-        if currency in SUPPORTED_CURRENCIES and currency not in inferred:
-            inferred.append(currency)
-    return inferred
-
-
-def _resolve_screening_currencies(
-    request: ScreenerRequest,
-    *,
-    strategy_currencies: list[str] | tuple[str, ...] | None,
-    tickers: list[str],
-    universe_id: str | None = None,
-) -> list[str]:
-    requested = _normalize_currency_codes(request.currencies)
-    if requested:
-        return requested
-
-    inferred = _infer_currencies_from_tickers(tickers)
-    if inferred:
-        return inferred
-
-    strategy_defaults = _normalize_currency_codes(list(strategy_currencies or []))
-    if strategy_defaults:
-        return strategy_defaults
-
-    if universe_id:
-        from swing_screener.data.universe import get_universe_currencies
-        universe_currencies = _normalize_currency_codes(get_universe_currencies(universe_id))
-        if universe_currencies:
-            return universe_currencies
-
-    return ["USD", "EUR"]
-
-
-def _resolve_default_asof_date(now_utc: dt.datetime, currencies: list[str]) -> dt.date:
-    active = _normalize_currency_codes(currencies) or ["USD", "EUR"]
-    effective_dates = [_market_effective_date(currency, now_utc)[0] for currency in active]
-    return min(effective_dates)
-
-
-def _all_markets_closed(now_utc: dt.datetime, currencies: list[str]) -> bool:
-    active = _normalize_currency_codes(currencies) or ["USD", "EUR"]
-    return all(_market_effective_date(currency, now_utc)[1] for currency in active)
-
-
-def _resolve_data_freshness(asof_date: str, now_utc: dt.datetime, currencies: list[str]) -> str:
-    try:
-        resolved = dt.date.fromisoformat(asof_date)
-    except ValueError:
-        return "final_close"
-
-    if resolved < now_utc.date():
-        return "final_close"
-    if resolved > now_utc.date():
-        return "intraday"
-    return "final_close" if _all_markets_closed(now_utc, currencies) else "intraday"
-
-
-_FETCH_TRADING_TO_CALENDAR = 1.45
-_FETCH_WINDOW_BUFFER_DAYS = 45
-_FETCH_MIN_BARS = 260
-
-
-def _resolve_fetch_start_date(asof_date: str, min_history: int) -> str:
-    """Start of the OHLCV fetch window: enough calendar days before asof to
-    yield at least max(min_history, 260) trading bars, instead of a fixed
-    start date whose window grows unbounded over time."""
-    try:
-        asof = dt.date.fromisoformat(asof_date)
-    except ValueError:
-        return "2022-01-01"
-    bars_needed = max(int(min_history), _FETCH_MIN_BARS)
-    calendar_days = math.ceil(bars_needed * _FETCH_TRADING_TO_CALENDAR) + _FETCH_WINDOW_BUFFER_DAYS
-    return (asof - dt.timedelta(days=calendar_days)).isoformat()
 
 
 @dataclass
@@ -432,7 +306,7 @@ class ScreenerService:
         ctx.market_health = self._provider.get_source_health().to_dict()
 
         ctx.screening_tickers = [ticker for ticker in ctx.tickers if ticker != ctx.benchmark]
-        ctx.active_currencies = _resolve_screening_currencies(
+        ctx.active_currencies = resolve_screening_currencies(
             request,
             strategy_currencies=ctx.universe_cfg.filt.currencies,
             tickers=ctx.screening_tickers,
@@ -441,7 +315,7 @@ class ScreenerService:
         if request.asof_date:
             ctx.asof_str = request.asof_date
         else:
-            ctx.asof_str = _resolve_default_asof_date(ctx.now_utc, ctx.active_currencies).isoformat()
+            ctx.asof_str = resolve_default_asof_date(ctx.now_utc, ctx.active_currencies).isoformat()
 
         if len(ctx.tickers) <= 1 and ctx.benchmark in ctx.tickers:
             raise NotFoundError("No tickers left after applying screener filters")
@@ -465,7 +339,7 @@ class ScreenerService:
         if "min_history" in fields_set and ctx.request.min_history is not None:
             ctx.signals_cfg = replace(ctx.signals_cfg, min_history=ctx.request.min_history)
 
-        ctx.start_date = _resolve_fetch_start_date(ctx.asof_str, ctx.signals_cfg.min_history)
+        ctx.start_date = resolve_fetch_start_date(ctx.asof_str, ctx.signals_cfg.min_history)
         ctx.end_date = ctx.asof_str
         sector_context_tickers = ["SPY", *sector_rotation.SECTOR_ETFS.keys()]
         sector_ohlcv = pd.DataFrame()
@@ -506,7 +380,7 @@ class ScreenerService:
 
         ctx.last_bar_map = last_bar_map(ctx.ohlcv)
         ctx.overall_last_bar = _to_iso(ctx.ohlcv.index.max())
-        ctx.data_freshness = _resolve_data_freshness(ctx.asof_str, ctx.now_utc, ctx.active_currencies)
+        ctx.data_freshness = resolve_data_freshness(ctx.asof_str, ctx.now_utc, ctx.active_currencies)
 
         # Detect tickers that failed to download and surface them as warnings
         if "Close" in ctx.ohlcv.columns.get_level_values(0):
@@ -1032,7 +906,7 @@ class ScreenerService:
         except (KeyError, IndexError) as exc:
             logger.error("Screener data error: %s", exc)
             raise ServiceError("Screener failed due to data error")
-        except Exception as exc:
+        except Exception:
             logger.exception("Unexpected screener error")
             raise ServiceError("Screener failed unexpectedly")
 
