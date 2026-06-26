@@ -3,6 +3,7 @@ import {
   formatConfidencePercent,
   formatCurrency,
   formatDate,
+  formatDateTime,
   formatPercent,
   formatNumber,
   formatRatioAsPercent,
@@ -166,6 +167,21 @@ describe('Formatter Utilities', () => {
 
     it('handles very large numbers', () => {
       expect(formatNumber(999999.99, 2)).toBe('999999.99')
+    })
+  })
+
+  describe('formatDateTime', () => {
+    it('treats a tz-less ISO datetime as UTC (same instant as explicit Z)', () => {
+      expect(formatDateTime('2026-06-26T07:19:00')).toBe(
+        formatDateTime('2026-06-26T07:19:00Z'),
+      )
+    })
+
+    it('does not shift an already tz-aware datetime', () => {
+      // 09:19+02:00 is the same instant as 07:19Z -> identical rendering
+      expect(formatDateTime('2026-06-26T09:19:00+02:00')).toBe(
+        formatDateTime('2026-06-26T07:19:00Z'),
+      )
     })
   })
 

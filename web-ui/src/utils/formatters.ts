@@ -97,7 +97,18 @@ export function formatCompactNumber(value?: number | null): string {
  * Format datetime (e.g., "Feb 5, 2026 14:30")
  */
 export function formatDateTime(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  let value = date;
+  // A tz-less ISO datetime (e.g. "2026-06-26T07:19:00") is UTC from the backend,
+  // but `new Date()` would parse it as local time. Mark it UTC so it renders in
+  // the viewer's local zone correctly.
+  if (
+    typeof value === 'string' &&
+    /T\d{2}:\d{2}/.test(value) &&
+    !/([Zz]|[+-]\d{2}:?\d{2})$/.test(value)
+  ) {
+    value = `${value}Z`;
+  }
+  const d = typeof value === 'string' ? new Date(value) : value;
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
