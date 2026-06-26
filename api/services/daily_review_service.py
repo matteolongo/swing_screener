@@ -1,8 +1,9 @@
 """Service for generating daily review with action items."""
 import logging
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Callable, Literal, Optional
 
 from swing_screener.errors import DomainError
 
@@ -59,6 +60,36 @@ def to_daily_review_candidate(c) -> DailyReviewCandidate:
         same_symbol=c.same_symbol,
         decision_summary=c.decision_summary,
     )
+
+
+@dataclass
+class _ActionBuckets:
+    """Collects categorized position actions while iterating positions."""
+    hold: list[DailyReviewPositionHold] = field(default_factory=list)
+    update: list[DailyReviewPositionUpdate] = field(default_factory=list)
+    close: list[DailyReviewPositionClose] = field(default_factory=list)
+    exit_signal: list[DailyReviewPositionExitSignal] = field(default_factory=list)
+
+
+@dataclass
+class _PositionActionContext:
+    """Per-position values that differ between the live and stateless review paths.
+
+    The two paths read success-branch fields from different sources (the position
+    model vs the stop suggestion) and resolve error-branch fields, the time-stop
+    payload and position_id differently. Capturing those as resolved scalars plus
+    two small callables lets one classifier handle both.
+    """
+    position_id: str
+    err_ticker: str
+    err_entry_price: float
+    err_stop_price: float
+    err_current_price: float
+    trim_r_threshold: float
+    #: suggestion -> (ticker, entry_price, stop_price) for the success branches.
+    success_fields: Callable
+    #: r_now -> {"days_open": ..., "time_stop_warning": ...}
+    time_stop: Callable
 
 
 class DailyReviewService:
@@ -129,123 +160,43 @@ class DailyReviewService:
             time_stop_min_r=float(active_manage.get("time_stop_min_r", 0.5)),
         )
         positions = positions_response.positions
-        
-        positions_hold: list[DailyReviewPositionHold] = []
-        positions_update: list[DailyReviewPositionUpdate] = []
-        positions_close: list[DailyReviewPositionClose] = []
-        positions_exit_signal: list[DailyReviewPositionExitSignal] = []
 
+        buckets = _ActionBuckets()
         for pos in positions:
-            # Get stop suggestion for this position
+            ctx = _PositionActionContext(
+                position_id=pos.position_id,
+                err_ticker=pos.ticker,
+                err_entry_price=pos.entry_price,
+                err_stop_price=pos.stop_price,
+                err_current_price=pos.current_price or pos.entry_price,
+                trim_r_threshold=trim_r_threshold,
+                success_fields=lambda _s, p=pos: (p.ticker, p.entry_price, p.stop_price),
+                time_stop=lambda r, p=pos: self._time_stop_payload_from_position(p, r, active_manage),
+            )
             try:
                 suggestion = self.portfolio.suggest_position_stop(pos.position_id)
             except DomainError as exc:
-                reason = exc.detail
                 logger.warning(
                     "Daily review stop suggestion unavailable for %s: %s",
                     pos.ticker,
-                    reason,
+                    exc.detail,
                 )
-                positions_hold.append(
-                    DailyReviewPositionHold(
-                        position_id=pos.position_id,
-                        ticker=pos.ticker,
-                        entry_price=pos.entry_price,
-                        stop_price=pos.stop_price,
-                        current_price=pos.current_price or pos.entry_price,
-                        r_now=0.0,
-                        **self._time_stop_payload_from_position(pos, 0.0, active_manage),
-                        reason=f"Stop suggestion unavailable: {reason}",
-                    )
-                )
+                buckets.hold.append(self._error_hold(ctx, f"Stop suggestion unavailable: {exc.detail}"))
                 continue
             except Exception as exc:
                 logger.exception(
                     "Unexpected error generating stop suggestion for %s",
                     pos.ticker,
                 )
-                positions_hold.append(
-                    DailyReviewPositionHold(
-                        position_id=pos.position_id,
-                        ticker=pos.ticker,
-                        entry_price=pos.entry_price,
-                        stop_price=pos.stop_price,
-                        current_price=pos.current_price or pos.entry_price,
-                        r_now=0.0,
-                        **self._time_stop_payload_from_position(pos, 0.0, active_manage),
-                        reason=f"Stop suggestion unavailable: {exc}",
-                    )
-                )
+                buckets.hold.append(self._error_hold(ctx, f"Stop suggestion unavailable: {exc}"))
                 continue
 
-            # Categorize based on action
-            if suggestion.action == "NO_ACTION":
-                trim_suggestion = (
-                    TrimSuggestion(r_threshold=trim_r_threshold, r_now=suggestion.r_now)
-                    if suggestion.r_now >= trim_r_threshold
-                    else None
-                )
-                positions_hold.append(
-                    DailyReviewPositionHold(
-                        position_id=pos.position_id,
-                        ticker=pos.ticker,
-                        entry_price=pos.entry_price,
-                        stop_price=pos.stop_price,
-                        current_price=suggestion.last,
-                        r_now=suggestion.r_now,
-                        **self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage),
-                        reason=suggestion.reason,
-                        exhaustion_score=suggestion.exhaustion_score,
-                        exhaustion_label=suggestion.exhaustion_label,
-                        trim_suggestion=trim_suggestion,
-                    )
-                )
+            self._classify_position_action(suggestion, ctx, buckets)
 
-            elif suggestion.action == "MOVE_STOP_UP":
-                positions_update.append(
-                    DailyReviewPositionUpdate(
-                        position_id=pos.position_id,
-                        ticker=pos.ticker,
-                        entry_price=pos.entry_price,
-                        stop_current=pos.stop_price,
-                        stop_suggested=suggestion.stop_suggested,
-                        current_price=suggestion.last,
-                        r_now=suggestion.r_now,
-                        **self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage),
-                        reason=suggestion.reason,
-                        exhaustion_score=suggestion.exhaustion_score,
-                        exhaustion_label=suggestion.exhaustion_label,
-                    )
-                )
-
-            elif suggestion.action in ["CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]:
-                positions_close.append(
-                    DailyReviewPositionClose(
-                        position_id=pos.position_id,
-                        ticker=pos.ticker,
-                        entry_price=pos.entry_price,
-                        stop_price=pos.stop_price,
-                        current_price=suggestion.last,
-                        r_now=suggestion.r_now,
-                        **self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage),
-                        reason=suggestion.reason,
-                    )
-                )
-
-            elif suggestion.action == "CLOSE_EXIT_SIGNAL":
-                days_open = self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage).get("days_open", 0)
-                positions_exit_signal.append(
-                    DailyReviewPositionExitSignal(
-                        position_id=pos.position_id,
-                        ticker=pos.ticker,
-                        entry_price=pos.entry_price,
-                        stop_price=pos.stop_price,
-                        current_price=suggestion.last,
-                        r_now=suggestion.r_now,
-                        days_open=days_open,
-                        reason=suggestion.reason,
-                    )
-                )
+        positions_hold = buckets.hold
+        positions_update = buckets.update
+        positions_close = buckets.close
+        positions_exit_signal = buckets.exit_signal
 
         # 3. Build summary
         summary = DailyReviewSummary(
@@ -396,6 +347,96 @@ class DailyReviewService:
             "exit_signal_days": cfg.exit_signal_days,
         }
 
+    @staticmethod
+    def _error_hold(ctx: _PositionActionContext, reason: str) -> DailyReviewPositionHold:
+        """Build a hold entry for a position whose stop suggestion failed."""
+        return DailyReviewPositionHold(
+            position_id=ctx.position_id,
+            ticker=ctx.err_ticker,
+            entry_price=ctx.err_entry_price,
+            stop_price=ctx.err_stop_price,
+            current_price=ctx.err_current_price,
+            r_now=0.0,
+            **ctx.time_stop(0.0),
+            reason=reason,
+        )
+
+    def _classify_position_action(
+        self,
+        suggestion,
+        ctx: _PositionActionContext,
+        buckets: _ActionBuckets,
+    ) -> None:
+        """Categorize a successful stop suggestion into the right action bucket."""
+        if suggestion.action == "NO_ACTION":
+            ticker, entry, stop = ctx.success_fields(suggestion)
+            trim_suggestion = (
+                TrimSuggestion(r_threshold=ctx.trim_r_threshold, r_now=suggestion.r_now)
+                if suggestion.r_now >= ctx.trim_r_threshold
+                else None
+            )
+            buckets.hold.append(
+                DailyReviewPositionHold(
+                    position_id=ctx.position_id,
+                    ticker=ticker,
+                    entry_price=entry,
+                    stop_price=stop,
+                    current_price=suggestion.last,
+                    r_now=suggestion.r_now,
+                    **ctx.time_stop(suggestion.r_now),
+                    reason=suggestion.reason,
+                    exhaustion_score=suggestion.exhaustion_score,
+                    exhaustion_label=suggestion.exhaustion_label,
+                    trim_suggestion=trim_suggestion,
+                )
+            )
+        elif suggestion.action == "MOVE_STOP_UP":
+            ticker, entry, stop = ctx.success_fields(suggestion)
+            buckets.update.append(
+                DailyReviewPositionUpdate(
+                    position_id=ctx.position_id,
+                    ticker=ticker,
+                    entry_price=entry,
+                    stop_current=stop,
+                    stop_suggested=suggestion.stop_suggested,
+                    current_price=suggestion.last,
+                    r_now=suggestion.r_now,
+                    **ctx.time_stop(suggestion.r_now),
+                    reason=suggestion.reason,
+                    exhaustion_score=suggestion.exhaustion_score,
+                    exhaustion_label=suggestion.exhaustion_label,
+                )
+            )
+        elif suggestion.action in ["CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]:
+            ticker, entry, stop = ctx.success_fields(suggestion)
+            buckets.close.append(
+                DailyReviewPositionClose(
+                    position_id=ctx.position_id,
+                    ticker=ticker,
+                    entry_price=entry,
+                    stop_price=stop,
+                    current_price=suggestion.last,
+                    r_now=suggestion.r_now,
+                    **ctx.time_stop(suggestion.r_now),
+                    reason=suggestion.reason,
+                )
+            )
+        elif suggestion.action == "CLOSE_EXIT_SIGNAL":
+            ticker, entry, stop = ctx.success_fields(suggestion)
+            days_open = ctx.time_stop(suggestion.r_now).get("days_open", 0)
+            buckets.exit_signal.append(
+                DailyReviewPositionExitSignal(
+                    position_id=ctx.position_id,
+                    ticker=ticker,
+                    entry_price=entry,
+                    stop_price=stop,
+                    current_price=suggestion.last,
+                    r_now=suggestion.r_now,
+                    days_open=days_open,
+                    reason=suggestion.reason,
+                )
+            )
+
     def compute_daily_review_from_state(
         self,
         strategy: dict,
@@ -429,126 +470,51 @@ class DailyReviewService:
         new_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
         add_on_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
 
-        positions_hold: list[DailyReviewPositionHold] = []
-        positions_update: list[DailyReviewPositionUpdate] = []
-        positions_close: list[DailyReviewPositionClose] = []
-        positions_exit_signal: list[DailyReviewPositionExitSignal] = []
         manage_payload = self._manage_cfg_payload_from_strategy(strategy)
         trim_r_threshold_state = float(
             (strategy.get("manage", {}) if isinstance(strategy, dict) else {}).get("trim_r_threshold", 2.0)
         )
 
+        buckets = _ActionBuckets()
         for pos in positions:
             if pos.get("status") != "open":
                 continue
 
             position_id = str(pos.get("position_id") or f"LOCAL-{pos.get('ticker', 'UNKNOWN')}")
+            ctx = _PositionActionContext(
+                position_id=position_id,
+                err_ticker=str(pos.get("ticker", "")),
+                err_entry_price=float(pos.get("entry_price", 0.0)),
+                err_stop_price=float(pos.get("stop_price", 0.0)),
+                err_current_price=float(pos.get("current_price") or pos.get("entry_price") or 0.0),
+                trim_r_threshold=trim_r_threshold_state,
+                success_fields=lambda s: (s.ticker, s.entry, s.stop_old),
+                time_stop=lambda r, p=pos: self._time_stop_payload(p, r, manage_payload),
+            )
             try:
                 suggestion = self.portfolio.compute_position_stop_suggestion(pos, manage_payload)
             except DomainError as exc:
-                reason = exc.detail
                 logger.warning(
                     "Stateless daily review stop suggestion unavailable for %s: %s",
                     pos.get("ticker"),
-                    reason,
+                    exc.detail,
                 )
-                positions_hold.append(
-                    DailyReviewPositionHold(
-                        position_id=position_id,
-                        ticker=str(pos.get("ticker", "")),
-                        entry_price=float(pos.get("entry_price", 0.0)),
-                        stop_price=float(pos.get("stop_price", 0.0)),
-                        current_price=float(pos.get("current_price") or pos.get("entry_price") or 0.0),
-                        r_now=0.0,
-                        **self._time_stop_payload(pos, 0.0, manage_payload),
-                        reason=f"Stop suggestion unavailable: {reason}",
-                    )
-                )
+                buckets.hold.append(self._error_hold(ctx, f"Stop suggestion unavailable: {exc.detail}"))
                 continue
             except Exception as exc:
                 logger.exception(
                     "Unexpected stateless stop suggestion error for %s",
                     pos.get("ticker"),
                 )
-                positions_hold.append(
-                    DailyReviewPositionHold(
-                        position_id=position_id,
-                        ticker=str(pos.get("ticker", "")),
-                        entry_price=float(pos.get("entry_price", 0.0)),
-                        stop_price=float(pos.get("stop_price", 0.0)),
-                        current_price=float(pos.get("current_price") or pos.get("entry_price") or 0.0),
-                        r_now=0.0,
-                        **self._time_stop_payload(pos, 0.0, manage_payload),
-                        reason=f"Stop suggestion unavailable: {exc}",
-                    )
-                )
+                buckets.hold.append(self._error_hold(ctx, f"Stop suggestion unavailable: {exc}"))
                 continue
 
-            if suggestion.action == "NO_ACTION":
-                trim_sug = (
-                    TrimSuggestion(r_threshold=trim_r_threshold_state, r_now=suggestion.r_now)
-                    if suggestion.r_now >= trim_r_threshold_state
-                    else None
-                )
-                positions_hold.append(
-                    DailyReviewPositionHold(
-                        position_id=position_id,
-                        ticker=suggestion.ticker,
-                        entry_price=suggestion.entry,
-                        stop_price=suggestion.stop_old,
-                        current_price=suggestion.last,
-                        r_now=suggestion.r_now,
-                        **self._time_stop_payload(pos, suggestion.r_now, manage_payload),
-                        reason=suggestion.reason,
-                        exhaustion_score=suggestion.exhaustion_score,
-                        exhaustion_label=suggestion.exhaustion_label,
-                        trim_suggestion=trim_sug,
-                    )
-                )
-            elif suggestion.action == "MOVE_STOP_UP":
-                positions_update.append(
-                    DailyReviewPositionUpdate(
-                        position_id=position_id,
-                        ticker=suggestion.ticker,
-                        entry_price=suggestion.entry,
-                        stop_current=suggestion.stop_old,
-                        stop_suggested=suggestion.stop_suggested,
-                        current_price=suggestion.last,
-                        r_now=suggestion.r_now,
-                        **self._time_stop_payload(pos, suggestion.r_now, manage_payload),
-                        reason=suggestion.reason,
-                        exhaustion_score=suggestion.exhaustion_score,
-                        exhaustion_label=suggestion.exhaustion_label,
-                    )
-                )
-            elif suggestion.action in ["CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]:
-                positions_close.append(
-                    DailyReviewPositionClose(
-                        position_id=position_id,
-                        ticker=suggestion.ticker,
-                        entry_price=suggestion.entry,
-                        stop_price=suggestion.stop_old,
-                        current_price=suggestion.last,
-                        r_now=suggestion.r_now,
-                        **self._time_stop_payload(pos, suggestion.r_now, manage_payload),
-                        reason=suggestion.reason,
-                    )
-                )
+            self._classify_position_action(suggestion, ctx, buckets)
 
-            elif suggestion.action == "CLOSE_EXIT_SIGNAL":
-                days_open = self._time_stop_payload(pos, suggestion.r_now, manage_payload).get("days_open", 0)
-                positions_exit_signal.append(
-                    DailyReviewPositionExitSignal(
-                        position_id=position_id,
-                        ticker=suggestion.ticker,
-                        entry_price=suggestion.entry,
-                        stop_price=suggestion.stop_old,
-                        current_price=suggestion.last,
-                        r_now=suggestion.r_now,
-                        days_open=days_open,
-                        reason=suggestion.reason,
-                    )
-                )
+        positions_hold = buckets.hold
+        positions_update = buckets.update
+        positions_close = buckets.close
+        positions_exit_signal = buckets.exit_signal
 
         return DailyReview(
             watchlist_near_trigger=[],
