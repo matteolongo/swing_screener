@@ -190,6 +190,15 @@ result also populates:
   up/down/flat, `summary`, and `drivers[]` of `{label, detail}` grounded in news since the entry
   date), explaining the sign and size of the current R. `null` outside position context.
 
+In position context the structured-output parser (call 2) uses `_LLMPositionAnalysis`, a variant that
+makes `position_signal`, `position_outlook` and `key_numbers` **required** so the model cannot omit
+them. As a belt-and-suspenders backstop, if `position_signal` or `key_numbers` still come back empty
+they are filled deterministically by `_fallback_position_fields(req)` from request data only
+(`signal` → HOLD/EXIT, plus current R / days held / entry / stop) — no LLM, no I/O. `position_outlook`
+has no deterministic fallback (it cannot be synthesised from request numbers) and relies on the
+required-field enforcement. The candidate (non-position) path is unaffected: it still parses
+`_LLMAnalysis`, where these fields stay optional.
+
 ## Distilled fields and UI panels
 
 The narrative is the long-form reasoning; the web UI keeps it collapsed and leads with distilled,
