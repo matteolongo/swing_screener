@@ -28,6 +28,39 @@ from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 logger = logging.getLogger(__name__)
 
 
+def to_daily_review_candidate(c) -> DailyReviewCandidate:
+    """Map a screener candidate to a DailyReviewCandidate."""
+    return DailyReviewCandidate(
+        ticker=c.ticker,
+        currency=c.currency,
+        rank=c.rank,
+        priority_rank=c.priority_rank,
+        confidence=c.confidence,
+        signal=c.signal or "UNKNOWN",
+        close=c.close,
+        score=c.score,
+        atr=c.atr,
+        sma_20=c.sma_20,
+        sma_50=c.sma_50,
+        sma_200=c.sma_200,
+        momentum_6m=c.momentum_6m,
+        momentum_12m=c.momentum_12m,
+        rel_strength=c.rel_strength,
+        entry=c.entry or 0.0,
+        stop=c.stop or 0.0,
+        shares=c.shares or 0,
+        r_reward=c.rr or 0.0,
+        name=c.name,
+        sector=c.sector,
+        suggested_order_type=c.suggested_order_type,
+        suggested_order_price=c.suggested_order_price,
+        execution_note=c.execution_note,
+        recommendation=c.recommendation,
+        same_symbol=c.same_symbol,
+        decision_summary=c.decision_summary,
+    )
+
+
 class DailyReviewService:
     """Service for generating daily review with trade candidates and position actions."""
 
@@ -74,41 +107,11 @@ class DailyReviewService:
         screener_result = self.screener.run_screener(screener_request)
         candidates = screener_result.candidates[:top_n]
 
-        def _to_daily_candidate(c) -> DailyReviewCandidate:
-            return DailyReviewCandidate(
-                ticker=c.ticker,
-                currency=c.currency,
-                rank=c.rank,
-                priority_rank=c.priority_rank,
-                confidence=c.confidence,
-                signal=c.signal or "UNKNOWN",
-                close=c.close,
-                score=c.score,
-                atr=c.atr,
-                sma_20=c.sma_20,
-                sma_50=c.sma_50,
-                sma_200=c.sma_200,
-                momentum_6m=c.momentum_6m,
-                momentum_12m=c.momentum_12m,
-                rel_strength=c.rel_strength,
-                entry=c.entry or 0.0,
-                stop=c.stop or 0.0,
-                shares=c.shares or 0,
-                r_reward=c.rr or 0.0,
-                name=c.name,
-                sector=c.sector,
-                suggested_order_type=c.suggested_order_type,
-                suggested_order_price=c.suggested_order_price,
-                execution_note=c.execution_note,
-                recommendation=c.recommendation,
-                same_symbol=c.same_symbol,
-                decision_summary=c.decision_summary,
-            )
         # Re-entries are fresh buy decisions (no open position), so rank them
         # among new opportunities by screener priority. Add-ons / scale-backs
         # depend on an existing position and stay in the portfolio sub-group.
-        new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
-        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
+        new_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
+        add_on_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
         screener_tickers = {c.ticker.upper() for c in candidates}
         watchlist_near_trigger = [
             item for item in self._watchlist_near_trigger_items()
@@ -419,41 +422,11 @@ class DailyReviewService:
         screener_result = self.screener.run_screener(screener_request, strategy_override=strategy)
         candidates = screener_result.candidates[:top_n]
 
-        def _to_daily_candidate(c) -> DailyReviewCandidate:
-            return DailyReviewCandidate(
-                ticker=c.ticker,
-                currency=c.currency,
-                rank=c.rank,
-                priority_rank=c.priority_rank,
-                confidence=c.confidence,
-                signal=c.signal or "UNKNOWN",
-                close=c.close,
-                score=c.score,
-                atr=c.atr,
-                sma_20=c.sma_20,
-                sma_50=c.sma_50,
-                sma_200=c.sma_200,
-                momentum_6m=c.momentum_6m,
-                momentum_12m=c.momentum_12m,
-                rel_strength=c.rel_strength,
-                entry=c.entry or 0.0,
-                stop=c.stop or 0.0,
-                shares=c.shares or 0,
-                r_reward=c.rr or 0.0,
-                name=c.name,
-                sector=c.sector,
-                suggested_order_type=c.suggested_order_type,
-                suggested_order_price=c.suggested_order_price,
-                execution_note=c.execution_note,
-                recommendation=c.recommendation,
-                same_symbol=c.same_symbol,
-                decision_summary=c.decision_summary,
-            )
         # Re-entries are fresh buy decisions (no open position), so rank them
         # among new opportunities by screener priority. Add-ons / scale-backs
         # depend on an existing position and stay in the portfolio sub-group.
-        new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
-        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
+        new_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
+        add_on_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
 
         positions_hold: list[DailyReviewPositionHold] = []
         positions_update: list[DailyReviewPositionUpdate] = []
