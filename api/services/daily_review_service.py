@@ -104,8 +104,11 @@ class DailyReviewService:
                 same_symbol=c.same_symbol,
                 decision_summary=c.decision_summary,
             )
-        new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
-        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "RE_ENTRY", "SCALE_BACK")]
+        # Re-entries are fresh buy decisions (no open position), so rank them
+        # among new opportunities by screener priority. Add-ons / scale-backs
+        # depend on an existing position and stay in the portfolio sub-group.
+        new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
+        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
         screener_tickers = {c.ticker.upper() for c in candidates}
         watchlist_near_trigger = [
             item for item in self._watchlist_near_trigger_items()
@@ -446,8 +449,11 @@ class DailyReviewService:
                 same_symbol=c.same_symbol,
                 decision_summary=c.decision_summary,
             )
-        new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
-        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "RE_ENTRY", "SCALE_BACK")]
+        # Re-entries are fresh buy decisions (no open position), so rank them
+        # among new opportunities by screener priority. Add-ons / scale-backs
+        # depend on an existing position and stay in the portfolio sub-group.
+        new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
+        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
 
         positions_hold: list[DailyReviewPositionHold] = []
         positions_update: list[DailyReviewPositionUpdate] = []

@@ -2,6 +2,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import { formatNumber, getSignColorClass } from '@/utils/formatters';
+import { formatDecisionAction } from '@/features/screener/decisionSummary';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
 import { useEarningsProximity } from '@/features/portfolio/hooks';
 import type {
@@ -276,7 +277,19 @@ export interface CandidateItemProps {
   isFocused?: boolean;
 }
 
-function candidateModeBadge(item: DailyReviewCandidate, isAddOn?: boolean) {
+// Primary badge: the action to take today (Buy on Pullback / Watch / ...).
+function candidateActionBadge(item: DailyReviewCandidate) {
+  const action = item.decisionSummary?.action;
+  return (
+    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+      {action ? formatDecisionAction(action) : item.signal}
+    </span>
+  );
+}
+
+// Secondary flag: same-symbol context (you already held / hold this name). It
+// annotates the action, it does not replace it.
+function candidateModeFlag(item: DailyReviewCandidate, isAddOn?: boolean) {
   const mode = item.sameSymbol?.mode;
   if (mode === 'RE_ENTRY') {
     return (
@@ -287,23 +300,19 @@ function candidateModeBadge(item: DailyReviewCandidate, isAddOn?: boolean) {
   }
   if (mode === 'SCALE_BACK') {
     return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground/10 text-muted">
         {t('todayPage.actionList.scaleBack')}
       </span>
     );
   }
   if (isAddOn || mode === 'ADD_ON') {
     return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground/10 text-muted">
         {t('todayPage.actionList.addOn')}
       </span>
     );
   }
-  return (
-    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-      {item.decisionSummary?.action ?? item.signal}
-    </span>
-  );
+  return null;
 }
 
 export function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps) {
@@ -320,7 +329,8 @@ export function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateIt
         <span className="text-sm font-semibold text-foreground min-w-[60px]">
           {item.ticker}
         </span>
-        {candidateModeBadge(item, isAddOn)}
+        {candidateActionBadge(item)}
+        {candidateModeFlag(item, isAddOn)}
         <span className="text-xs text-muted tabular-nums">
           r/r: {formatNumber(item.rReward, 2)}R
         </span>
