@@ -101,6 +101,22 @@ def test_all_unsupported_indices_raises():
         provider.fetch_ohlcv(["^AEX"], "2026-06-15", "2026-06-16")
 
 
+def test_tz_aware_cache_is_normalized_on_read(tmp_path):
+    """Parquet caches written before tz handling are tz-aware; reading one must
+    still yield a tz-naive index so it can merge with fresh fetches."""
+    provider = AlpacaDataProvider(
+        api_key="k", secret_key="s", paper=True, cache_dir=str(tmp_path), use_cache=True
+    )
+    # Historical window (not live-edge) so the cache path is taken.
+    start, end = "2026-06-15", "2026-06-16"
+    cache_file = provider._cache_path(["AAPL"], start, end, "1d")
+    aware_idx = pd.to_datetime(["2026-06-15", "2026-06-16"]).tz_localize("UTC")
+    pd.DataFrame({("Close", "AAPL"): [100.5, 101.0]}, index=aware_idx).to_parquet(cache_file)
+
+    out = provider.fetch_ohlcv(["AAPL"], start, end)
+    assert out.index.tz is None
+
+
 def test_eurusd_rate_uses_yfinance_not_active_provider(monkeypatch):
     """FX must come from yfinance regardless of the configured equity provider."""
     from api.services import portfolio_service as ps

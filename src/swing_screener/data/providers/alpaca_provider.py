@@ -218,7 +218,10 @@ class AlpacaDataProvider(MarketDataProvider):
         # post-close bars are visible before local midnight.
         cache_file = self._cache_path(tickers, start_date, end_date, interval)
         if self.use_cache and cache_file.exists() and not is_live_edge_request:
-            return pd.read_parquet(cache_file)
+            # Normalize on read too: parquet caches written before tz handling
+            # was added are tz-aware and would not survive a merge with a
+            # freshly-fetched tz-naive frame.
+            return self._normalize_index_tz(pd.read_parquet(cache_file))
         
         # Parse timeframe
         timeframe = self._parse_timeframe(interval)
@@ -320,14 +323,17 @@ class AlpacaDataProvider(MarketDataProvider):
         # Remove any duplicate timestamps
         result = result.loc[~result.index.duplicated(keep="last")]
 
-        # Normalize to a tz-naive index (the OHLCV convention; yfinance returns
-        # tz-naive dates). Alpaca daily bars carry a tz-aware UTC stamp at 00:00
-        # ET; converting to ET then dropping tz yields the midnight-naive trading
-        # date (and preserves wall-clock time for intraday intervals).
-        if isinstance(result.index, pd.DatetimeIndex) and result.index.tz is not None:
-            result.index = result.index.tz_convert("America/New_York").tz_localize(None)
+        return self._normalize_index_tz(result)
 
-        return result
+    @staticmethod
+    def _normalize_index_tz(df: pd.DataFrame) -> pd.DataFrame:
+        """Return a tz-naive index (the OHLCV convention; yfinance returns
+        tz-naive dates). Alpaca daily bars carry a tz-aware UTC stamp at 00:00
+        ET; converting to ET then dropping tz yields the midnight-naive trading
+        date (and preserves wall-clock time for intraday intervals)."""
+        if isinstance(df.index, pd.DatetimeIndex) and df.index.tz is not None:
+            df.index = df.index.tz_convert("America/New_York").tz_localize(None)
+        return df
     
     def fetch_latest_price(self, ticker: str) -> float:
         """
