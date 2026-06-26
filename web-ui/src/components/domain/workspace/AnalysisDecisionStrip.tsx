@@ -88,14 +88,22 @@ export default function AnalysisDecisionStrip({
 }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
-  const closeEntry = summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null;
+  const heldMode = Boolean(position);
+  const closeEntry = heldMode
+    ? position!.entryPrice
+    : (summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null);
   const suggestedOrderEntry = isPositiveNumber(candidate?.suggestedOrderPrice) ? candidate.suggestedOrderPrice : null;
   const usesSuggestedEntry =
+    !heldMode &&
     suggestedOrderEntry != null &&
     (!isPositiveNumber(closeEntry) || Math.abs(suggestedOrderEntry - closeEntry) >= 0.005);
   const entry = usesSuggestedEntry ? suggestedOrderEntry : closeEntry;
-  const stop = summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop ?? position?.stopPrice ?? null;
-  const target = summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? position?.targetPrice ?? null;
+  const stop = heldMode
+    ? position!.stopPrice
+    : (summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop ?? position?.stopPrice ?? null);
+  const target = heldMode
+    ? (position!.targetPrice ?? null)
+    : (summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? position?.targetPrice ?? null);
   const computedRr = target != null && entry != null && stop != null && entry > stop
     ? (target - entry) / (entry - stop)
     : null;
@@ -106,9 +114,11 @@ export default function AnalysisDecisionStrip({
     ?? (position != null && isPositiveNumber(position.perShareRisk) && isPositiveNumber(position.entryPrice)
       ? position.perShareRisk / position.entryPrice
       : undefined);
-  const entryLabel = usesSuggestedEntry
-    ? t('workspacePage.panels.analysis.decisionSummary.tradePlan.plannedEntry')
-    : t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose');
+  const entryLabel = heldMode
+    ? t('workspacePage.panels.analysis.decisionSummary.tradePlan.entry')
+    : usesSuggestedEntry
+      ? t('workspacePage.panels.analysis.decisionSummary.tradePlan.plannedEntry')
+      : t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose');
   const closeSecondary = usesSuggestedEntry && isPositiveNumber(closeEntry)
     ? `${t('workspacePage.panels.analysis.decisionSummary.tradePlan.close')} ${formatCurrency(closeEntry, currency)}`
     : undefined;
