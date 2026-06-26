@@ -18,6 +18,7 @@ from api.models.daily_review import (
     PendingOrderReview,
     TrimSuggestion,
 )
+from api.models.portfolio import PositionUpdate
 from api.models.screener import ScreenerRequest
 from api.repositories.orders_repo import OrdersRepository
 from api.services.screener_service import ScreenerService
@@ -87,9 +88,9 @@ class _PositionActionContext:
     err_current_price: float
     trim_r_threshold: float
     #: suggestion -> (ticker, entry_price, stop_price) for the success branches.
-    success_fields: Callable
+    success_fields: Callable[[PositionUpdate], tuple[str, float, float]]
     #: r_now -> {"days_open": ..., "time_stop_warning": ...}
-    time_stop: Callable
+    time_stop: Callable[[float], dict]
 
 
 class DailyReviewService:
@@ -363,7 +364,7 @@ class DailyReviewService:
 
     def _classify_position_action(
         self,
-        suggestion,
+        suggestion: PositionUpdate,
         ctx: _PositionActionContext,
         buckets: _ActionBuckets,
     ) -> None:
