@@ -1,7 +1,6 @@
 """Shared dependencies for API routers."""
 from __future__ import annotations
 
-import os
 import threading
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
@@ -26,8 +25,8 @@ from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.screener_service import ScreenerService
 from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
-from api.utils.files import read_json_file, write_json_file, get_today_str
-from swing_screener.settings import data_dir, get_settings_manager, project_root
+from api.utils.files import get_today_str
+from swing_screener.settings import data_dir, get_settings_manager
 from swing_screener.runtime_env import get_env_value
 from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
 from swing_screener.fundamentals import FundamentalsAnalysisService as _FundamentalsAnalysisService
@@ -58,7 +57,6 @@ def get_finnhub_client() -> FinnhubEnrichmentClient | None:
         return _finnhub_client
 
 # Repository root
-ROOT_DIR = project_root()
 DATA_DIR = data_dir()
 POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", DATA_DIR / "positions.json")
 ORDERS_FILE = DATA_DIR / "orders.json"
