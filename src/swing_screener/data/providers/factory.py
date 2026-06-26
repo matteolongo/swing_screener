@@ -51,7 +51,7 @@ def get_market_data_provider(
             progress=kwargs.get("progress", bool(yfinance_defaults.get("progress", False))),
             same_day_cache_ttl_minutes=kwargs.get(
                 "same_day_cache_ttl_minutes",
-                float(yfinance_defaults.get("same_day_cache_ttl_minutes", 15.0)),
+                float(yfinance_defaults.get("same_day_cache_ttl_minutes", 480.0)),
             ),
         )
     

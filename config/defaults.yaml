@@ -414,7 +414,7 @@ low_level:
       progress: false
       # Cache reuse window (minutes) for requests whose end date is today;
       # historical windows are cached indefinitely.
-      same_day_cache_ttl_minutes: 15
+      same_day_cache_ttl_minutes: 480
     alpaca:
       rate_limit_requests: 200
       rate_limit_window_seconds: 60

@@ -39,7 +39,7 @@ class YfinanceProvider(MarketDataProvider):
         cache_dir: str = ".cache/market_data",
         auto_adjust: bool = True,
         progress: bool = False,
-        same_day_cache_ttl_minutes: float = 15.0,
+        same_day_cache_ttl_minutes: float = 480.0,
     ):
         """
         Initialize Yfinance provider.
@@ -49,7 +49,7 @@ class YfinanceProvider(MarketDataProvider):
             auto_adjust: Use adjusted prices (default: True)
             progress: Show download progress bar (default: False)
             same_day_cache_ttl_minutes: Max age of a cache file reused for
-                requests whose end date is today or later (default: 15)
+                requests whose end date is today or later (default: 480)
         """
         self.cache_dir = Path(cache_dir)
         self.auto_adjust = auto_adjust

@@ -32,6 +32,12 @@ Candlestick pattern + structural-stop settings live under `low_level`:
   market canary, default AAPL) and `eu` (EU market canary, default ASML.AS). Used
   by the `DatasourcesService` to test provider health without requiring a real
   universe.
+- `low_level.data_providers.yfinance.same_day_cache_ttl_minutes` (default: `480`) —
+  How long a cached file is reused when the request end date is today or later.
+  Set to 480 (8 hours) so that EU tickers — whose markets close ~6–8 hours before
+  a typical post-US-close screener run — are served from cache rather than
+  re-fetched. Override to a lower value (e.g. `30`) if you need fresher data
+  during US market hours.
 
 ### `user.yaml`
 

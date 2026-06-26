@@ -37,3 +37,11 @@ def test_kwargs_override_yfinance_defaults():
         auto_adjust=False,
     )
     assert provider.auto_adjust is False
+
+
+def test_factory_default_cache_ttl_is_480_minutes(monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_PROVIDER", "yfinance")
+    provider = get_market_data_provider()
+    assert provider.same_day_cache_ttl_minutes == 480.0, (
+        f"Expected 480.0 minutes TTL, got {provider.same_day_cache_ttl_minutes}"
+    )
