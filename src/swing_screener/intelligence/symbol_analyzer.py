@@ -8,8 +8,15 @@ from pydantic import BaseModel
 
 from swing_screener.intelligence.cache import write_to_cache
 from swing_screener.intelligence.metrics import record_analysis_metrics
-from swing_screener.intelligence.history import HistoryEntry, append_history, read_history
-from swing_screener.intelligence.market_hours import is_us_pre_market, previous_session_close
+from swing_screener.intelligence.history import (
+    HistoryEntry,
+    append_history,
+    read_history,
+)
+from swing_screener.intelligence.market_hours import (
+    is_us_pre_market,
+    previous_session_close,
+)
 from swing_screener.data.currency import detect_currency
 from swing_screener.intelligence.models import (
     CatalystUrgency,
@@ -19,6 +26,7 @@ from swing_screener.intelligence.models import (
     PositionMoveExplanation,
     PositionOutlook,
     PositionSignal,
+    PositionSignalAction,
     PredictionBullet,
     PreOpenOutlook,
     SymbolIntelligence,
@@ -149,6 +157,15 @@ class _LLMAnalysis(BaseModel):
     thesis_delta: ThesisDelta | None = None
 
 
+class _LLMPositionAnalysis(_LLMAnalysis):
+    """Position-mode schema: the position-specific structured fields are
+    REQUIRED so the structured-output parser must emit them."""
+
+    position_signal: PositionSignal
+    position_outlook: PositionOutlook
+    key_numbers: list[KeyNumber]
+
+
 _FORMAT_PROMPT = (
     "Convert the analyst write-up below into the structured schema. Use only "
     "information present in the write-up. Copy every URL from its Sources section "
@@ -159,7 +176,8 @@ _FORMAT_PROMPT = (
 def _format_past_trades(ticker: str, past_positions: list[dict]) -> str | None:
     """Summarise closed positions for ticker into a prompt block. Returns None if none."""
     closed = [
-        p for p in past_positions
+        p
+        for p in past_positions
         if str(p.get("ticker", "")).upper() == ticker.upper()
         and p.get("status") == "closed"
         and p.get("exit_price") is not None
@@ -199,6 +217,58 @@ def _format_prior_digest(digest: list[HistoryEntry]) -> str | None:
         "or invalidated, and note in what_played_out which previously-flagged items did or did not happen."
     )
     return "\n".join(lines)
+
+
+def _fallback_position_fields(
+    req: SymbolIntelligenceRequest,
+) -> tuple[PositionSignal, list[KeyNumber]]:
+    """Deterministic position_signal + key_numbers from request data only.
+
+    Used when the LLM omits the position-mode structured fields. Derives the
+    action from the manage-rule signal carried on req.signal (the suggested-stop
+    action) and the key numbers from R / entry / stop / days held.
+    """
+    signal = (req.signal or "").upper()
+    if signal in {"CLOSE_STOP_HIT", "CLOSE_TIME_EXIT", "CLOSE_EXIT_SIGNAL"}:
+        action = PositionSignalAction.EXIT
+        reason = "Manage rules flag an exit on this position."
+    else:
+        action = PositionSignalAction.HOLD
+        reason = "No manage-rule action is triggered; hold and keep managing risk."
+
+    position_signal = PositionSignal(action=action, reason=reason)
+
+    key_numbers: list[KeyNumber] = []
+    if req.r_now is not None:
+        r_sign = "+" if req.r_now >= 0 else ""
+        key_numbers.append(
+            KeyNumber(
+                label="Current R",
+                value=f"{r_sign}{req.r_now:.2f}R",
+                sentiment="bullish" if req.r_now >= 0 else "bearish",
+            )
+        )
+    if req.days_open is not None:
+        key_numbers.append(
+            KeyNumber(label="Days held", value=str(req.days_open), sentiment="neutral")
+        )
+    if req.entry_price is not None:
+        key_numbers.append(
+            KeyNumber(
+                label="Entry",
+                value=f"{req.entry_price:.2f} {req.currency}",
+                sentiment="neutral",
+            )
+        )
+    if req.stop is not None:
+        key_numbers.append(
+            KeyNumber(
+                label="Stop",
+                value=f"{req.stop:.2f} {req.currency}",
+                sentiment="neutral",
+            )
+        )
+    return position_signal, key_numbers
 
 
 def _build_user_prompt(
@@ -247,11 +317,26 @@ def _build_user_prompt(
 
         # Trade plan block — placed FIRST so the planned entry is the dominant price.
         # The current market price follows below as context only.
-        if not has_position and any(x is not None for x in (req.entry, req.stop, req.target, req.rr)):
-            plan_lines: list[str] = ["", "--- Trade plan (use these prices in the narrative) ---"]
-            entry_str = f"Planned entry: {fmt(req.entry)} {currency}" if req.entry is not None else ""
-            stop_str = f"Stop loss: {fmt(req.stop)} {currency}" if req.stop is not None else ""
-            target_str = f"Price target: {fmt(req.target)} {currency}" if req.target is not None else ""
+        if not has_position and any(
+            x is not None for x in (req.entry, req.stop, req.target, req.rr)
+        ):
+            plan_lines: list[str] = [
+                "",
+                "--- Trade plan (use these prices in the narrative) ---",
+            ]
+            entry_str = (
+                f"Planned entry: {fmt(req.entry)} {currency}"
+                if req.entry is not None
+                else ""
+            )
+            stop_str = (
+                f"Stop loss: {fmt(req.stop)} {currency}" if req.stop is not None else ""
+            )
+            target_str = (
+                f"Price target: {fmt(req.target)} {currency}"
+                if req.target is not None
+                else ""
+            )
             price_parts = [p for p in (entry_str, stop_str, target_str) if p]
             if price_parts:
                 plan_lines.append(" | ".join(price_parts))
@@ -266,7 +351,9 @@ def _build_user_prompt(
                 plan_lines.append(" | ".join(rr_parts))
             lines += plan_lines
 
-        lines.append(f"Current market price (context only, NOT the entry): {fmt(req.close)} {currency}")
+        lines.append(
+            f"Current market price (context only, NOT the entry): {fmt(req.close)} {currency}"
+        )
 
     lines += [
         "",
@@ -294,16 +381,37 @@ def _build_user_prompt(
         )
     )
     if has_fundamentals:
+
         def _pct(v: float | None) -> str | None:
             return f"{v * 100:.1f}%" if v is not None else None
 
         fund_parts = [
             f"P/E: {req.trailing_pe:.2f}" if req.trailing_pe is not None else None,
-            f"Revenue growth YoY: {_pct(req.revenue_growth_yoy)}" if req.revenue_growth_yoy is not None else None,
-            f"Gross margin: {_pct(req.gross_margin)}" if req.gross_margin is not None else None,
-            f"Net margin: {_pct(req.net_margin)}" if req.net_margin is not None else None,
-            f"ROE: {_pct(req.return_on_equity)}" if req.return_on_equity is not None else None,
-            f"Debt/Equity: {req.debt_to_equity:.2f}" if req.debt_to_equity is not None else None,
+            (
+                f"Revenue growth YoY: {_pct(req.revenue_growth_yoy)}"
+                if req.revenue_growth_yoy is not None
+                else None
+            ),
+            (
+                f"Gross margin: {_pct(req.gross_margin)}"
+                if req.gross_margin is not None
+                else None
+            ),
+            (
+                f"Net margin: {_pct(req.net_margin)}"
+                if req.net_margin is not None
+                else None
+            ),
+            (
+                f"ROE: {_pct(req.return_on_equity)}"
+                if req.return_on_equity is not None
+                else None
+            ),
+            (
+                f"Debt/Equity: {req.debt_to_equity:.2f}"
+                if req.debt_to_equity is not None
+                else None
+            ),
         ]
         lines += ["", "--- Fundamentals ---", " | ".join(p for p in fund_parts if p)]
 
@@ -313,26 +421,44 @@ def _build_user_prompt(
         has_decision = any(
             x is not None and x != ""
             for x in (
-                req.decision_action, req.decision_conviction,
-                req.technical_label, req.fundamentals_label, req.valuation_label,
-                req.fair_value_low, req.fair_value_base, req.fair_value_high,
+                req.decision_action,
+                req.decision_conviction,
+                req.technical_label,
+                req.fundamentals_label,
+                req.valuation_label,
+                req.fair_value_low,
+                req.fair_value_base,
+                req.fair_value_high,
             )
         )
         if has_decision:
             currency = req.currency or ""
             lines += ["", "--- Decision context (screener) ---"]
             action_str = f"Action: {req.decision_action}" if req.decision_action else ""
-            conv_str = f"Conviction: {req.decision_conviction}" if req.decision_conviction else ""
+            conv_str = (
+                f"Conviction: {req.decision_conviction}"
+                if req.decision_conviction
+                else ""
+            )
             ac_parts = [p for p in (action_str, conv_str) if p]
             if ac_parts:
                 lines.append(" | ".join(ac_parts))
-            tech_str = f"Technical: {req.technical_label}" if req.technical_label else ""
-            fund_str = f"Fundamentals: {req.fundamentals_label}" if req.fundamentals_label else ""
+            tech_str = (
+                f"Technical: {req.technical_label}" if req.technical_label else ""
+            )
+            fund_str = (
+                f"Fundamentals: {req.fundamentals_label}"
+                if req.fundamentals_label
+                else ""
+            )
             val_str = f"Valuation: {req.valuation_label}" if req.valuation_label else ""
             label_parts = [p for p in (tech_str, fund_str, val_str) if p]
             if label_parts:
                 lines.append(" | ".join(label_parts))
-            if all(x is not None for x in (req.fair_value_low, req.fair_value_base, req.fair_value_high)):
+            if all(
+                x is not None
+                for x in (req.fair_value_low, req.fair_value_base, req.fair_value_high)
+            ):
                 fv_low = fmt(req.fair_value_low)
                 fv_high = fmt(req.fair_value_high)
                 fv_base = fmt(req.fair_value_base)
@@ -355,8 +481,16 @@ def _build_user_prompt(
     if has_chart_quality:
         lines += ["", "--- Chart quality ---"]
         atr_str = f"ATR: {fmt(req.atr)}" if req.atr is not None else ""
-        rs_str = f"Relative strength vs benchmark: {req.rel_strength}%" if req.rel_strength is not None else ""
-        sector_rs_str = f"Relative strength vs sector ETF: {req.sector_rs}%" if req.sector_rs is not None else ""
+        rs_str = (
+            f"Relative strength vs benchmark: {req.rel_strength}%"
+            if req.rel_strength is not None
+            else ""
+        )
+        sector_rs_str = (
+            f"Relative strength vs sector ETF: {req.sector_rs}%"
+            if req.sector_rs is not None
+            else ""
+        )
         cq_parts = [p for p in (atr_str, rs_str, sector_rs_str) if p]
         if cq_parts:
             lines.append(" | ".join(cq_parts))
@@ -379,19 +513,34 @@ def _build_user_prompt(
                 lines.append("Sector rotation: " + " | ".join(parts))
 
     # Finnhub enrichment signals block — also shown for open positions.
-    has_finnhub = any(x is not None for x in (
-        req.insider_net_shares_90d, req.forward_eps_estimate, req.analyst_upgrade_downgrade_net_30d
-    ))
+    has_finnhub = any(
+        x is not None
+        for x in (
+            req.insider_net_shares_90d,
+            req.forward_eps_estimate,
+            req.analyst_upgrade_downgrade_net_30d,
+        )
+    )
     if has_finnhub:
         lines += ["", "--- Finnhub enrichment signals ---"]
         if req.insider_net_shares_90d is not None:
-            direction = "net buyer" if req.insider_net_shares_90d > 0 else ("net seller" if req.insider_net_shares_90d < 0 else "flat")
-            lines.append(f"Insider activity (90d): {req.insider_net_shares_90d:+,} shares ({direction})")
+            direction = (
+                "net buyer"
+                if req.insider_net_shares_90d > 0
+                else ("net seller" if req.insider_net_shares_90d < 0 else "flat")
+            )
+            lines.append(
+                f"Insider activity (90d): {req.insider_net_shares_90d:+,} shares ({direction})"
+            )
         if req.forward_eps_estimate is not None:
-            lines.append(f"Forward EPS estimate (next Q): {req.forward_eps_estimate:.2f}")
+            lines.append(
+                f"Forward EPS estimate (next Q): {req.forward_eps_estimate:.2f}"
+            )
         if req.analyst_upgrade_downgrade_net_30d is not None:
             net = req.analyst_upgrade_downgrade_net_30d
-            direction = "net upgrades" if net > 0 else ("net downgrades" if net < 0 else "flat")
+            direction = (
+                "net upgrades" if net > 0 else ("net downgrades" if net < 0 else "flat")
+            )
             lines.append(f"Analyst upgrades/downgrades (30d): {net:+d} ({direction})")
 
     # Earnings proximity block
@@ -416,7 +565,9 @@ def _build_user_prompt(
                 else ""
             )
             lines.append(f"{head}{quote} · {ev.url}")
-        lines.append("(Corroborate against your own web search. Cite these URLs when you use them.)")
+        lines.append(
+            "(Corroborate against your own web search. Cite these URLs when you use them.)"
+        )
 
     # Inject past trades block before the web-search instruction
     past_block = _format_past_trades(ticker, past_positions or [])
@@ -432,7 +583,11 @@ def _build_user_prompt(
 
     # Pre-open mode — US symbol analyzed before the regular-session open
     if pre_open:
-        since = f" (since the previous session close at {pre_open_since})" if pre_open_since else ""
+        since = (
+            f" (since the previous session close at {pre_open_since})"
+            if pre_open_since
+            else ""
+        )
         framing = (
             "Frame action_at_open and stop_gap_plan around the OPEN POSITION and its current stop."
             if has_position
@@ -537,7 +692,9 @@ class SymbolAnalyzer:
         if req.rr is not None:
             trade_plan["rr"] = req.rr
         if req.target is not None and req.close is not None:
-            trade_plan["upside_pct"] = round((req.target - req.close) / req.close * 100, 1)
+            trade_plan["upside_pct"] = round(
+                (req.target - req.close) / req.close * 100, 1
+            )
         if trade_plan:
             inputs_used["trade_plan"] = trade_plan
 
@@ -592,18 +749,24 @@ class SymbolAnalyzer:
         if req.catalyst_evidence:
             inputs_used["catalyst_evidence"] = {
                 "count": len(req.catalyst_evidence),
-                "sources": sorted({ev.publisher for ev in req.catalyst_evidence if ev.publisher}),
+                "sources": sorted(
+                    {ev.publisher for ev in req.catalyst_evidence if ev.publisher}
+                ),
             }
 
         finnhub_signals: dict = {}
         if req.insider_net_shares_90d is not None:
             finnhub_signals["insider_net_shares_90d"] = req.insider_net_shares_90d
         if req.insider_transaction_count_90d is not None:
-            finnhub_signals["insider_transaction_count_90d"] = req.insider_transaction_count_90d
+            finnhub_signals["insider_transaction_count_90d"] = (
+                req.insider_transaction_count_90d
+            )
         if req.forward_eps_estimate is not None:
             finnhub_signals["forward_eps_estimate"] = req.forward_eps_estimate
         if req.analyst_upgrade_downgrade_net_30d is not None:
-            finnhub_signals["analyst_upgrade_downgrade_net_30d"] = req.analyst_upgrade_downgrade_net_30d
+            finnhub_signals["analyst_upgrade_downgrade_net_30d"] = (
+                req.analyst_upgrade_downgrade_net_30d
+            )
         if finnhub_signals:
             inputs_used["finnhub_signals"] = finnhub_signals
 
@@ -611,10 +774,18 @@ class SymbolAnalyzer:
             inputs_used["candles"] = {"patterns": ", ".join(req.recent_patterns)}
 
         if pre_open:
-            inputs_used["pre_open"] = {"window": "us_pre_market", "since": pre_open_since}
+            inputs_used["pre_open"] = {
+                "window": "us_pre_market",
+                "since": pre_open_since,
+            }
         if prior_digest:
             inputs_used["history"] = {"prior_runs": len(prior_digest)}
 
+        has_position = (
+            req.entry_price is not None
+            and req.r_now is not None
+            and req.days_open is not None
+        )
         user_prompt = _build_user_prompt(
             ticker,
             req,
@@ -634,9 +805,16 @@ class SymbolAnalyzer:
             model=self._format_model,
             instructions=_FORMAT_PROMPT,
             input=search.output_text,
-            text_format=_LLMAnalysis,
+            text_format=_LLMPositionAnalysis if has_position else _LLMAnalysis,
         )
         draft: _LLMAnalysis = parsed.output_parsed
+
+        if has_position:
+            fb_signal, fb_key_numbers = _fallback_position_fields(req)
+            if draft.position_signal is None:
+                draft = draft.model_copy(update={"position_signal": fb_signal})
+            if not draft.key_numbers:
+                draft = draft.model_copy(update={"key_numbers": fb_key_numbers})
 
         # Token observability: sum total_tokens from both calls where available.
         _u1 = getattr(search, "usage", None)
@@ -655,7 +833,10 @@ class SymbolAnalyzer:
 
         # `attempted` = configured sources (visible even on a blackout where evidence is empty).
         try:
-            from swing_screener.intelligence.evidence.config import load_evidence_config as _load_ev_cfg
+            from swing_screener.intelligence.evidence.config import (
+                load_evidence_config as _load_ev_cfg,
+            )
+
             _attempted = sorted(_load_ev_cfg().enabled_sources)
         except Exception:
             _attempted = sorted(_pub_counts)
@@ -691,13 +872,21 @@ class SymbolAnalyzer:
         try:
             write_to_cache(ticker, result)
         except Exception:
-            logger.warning("Failed to write intelligence cache for %r; result will not be cached", ticker, exc_info=True)
+            logger.warning(
+                "Failed to write intelligence cache for %r; result will not be cached",
+                ticker,
+                exc_info=True,
+            )
         try:
             append_history(ticker, result, max_entries=self._history_max_entries)
         except Exception:
-            logger.warning("Failed to append intelligence history for %r", ticker, exc_info=True)
+            logger.warning(
+                "Failed to append intelligence history for %r", ticker, exc_info=True
+            )
         try:
             record_analysis_metrics(ticker, tokens=tokens)
         except Exception:
-            logger.warning("Failed to record analysis metrics for %r", ticker, exc_info=True)
+            logger.warning(
+                "Failed to record analysis metrics for %r", ticker, exc_info=True
+            )
         return result
