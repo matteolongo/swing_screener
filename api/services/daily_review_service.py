@@ -1,5 +1,4 @@
 """Service for generating daily review with action items."""
-import json
 import logging
 from datetime import date
 from pathlib import Path
@@ -23,6 +22,7 @@ from api.repositories.orders_repo import OrdersRepository
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
 from api.services.watchlist_service import WatchlistService
+from api.services.daily_review import DailyReviewWriter
 from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 
 logger = logging.getLogger(__name__)
@@ -82,6 +82,7 @@ class DailyReviewService:
         self.data_dir = data_dir
         self.daily_reviews_dir = data_dir / "daily_reviews"
         self.daily_reviews_dir.mkdir(parents=True, exist_ok=True)
+        self._writer = DailyReviewWriter(self.daily_reviews_dir)
 
     def generate_daily_review(
         self,
@@ -274,7 +275,7 @@ class DailyReviewService:
         )
 
         # Save to historical file (use "default" as strategy name for now)
-        self._save_review(review, "default")
+        self._writer.save(review, "default")
         
         return review
 
@@ -570,22 +571,3 @@ class DailyReviewService:
             ),
         )
     
-    def _save_review(self, review: DailyReview, strategy_name: str) -> None:
-        """
-        Save daily review to historical file.
-        
-        Args:
-            review: DailyReview to save
-            strategy_name: Name of the strategy used
-        """
-        review_date = review.summary.review_date
-        filename = f"daily_review_{review_date.isoformat()}_{strategy_name}.json"
-        filepath = self.daily_reviews_dir / filename
-        
-        # Convert to dict for JSON serialization
-        review_dict = review.model_dump(mode="json")
-        
-        with open(filepath, 'w') as f:
-            json.dump(review_dict, f, indent=2)
-        
-        logger.info(f"Daily review saved to {filepath}")
