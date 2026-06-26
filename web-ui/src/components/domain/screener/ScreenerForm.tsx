@@ -6,6 +6,7 @@ import Field from '@/components/common/Field';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import type { DecisionActionFilter } from '@/features/screener/prioritization';
+import { formatDecisionAction } from '@/features/screener/decisionSummary';
 import type { UniverseSummary } from '@/features/screener/types';
 import { t } from '@/i18n/t';
 
@@ -47,26 +48,8 @@ const universeSourceLabel = (source: string): string => {
   return source;
 };
 
-const formatActionFilterLabel = (value: DecisionActionFilter): string => {
-  switch (value) {
-    case 'BUY_NOW':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.buyNow');
-    case 'BUY_ON_PULLBACK':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback');
-    case 'WAIT_FOR_BREAKOUT':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.waitForBreakout');
-    case 'WATCH':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.watch');
-    case 'TACTICAL_ONLY':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.tacticalOnly');
-    case 'AVOID':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.avoid');
-    case 'MANAGE_ONLY':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly');
-    default:
-      return t('screener.controls.allActions');
-  }
-};
+const formatActionFilterLabel = (value: DecisionActionFilter): string =>
+  value === 'all' ? t('screener.controls.allActions') : formatDecisionAction(value);
 
 interface ScreenerFormProps {
   selectedUniverse: string;

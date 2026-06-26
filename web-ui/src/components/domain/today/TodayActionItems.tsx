@@ -2,6 +2,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import { formatNumber, getSignColorClass } from '@/utils/formatters';
+import { formatDecisionAction } from '@/features/screener/decisionSummary';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
 import { useEarningsProximity } from '@/features/portfolio/hooks';
 import type {
@@ -278,9 +279,10 @@ export interface CandidateItemProps {
 
 // Primary badge: the action to take today (Buy on Pullback / Watch / ...).
 function candidateActionBadge(item: DailyReviewCandidate) {
+  const action = item.decisionSummary?.action;
   return (
     <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-      {item.decisionSummary?.action ?? item.signal}
+      {action ? formatDecisionAction(action) : item.signal}
     </span>
   );
 }

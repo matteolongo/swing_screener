@@ -29,7 +29,9 @@ describe('CandidateItem badges', () => {
     renderWithProviders(<CandidateItem item={item} onClick={() => {}} />);
 
     // Action is still shown (the thing you can act on)...
-    expect(screen.getByText('BUY_ON_PULLBACK')).toBeInTheDocument();
+    expect(
+      screen.getByText(messagesEn.workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback),
+    ).toBeInTheDocument();
     // ...and re-enter is an additional flag, not a replacement.
     expect(screen.getByText(messagesEn.todayPage.actionList.reEnter)).toBeInTheDocument();
   });
@@ -38,7 +40,9 @@ describe('CandidateItem badges', () => {
     const item = makeCandidate();
     renderWithProviders(<CandidateItem item={item} onClick={() => {}} />);
 
-    expect(screen.getByText('BUY_ON_PULLBACK')).toBeInTheDocument();
+    expect(
+      screen.getByText(messagesEn.workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback),
+    ).toBeInTheDocument();
     expect(screen.queryByText(messagesEn.todayPage.actionList.reEnter)).not.toBeInTheDocument();
   });
 });
