@@ -11,62 +11,17 @@ import httpx
 import pandas as pd
 
 from .base import MarketDataProvider
+from .market_metadata import (
+    MARKET_SUFFIX as _STOOQ_MARKET_SUFFIX,
+    COUNTRY_BY_MARKET as _COUNTRY_BY_MARKET,
+    CURRENCY_BY_MARKET as _CURRENCY_BY_MARKET,
+    EXCHANGE_BY_MARKET as _EXCHANGE_BY_MARKET,
+)
 from swing_screener.data.source_health import DataSourceHealth, SourceDescriptor, ProbeResult
 from swing_screener.data.providers._probe import ohlcv_canary_probe
 from swing_screener.utils import normalize_tickers
 
 _INSTRUMENT_MASTER_PATH = Path("data/intelligence/instrument_master.json")
-_STOOQ_MARKET_SUFFIX = {
-    ".PA": "fr",
-    ".AS": "nl",
-    ".MI": "it",
-    ".DE": "de",
-    ".L": "uk",
-    ".SW": "ch",
-    ".ST": "se",
-    ".MC": "es",
-    ".HE": "fi",
-    ".BR": "be",
-}
-_COUNTRY_BY_MARKET = {
-    "us": "US",
-    "fr": "FR",
-    "nl": "NL",
-    "it": "IT",
-    "de": "DE",
-    "uk": "GB",
-    "ch": "CH",
-    "se": "SE",
-    "es": "ES",
-    "fi": "FI",
-    "be": "BE",
-}
-_CURRENCY_BY_MARKET = {
-    "us": "USD",
-    "fr": "EUR",
-    "nl": "EUR",
-    "it": "EUR",
-    "de": "EUR",
-    "uk": "GBP",
-    "ch": "CHF",
-    "se": "SEK",
-    "es": "EUR",
-    "fi": "EUR",
-    "be": "EUR",
-}
-_EXCHANGE_BY_MARKET = {
-    "us": "US",
-    "fr": "XPAR",
-    "nl": "XAMS",
-    "it": "XMIL",
-    "de": "XETR",
-    "uk": "XLON",
-    "ch": "XSWX",
-    "se": "XSTO",
-    "es": "XMAD",
-    "fi": "XHEL",
-    "be": "XBRU",
-}
 
 
 def _safe_read_json(path: Path) -> Any:
