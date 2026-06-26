@@ -278,7 +278,12 @@ class PortfolioService:
         return last_prices
 
     def _eurusd_rate(self) -> float:
-        """Fetch EURUSD rate with simple caching."""
+        """Fetch EURUSD rate with simple caching.
+
+        FX is provider-independent: equity providers like Alpaca have no forex
+        and reject the Yahoo symbol "EURUSD=X", so the rate is always sourced
+        from yfinance regardless of the configured market-data provider.
+        """
         import time
         now = time.time()
         cached = _eurusd_cache.get("eurusd")
@@ -288,8 +293,15 @@ class PortfolioService:
                 return rate
 
         try:
-            fx = self._fetch_last_prices(["EURUSD=X"])
-            rate = float(fx.get("EURUSD=X", 0.0))
+            from swing_screener.data.providers.yfinance_provider import YfinanceProvider
+
+            ohlcv = YfinanceProvider().fetch_ohlcv(
+                ["EURUSD=X"],
+                start_date=get_default_history_start(),
+                end_date=get_today_str(),
+            )
+            prices, _ = _last_close_map(ohlcv)
+            rate = float(prices.get("EURUSD=X", 0.0))
             rate = rate if rate > 0 else 1.0
             _eurusd_cache["eurusd"] = (rate, now)
             return rate

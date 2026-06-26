@@ -153,15 +153,19 @@ def test_position_metrics_subtracts_recorded_fees_usd(
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
-
-    def mock_fetch_ohlcv(tickers, **kwargs):
-        if "EURUSD=X" in tickers:
-            return _ohlcv_with_closes({"EURUSD=X": [1.18, 1.18]})
-        return _ohlcv_with_closes({"INTC": [48.0, 47.5]})
-
-    mock_provider.fetch_ohlcv = mock_fetch_ohlcv
+    mock_provider.fetch_ohlcv = lambda tickers, **kwargs: _ohlcv_with_closes({"INTC": [48.0, 47.5]})
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+
+    # FX is provider-independent (always yfinance); stub that path for EURUSD.
+    def _stub_yf(*_a, **_k):
+        prov = MagicMock()
+        prov.fetch_ohlcv = lambda tickers, **kw: _ohlcv_with_closes({"EURUSD=X": [1.18, 1.18]})
+        return prov
+
+    monkeypatch.setattr(
+        "swing_screener.data.providers.yfinance_provider.YfinanceProvider", _stub_yf
+    )
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-INTC-USD-1/metrics")

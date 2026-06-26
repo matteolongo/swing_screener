@@ -14,6 +14,22 @@ from .base import MarketDataProvider
 from swing_screener.data.source_health import DataSourceHealth, SourceDescriptor, ProbeResult
 from swing_screener.data.providers._probe import ohlcv_canary_probe
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Alpaca serves US equities/ETFs only — it has no index data. Universe
+# benchmarks are stored as index symbols (^NDX, ^GSPC, ...); map the US ones to
+# tradeable ETF proxies so relative-strength keeps working. Indices without a
+# proxy (foreign benchmarks) are dropped — Alpaca can't serve those universes
+# anyway.
+_INDEX_ETF_PROXIES = {
+    "^NDX": "QQQ",
+    "^GSPC": "SPY",
+    "^DJI": "DIA",
+    "^RUT": "IWM",
+}
+
 
 class AlpacaDataProvider(MarketDataProvider):
     """
@@ -168,7 +184,32 @@ class AlpacaDataProvider(MarketDataProvider):
         """
         if not tickers:
             raise ValueError("tickers list is empty")
-        
+
+        # Map index benchmarks to ETF proxies; drop unsupported indices. The
+        # original index symbol is restored as a column copy after the fetch.
+        proxy_to_index: dict[str, str] = {}
+        request_tickers: list[str] = []
+        for ticker in tickers:
+            if ticker.startswith("^"):
+                proxy = _INDEX_ETF_PROXIES.get(ticker)
+                if proxy is None:
+                    logger.warning(
+                        "AlpacaDataProvider: no ETF proxy for index %s; dropping "
+                        "(Alpaca has no index data)", ticker,
+                    )
+                    continue
+                proxy_to_index[proxy] = ticker
+                if proxy not in request_tickers:
+                    request_tickers.append(proxy)
+            elif ticker not in request_tickers:
+                request_tickers.append(ticker)
+
+        if not request_tickers:
+            raise ValueError(
+                f"No Alpaca-supported symbols in request {tickers}: Alpaca serves "
+                "US equities/ETFs only and these indices have no ETF proxy."
+            )
+
         end_dt = pd.Timestamp(end_date).date()
         is_live_edge_request = end_dt >= date.today()
 
@@ -191,7 +232,7 @@ class AlpacaDataProvider(MarketDataProvider):
             from alpaca.data.requests import StockBarsRequest  # lazy
             self._wait_for_rate_limit()
             request = StockBarsRequest(
-                symbol_or_symbols=tickers,
+                symbol_or_symbols=request_tickers,
                 start=start,
                 end=end,
                 timeframe=timeframe,
@@ -211,8 +252,16 @@ class AlpacaDataProvider(MarketDataProvider):
         
         # Alpaca returns MultiIndex (symbol, timestamp) -> we need to reshape
         # to our format: DatetimeIndex with MultiIndex columns (field, ticker)
-        df = self._convert_alpaca_format(df, tickers)
-        
+        df = self._convert_alpaca_format(df, request_tickers)
+
+        # Restore index benchmarks by copying each ETF-proxy column under the
+        # original index symbol (copy, not rename, so a proxy that is also a
+        # requested constituent keeps both columns).
+        for proxy, index_sym in proxy_to_index.items():
+            for field in ("Open", "High", "Low", "Close", "Volume"):
+                if (field, proxy) in df.columns:
+                    df[(field, index_sym)] = df[(field, proxy)]
+
         # Cache result
         if self.use_cache:
             df.to_parquet(cache_file)
@@ -267,10 +316,17 @@ class AlpacaDataProvider(MarketDataProvider):
         
         # Sort by date
         result = result.sort_index()
-        
+
         # Remove any duplicate timestamps
         result = result.loc[~result.index.duplicated(keep="last")]
-        
+
+        # Normalize to a tz-naive index (the OHLCV convention; yfinance returns
+        # tz-naive dates). Alpaca daily bars carry a tz-aware UTC stamp at 00:00
+        # ET; converting to ET then dropping tz yields the midnight-naive trading
+        # date (and preserves wall-clock time for intraday intervals).
+        if isinstance(result.index, pd.DatetimeIndex) and result.index.tz is not None:
+            result.index = result.index.tz_convert("America/New_York").tz_localize(None)
+
         return result
     
     def fetch_latest_price(self, ticker: str) -> float:
