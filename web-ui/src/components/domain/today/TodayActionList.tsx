@@ -1,9 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
-import PartialCloseModalForm from '@/components/domain/positions/PartialCloseModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import { useDailyReview } from '@/features/dailyReview/api';
 import { parseUniverseFromStorage, SCREENER_UNIVERSE_STORAGE_KEY } from '@/features/screener/universeStorage';
@@ -16,36 +15,11 @@ import {
   CloseItem,
   UpdateStopItem,
   CandidateItem,
-  HoldItem,
   ExitSignalItem,
   WatchlistNearTriggerItem,
   PendingOrderItem,
   OpenPositionItem,
 } from './TodayActionItems';
-
-interface SectionHeaderProps {
-  label: string;
-  count: number;
-  colorClass: string;
-  expanded: boolean;
-  onToggle: () => void;
-}
-
-function SectionHeader({ label, count, colorClass, expanded, onToggle }: SectionHeaderProps) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={cn(
-        'w-full flex items-center justify-between px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-wide',
-        colorClass
-      )}
-    >
-      <span>{label}</span>
-      <span className="font-bold">{count} {expanded ? '▲' : '▼'}</span>
-    </button>
-  );
-}
 
 interface TodayActionListProps {
   onTickerSelect: (ticker: string) => void;
@@ -77,7 +51,6 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
       ...(review?.pendingOrdersReview?.map((i) => ({ ticker: i.ticker, id: `pending-${i.orderId}` })) ?? []),
       ...(review?.newCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })) ?? []),
       ...(review?.positionsAddOnCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })) ?? []),
-      ...(review?.positionsHold.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
     ],
     [review],
   );
@@ -88,29 +61,22 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
     acceptStopMutation,
     updateStopMutation,
     closePositionMutation,
-    partialCloseMutation,
     updateStopTarget,
     setUpdateStopTarget,
     closeTarget,
     setCloseTarget,
-    trimTarget,
-    setTrimTarget,
     focusedIndex,
     handleAcceptStop,
     handleUpdateStop,
     handleClosePosition,
-    handlePartialClose,
     handleItemClick,
   } = useTodayActions(flatItems, onTickerSelect);
-
-  const [holdExpanded, setHoldExpanded] = useState(false);
 
   const requiresActionCount =
     (review?.positionsClose.length ?? 0) + (review?.positionsUpdateStop.length ?? 0);
   const exitSignalCount = review?.positionsExitSignal.length ?? 0;
   const watchlistNearTriggerCount = review?.watchlistNearTrigger.length ?? 0;
   const opportunitiesCount = (review?.newCandidates.length ?? 0) + (review?.positionsAddOnCandidates.length ?? 0);
-  const holdCount = review?.positionsHold.length ?? 0;
 
   if (isLoading) {
     return (
@@ -128,7 +94,7 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
     );
   }
 
-  const isEmpty = openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && holdCount === 0;
+  const isEmpty = openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -345,36 +311,6 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
             </div>
           </div>
         )}
-
-        {holdCount > 0 && (
-          <div className="space-y-1">
-            <SectionHeader
-              label={t('todayPage.actionList.holding')}
-              count={holdCount}
-              colorClass="text-muted bg-foreground/5 hover:bg-foreground/10"
-              expanded={holdExpanded}
-              onToggle={() => setHoldExpanded((v) => !v)}
-            />
-            {holdExpanded && (
-              <div className="space-y-0.5">
-                {review?.positionsHold.map((item) => {
-                  const idx = flatItems.findIndex((fi) => fi.id === item.positionId);
-                  const position = positionById.get(item.positionId);
-                  return (
-                    <HoldItem
-                      key={item.positionId}
-                      item={item}
-                      onClick={handleItemClick}
-                      onTrim={item.trimSuggestion && position ? () => setTrimTarget(position) : undefined}
-                      isFocused={focusedIndex === idx}
-                      intelligenceSummary={intelligenceByTicker.get(item.ticker)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {updateStopTarget && (
@@ -393,15 +329,6 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
           error={closePositionMutation.error instanceof Error ? closePositionMutation.error.message : undefined}
           onClose={() => setCloseTarget(null)}
           onSubmit={(req) => handleClosePosition(closeTarget, req)}
-        />
-      )}
-      {trimTarget && (
-        <PartialCloseModalForm
-          position={trimTarget}
-          isLoading={partialCloseMutation.isPending}
-          error={partialCloseMutation.error instanceof Error ? partialCloseMutation.error.message : undefined}
-          onClose={() => setTrimTarget(null)}
-          onSubmit={(req) => handlePartialClose(trimTarget, req)}
         />
       )}
     </div>
