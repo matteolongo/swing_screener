@@ -22,7 +22,8 @@ def test_canary_map_reads_defaults():
 def test_inventory_includes_market_fundamentals_intelligence():
     svc = DatasourcesService()
     ids = {d.id for d in svc.inventory()}
-    assert {"yfinance", "stooq", "alpaca"} <= ids               # market
+    assert {"yfinance", "alpaca"} <= ids                         # market (stooq dropped: JS PoW wall)
+    assert "stooq" not in ids
     assert {"sec_edgar", "yfinance_fundamentals", "finnhub"} <= ids  # fundamentals + enrichment
     # 1 intelligence source: SEC EDGAR only (Company IR RSS dropped, ~0% hit rate).
     intel = [d for d in svc.inventory() if d.domain == "intelligence"]

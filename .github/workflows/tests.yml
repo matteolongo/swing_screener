@@ -17,6 +17,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify uv.lock is in sync with pyproject.toml
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.24"
+      - name: uv lock --check
+        run: uv lock --check
+
       - name: Build Docker images
         run: |
           docker compose build
