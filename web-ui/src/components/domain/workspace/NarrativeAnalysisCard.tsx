@@ -234,7 +234,7 @@ export default function NarrativeAnalysisCard({
       </div>
 
       <div className="bg-surface p-3 space-y-3">
-        {candidate?.decisionSummary?.action && action !== candidate.decisionSummary.action && (
+        {!positionMode && candidate?.decisionSummary?.action && action !== candidate.decisionSummary.action && (
           <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
             {t('workspacePage.panels.analysis.intelligence.secondOpinion', {
               aiAction: actionLabel(action),
