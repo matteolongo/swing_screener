@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from swing_screener.data.source_health import DataSourceHealth
 from swing_screener.fundamentals.config import FundamentalsConfig
@@ -861,7 +861,7 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         symbol=resolved_record.symbol,
         asof_date=resolved_record.asof_date,
         provider=resolved_record.provider,
-        updated_at=datetime.utcnow().replace(microsecond=0).isoformat(),
+        updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         instrument_type=resolved_record.instrument_type,
         supported=supported,
         coverage_status=coverage_status,
@@ -927,7 +927,7 @@ def build_provider_error_snapshot(symbol: str, provider: str, error: str) -> Fun
         symbol=symbol,
         asof_date=datetime.utcnow().date().isoformat(),
         provider=provider,
-        updated_at=datetime.utcnow().replace(microsecond=0).isoformat(),
+        updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         supported=True,
         coverage_status="insufficient",
         freshness_status="unknown",
