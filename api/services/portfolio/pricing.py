@@ -56,12 +56,6 @@ def _last_close_map(ohlcv: pd.DataFrame) -> tuple[dict[str, float], dict[str, st
     return prices, bars
 
 
-def _pct_to_target(target: Optional[float], last_price: Optional[float]) -> Optional[float]:
-    if target is None or last_price is None or last_price == 0:
-        return None
-    return (target - last_price) / last_price * 100.0
-
-
 class PositionPricingService:
     """Market-data, live-price, FX, and earnings proximity."""
 
