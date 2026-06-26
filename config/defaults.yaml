@@ -398,8 +398,8 @@ low_level:
   # ---------------------------------------------------------------------------
   # Tier 1 free-first data provider stack
   # ---------------------------------------------------------------------------
-  # data_providers below configures the OHLCV / price pipeline (yfinance with
-  # Stooq fallback, optional Alpaca validation).  This is separate from
+  # data_providers below configures the OHLCV / price pipeline (yfinance,
+  # optional Alpaca validation).  This is separate from
   # `sources.enabled` above, which controls the evidence-adapter chain used by
   # the market-intelligence / catalyst system (yahoo_finance, earnings_calendar,
   # sec_edgar, company_ir_rss).

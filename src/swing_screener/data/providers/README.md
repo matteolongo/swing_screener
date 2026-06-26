@@ -7,7 +7,6 @@ Market-data provider implementations for OHLCV and price history.
 | Module | Provider class | Source | Role |
 |--------|---------------|--------|------|
 | `yfinance_provider.py` | `YfinanceProvider` | Yahoo Finance | primary |
-| `stooq_provider.py` | `StooqDataProvider` | Stooq | fallback |
 | `alpaca_provider.py` | `AlpacaDataProvider` | Alpaca Markets | primary (requires `ALPACA_API_KEY` + `ALPACA_SECRET_KEY`) |
 
 ## How to add a data source
