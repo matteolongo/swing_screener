@@ -24,16 +24,6 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_stooq_provider(df: pd.DataFrame | None = None):
-    """Return a StooqDataProvider whose fetch_ohlcv always returns `df`."""
-    from swing_screener.data.providers.stooq_provider import StooqDataProvider
-
-    provider = StooqDataProvider.__new__(StooqDataProvider)
-    provider.timeout_sec = 10.0
-    provider.fetch_ohlcv = MagicMock(return_value=df if df is not None else pd.DataFrame())
-    return provider
-
-
 def _make_sec_edgar_provider(record=None, raises=None):
     """Return a SecEdgarFundamentalsProvider stub."""
     from swing_screener.fundamentals.providers.sec_edgar import SecEdgarFundamentalsProvider
@@ -66,67 +56,6 @@ def _minimal_record(symbol: str, provider: str, data_region: str | None = None):
         instrument_type="equity",
         data_region=data_region,
     )
-
-
-# ---------------------------------------------------------------------------
-# Test 1: OHLCV path — yfinance primary, Stooq fallback for EU ticker
-# ---------------------------------------------------------------------------
-
-@pytest.mark.integration
-def test_ohlcv_yfinance_with_stooq_fallback(tmp_path):
-    """AAPL is served by yfinance; AIR.PA falls through to Stooq."""
-    from swing_screener.data.providers.yfinance_provider import YfinanceProvider
-
-    aapl_df = pd.DataFrame(
-        {"Close": [180.0, 181.0]},
-        index=pd.to_datetime(["2026-03-18", "2026-03-19"]),
-    )
-    aapl_multi = pd.DataFrame(
-        {("Close", "AAPL"): [180.0, 181.0]},
-        index=pd.to_datetime(["2026-03-18", "2026-03-19"]),
-    )
-    aapl_multi.columns = pd.MultiIndex.from_tuples(aapl_multi.columns)
-
-    airpa_df = pd.DataFrame(
-        {("Close", "AIR.PA"): [145.0, 146.0]},
-        index=pd.to_datetime(["2026-03-18", "2026-03-19"]),
-    )
-    airpa_df.columns = pd.MultiIndex.from_tuples(airpa_df.columns)
-
-    stooq_provider = _make_stooq_provider(airpa_df)
-
-    provider = YfinanceProvider(
-        cache_dir=str(tmp_path / "cache"),
-        stooq_fallback_enabled=True,
-        stooq_provider=stooq_provider,
-    )
-
-    # Patch yf.download to return AAPL data for AAPL, empty for AIR.PA
-    def fake_download(tickers, **kwargs):
-        if isinstance(tickers, list) and "AAPL" in tickers and "AIR.PA" not in tickers:
-            return aapl_multi
-        if isinstance(tickers, list) and "AIR.PA" in tickers:
-            # Return empty so Stooq fallback kicks in
-            return pd.DataFrame()
-        return aapl_multi
-
-    with patch("swing_screener.data.providers.yfinance_provider.yf.download", side_effect=fake_download):
-        aapl_result = provider.fetch_ohlcv(
-            ["AAPL"],
-            start_date="2026-03-18",
-            end_date="2026-03-19",
-            use_cache=False,
-        )
-        airpa_result = provider.fetch_ohlcv(
-            ["AIR.PA"],
-            start_date="2026-03-18",
-            end_date="2026-03-19",
-            use_cache=False,
-        )
-
-    assert not aapl_result.empty, "AAPL data should come from yfinance"
-    stooq_provider.fetch_ohlcv.assert_called_once()
-    assert not airpa_result.empty, "AIR.PA data should fall back to Stooq"
 
 
 # ---------------------------------------------------------------------------

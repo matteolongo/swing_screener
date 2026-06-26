@@ -50,10 +50,6 @@ def test_fetch_ohlcv_fallbacks_to_cache_on_download_error(tmp_path, monkeypatch)
     monkeypatch.setattr(
         "swing_screener.data.providers.yfinance_provider.yf.download", _raise
     )
-    monkeypatch.setattr(
-        "swing_screener.data.providers.stooq_provider.StooqDataProvider.fetch_ohlcv",
-        _raise,
-    )
 
     df = fetch_ohlcv(["AAPL", "MSFT", "SPY"], cfg, use_cache=False)
     assert ("Close", "AAPL") in df.columns

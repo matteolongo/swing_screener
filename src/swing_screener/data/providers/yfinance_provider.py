@@ -13,7 +13,6 @@ import pandas as pd
 import yfinance as yf
 
 from .base import MarketDataProvider
-from .stooq_provider import StooqDataProvider
 from ..market_data import fetch_ticker_metadata
 from swing_screener.data.source_health import (
     DataSourceHealth, SourceDescriptor, ProbeResult, record_fallback,
@@ -40,9 +39,6 @@ class YfinanceProvider(MarketDataProvider):
         cache_dir: str = ".cache/market_data",
         auto_adjust: bool = True,
         progress: bool = False,
-        stooq_fallback_enabled: bool = True,
-        stooq_timeout_sec: float = 10.0,
-        stooq_provider: StooqDataProvider | None = None,
         same_day_cache_ttl_minutes: float = 15.0,
     ):
         """
@@ -59,9 +55,7 @@ class YfinanceProvider(MarketDataProvider):
         self.auto_adjust = auto_adjust
         self.progress = progress
         self.same_day_cache_ttl_minutes = float(same_day_cache_ttl_minutes)
-        self.stooq_fallback_enabled = bool(stooq_fallback_enabled)
-        self._stooq_provider = stooq_provider or StooqDataProvider(timeout_sec=stooq_timeout_sec)
-        
+
         # Create cache directory
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._configure_yf_tz_cache()
@@ -217,51 +211,6 @@ class YfinanceProvider(MarketDataProvider):
         """Yield fixed-size chunks from a ticker list."""
         for i in range(0, len(tickers), size):
             yield tickers[i : i + size]
-
-    def _supports_stooq_fallback(self, interval: str) -> bool:
-        return self.stooq_fallback_enabled and str(interval).strip().lower() == "1d"
-
-    def _stooq_end_date(self, end_date: Optional[str]) -> str:
-        if not end_date:
-            return date.today().isoformat()
-        try:
-            exclusive_end = datetime.strptime(end_date, "%Y-%m-%d").date()
-        except ValueError:
-            return end_date
-        return (exclusive_end - timedelta(days=1)).isoformat()
-
-    def _fetch_stooq_fallback(
-        self,
-        tickers: list[str],
-        start_date: str,
-        end_date: Optional[str],
-        *,
-        interval: str,
-    ) -> pd.DataFrame:
-        if not tickers or not self._supports_stooq_fallback(interval):
-            return pd.DataFrame()
-        try:
-            return self._stooq_provider.fetch_ohlcv(
-                tickers,
-                start_date=start_date,
-                end_date=self._stooq_end_date(end_date),
-                interval="1d",
-            )
-        except Exception as exc:
-            logger.warning(
-                "Stooq fallback failed for %s tickers (%s): %s",
-                len(tickers),
-                ",".join(tickers[:5]),
-                exc,
-            )
-            record_fallback(
-                domain="market_data",
-                from_provider="yfinance",
-                reason=f"stooq fallback failed: {exc}",
-                fell_back_to="stooq",
-                tickers=list(tickers[:20]),
-            )
-            return pd.DataFrame()
 
     def _download_raw(
         self,
@@ -527,9 +476,6 @@ class YfinanceProvider(MarketDataProvider):
                 df = self._download_sequential(misses, start_date, actual_end)
 
             if df is None or df.empty:
-                df = self._fetch_stooq_fallback(misses, start_date, end_date, interval=interval)
-
-            if df is None or df.empty:
                 df = pd.DataFrame()
                 _pre_stale_len_1 = len(cached_frames)
                 _served_stale_tickers_1: list[str] = []
@@ -569,20 +515,6 @@ class YfinanceProvider(MarketDataProvider):
                             len(remaining_missing),
                             ",".join(remaining_missing[:10]),
                         )
-                        record_fallback(
-                            domain="market_data",
-                            from_provider="yfinance",
-                            reason="missing close after retries; trying stooq",
-                            fell_back_to="stooq",
-                            tickers=list(remaining_missing[:20]),
-                        )
-                        fallback_df = self._fetch_stooq_fallback(
-                            remaining_missing,
-                            start_date,
-                            end_date,
-                            interval=interval,
-                        )
-                        df = self._merge_ohlcv_frames(df, fallback_df)
 
                 # Tickers that still have no data but hold stale cached coverage
                 # are better served stale than dropped.
