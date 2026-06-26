@@ -478,3 +478,57 @@ describe('NarrativeAnalysisCard — status-aware skeleton', () => {
     expect(summaries).toContain(t('workspacePage.panels.analysis.intelligence.fullRationale'));
   });
 });
+
+describe('NarrativeAnalysisCard second opinion', () => {
+  const intelligence = {
+    symbol: 'LRCX',
+    generatedAt: new Date().toISOString(),
+    action: 'WATCH',
+    conviction: 'medium',
+    summaryLine: 'Maintain your current position.',
+    narrative: 'body',
+  } as unknown as SymbolIntelligence;
+
+  const candidate: SymbolAnalysisCandidate = {
+    ticker: 'LRCX',
+    currency: 'USD',
+    decisionSummary: {
+      symbol: 'LRCX',
+      action: 'MANAGE_ONLY',
+      conviction: 'medium',
+      technicalLabel: 'neutral',
+      fundamentalsLabel: 'neutral',
+      valuationLabel: 'fair',
+      catalystLabel: 'neutral',
+      whyNow: 'Hold.',
+      whatToDo: 'Manage.',
+      mainRisk: 'None.',
+      tradePlan: { entry: 100, stop: 90, target: 110, rr: 1.0 },
+      valuationContext: { method: 'earnings_multiple' },
+      drivers: { positives: [], negatives: [], warnings: [] },
+      explanation: undefined,
+    },
+  };
+
+  it('does not show the second-opinion banner when analysing an open position', () => {
+    render(
+      <NarrativeAnalysisCard intelligence={intelligence} candidate={candidate} isPosition />,
+    );
+    const banner = t('workspacePage.panels.analysis.intelligence.secondOpinion', {
+      aiAction: t('workspacePage.panels.analysis.decisionSummary.actions.watch'),
+      screenerAction: t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly'),
+    });
+    expect(screen.queryByText(banner)).not.toBeInTheDocument();
+  });
+
+  it('still shows the second-opinion banner for a screened candidate', () => {
+    render(
+      <NarrativeAnalysisCard intelligence={intelligence} candidate={candidate} isPosition={false} />,
+    );
+    const banner = t('workspacePage.panels.analysis.intelligence.secondOpinion', {
+      aiAction: t('workspacePage.panels.analysis.decisionSummary.actions.watch'),
+      screenerAction: t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly'),
+    });
+    expect(screen.getByText(banner)).toBeInTheDocument();
+  });
+});

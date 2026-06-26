@@ -262,3 +262,23 @@ describe('AnalysisDecisionStrip — source chips', () => {
     expect(screen.getByText('Fundamentals: sec_edgar (degraded)')).toBeInTheDocument();
   });
 });
+
+describe('AnalysisDecisionStrip held position', () => {
+  it('shows the real filled entry, not the fresh-setup close', () => {
+    const position = {
+      positionId: 'POS-1', ticker: 'LRCX', entryPrice: 383.04, stopPrice: 346.3,
+      targetPrice: 498.26, shares: 1, perShareRisk: 36.74, entryValue: 383.04,
+    } as any;
+
+    // Candidate carries a fresh-setup trade plan whose entry equals today's close.
+    const candidate = buildCandidate({
+      ticker: 'LRCX',
+      currency: 'USD',
+      decisionSummary: { symbol: 'LRCX', action: 'MANAGE_ONLY' as const, conviction: 'low' as const, technicalLabel: 'neutral' as const, fundamentalsLabel: 'neutral' as const, valuationLabel: 'fair' as const, catalystLabel: 'weak' as const, whyNow: '', whatToDo: '', mainRisk: '', tradePlan: { entry: 401.82, stop: 353.6, target: 498.26, rr: 2 }, drivers: { positives: [], negatives: [], warnings: [] }, valuationContext: { method: 'not_available' as const, summary: '', trailingPe: undefined, priceToSales: undefined, bookValuePerShare: undefined, priceToBook: undefined, bookToPrice: undefined, fairValueLow: undefined, fairValueBase: undefined, fairValueHigh: undefined, premiumDiscountPct: undefined } },
+    });
+
+    render(<AnalysisDecisionStrip ticker="LRCX" candidate={candidate} position={position} />);
+    expect(screen.getByText('$383.04')).toBeInTheDocument();
+    expect(screen.queryByText('$401.82')).not.toBeInTheDocument();
+  });
+});
