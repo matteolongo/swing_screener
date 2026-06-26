@@ -381,6 +381,64 @@ def test_generate_daily_review_separates_add_on_candidates(mock_portfolio_servic
     assert review.summary.add_on_candidates == 1
 
 
+def test_reentries_rank_with_new_candidates(mock_portfolio_service, tmp_path):
+    """RE_ENTRY is a fresh buy decision: it belongs with new candidates (in
+    screener-priority order), not in the add-on/scale-back portfolio group."""
+
+    def _candidate(ticker: str, rank: int, mode: str) -> ScreenerCandidate:
+        return ScreenerCandidate(
+            ticker=ticker,
+            signal="MOMENTUM",
+            suggested_order_type="BUY_LIMIT",
+            suggested_order_price=100.0,
+            execution_note="setup",
+            entry=100.0,
+            stop=95.0,
+            shares=5,
+            rr=2.0,
+            name=ticker,
+            sector="Tech",
+            close=100.0,
+            sma_20=99.0,
+            sma_50=98.0,
+            sma_200=90.0,
+            atr=1.0,
+            momentum_6m=0.1,
+            momentum_12m=0.2,
+            rel_strength=1.1,
+            score=90.0,
+            confidence=0.9,
+            rank=rank,
+            same_symbol=SameSymbolCandidateContext(
+                mode=mode,
+                fresh_setup_stop=95.0,
+                execution_stop=95.0,
+                reason=mode,
+            ),
+        )
+
+    screener_service = Mock()
+    # Pre-sorted by priority: new, re-entry, new, add-on.
+    screener_service.run_screener.return_value = ScreenerResponse(
+        candidates=[
+            _candidate("AALB", 1, "NEW_ENTRY"),
+            _candidate("BESI", 2, "RE_ENTRY"),
+            _candidate("NN", 3, "NEW_ENTRY"),
+            _candidate("REP", 4, "ADD_ON"),
+        ],
+        asof_date=str(date.today()),
+        total_screened=100,
+    )
+
+    service = DailyReviewService(screener_service, mock_portfolio_service, data_dir=tmp_path)
+    review = service.generate_daily_review(top_n=10)
+
+    # Re-entry interleaved with new entries, preserving screener priority order.
+    assert [c.ticker for c in review.new_candidates] == ["AALB", "BESI", "NN"]
+    # Only the genuine add-on stays in the portfolio sub-group.
+    assert [c.ticker for c in review.positions_add_on_candidates] == ["REP"]
+
+
 def test_generate_daily_review_position_close(mock_screener_service, mock_portfolio_service, tmp_path):
     """Test position categorized as 'close'."""
     service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
