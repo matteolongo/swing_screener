@@ -139,19 +139,6 @@ export function buildPortfolioColumns(actions: PortfolioColumnActions): DataTabl
                   label={t('workspacePage.panels.portfolio.analyze')}
                   onClick={() => actions.onAnalyze(row)}
                 />
-                <DropdownItem
-                  label={t('workspacePage.panels.portfolio.addOnEntry')}
-                  onClick={() => actions.onAddOnEntry(row.ticker)}
-                />
-                <DropdownItem
-                  label={t('positions.partialCloseModal.submit')}
-                  onClick={() => actions.onPartialClose(row.position!)}
-                />
-                <DropdownItem
-                  label={t('positionsPage.closePosition')}
-                  className="text-danger"
-                  onClick={() => actions.onClosePosition(row.position!)}
-                />
               </ActionsDropdown>
             </div>
           );
