@@ -398,8 +398,8 @@ low_level:
   # ---------------------------------------------------------------------------
   # Tier 1 free-first data provider stack
   # ---------------------------------------------------------------------------
-  # data_providers below configures the OHLCV / price pipeline (yfinance with
-  # Stooq fallback, optional Alpaca validation).  This is separate from
+  # data_providers below configures the OHLCV / price pipeline (yfinance,
+  # optional Alpaca validation).  This is separate from
   # `sources.enabled` above, which controls the evidence-adapter chain used by
   # the market-intelligence / catalyst system (yahoo_finance, earnings_calendar,
   # sec_edgar, company_ir_rss).
@@ -412,12 +412,9 @@ low_level:
       retry_chunk_size: 10
       auto_adjust: true
       progress: false
-      stooq_fallback_enabled: true
       # Cache reuse window (minutes) for requests whose end date is today;
       # historical windows are cached indefinitely.
-      same_day_cache_ttl_minutes: 15
-    stooq:
-      timeout_seconds: 10.0
+      same_day_cache_ttl_minutes: 480
     alpaca:
       rate_limit_requests: 200
       rate_limit_window_seconds: 60

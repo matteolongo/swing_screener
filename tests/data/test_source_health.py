@@ -8,7 +8,6 @@ from swing_screener.data.source_health import (
 )
 from swing_screener.data.providers.alpaca_provider import AlpacaDataProvider
 from swing_screener.data.providers.base import MarketDataProvider
-from swing_screener.data.providers.stooq_provider import StooqDataProvider
 from swing_screener.data.providers.yfinance_provider import YfinanceProvider
 
 
@@ -94,7 +93,6 @@ def test_market_data_provider_default_health_is_unknown_and_neutral():
 
 def test_market_data_provider_quality_defaults_are_explicit(tmp_path):
     yfinance = YfinanceProvider(cache_dir=str(tmp_path / "yf"))
-    stooq = StooqDataProvider()
     alpaca_paper = AlpacaDataProvider(
         api_key="paper-key",
         secret_key="paper-secret",
@@ -103,7 +101,6 @@ def test_market_data_provider_quality_defaults_are_explicit(tmp_path):
     )
 
     yfinance_health = yfinance.get_source_health().to_dict()
-    stooq_health = stooq.get_source_health().to_dict()
     alpaca_health = alpaca_paper.get_source_health().to_dict()
 
     assert yfinance_health["provider"] == "yfinance"
@@ -111,11 +108,6 @@ def test_market_data_provider_quality_defaults_are_explicit(tmp_path):
     assert yfinance_health["quality_score"] == 0.65
     assert yfinance_health["delay_policy"] == "delayed_or_eod"
     assert yfinance_health["warnings"] == ["unofficial_provider"]
-
-    assert stooq_health["provider"] == "stooq"
-    assert stooq_health["quality_score"] == 0.6
-    assert stooq_health["delay_policy"] == "daily_eod"
-    assert stooq_health["warnings"] == ["daily_only"]
 
     assert alpaca_health["provider"] == "alpaca-paper"
     assert alpaca_health["quality_score"] == 0.75

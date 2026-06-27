@@ -1,22 +1,55 @@
+import inspect
+from datetime import date, timedelta
+
 import pandas as pd
+import pytest
+from unittest.mock import patch
 
 from swing_screener.data.providers.yfinance_provider import YfinanceProvider
 from swing_screener.data.source_health import recent_events, reset_fallback_events
 
 
-def test_stooq_fallback_records_event(monkeypatch, tmp_path):
-    reset_fallback_events()
+def test_yfinance_provider_has_no_stooq_params():
+    sig = inspect.signature(YfinanceProvider.__init__)
+    assert "stooq_fallback_enabled" not in sig.parameters
+    assert "stooq_timeout_sec" not in sig.parameters
+    assert "stooq_provider" not in sig.parameters
+
+
+def test_bulk_failure_falls_through_to_stale_cache(tmp_path, monkeypatch):
+    """When yfinance bulk download returns empty, provider uses cached data."""
     provider = YfinanceProvider(cache_dir=str(tmp_path))
 
-    # Force the stooq fallback path: stooq raises -> event recorded.
-    def boom(*args, **kwargs):
-        raise RuntimeError("stooq down")
+    start_date = date.today() - timedelta(days=10)
+    end_date = date.today() - timedelta(days=5)
+    start_str = start_date.isoformat()
+    end_str = end_date.isoformat()
+    # fetch_ohlcv adds 1 day to end_date; end_for_coverage = end_str + 1 day
+    end_for_coverage = (end_date + timedelta(days=1)).isoformat()
 
-    monkeypatch.setattr(provider._stooq_provider, "fetch_ohlcv", boom)
-    provider._fetch_stooq_fallback(["ASML.AS"], "2026-06-01", "2026-06-10", interval="1d")
+    # Pre-populate cache via the provider's own writer so the path/index matches.
+    # end_for_coverage must match so the index entry covers the request window.
+    aapl_df = pd.DataFrame(
+        {("Close", "AAPL"): [152.0], ("Open", "AAPL"): [150.0],
+         ("High", "AAPL"): [155.0], ("Low", "AAPL"): [148.0],
+         ("Volume", "AAPL"): [1000000.0]},
+        index=pd.to_datetime([start_str]),
+    )
+    aapl_df.columns = pd.MultiIndex.from_tuples(aapl_df.columns)
+    provider._store_per_ticker_cache(aapl_df, ["AAPL"], start_str, end_for_coverage)
 
-    events = recent_events()
-    assert any(e.from_provider == "yfinance" and e.fell_back_to == "stooq" for e in events)
+    # Force download to fail so the stale-cache branch is exercised.
+    monkeypatch.setattr(provider, "_download_batch", lambda *a, **kw: pd.DataFrame())
+    monkeypatch.setattr(provider, "_download_sequential", lambda *a, **kw: pd.DataFrame())
+
+    result = provider.fetch_ohlcv(
+        ["AAPL"],
+        start_date=start_str,
+        end_date=end_str,
+        allow_cache_fallback_on_error=True,
+    )
+
+    assert not result.empty, "Expected cache to be served when download fails"
 
 
 def test_no_stale_cache_event_when_only_fresh_cache_served(monkeypatch, tmp_path):
@@ -49,7 +82,6 @@ def test_no_stale_cache_event_when_only_fresh_cache_served(monkeypatch, tmp_path
     # Disable all live-download paths.
     monkeypatch.setattr(provider, "_download_batch", lambda *a, **kw: pd.DataFrame())
     monkeypatch.setattr(provider, "_download_sequential", lambda *a, **kw: pd.DataFrame())
-    monkeypatch.setattr(provider, "_fetch_stooq_fallback", lambda *a, **kw: pd.DataFrame())
 
     # Call with AAPL (fresh cache hit) + MSFT (miss, no stale fallback).
     # Should succeed because AAPL frame is in cached_frames.
