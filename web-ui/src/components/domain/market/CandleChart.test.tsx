@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
-import { CandleChart } from './CandleChart';
-import type { PriceHistoryPoint, CandlePattern } from '@/features/screener/types';
+import { CandleChart, rebaseBenchmark, computeSMA } from './CandleChart';
+import type { PriceHistoryPoint } from '@/features/screener/types';
+
+vi.mock('lightweight-charts');
 
 const bars: PriceHistoryPoint[] = [
   { date: '2024-01-01', open: 9.5, high: 10.2, low: 9.4, close: 10.0, volume: 1000 },
@@ -9,39 +12,19 @@ const bars: PriceHistoryPoint[] = [
 ];
 
 describe('CandleChart', () => {
-  it('renders one candle body per usable bar', () => {
+  it('renders chart container when bars are usable', () => {
     renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={[]} />);
-    expect(document.querySelectorAll('[data-testid="candle-body"]').length).toBe(2);
+    expect(document.querySelector('[data-testid="candle-chart-container"]')).toBeInTheDocument();
   });
 
-  it('colors up vs down candles by close vs open', () => {
-    renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={[]} />);
-    const bodies = document.querySelectorAll('[data-testid="candle-body"]');
-    expect(bodies[0].getAttribute('data-direction')).toBe('up'); // close > open
-    expect(bodies[1].getAttribute('data-direction')).toBe('down'); // close < open
+  it('renders a fallback when no usable OHLC bars', () => {
+    const closeOnly: PriceHistoryPoint[] = [{ date: '2024-01-01', close: 10 }];
+    renderWithProviders(<CandleChart ticker="AAA" bars={closeOnly} patterns={[]} />);
+    expect(document.querySelector('[data-testid="candle-chart-container"]')).not.toBeInTheDocument();
+    expect(screen.getByText('AAA')).toBeInTheDocument();
   });
 
-  it('renders volume bars', () => {
-    renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={[]} />);
-    expect(document.querySelectorAll('[data-testid="volume-bar"]').length).toBe(2);
-  });
-
-  it('renders a pattern marker when patterns are present', () => {
-    const patterns: CandlePattern[] = [
-      {
-        barIndex: 1,
-        date: '2024-01-02',
-        name: 'hammer',
-        direction: 'bullish',
-        keyLevel: 9.4,
-        context: 'at_pullback',
-      },
-    ];
-    renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={patterns} />);
-    expect(document.querySelectorAll('[data-testid="pattern-marker"]').length).toBe(1);
-  });
-
-  it('renders a rebased benchmark line when benchmark bars are provided', () => {
+  it('shows benchmark legend with label and outperformance when provided', () => {
     const benchmarkBars: PriceHistoryPoint[] = [
       { date: '2024-01-01', close: 500 },
       { date: '2024-01-02', close: 505 },
@@ -56,17 +39,65 @@ describe('CandleChart', () => {
         outperformancePct={-2.5}
       />,
     );
-    expect(document.querySelectorAll('[data-testid="benchmark-line"]').length).toBe(1);
+    expect(screen.getByText('SPY')).toBeInTheDocument();
+    expect(screen.getByText('-2.5%')).toBeInTheDocument();
   });
 
-  it('omits the benchmark line when no benchmark label', () => {
+  it('hides benchmark legend when no benchmark label', () => {
     renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={[]} />);
-    expect(document.querySelectorAll('[data-testid="benchmark-line"]').length).toBe(0);
+    expect(screen.queryByText('SPY')).not.toBeInTheDocument();
+  });
+});
+
+describe('computeSMA', () => {
+  const closes = [10, 11, 12, 13, 14];
+
+  it('returns nulls for first period-1 bars', () => {
+    const result = computeSMA(closes, 3);
+    expect(result[0]).toBeNull();
+    expect(result[1]).toBeNull();
   });
 
-  it('renders a fallback when no usable OHLC bars', () => {
-    const closeOnly: PriceHistoryPoint[] = [{ date: '2024-01-01', close: 10 }];
-    renderWithProviders(<CandleChart ticker="AAA" bars={closeOnly} patterns={[]} />);
-    expect(document.querySelectorAll('[data-testid="candle-body"]').length).toBe(0);
+  it('computes correct average at period boundary', () => {
+    const result = computeSMA(closes, 3);
+    expect(result[2]).toBeCloseTo((10 + 11 + 12) / 3);
+    expect(result[4]).toBeCloseTo((12 + 13 + 14) / 3);
+  });
+
+  it('returns all nulls when fewer bars than period', () => {
+    const result = computeSMA([10, 11], 5);
+    expect(result).toEqual([null, null]);
+  });
+});
+
+describe('rebaseBenchmark', () => {
+  const usable = [
+    { date: '2024-01-01', open: 9.5, high: 10.2, low: 9.4, close: 10.0, volume: 1000 },
+    { date: '2024-01-02', open: 10.0, high: 10.6, low: 9.9, close: 9.8, volume: 1200 },
+  ];
+
+  it('rebases benchmark to symbol start price', () => {
+    const benchBars = [
+      { date: '2024-01-01', close: 500 },
+      { date: '2024-01-02', close: 505 },
+    ];
+    const result = rebaseBenchmark(usable, benchBars);
+    expect(result[0]).toBeCloseTo(10.0);
+    expect(result[1]).toBeCloseTo(10.0 * (505 / 500));
+  });
+
+  it('returns nulls when no shared dates', () => {
+    const benchBars = [{ date: '2024-02-01', close: 500 }];
+    const result = rebaseBenchmark(usable, benchBars);
+    expect(result).toEqual([null, null]);
+  });
+
+  it('returns nulls when benchmark base is zero', () => {
+    const benchBars = [
+      { date: '2024-01-01', close: 0 },
+      { date: '2024-01-02', close: 505 },
+    ];
+    const result = rebaseBenchmark(usable, benchBars);
+    expect(result).toEqual([null, null]);
   });
 });

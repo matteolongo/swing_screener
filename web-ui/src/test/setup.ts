@@ -78,6 +78,14 @@ afterAll(() => {
   server?.close()
 })
 
+// Mock ResizeObserver (used by Lightweight Charts autoSize)
+globalThis.ResizeObserver = class ResizeObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+} as any
+
 // Mock IntersectionObserver
 globalThis.IntersectionObserver = class IntersectionObserver {
   constructor() {}
