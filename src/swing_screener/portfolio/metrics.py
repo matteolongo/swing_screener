@@ -16,7 +16,7 @@ def calculate_per_share_risk(position: Position) -> float:
     return float(position.entry_price - position.stop_price)
 
 
-def calculate_r_now(position: Position, current_price: float) -> float:
+def calculate_r_now(position: Position, current_price: float, fee_deduction: float = 0.0) -> float:
     """Calculate current R-multiple for an open position."""
     if position.shares <= 0:
         return 0.0
@@ -26,7 +26,7 @@ def calculate_r_now(position: Position, current_price: float) -> float:
         return 0.0
 
     total_risk = per_share_risk * float(position.shares)
-    pnl = calculate_pnl(position.entry_price, current_price, position.shares)
+    pnl = calculate_pnl(position.entry_price, current_price, position.shares) - fee_deduction
     return pnl / total_risk
 
 

@@ -31,6 +31,7 @@ export interface LocalPositionWithMetrics extends Position {
   pnl: number;
   pnlPercent: number;
   rNow: number;
+  rFxAdjusted?: number | null;
   entryValue: number;
   currentValue: number;
   perShareRisk: number;
@@ -38,6 +39,8 @@ export interface LocalPositionWithMetrics extends Position {
   feesEur: number;
   daysOpen: number;
   timeStopWarning: boolean;
+  priceSource: 'live' | 'cached' | 'entry';
+  rUsesInitialRisk: boolean;
 }
 
 export interface LocalConcentrationGroup {
@@ -213,6 +216,7 @@ function toPositionWithMetrics(position: Position, feesByPosition: Map<string, n
     pnl,
     pnlPercent: entryValue > 0 ? (pnl / entryValue) * 100 : 0,
     rNow,
+    rFxAdjusted: null,
     entryValue,
     currentValue,
     perShareRisk: riskPerShare,
@@ -220,6 +224,8 @@ function toPositionWithMetrics(position: Position, feesByPosition: Map<string, n
     feesEur: fee,
     daysOpen,
     timeStopWarning: position.status === 'open' && daysOpen >= timeStopDays && rNow < timeStopMinR,
+    priceSource: 'entry' as const,
+    rUsesInitialRisk: false,
   };
 }
 

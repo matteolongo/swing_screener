@@ -314,6 +314,14 @@ class PositionWithMetrics(Position):
         default=None,
         description="R-multiple adjusted for FX movement since entry (null when currencies match or no entry rate stored)",
     )
+    price_source: str = Field(
+        default="live",
+        description="Source of current price: 'live', 'cached', or 'entry'",
+    )
+    r_uses_initial_risk: bool = Field(
+        default=False,
+        description="True when R is computed using original entry risk (stop has moved from initial position)",
+    )
 
 
 class PositionsWithMetricsResponse(BaseModel):
@@ -344,6 +352,14 @@ class PositionMetrics(BaseModel):
     r_fx_adjusted: Optional[float] = Field(
         default=None,
         description="R-multiple adjusted for FX movement since entry",
+    )
+    price_source: str = Field(
+        default="live",
+        description="Source of current price: 'live', 'cached', or 'entry'",
+    )
+    r_uses_initial_risk: bool = Field(
+        default=False,
+        description="True when R is computed using original entry risk (stop has moved from initial position)",
     )
 
 

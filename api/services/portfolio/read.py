@@ -115,8 +115,22 @@ class PortfolioReadService:
         if state_position.status == "open" and live_price is not None:
             payload["current_price"] = live_price
 
+        if live_price is not None:
+            price_source = "live"
+        elif position.get("current_price") is not None:
+            price_source = "cached"
+        else:
+            price_source = "entry"
+
+        current_risk_per_share = float(state_position.entry_price - state_position.stop_price)
+        r_uses_initial_risk = (
+            state_position.initial_risk is not None
+            and float(state_position.initial_risk) > 0
+            and abs(float(state_position.initial_risk) - current_risk_per_share) > 0.001
+        )
+
         days_open = self._days_open(state_position.entry_date)
-        r_now = calculate_r_now(state_position, current_price_for_metrics)
+        r_now = calculate_r_now(state_position, current_price_for_metrics, fee_deduction=fee_for_pnl)
         manage_defaults = ManageStateConfig()
         stale_days = int(time_stop_days or manage_defaults.time_stop_days)
         min_progress_r = float(time_stop_min_r if time_stop_min_r is not None else manage_defaults.time_stop_min_r)
@@ -157,6 +171,8 @@ class PortfolioReadService:
             days_open=days_open,
             time_stop_warning=time_stop_warning,
             r_fx_adjusted=r_fx_adjusted,
+            price_source=price_source,
+            r_uses_initial_risk=r_uses_initial_risk,
         )
 
     @staticmethod
@@ -261,12 +277,19 @@ class PortfolioReadService:
                 current_eurusd=current_eurusd,
             )
 
+        current_risk_per_share_metrics = float(state_position.entry_price - state_position.stop_price)
+        r_uses_initial_risk_metrics = (
+            state_position.initial_risk is not None
+            and float(state_position.initial_risk) > 0
+            and abs(float(state_position.initial_risk) - current_risk_per_share_metrics) > 0.001
+        )
+
         return PositionMetrics(
             ticker=ticker,
             pnl=pnl,
             fees_eur=entry_fee_eur,
             pnl_percent=pnl_percent,
-            r_now=calculate_r_now(state_position, current_price),
+            r_now=calculate_r_now(state_position, current_price, fee_deduction=fee_for_pnl),
             entry_value=entry_value,
             current_value=calculate_current_position_value(current_price, state_position.shares),
             per_share_risk=per_share_risk,
@@ -274,6 +297,8 @@ class PortfolioReadService:
             partial_closes=partial_close_events,
             blended_r=blended_r,
             r_fx_adjusted=r_fx_adjusted,
+            price_source="live",
+            r_uses_initial_risk=r_uses_initial_risk_metrics,
         )
 
     def _realized_pnl(self) -> float:

@@ -49,6 +49,8 @@ function makePosition(overrides: Partial<PositionWithMetrics> = {}): PositionWit
     feesEur: 0,
     daysOpen: 0,
     timeStopWarning: false,
+    priceSource: 'live',
+    rUsesInitialRisk: false,
     notes: '',
     tags: [],
     ...overrides,

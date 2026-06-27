@@ -69,6 +69,8 @@ interface PositionWithMetricsApiResponse extends PositionApiResponse {
   fees_eur: number;
   days_open?: number;
   time_stop_warning?: boolean;
+  price_source?: string;
+  r_uses_initial_risk?: boolean;
 }
 
 interface PortfolioSummaryApiResponse {
@@ -128,6 +130,8 @@ export interface PositionWithMetrics extends Position {
   feesEur: number;
   daysOpen: number;
   timeStopWarning: boolean;
+  priceSource: 'live' | 'cached' | 'entry';
+  rUsesInitialRisk: boolean;
 }
 
 export interface PortfolioSummary {
@@ -564,6 +568,8 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
     feesEur: data.fees_eur ?? 0,
     daysOpen: data.days_open ?? 0,
     timeStopWarning: data.time_stop_warning ?? false,
+    priceSource: (data.price_source as 'live' | 'cached' | 'entry') ?? 'live',
+    rUsesInitialRisk: data.r_uses_initial_risk ?? false,
   };
 }
 
