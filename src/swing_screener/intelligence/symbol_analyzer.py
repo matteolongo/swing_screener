@@ -723,6 +723,8 @@ class SymbolAnalyzer:
             technical["sector_rotation_context"] = req.sector_rotation_context
         if req.signal:
             technical["signal"] = req.signal
+        if req.price_source:
+            technical["price_source"] = req.price_source
         if technical:
             inputs_used["technical"] = technical
 

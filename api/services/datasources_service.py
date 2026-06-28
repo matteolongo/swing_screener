@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from swing_screener.data.providers.yfinance_provider import YfinanceProvider
 from swing_screener.data.providers.alpaca_provider import AlpacaDataProvider
+from swing_screener.data.providers.polygon_provider import PolygonProvider
 from swing_screener.fundamentals.providers.sec_edgar import SecEdgarFundamentalsProvider
 from swing_screener.fundamentals.providers.yfinance import YfinanceFundamentalsProvider
 from swing_screener.fundamentals.providers.degiro import DegiroFundamentalsProvider
@@ -21,6 +22,7 @@ from swing_screener.data.source_health import (
 )
 from swing_screener.settings import get_settings_manager
 from swing_screener.intelligence.evidence.collectors.sec_edgar import SecEdgarCatalystCollector
+from swing_screener.intelligence.evidence.collectors.polygon_news import PolygonNewsCollector
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +34,13 @@ logger = logging.getLogger(__name__)
 _PROBEABLE: dict[str, type] = {
     "yfinance": YfinanceProvider,
     "alpaca": AlpacaDataProvider,
+    "polygon": PolygonProvider,
     "sec_edgar": SecEdgarFundamentalsProvider,
     "yfinance_fundamentals": YfinanceFundamentalsProvider,
     "degiro": DegiroFundamentalsProvider,
     "finnhub": FinnhubEnrichmentClient,
     "sec_edgar_catalysts": SecEdgarCatalystCollector,
+    "polygon_news": PolygonNewsCollector,
 }
 
 # Intelligence catalyst evidence ships only SEC EDGAR 8-K/6-K filings (the sole

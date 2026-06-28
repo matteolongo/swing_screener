@@ -8,21 +8,26 @@ import os
 from swing_screener.settings import get_settings_manager
 
 
+_VALID_PROVIDERS = ("yfinance", "alpaca", "polygon")
+
+
 @dataclass
 class BrokerConfig:
     """
     Broker and market data provider configuration.
-    
+
     Attributes:
-        provider: Market data provider ("yfinance" or "alpaca")
+        provider: Market data provider ("yfinance", "alpaca", or "polygon")
         alpaca_api_key: Alpaca API key (required if provider="alpaca")
         alpaca_secret_key: Alpaca secret key (required if provider="alpaca")
         alpaca_paper: Use Alpaca paper trading account (default: True)
+        polygon_api_key: Polygon.io API key (required if provider="polygon")
     """
     provider: str = "yfinance"
     alpaca_api_key: Optional[str] = None
     alpaca_secret_key: Optional[str] = None
     alpaca_paper: bool = True
+    polygon_api_key: Optional[str] = None
     
     @classmethod
     def from_env(cls) -> BrokerConfig:
@@ -45,8 +50,8 @@ class BrokerConfig:
         ).lower()
         
         # Validate provider
-        if provider not in ("yfinance", "alpaca"):
-            raise ValueError(f"Invalid provider: {provider}. Must be 'yfinance' or 'alpaca'")
+        if provider not in _VALID_PROVIDERS:
+            raise ValueError(f"Invalid provider: {provider}. Must be one of {_VALID_PROVIDERS}")
         
         # Get Alpaca credentials
         alpaca_api_key = os.getenv("ALPACA_API_KEY")
@@ -61,11 +66,18 @@ class BrokerConfig:
                     "Alpaca provider requires ALPACA_API_KEY and ALPACA_SECRET_KEY environment variables"
                 )
         
+        polygon_api_key = os.getenv("POLYGON_IO_API_KEY")
+        if provider == "polygon" and not polygon_api_key:
+            raise ValueError(
+                "Polygon provider requires POLYGON_IO_API_KEY environment variable"
+            )
+
         return cls(
             provider=provider,
             alpaca_api_key=alpaca_api_key,
             alpaca_secret_key=alpaca_secret_key,
             alpaca_paper=alpaca_paper,
+            polygon_api_key=polygon_api_key,
         )
     
     def validate(self):
@@ -75,9 +87,13 @@ class BrokerConfig:
         Raises:
             ValueError: If configuration is invalid
         """
-        if self.provider not in ("yfinance", "alpaca"):
+        if self.provider not in _VALID_PROVIDERS:
             raise ValueError(f"Invalid provider: {self.provider}")
-        
+
         if self.provider == "alpaca":
             if not self.alpaca_api_key or not self.alpaca_secret_key:
                 raise ValueError("Alpaca provider requires api_key and secret_key")
+
+        if self.provider == "polygon":
+            if not self.polygon_api_key:
+                raise ValueError("Polygon provider requires POLYGON_IO_API_KEY")
