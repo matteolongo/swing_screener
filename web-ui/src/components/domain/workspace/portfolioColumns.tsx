@@ -5,6 +5,7 @@ import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { type Order } from '@/features/portfolio/types';
 import { getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
+import { cn } from '@/utils/cn';
 import {
   ActionsDropdown,
   DropdownItem,
@@ -63,14 +64,28 @@ export function buildPortfolioColumns(actions: PortfolioColumnActions): DataTabl
             <span className="text-foreground">{formatOptionalCurrency(row.entryPrice)}</span>
           </div>
           {row.currentPrice != null && row.currentPrice !== row.entryPrice ? (
-            <div className="flex gap-1 text-muted">
+            <div className="flex gap-1 text-muted items-center">
               <span>Now</span>
-              <span className="text-foreground">{formatOptionalCurrency(row.currentPrice)}</span>
+              <span className={cn('text-foreground', row.position?.priceSource !== 'live' && 'text-warning')}>
+                {formatOptionalCurrency(row.currentPrice)}
+              </span>
+              {row.position?.priceSource !== 'live' && (
+                <span
+                  className="text-warning text-[10px] leading-none"
+                  title={t('positions.priceStaleTooltip')}
+                >
+                  {t('positions.priceStale')}
+                </span>
+              )}
             </div>
           ) : null}
           <div className="flex gap-1 text-muted">
             <span>Stop</span>
-            <span className="text-danger">{formatOptionalCurrency(row.stopLoss)}</span>
+            {row.position?.rUsesInitialRisk && row.stopLoss != null && row.entryPrice != null && Math.abs(row.stopLoss - row.entryPrice) < 0.01 ? (
+              <span className="text-muted" title={`Break-even stop at ${formatOptionalCurrency(row.stopLoss)}`}>B/E</span>
+            ) : (
+              <span className="text-danger">{formatOptionalCurrency(row.stopLoss)}</span>
+            )}
           </div>
         </div>
       ),
@@ -89,23 +104,31 @@ export function buildPortfolioColumns(actions: PortfolioColumnActions): DataTabl
       align: 'right' as const,
       render: (row) => {
         if (!row.position) return <span className="text-muted text-xs">—</span>;
-        const { rNow, rFxAdjusted } = row.position;
+        const { rNow, rFxAdjusted, rUsesInitialRisk } = row.position;
         const rSign = rNow >= 0 ? '+' : '';
         const rLabel = `${rSign}${rNow.toFixed(2)}R`;
-        if (rFxAdjusted == null) {
+        if (rFxAdjusted == null && !rUsesInitialRisk) {
           return <span className="text-sm font-mono">{rLabel}</span>;
         }
-        const fxSign = rFxAdjusted >= 0 ? '+' : '';
-        const fxLabel = `${fxSign}${rFxAdjusted.toFixed(2)}R`;
         return (
           <div className="text-right font-mono">
             <div className="text-sm">{rLabel}</div>
-            <div
-              className="text-xs text-muted"
-              title={t('positions.rFxAdjustedTooltip')}
-            >
-              {t('positions.rFxAdjusted')}: {fxLabel}
-            </div>
+            {rFxAdjusted != null && (
+              <div
+                className="text-xs text-muted"
+                title={t('positions.rFxAdjustedTooltip')}
+              >
+                {t('positions.rFxAdjusted')}: {`${rFxAdjusted >= 0 ? '+' : ''}${rFxAdjusted.toFixed(2)}R`}
+              </div>
+            )}
+            {rUsesInitialRisk && (
+              <div
+                className="text-xs text-muted"
+                title={t('positions.rInitialRiskTooltip')}
+              >
+                {t('positions.rInitialRisk')}
+              </div>
+            )}
           </div>
         );
       },

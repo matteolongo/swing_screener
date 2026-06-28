@@ -432,6 +432,10 @@ export const messagesEn = {
   positions: {
     rFxAdjusted: 'FX-adj. R',
     rFxAdjustedTooltip: 'R in account currency (EUR), adjusted for FX movement since entry',
+    rInitialRisk: 'initial 1R',
+    rInitialRiskTooltip: 'R based on original entry risk — stop has moved from initial position',
+    priceStale: 'stale',
+    priceStaleTooltip: 'Live price unavailable — showing cached price from last fetch',
     updateStopModal: {
       title: 'Update Stop - {{ticker}}',
       currentPosition: 'Current Position:',
