@@ -74,6 +74,15 @@ def get_market_data_provider(
             use_cache=kwargs.get("use_cache", True),
         )
     
+    elif config.provider == "polygon":
+        if not config.polygon_api_key:
+            raise ValueError("Polygon provider requires polygon_api_key")
+        from .polygon_provider import PolygonProvider
+        return PolygonProvider(
+            api_key=config.polygon_api_key,
+            cache_dir=kwargs.get("cache_dir", str(manager.resolve_runtime_path("polygon_cache_dir", ".cache/polygon_data"))),
+        )
+
     else:
         raise ValueError(f"Unknown provider: {config.provider}")
 

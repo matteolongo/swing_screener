@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from swing_screener.data.providers.yfinance_provider import YfinanceProvider
 from swing_screener.data.providers.alpaca_provider import AlpacaDataProvider
+from swing_screener.data.providers.polygon_provider import PolygonProvider
 from swing_screener.fundamentals.providers.sec_edgar import SecEdgarFundamentalsProvider
 from swing_screener.fundamentals.providers.yfinance import YfinanceFundamentalsProvider
 from swing_screener.fundamentals.providers.degiro import DegiroFundamentalsProvider
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 _PROBEABLE: dict[str, type] = {
     "yfinance": YfinanceProvider,
     "alpaca": AlpacaDataProvider,
+    "polygon": PolygonProvider,
     "sec_edgar": SecEdgarFundamentalsProvider,
     "yfinance_fundamentals": YfinanceFundamentalsProvider,
     "degiro": DegiroFundamentalsProvider,
