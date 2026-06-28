@@ -85,6 +85,7 @@ Intelligence (`/api/intelligence`):
 - `GET /api/intelligence/{ticker}/latest`
 - `GET /api/intelligence/{ticker}/history` — per-symbol analysis history, newest-first, capped at `analysis_history.max_entries`. Returns `{entries: HistoryEntry[]}`; empty list (not 404) when none.
 - `POST /api/intelligence/sweep` — same full enrich + two-call analysis as the single-symbol endpoint, applied to each symbol in the request. No batch cap; cost scales linearly. Per-symbol cache-before-spend applies unless `force=true` per symbol. Returns 503 on the same kill-switch conditions.
+- `POST /api/intelligence/position/{position_id}?force=false` — position-aware LLM analysis for an open position. Enriches with the same fundamentals and technicals a screener candidate gets, so the model has real data to manage the position. Returns cached result unless `force=true`. Returns 404 if position not found.
 
 Fundamentals (`/api/fundamentals`):
 - `GET /api/fundamentals/config`
