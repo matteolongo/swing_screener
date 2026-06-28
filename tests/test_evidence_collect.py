@@ -29,6 +29,37 @@ def test_collect_caches_and_rereads(tmp_path, monkeypatch):
     assert calls["n"] == 1  # second call served from cache
 
 
+def test_polygon_news_collector_registered():
+    from swing_screener.intelligence.evidence.collectors.polygon_news import (
+        PolygonNewsCollector,
+    )
+
+    assert collect_mod._COLLECTORS.get("polygon_news") is PolygonNewsCollector
+
+
+def test_polygon_news_runs_when_enabled(tmp_path, monkeypatch):
+    cfg = EvidenceConfig(enabled_sources=("polygon_news",))
+
+    def fake_collect(cls, ticker, *, asof_date, cfg, **kw):
+        return [
+            SourceEvidence(
+                title="news",
+                url="https://x/y",
+                publisher="Polygon",
+                published_at="2026-06-23",
+                quote_or_summary="s",
+                relevance="Polygon news · bullish",
+            )
+        ]
+
+    monkeypatch.setattr(
+        collect_mod.PolygonNewsCollector, "collect", classmethod(fake_collect)
+    )
+    out = collect_evidence("AAPL", asof_date=ASOF, cfg=cfg, cache_root=tmp_path)
+    assert len(out) == 1
+    assert out[0].publisher == "Polygon"
+
+
 def test_failing_collector_records_fallback_and_degrades(tmp_path, monkeypatch):
     source_health.reset_fallback_events()
 

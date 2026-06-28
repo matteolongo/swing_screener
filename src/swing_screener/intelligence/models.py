@@ -161,6 +161,8 @@ class SymbolIntelligenceRequest(BaseModel):
     next_earnings_date: str | None = None
     # Recent candlestick patterns as "name@context" strings, for the prompt
     recent_patterns: list[str] | None = None
+    # Provenance: which provider supplied the price/technical inputs (e.g. "polygon")
+    price_source: str | None = None
     # Raw fundamentals (filled by the server-side enricher when absent)
     trailing_pe: float | None = None
     revenue_growth_yoy: float | None = None
