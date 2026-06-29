@@ -12,6 +12,8 @@ from swing_screener.data.symbol_pool import (
     TaxonomyFilterSpec,
     filter_pool_by_taxonomy,
     enrich_pool_taxonomy,
+    serialize_pool,
+    deserialize_pool,
 )
 
 
@@ -80,9 +82,14 @@ def test_derive_liquidity_tier_buckets():
 def test_derive_instrument_detail():
     assert derive_instrument_detail("EQUITY", None, "equity") == "equity"
     assert derive_instrument_detail("ETF", "Technology", "etf") == "etf_sector"
-    assert derive_instrument_detail("ETF", "Trading--Leveraged Equity", "etf") == "etf_leveraged"
+    assert (
+        derive_instrument_detail("ETF", "Trading--Leveraged Equity", "etf")
+        == "etf_leveraged"
+    )
     assert derive_instrument_detail("ETF", "Corporate Bond", "etf") == "etf_bond"
-    assert derive_instrument_detail("ETF", "Commodities Focused", "etf") == "etf_commodity"
+    assert (
+        derive_instrument_detail("ETF", "Commodities Focused", "etf") == "etf_commodity"
+    )
     assert derive_instrument_detail("ETF", "Large Blend", "etf") == "etf_equity"
     assert derive_instrument_detail(None, None, "etf") == "etf_equity"
 
@@ -137,7 +144,10 @@ def test_build_pool_base_merges_snapshots_and_instrument_master():
     by_symbol = {s.symbol: s for s in pool}
 
     assert set(by_symbol) == {"AAPL", "MSFT", "ASML"}
-    assert sorted(by_symbol["AAPL"].index_memberships) == ["broad_market_stocks", "us_sp500"]
+    assert sorted(by_symbol["AAPL"].index_memberships) == [
+        "broad_market_stocks",
+        "us_sp500",
+    ]
     assert by_symbol["AAPL"].region == "us"
     assert by_symbol["ASML"].region == "europe"
     assert set(by_symbol["ASML"].available_providers) == {"yfinance", "degiro"}
@@ -150,7 +160,9 @@ def test_build_pool_base_handles_symbol_absent_from_instrument_master():
     snapshots = {
         "x": {
             "id": "x",
-            "constituents": [{"symbol": "NEW", "exchange_mic": "XNYS", "currency": "USD"}],
+            "constituents": [
+                {"symbol": "NEW", "exchange_mic": "XNYS", "currency": "USD"}
+            ],
         }
     }
     pool = build_pool_base(snapshots=snapshots, instrument_master={})
@@ -172,7 +184,11 @@ def test_filter_none_spec_returns_all():
 
 
 def test_filter_single_dimension_or_within():
-    pool = [_mk("A", region="us"), _mk("B", region="europe"), _mk("C", region="asia_pacific")]
+    pool = [
+        _mk("A", region="us"),
+        _mk("B", region="europe"),
+        _mk("C", region="asia_pacific"),
+    ]
     out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec(region=("us", "europe")))
     assert {s.symbol for s in out} == {"A", "B"}
 
@@ -196,8 +212,13 @@ def test_filter_excludes_symbol_with_null_field_when_dimension_active():
 
 
 def test_filter_index_membership_matches_any():
-    pool = [_mk("A", index_memberships=["us_sp500"]), _mk("B", index_memberships=["germany_dax"])]
-    out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec(index_memberships=("us_sp500",)))
+    pool = [
+        _mk("A", index_memberships=["us_sp500"]),
+        _mk("B", index_memberships=["germany_dax"]),
+    ]
+    out = filter_pool_by_taxonomy(
+        pool, TaxonomyFilterSpec(index_memberships=("us_sp500",))
+    )
     assert {s.symbol for s in out} == {"A"}
 
 
@@ -254,3 +275,13 @@ def test_enrich_records_failures_and_continues():
     assert failed == ["BAD"]
     assert pool[0].sector == "Energy"
     assert pool[1].sector is None
+
+
+def test_serialize_deserialize_roundtrip():
+    pool = [PoolSymbol(symbol="AAPL", region="us", index_memberships=["us_sp500"])]
+    payload = serialize_pool(pool, asof_date="2026-06-30")
+    assert payload["schema_version"] == 1
+    assert payload["asof"] == "2026-06-30"
+    assert payload["symbols"][0]["symbol"] == "AAPL"
+    restored = deserialize_pool(payload)
+    assert restored == pool

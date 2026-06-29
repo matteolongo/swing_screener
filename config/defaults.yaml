@@ -427,6 +427,21 @@ low_level:
     probe_canary:
       us: AAPL
       eu: ASML.AS
+  # ---------------------------------------------------------------------------
+  # Unified taxonomy symbol pool (data/symbol_pool.json).
+  # ---------------------------------------------------------------------------
+  symbol_pool:
+    # Market-cap tier thresholds in USD (>= bound assigns the tier; below small = micro).
+    market_cap_thresholds:
+      large: 10000000000   # >= $10B
+      mid: 2000000000      # >= $2B
+      small: 300000000     # >= $300M
+    # Liquidity tier thresholds in USD average daily dollar volume (below mid = low).
+    liquidity_thresholds:
+      high: 50000000       # >= $50M
+      mid: 5000000         # >= $5M
+    # Consecutive OHLCV fetch failures before a symbol moves to the review queue.
+    fetch_failure_threshold: 3
 
 # ---------------------------------------------------------------------------
 # Cache TTL settings for disk caches.

@@ -4,6 +4,7 @@ The pool (`data/symbol_pool.json`) is the query-time source of truth for the
 screener. It is built by merging the universe registry snapshots with the
 instrument master (network-free) plus best-effort yfinance enrichment.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -86,7 +87,11 @@ def pool_symbol_from_dict(d: dict) -> PoolSymbol:
     )
 
 
-DEFAULT_CAP_THRESHOLDS = {"large": 10_000_000_000, "mid": 2_000_000_000, "small": 300_000_000}
+DEFAULT_CAP_THRESHOLDS = {
+    "large": 10_000_000_000,
+    "mid": 2_000_000_000,
+    "small": 300_000_000,
+}
 DEFAULT_LIQUIDITY_THRESHOLDS = {"high": 50_000_000, "mid": 5_000_000}
 
 PROVIDER_KEY_MAP = {
@@ -169,7 +174,9 @@ def derive_region(exchange_mic: str | None, country_code: str | None) -> str:
     return "other"
 
 
-def derive_cap_tier(market_cap: float | None, thresholds: dict | None = None) -> str | None:
+def derive_cap_tier(
+    market_cap: float | None, thresholds: dict | None = None
+) -> str | None:
     if market_cap is None:
         return None
     t = thresholds or DEFAULT_CAP_THRESHOLDS
@@ -267,7 +274,11 @@ def build_pool_base(
 ) -> list[PoolSymbol]:
     """Merge universe snapshots + instrument master into base PoolSymbols (no network)."""
     snaps = snapshots if snapshots is not None else _default_snapshots()
-    master = instrument_master if instrument_master is not None else _default_instrument_master()
+    master = (
+        instrument_master
+        if instrument_master is not None
+        else _default_instrument_master()
+    )
 
     pool: dict[str, PoolSymbol] = {}
     for uid, snap in snaps.items():
@@ -385,15 +396,46 @@ def enrich_pool_taxonomy(
             continue
         s.sector = info.get("sector") or s.sector
         s.industry = info.get("industry") or s.industry
-        s.market_cap_tier = derive_cap_tier(_coerce_float(info.get("marketCap")), cap_thresholds)
+        s.market_cap_tier = derive_cap_tier(
+            _coerce_float(info.get("marketCap")), cap_thresholds
+        )
         avg_vol = _coerce_float(info.get("averageDailyVolume3Month")) or _coerce_float(
             info.get("averageVolume")
         )
         price = _coerce_float(info.get("regularMarketPrice"))
-        dollar_vol = avg_vol * price if (avg_vol is not None and price is not None) else None
+        dollar_vol = (
+            avg_vol * price if (avg_vol is not None and price is not None) else None
+        )
         s.liquidity_tier = derive_liquidity_tier(dollar_vol, liquidity_thresholds)
         s.instrument_type_detail = derive_instrument_detail(
             info.get("quoteType"), info.get("category"), s.instrument_type
         )
         s.taxonomy_refreshed_at = asof_date
     return failed
+
+
+def serialize_pool(pool: list[PoolSymbol], asof_date: str | None = None) -> dict:
+    return {
+        "schema_version": POOL_SCHEMA_VERSION,
+        "asof": asof_date,
+        "symbols": [pool_symbol_to_dict(s) for s in pool],
+    }
+
+
+def deserialize_pool(payload: dict) -> list[PoolSymbol]:
+    return [pool_symbol_from_dict(d) for d in payload.get("symbols", [])]
+
+
+def load_symbol_pool_thresholds() -> tuple[dict, dict, int]:
+    try:
+        from swing_screener.settings import get_settings_manager
+
+        cfg = get_settings_manager().get_low_level_defaults_payload("symbol_pool")
+    except Exception:  # noqa: BLE001
+        cfg = {}
+    cap = dict(DEFAULT_CAP_THRESHOLDS)
+    cap.update({k: v for k, v in (cfg.get("market_cap_thresholds") or {}).items()})
+    liq = dict(DEFAULT_LIQUIDITY_THRESHOLDS)
+    liq.update({k: v for k, v in (cfg.get("liquidity_thresholds") or {}).items()})
+    threshold = int(cfg.get("fetch_failure_threshold", 3) or 3)
+    return cap, liq, threshold
