@@ -11,6 +11,7 @@ from swing_screener.data.symbol_pool import (
     build_pool_base,
     TaxonomyFilterSpec,
     filter_pool_by_taxonomy,
+    enrich_pool_taxonomy,
 )
 
 
@@ -207,3 +208,49 @@ def test_filter_provider_matches_available():
     ]
     out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec(provider=("degiro",)))
     assert {s.symbol for s in out} == {"A"}
+
+
+def test_enrich_populates_yfinance_fields():
+    pool = [PoolSymbol(symbol="AAPL", instrument_type="equity")]
+    info = {
+        "AAPL": {
+            "sector": "Technology",
+            "industry": "Consumer Electronics",
+            "marketCap": 3_000_000_000_000,
+            "averageVolume": 50_000_000,
+            "regularMarketPrice": 200.0,
+            "quoteType": "EQUITY",
+            "category": None,
+        }
+    }
+    failed = enrich_pool_taxonomy(pool, info_fn=info.get, asof_date="2026-06-30")
+    assert failed == []
+    s = pool[0]
+    assert s.sector == "Technology"
+    assert s.market_cap_tier == "large"
+    assert s.liquidity_tier == "high"  # 50M * 200 = 10B dollar volume
+    assert s.instrument_type_detail == "equity"
+    assert s.taxonomy_refreshed_at == "2026-06-30"
+
+
+def test_enrich_records_failures_and_continues():
+    pool = [PoolSymbol(symbol="GOOD"), PoolSymbol(symbol="BAD")]
+    info = {
+        "GOOD": {
+            "sector": "Energy",
+            "marketCap": 5e9,
+            "averageVolume": 1e6,
+            "regularMarketPrice": 50.0,
+            "quoteType": "EQUITY",
+        }
+    }
+
+    def info_fn(sym):
+        if sym == "BAD":
+            raise RuntimeError("network")
+        return info.get(sym)
+
+    failed = enrich_pool_taxonomy(pool, info_fn=info_fn, asof_date="2026-06-30")
+    assert failed == ["BAD"]
+    assert pool[0].sector == "Energy"
+    assert pool[1].sector is None

@@ -354,3 +354,46 @@ def filter_pool_by_taxonomy(
             continue
         out.append(s)
     return out
+
+
+def _coerce_float(value) -> float | None:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def enrich_pool_taxonomy(
+    pool: list[PoolSymbol],
+    info_fn: Callable[[str], dict | None],
+    asof_date: str,
+    cap_thresholds: dict | None = None,
+    liquidity_thresholds: dict | None = None,
+) -> list[str]:
+    """Best-effort enrichment of yfinance-derived taxonomy fields. Returns failed symbols."""
+    failed: list[str] = []
+    for s in pool:
+        try:
+            info = info_fn(s.symbol)
+        except Exception:  # noqa: BLE001 - per-symbol failure must not abort the run
+            failed.append(s.symbol)
+            continue
+        if not info:
+            failed.append(s.symbol)
+            continue
+        s.sector = info.get("sector") or s.sector
+        s.industry = info.get("industry") or s.industry
+        s.market_cap_tier = derive_cap_tier(_coerce_float(info.get("marketCap")), cap_thresholds)
+        avg_vol = _coerce_float(info.get("averageDailyVolume3Month")) or _coerce_float(
+            info.get("averageVolume")
+        )
+        price = _coerce_float(info.get("regularMarketPrice"))
+        dollar_vol = avg_vol * price if (avg_vol is not None and price is not None) else None
+        s.liquidity_tier = derive_liquidity_tier(dollar_vol, liquidity_thresholds)
+        s.instrument_type_detail = derive_instrument_detail(
+            info.get("quoteType"), info.get("category"), s.instrument_type
+        )
+        s.taxonomy_refreshed_at = asof_date
+    return failed
