@@ -23,6 +23,7 @@ from swing_screener.data.source_health import (
 from swing_screener.settings import get_settings_manager
 from swing_screener.intelligence.evidence.collectors.sec_edgar import SecEdgarCatalystCollector
 from swing_screener.intelligence.evidence.collectors.polygon_news import PolygonNewsCollector
+from swing_screener.intelligence.evidence.collectors.degiro_news import DegiroNewsCollector
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ _PROBEABLE: dict[str, type] = {
     "finnhub": FinnhubEnrichmentClient,
     "sec_edgar_catalysts": SecEdgarCatalystCollector,
     "polygon_news": PolygonNewsCollector,
+    "degiro_news": DegiroNewsCollector,
 }
 
 # Intelligence catalyst evidence ships only SEC EDGAR 8-K/6-K filings (the sole

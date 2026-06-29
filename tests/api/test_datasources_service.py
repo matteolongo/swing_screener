@@ -25,9 +25,10 @@ def test_inventory_includes_market_fundamentals_intelligence():
     assert {"yfinance", "alpaca"} <= ids                         # market (stooq dropped: JS PoW wall)
     assert "stooq" not in ids
     assert {"sec_edgar", "yfinance_fundamentals", "finnhub"} <= ids  # fundamentals + enrichment
-    # Intelligence sources: SEC EDGAR filings + Polygon news (probeable once keyed).
+    # Intelligence sources: SEC EDGAR filings + Polygon news + DeGiro news
+    # (the latter two probeable once keyed / DeGiro creds set).
     intel = [d for d in svc.inventory() if d.domain == "intelligence"]
-    assert {d.id for d in intel} == {"sec_edgar_catalysts", "polygon_news"}
+    assert {d.id for d in intel} == {"sec_edgar_catalysts", "polygon_news", "degiro_news"}
     assert all(d.probeable or d.requires for d in intel)  # not inert: probeable or key-gated
     assert all(d.note for d in intel)
 
