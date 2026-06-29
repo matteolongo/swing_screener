@@ -89,6 +89,10 @@ export const API_ENDPOINTS = {
   datasourceProbe: (id: string) => `/api/datasources/${encodeURIComponent(id)}/probe`,
   datasourcesProbeAll: '/api/datasources/probe',
   datasourcesEvents: '/api/datasources/events',
+
+  // Cache
+  cacheStatus: '/api/cache/status',
+  cacheClear: (id: string) => `/api/cache/clear/${encodeURIComponent(id)}`,
 } as const;
 
 // Helper to build full URL

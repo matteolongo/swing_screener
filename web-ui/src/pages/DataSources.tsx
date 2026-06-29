@@ -4,6 +4,7 @@ import type { MessageKey } from '@/i18n/types';
 import { useDataSources, useFallbackEvents, useProbeSourceMutation, useProbeAllMutation } from '@/features/datasources/hooks';
 import SourceCard from '@/components/domain/datasources/SourceCard';
 import FallbackFeed from '@/components/domain/datasources/FallbackFeed';
+import CacheSection from '@/components/domain/datasources/CacheSection';
 import type { DataSource } from '@/features/datasources/types';
 
 const DOMAIN_ORDER = ['market_data', 'fundamentals', 'intelligence'] as const;
@@ -63,6 +64,7 @@ export default function DataSources() {
       ))}
 
       <FallbackFeed events={eventsQuery.data ?? []} />
+      <CacheSection />
     </div>
   );
 }

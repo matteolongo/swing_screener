@@ -94,6 +94,19 @@ export function formatCompactNumber(value?: number | null): string {
 }
 
 /**
+ * Return a human-readable relative time string from an ISO8601 timestamp.
+ * e.g. "3h ago", "2 days ago", "just now"
+ */
+export function formatRelativeTime(isoString: string | null | undefined): string {
+  if (!isoString) return '—';
+  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)} days ago`;
+}
+
+/**
  * Format datetime (e.g., "Feb 5, 2026 14:30")
  */
 export function formatDateTime(date: string | Date): string {

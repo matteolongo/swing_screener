@@ -615,6 +615,19 @@ export const messagesEn = {
       down: 'Down',
       not_configured: 'Not configured',
     },
+    cache: {
+      title: 'Cache',
+      clear: 'Clear',
+      clearing: 'Clearing…',
+      clearsOnRestart: 'Clears on restart',
+      neverModified: '—',
+      entries: '{{count}} entries',
+      storage: {
+        disk_json: 'Disk JSON',
+        disk_parquet: 'Disk Parquet',
+        memory: 'In-Memory',
+      },
+    },
   },
   workspacePage: {
     title: 'Workspace',

@@ -33,4 +33,5 @@ export const queryKeys = {
   tickerCandles: (ticker?: string | null) => ['ticker-candles', ticker ?? null] as const,
   datasources: () => ['datasources'] as const,
   datasourcesEvents: () => ['datasources', 'events'] as const,
+  cacheStatus: () => ['cache-status'] as const,
 };
