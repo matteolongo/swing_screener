@@ -1,3 +1,5 @@
+import { t } from '@/i18n/t';
+
 /**
  * Format number with specified decimals (e.g., 2.34, 1.5)
  */
@@ -93,17 +95,41 @@ export function formatCompactNumber(value?: number | null): string {
   return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 }
 
+export type RelativeTimeParts =
+  | { kind: 'unknown' }
+  | { kind: 'justNow' }
+  | { kind: 'minutes'; value: number }
+  | { kind: 'hours'; value: number }
+  | { kind: 'days'; value: number };
+
+/**
+ * Decompose an ISO8601 timestamp into bucketed relative-time parts.
+ * Shared by formatRelativeTime and WatchMetaInline to avoid duplicated bucketing.
+ */
+export function relativeTimeParts(isoString: string | null | undefined): RelativeTimeParts {
+  if (!isoString) return { kind: 'unknown' };
+  const ms = new Date(isoString).getTime();
+  if (!Number.isFinite(ms)) return { kind: 'unknown' };
+  const diff = Math.floor((Date.now() - ms) / 1000);
+  if (diff < 60) return { kind: 'justNow' };
+  if (diff < 3600) return { kind: 'minutes', value: Math.floor(diff / 60) };
+  if (diff < 86400) return { kind: 'hours', value: Math.floor(diff / 3600) };
+  return { kind: 'days', value: Math.floor(diff / 86400) };
+}
+
 /**
  * Return a human-readable relative time string from an ISO8601 timestamp.
  * e.g. "3h ago", "2 days ago", "just now"
  */
 export function formatRelativeTime(isoString: string | null | undefined): string {
-  if (!isoString) return '—';
-  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)} days ago`;
+  const parts = relativeTimeParts(isoString);
+  switch (parts.kind) {
+    case 'unknown': return '—';
+    case 'justNow': return t('common.relativeTime.justNow');
+    case 'minutes': return t('common.relativeTime.minutesAgo', { value: parts.value });
+    case 'hours': return t('common.relativeTime.hoursAgo', { value: parts.value });
+    case 'days': return t('common.relativeTime.daysAgo', { value: parts.value });
+  }
 }
 
 /**
