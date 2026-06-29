@@ -8,6 +8,7 @@ from swing_screener.data.symbol_pool import (
     derive_liquidity_tier,
     derive_instrument_detail,
     derive_providers,
+    build_pool_base,
 )
 
 
@@ -92,3 +93,66 @@ def test_derive_providers_maps_known_keys():
     available, primary = derive_providers({"yahoo_finance": "AAPL", "degiro": "1234"})
     assert set(available) == {"yfinance", "degiro"}
     assert primary == "yfinance"
+
+
+def test_build_pool_base_merges_snapshots_and_instrument_master():
+    snapshots = {
+        "us_sp500": {
+            "id": "us_sp500",
+            "constituents": [
+                {"symbol": "AAPL", "exchange_mic": "XNAS", "currency": "USD"},
+                {"symbol": "MSFT", "exchange_mic": "XNAS", "currency": "USD"},
+            ],
+        },
+        "broad_market_stocks": {
+            "id": "broad_market_stocks",
+            "constituents": [
+                {"symbol": "AAPL", "exchange_mic": "XNAS", "currency": "USD"},
+                {"symbol": "ASML", "exchange_mic": "XAMS", "currency": "EUR"},
+            ],
+        },
+    }
+    instrument_master = {
+        "AAPL": {
+            "symbol": "AAPL",
+            "exchange_mic": "XNAS",
+            "currency": "USD",
+            "country_code": "US",
+            "instrument_type": "equity",
+            "provider_symbol_map": {"yahoo_finance": "AAPL"},
+        },
+        "ASML": {
+            "symbol": "ASML",
+            "exchange_mic": "XAMS",
+            "currency": "EUR",
+            "country_code": "NL",
+            "instrument_type": "equity",
+            "provider_symbol_map": {"yahoo_finance": "ASML.AS", "degiro": "1001"},
+        },
+    }
+    pool = build_pool_base(snapshots=snapshots, instrument_master=instrument_master)
+    by_symbol = {s.symbol: s for s in pool}
+
+    assert set(by_symbol) == {"AAPL", "MSFT", "ASML"}
+    assert sorted(by_symbol["AAPL"].index_memberships) == ["broad_market_stocks", "us_sp500"]
+    assert by_symbol["AAPL"].region == "us"
+    assert by_symbol["ASML"].region == "europe"
+    assert set(by_symbol["ASML"].available_providers) == {"yfinance", "degiro"}
+    assert by_symbol["ASML"].primary_provider == "yfinance"
+    assert by_symbol["AAPL"].sector is None
+    assert by_symbol["AAPL"].market_cap_tier is None
+
+
+def test_build_pool_base_handles_symbol_absent_from_instrument_master():
+    snapshots = {
+        "x": {
+            "id": "x",
+            "constituents": [{"symbol": "NEW", "exchange_mic": "XNYS", "currency": "USD"}],
+        }
+    }
+    pool = build_pool_base(snapshots=snapshots, instrument_master={})
+    sym = pool[0]
+    assert sym.symbol == "NEW"
+    assert sym.region == "us"
+    assert sym.available_providers == ["yfinance"]
+    assert sym.primary_provider == "yfinance"

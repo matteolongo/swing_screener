@@ -241,3 +241,62 @@ def derive_providers(provider_symbol_map: dict | None) -> tuple[list[str], str |
         return (["yfinance"], "yfinance")
     primary = next((p for p in PROVIDER_PREFERENCE if p in available), available[0])
     return (available, primary)
+
+
+def _default_snapshots() -> dict[str, dict]:
+    from swing_screener.data.universe import _load_snapshot, list_package_universes
+
+    out: dict[str, dict] = {}
+    for uid in list_package_universes():
+        try:
+            out[uid] = _load_snapshot(uid)
+        except Exception:  # noqa: BLE001 - skip unreadable snapshot
+            continue
+    return out
+
+
+def _default_instrument_master() -> dict[str, dict]:
+    from swing_screener.data.universe import _load_instrument_master
+
+    return _load_instrument_master()
+
+
+def build_pool_base(
+    snapshots: dict[str, dict] | None = None,
+    instrument_master: dict[str, dict] | None = None,
+) -> list[PoolSymbol]:
+    """Merge universe snapshots + instrument master into base PoolSymbols (no network)."""
+    snaps = snapshots if snapshots is not None else _default_snapshots()
+    master = instrument_master if instrument_master is not None else _default_instrument_master()
+
+    pool: dict[str, PoolSymbol] = {}
+    for uid, snap in snaps.items():
+        for c in snap.get("constituents", []) or []:
+            sym = str(c.get("symbol", "")).strip().upper()
+            if not sym:
+                continue
+            entry = pool.get(sym)
+            if entry is None:
+                entry = PoolSymbol(symbol=sym)
+                pool[sym] = entry
+            if uid not in entry.index_memberships:
+                entry.index_memberships.append(uid)
+            if not entry.exchange_mic and c.get("exchange_mic"):
+                entry.exchange_mic = c.get("exchange_mic")
+            if not entry.currency and c.get("currency"):
+                entry.currency = c.get("currency")
+
+    for sym, entry in pool.items():
+        rec = master.get(sym) or {}
+        if rec.get("exchange_mic"):
+            entry.exchange_mic = rec["exchange_mic"]
+        if rec.get("currency"):
+            entry.currency = rec["currency"]
+        if rec.get("instrument_type"):
+            entry.instrument_type = rec["instrument_type"]
+        entry.region = derive_region(entry.exchange_mic, rec.get("country_code"))
+        available, primary = derive_providers(rec.get("provider_symbol_map"))
+        entry.available_providers = available
+        entry.primary_provider = primary
+
+    return list(pool.values())
