@@ -97,3 +97,21 @@ def test_ticker_metadata_uses_fresh_cache(tmp_path):
             cache_ttl_days=30,
         )
     assert df.loc["AAPL", "name"] == "Cached Apple"
+
+
+def test_ticker_metadata_cache_hit_does_not_reset_fetched_at(tmp_path):
+    """Cache hit must NOT re-stamp fetched_at (fixes sliding-TTL bug)."""
+    cache_file = tmp_path / "ticker_meta.json"
+    original_ts = time.time() - (10 * 86400)  # 10 days ago, still within 30-day TTL
+    cache_file.write_text(
+        json.dumps({"AAPL": {"name": "Cached Apple", "currency": "USD", "exchange": "NMS", "fetched_at": original_ts}}),
+        encoding="utf-8",
+    )
+    with patch.object(yf, "Ticker", side_effect=AssertionError("should not call yfinance")):
+        fetch_ticker_metadata(
+            ["AAPL"],
+            cache_path=str(cache_file),
+            cache_ttl_days=30,
+        )
+    on_disk = json.loads(cache_file.read_text(encoding="utf-8"))
+    assert on_disk["AAPL"]["fetched_at"] == original_ts

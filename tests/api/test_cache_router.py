@@ -62,3 +62,18 @@ def test_clear_json_cache_writes_empty_dict(tmp_path):
         assert json.loads(cache_file.read_text()) == {}
     finally:
         _ID_TO_DEF["ticker_meta"]["path"] = original_path
+
+
+def test_scan_dir_returns_none_for_dir_with_only_subdirs(tmp_path):
+    """_scan_dir (and _mtime_iso) must not raise when a dir contains only subdirs, no files."""
+    from api.services.cache_service import _scan_dir, _ID_TO_DEF
+    subdir = tmp_path / "subdir"
+    subdir.mkdir()
+    original_path = _ID_TO_DEF["intelligence_evidence"]["path"]
+    _ID_TO_DEF["intelligence_evidence"]["path"] = str(tmp_path)
+    try:
+        iso, count = _scan_dir(str(tmp_path), ".json")
+        assert iso is None
+        assert count == 0
+    finally:
+        _ID_TO_DEF["intelligence_evidence"]["path"] = original_path

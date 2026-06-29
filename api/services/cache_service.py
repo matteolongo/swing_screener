@@ -114,6 +114,25 @@ _CACHE_DEFS: list[dict] = [
 _ID_TO_DEF: dict[str, dict] = {d["id"]: d for d in _CACHE_DEFS}
 
 
+def _scan_dir(path: str, ext: str) -> tuple[Optional[str], int]:
+    """Single rglob pass: returns (newest_mtime_iso, count_of_matching_files)."""
+    p = Path(path)
+    if not p.exists():
+        return None, 0
+    newest = None
+    count = 0
+    for f in p.rglob("*"):
+        if not f.is_file():
+            continue
+        m = f.stat().st_mtime
+        if newest is None or m > newest:
+            newest = m
+        if f.name.endswith(ext):
+            count += 1
+    iso = datetime.fromtimestamp(newest, tz=timezone.utc).isoformat() if newest is not None else None
+    return iso, count
+
+
 def _mtime_iso(path: str) -> Optional[str]:
     """Return ISO8601 of the newest mtime found under path, or None if absent."""
     p = Path(path)
@@ -121,11 +140,12 @@ def _mtime_iso(path: str) -> Optional[str]:
         return None
     if p.is_file():
         ts = p.stat().st_mtime
+        return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
     else:
-        files = list(p.rglob("*"))
-        if not files:
+        file_mtimes = [f.stat().st_mtime for f in p.rglob("*") if f.is_file()]
+        if not file_mtimes:
             return None
-        ts = max(f.stat().st_mtime for f in files if f.is_file())
+        ts = max(file_mtimes)
     return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
 
 
@@ -151,6 +171,12 @@ class CacheService:
         for d in _CACHE_DEFS:
             path = d.get("path")
             kind = d["kind"]
+            if path and kind in ("parquet_dir", "json_dir"):
+                ext = ".parquet" if kind == "parquet_dir" else ".json"
+                last_modified_at, entry_count = _scan_dir(path, ext)
+            else:
+                last_modified_at = _mtime_iso(path) if path else None
+                entry_count = _entry_count(path, kind) if path else None
             entries.append(
                 CacheStatusEntry(
                     id=d["id"],
@@ -158,8 +184,8 @@ class CacheService:
                     storage=d["storage"],
                     ttl_description=d["ttl_description"],
                     can_clear=d["can_clear"],
-                    last_modified_at=_mtime_iso(path) if path else None,
-                    entry_count=_entry_count(path, kind) if path else None,
+                    last_modified_at=last_modified_at,
+                    entry_count=entry_count,
                 )
             )
         return entries

@@ -189,6 +189,7 @@ def fetch_ticker_metadata(
             cache = {}
 
     results: dict[str, dict] = {}
+    freshly_fetched: set[str] = set()
     for t in tks:
         if not force_refresh and t in cache:
             entry = cache[t]
@@ -227,11 +228,12 @@ def fetch_ticker_metadata(
             "currency": currency,
             "exchange": exchange,
         }
+        freshly_fetched.add(t)
 
-    if use_cache:
+    if use_cache and freshly_fetched:
         _now_write = time.time()
-        for t, v in results.items():
-            cache[t] = {**v, "fetched_at": _now_write}
+        for t in freshly_fetched:
+            cache[t] = {**results[t], "fetched_at": _now_write}
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(json.dumps(cache, indent=2), encoding="utf-8")
 
