@@ -13,8 +13,6 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from degiro_connector.trading.models.credentials import Credentials
-
 _ENV_USERNAME = "DEGIRO_USERNAME"
 _ENV_PASSWORD = "DEGIRO_PASSWORD"
 _ENV_INT_ACCOUNT = "DEGIRO_INT_ACCOUNT"
@@ -25,7 +23,9 @@ def credentials_configured() -> bool:
     return bool(os.getenv(_ENV_USERNAME)) and bool(os.getenv(_ENV_PASSWORD))
 
 
-def load_credentials() -> Credentials:
+def load_credentials() -> "Credentials":
+    from degiro_connector.trading.models.credentials import Credentials
+
     username = os.getenv(_ENV_USERNAME)
     password = os.getenv(_ENV_PASSWORD)
     if not username or not password:

@@ -15,12 +15,26 @@ SUPPORTED_FUNDAMENTAL_PROVIDERS = {"sec_edgar", "yfinance", "degiro"}
 
 
 def _degiro_integration_available() -> bool:
+    """True only when the integration package is importable AND credentials are set.
+
+    The source files are always present now, so package presence alone is not a
+    useful gate: degiro should enter the default provider chain only when it can
+    actually authenticate. Checking credentials keeps the chain clean (and the
+    diagnostics panel honest) for environments without DEGIRO_* env vars.
+    """
     try:
-        return (
+        specs_present = (
             find_spec("swing_screener.integrations.degiro.credentials") is not None
             and find_spec("swing_screener.integrations.degiro.client") is not None
         )
     except ModuleNotFoundError:
+        return False
+    if not specs_present:
+        return False
+    try:
+        from swing_screener.integrations.degiro.credentials import credentials_configured
+        return credentials_configured()
+    except Exception:
         return False
 
 
