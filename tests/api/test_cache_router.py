@@ -77,3 +77,35 @@ def test_scan_dir_returns_none_for_dir_with_only_subdirs(tmp_path):
         assert count == 0
     finally:
         _ID_TO_DEF["intelligence_evidence"]["path"] = original_path
+
+
+def test_ttl_description_reads_from_config():
+    """status() derives ticker_meta/ohlcv_polygon TTL labels from config, not hardcoded literals."""
+    from unittest.mock import MagicMock, patch
+    from api.services.cache_service import CacheService
+
+    mock_mgr = MagicMock()
+    mock_mgr.load_user_document.return_value = {
+        "cache": {"ticker_meta_ttl_days": 14, "polygon_cache_ttl_days": 3}
+    }
+    with patch("api.services.cache_service.get_settings_manager", return_value=mock_mgr):
+        entries = CacheService().status()
+
+    by_id = {e.id: e for e in entries}
+    assert by_id["ticker_meta"].ttl_description == "14 days"
+    assert by_id["ohlcv_polygon"].ttl_description == "3 days"
+
+
+def test_ttl_description_falls_back_to_defaults_on_empty_config():
+    """status() falls back to '30 days'/'7 days' when config returns empty cache block."""
+    from unittest.mock import MagicMock, patch
+    from api.services.cache_service import CacheService
+
+    mock_mgr = MagicMock()
+    mock_mgr.load_user_document.return_value = {}
+    with patch("api.services.cache_service.get_settings_manager", return_value=mock_mgr):
+        entries = CacheService().status()
+
+    by_id = {e.id: e for e in entries}
+    assert by_id["ticker_meta"].ttl_description == "30 days"
+    assert by_id["ohlcv_polygon"].ttl_description == "7 days"

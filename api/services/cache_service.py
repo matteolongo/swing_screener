@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from api.models.cache import CacheStatusEntry
+from swing_screener.settings import get_settings_manager
 
 
 _CACHE_DEFS: list[dict] = [
@@ -114,6 +115,26 @@ _CACHE_DEFS: list[dict] = [
 _ID_TO_DEF: dict[str, dict] = {d["id"]: d for d in _CACHE_DEFS}
 
 
+def _load_cache_config() -> dict:
+    """Return the 'cache' block from user config, or {} on failure."""
+    try:
+        _doc = get_settings_manager().load_user_document()
+        return _doc.get("cache", {})
+    except Exception:
+        return {}
+
+
+def _dynamic_ttl_description(cache_id: str, fallback: str, cache_cfg: dict) -> str:
+    """Return config-derived ttl_description for configurable caches, fallback otherwise."""
+    if cache_id == "ticker_meta":
+        n = cache_cfg.get("ticker_meta_ttl_days", 30)
+        return f"{int(round(n))} days"
+    if cache_id == "ohlcv_polygon":
+        n = cache_cfg.get("polygon_cache_ttl_days", 7)
+        return f"{int(round(n))} days"
+    return fallback
+
+
 def _scan_dir(path: str, ext: str) -> tuple[Optional[str], int]:
     """Single rglob pass: returns (newest_mtime_iso, count_of_matching_files)."""
     p = Path(path)
@@ -167,6 +188,7 @@ def _entry_count(path: str, kind: str) -> Optional[int]:
 
 class CacheService:
     def status(self) -> list[CacheStatusEntry]:
+        cache_cfg = _load_cache_config()
         entries = []
         for d in _CACHE_DEFS:
             path = d.get("path")
@@ -182,7 +204,7 @@ class CacheService:
                     id=d["id"],
                     label=d["label"],
                     storage=d["storage"],
-                    ttl_description=d["ttl_description"],
+                    ttl_description=_dynamic_ttl_description(d["id"], d["ttl_description"], cache_cfg),
                     can_clear=d["can_clear"],
                     last_modified_at=last_modified_at,
                     entry_count=entry_count,
