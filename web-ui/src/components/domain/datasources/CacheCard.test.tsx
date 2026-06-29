@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderWithProviders } from '@/test/utils';
+import { t } from '@/i18n/t';
 import CacheCard from './CacheCard';
 import type { CacheStatusEntry } from '@/features/datasources/cacheApi';
 
@@ -28,21 +29,21 @@ describe('CacheCard', () => {
     const { getByText } = renderWithProviders(
       <CacheCard entry={clearableEntry} onClear={vi.fn()} clearing={false} />
     );
-    expect(getByText('Clear')).toBeInTheDocument();
+    expect(getByText(t('datasources.cache.clear'))).toBeInTheDocument();
   });
 
   it('renders clearsOnRestart label when canClear is false', () => {
     const { getByText } = renderWithProviders(
       <CacheCard entry={memoryEntry} onClear={vi.fn()} clearing={false} />
     );
-    expect(getByText('Clears on restart')).toBeInTheDocument();
+    expect(getByText(t('datasources.cache.clearsOnRestart'))).toBeInTheDocument();
   });
 
   it('disables clear button while clearing', () => {
     const { getByText } = renderWithProviders(
       <CacheCard entry={clearableEntry} onClear={vi.fn()} clearing={true} />
     );
-    const btn = getByText('Clearing…') as HTMLButtonElement;
+    const btn = getByText(t('datasources.cache.clearing')) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
 

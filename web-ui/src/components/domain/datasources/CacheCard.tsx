@@ -29,9 +29,9 @@ export default function CacheCard({ entry, onClear, clearing }: Props) {
         </span>
       </div>
       <div className="flex flex-col gap-0.5 text-xs text-muted">
-        <span>TTL: {entry.ttlDescription}</span>
+        <span>{t('datasources.cache.ttlLabel')}: {entry.ttlDescription}</span>
         <span>
-          Last modified:{' '}
+          {t('datasources.cache.lastModifiedLabel')}:{' '}
           {entry.lastModifiedAt ? formatRelativeTime(entry.lastModifiedAt) : t('datasources.cache.neverModified')}
         </span>
         {entry.entryCount != null && (

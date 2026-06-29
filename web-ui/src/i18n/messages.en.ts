@@ -620,6 +620,8 @@ export const messagesEn = {
       clear: 'Clear',
       clearing: 'Clearing…',
       clearsOnRestart: 'Clears on restart',
+      ttlLabel: 'TTL',
+      lastModifiedLabel: 'Last modified',
       neverModified: '—',
       entries: '{{count}} entries',
       storage: {
