@@ -29,6 +29,12 @@ export const messagesEn = {
       r: 'R',
       rValue: '{{value}}R',
     },
+    relativeTime: {
+      justNow: 'just now',
+      minutesAgo: '{{value}}m ago',
+      hoursAgo: '{{value}}h ago',
+      daysAgo: '{{value}} days ago',
+    },
     yes: 'Yes',
     no: 'No',
   },

@@ -1,4 +1,4 @@
-import { formatCurrency, formatDateTime, formatPercent } from '@/utils/formatters';
+import { formatCurrency, formatDateTime, formatPercent, relativeTimeParts } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
 interface WatchMetaInlineProps {
@@ -10,22 +10,14 @@ interface WatchMetaInlineProps {
 }
 
 function formatRelativeWatchTime(iso: string): string {
-  const parsed = new Date(iso);
-  const timestamp = parsed.getTime();
-  if (!Number.isFinite(timestamp)) {
-    return t('watchlist.since.unknown');
+  const parts = relativeTimeParts(iso);
+  switch (parts.kind) {
+    case 'unknown': return t('watchlist.since.unknown');
+    case 'justNow': return t('watchlist.since.justNow');
+    case 'minutes': return t('watchlist.since.minutesAgo', { value: parts.value });
+    case 'hours': return t('watchlist.since.hoursAgo', { value: parts.value });
+    case 'days': return t('watchlist.since.daysAgo', { value: parts.value });
   }
-  const deltaMs = Date.now() - timestamp;
-  if (deltaMs < 60_000) {
-    return t('watchlist.since.justNow');
-  }
-  if (deltaMs < 3_600_000) {
-    return t('watchlist.since.minutesAgo', { value: Math.floor(deltaMs / 60_000) });
-  }
-  if (deltaMs < 86_400_000) {
-    return t('watchlist.since.hoursAgo', { value: Math.floor(deltaMs / 3_600_000) });
-  }
-  return t('watchlist.since.daysAgo', { value: Math.floor(deltaMs / 86_400_000) });
 }
 
 function formatDeltaCurrency(value: number, currency?: string | null): string {

@@ -150,16 +150,17 @@ def _min_days_to_earnings_default() -> int:
 
 def _fetch_ohlcv_chunked(
     provider: MarketDataProvider,
-    tickers: list[str], 
+    tickers: list[str],
     start_date: str,
     end_date: str,
-    chunk_size: int = 100
+    chunk_size: int = 100,
+    force_refresh: bool = False,
 ) -> pd.DataFrame:
     """Fetch OHLCV in chunks using provider."""
     frames: list[pd.DataFrame] = []
     for i in range(0, len(tickers), chunk_size):
         chunk = tickers[i : i + chunk_size]
-        df = provider.fetch_ohlcv(chunk, start_date=start_date, end_date=end_date)
+        df = provider.fetch_ohlcv(chunk, start_date=start_date, end_date=end_date, force_refresh=force_refresh)
         if df is None or df.empty:
             logger.warning("OHLCV chunk returned empty data (%s)", chunk)
             continue
@@ -341,6 +342,7 @@ class ScreenerService:
 
         ctx.start_date = resolve_fetch_start_date(ctx.asof_str, ctx.signals_cfg.min_history)
         ctx.end_date = ctx.asof_str
+        force_refresh = bool(getattr(ctx.request, "force_refresh", False))
         sector_context_tickers = ["SPY", *sector_rotation.SECTOR_ETFS.keys()]
         sector_ohlcv = pd.DataFrame()
         try:
@@ -348,6 +350,7 @@ class ScreenerService:
                 sector_context_tickers,
                 start_date=ctx.start_date,
                 end_date=ctx.end_date,
+                force_refresh=force_refresh,
             )
         except Exception as exc:
             logger.warning("Sector ETF OHLCV fetch failed: %s", exc)
@@ -361,9 +364,9 @@ class ScreenerService:
         )
 
         if len(ctx.tickers) > 120:
-            ctx.ohlcv = _fetch_ohlcv_chunked(self._provider, ctx.tickers, ctx.start_date, ctx.end_date, chunk_size=100)
+            ctx.ohlcv = _fetch_ohlcv_chunked(self._provider, ctx.tickers, ctx.start_date, ctx.end_date, chunk_size=100, force_refresh=force_refresh)
         else:
-            ctx.ohlcv = self._provider.fetch_ohlcv(ctx.tickers, start_date=ctx.start_date, end_date=ctx.end_date)
+            ctx.ohlcv = self._provider.fetch_ohlcv(ctx.tickers, start_date=ctx.start_date, end_date=ctx.end_date, force_refresh=force_refresh)
 
         if ctx.ohlcv is None or ctx.ohlcv.empty:
             logger.error("OHLCV fetch returned empty data (tickers=%s)", len(ctx.tickers))
@@ -373,7 +376,7 @@ class ScreenerService:
 
         if "Close" not in ctx.ohlcv.columns.get_level_values(0) or ctx.benchmark not in ctx.ohlcv["Close"].columns:
             logger.warning("Benchmark %s missing from OHLCV; fetching separately.", ctx.benchmark)
-            bench_df = self._provider.fetch_ohlcv([ctx.benchmark], start_date=ctx.start_date, end_date=ctx.end_date)
+            bench_df = self._provider.fetch_ohlcv([ctx.benchmark], start_date=ctx.start_date, end_date=ctx.end_date, force_refresh=force_refresh)
             ctx.ohlcv = merge_ohlcv(ctx.ohlcv, bench_df)
             if "Close" not in ctx.ohlcv.columns.get_level_values(0) or ctx.benchmark not in ctx.ohlcv["Close"].columns:
                 raise ServiceError("Benchmark data missing; cannot compute momentum.")
