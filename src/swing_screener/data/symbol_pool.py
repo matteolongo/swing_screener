@@ -300,3 +300,57 @@ def build_pool_base(
         entry.primary_provider = primary
 
     return list(pool.values())
+
+
+@dataclass(frozen=True)
+class TaxonomyFilterSpec:
+    region: tuple[str, ...] | None = None
+    market_cap_tier: tuple[str, ...] | None = None
+    sector: tuple[str, ...] | None = None
+    index_memberships: tuple[str, ...] | None = None
+    instrument_type_detail: tuple[str, ...] | None = None
+    provider: tuple[str, ...] | None = None
+    currency: tuple[str, ...] | None = None
+    exchange_mics: tuple[str, ...] | None = None
+    liquidity_tier: tuple[str, ...] | None = None
+
+
+def _matches_scalar(value: str | None, allowed: tuple[str, ...] | None) -> bool:
+    if not allowed:
+        return True
+    if value is None:
+        return False
+    return value in set(allowed)
+
+
+def _matches_list(values: list[str], allowed: tuple[str, ...] | None) -> bool:
+    if not allowed:
+        return True
+    return bool(set(values) & set(allowed))
+
+
+def filter_pool_by_taxonomy(
+    pool: list[PoolSymbol], spec: TaxonomyFilterSpec
+) -> list[PoolSymbol]:
+    out: list[PoolSymbol] = []
+    for s in pool:
+        if not _matches_scalar(s.region, spec.region):
+            continue
+        if not _matches_scalar(s.market_cap_tier, spec.market_cap_tier):
+            continue
+        if not _matches_scalar(s.sector, spec.sector):
+            continue
+        if not _matches_scalar(s.instrument_type_detail, spec.instrument_type_detail):
+            continue
+        if not _matches_scalar(s.currency, spec.currency):
+            continue
+        if not _matches_scalar(s.exchange_mic, spec.exchange_mics):
+            continue
+        if not _matches_scalar(s.liquidity_tier, spec.liquidity_tier):
+            continue
+        if not _matches_list(s.index_memberships, spec.index_memberships):
+            continue
+        if not _matches_list(s.available_providers, spec.provider):
+            continue
+        out.append(s)
+    return out

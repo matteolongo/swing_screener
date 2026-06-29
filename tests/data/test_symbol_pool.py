@@ -9,6 +9,8 @@ from swing_screener.data.symbol_pool import (
     derive_instrument_detail,
     derive_providers,
     build_pool_base,
+    TaxonomyFilterSpec,
+    filter_pool_by_taxonomy,
 )
 
 
@@ -156,3 +158,52 @@ def test_build_pool_base_handles_symbol_absent_from_instrument_master():
     assert sym.region == "us"
     assert sym.available_providers == ["yfinance"]
     assert sym.primary_provider == "yfinance"
+
+
+def _mk(symbol, **kw):
+    return PoolSymbol(symbol=symbol, **kw)
+
+
+def test_filter_none_spec_returns_all():
+    pool = [_mk("A", region="us"), _mk("B", region="europe")]
+    out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec())
+    assert {s.symbol for s in out} == {"A", "B"}
+
+
+def test_filter_single_dimension_or_within():
+    pool = [_mk("A", region="us"), _mk("B", region="europe"), _mk("C", region="asia_pacific")]
+    out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec(region=("us", "europe")))
+    assert {s.symbol for s in out} == {"A", "B"}
+
+
+def test_filter_and_across_dimensions():
+    pool = [
+        _mk("A", region="us", market_cap_tier="large"),
+        _mk("B", region="us", market_cap_tier="small"),
+        _mk("C", region="europe", market_cap_tier="large"),
+    ]
+    out = filter_pool_by_taxonomy(
+        pool, TaxonomyFilterSpec(region=("us",), market_cap_tier=("large",))
+    )
+    assert {s.symbol for s in out} == {"A"}
+
+
+def test_filter_excludes_symbol_with_null_field_when_dimension_active():
+    pool = [_mk("A", sector="Technology"), _mk("B", sector=None)]
+    out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec(sector=("Technology",)))
+    assert {s.symbol for s in out} == {"A"}
+
+
+def test_filter_index_membership_matches_any():
+    pool = [_mk("A", index_memberships=["us_sp500"]), _mk("B", index_memberships=["germany_dax"])]
+    out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec(index_memberships=("us_sp500",)))
+    assert {s.symbol for s in out} == {"A"}
+
+
+def test_filter_provider_matches_available():
+    pool = [
+        _mk("A", available_providers=["yfinance", "degiro"]),
+        _mk("B", available_providers=["yfinance"]),
+    ]
+    out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec(provider=("degiro",)))
+    assert {s.symbol for s in out} == {"A"}
