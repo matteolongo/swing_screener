@@ -38,6 +38,7 @@ def enrich_intelligence_request(
     *,
     fundamentals: _FundamentalsLike | None = None,
     earnings: Callable[[str], tuple[int | None, str | None]] | None = None,
+    dividend: Callable[[str], tuple[int | None, str | None, float | None]] | None = None,
     evidence: Callable[[str], list[SourceEvidence]] | None = None,
 ) -> SymbolIntelligenceRequest:
     updates: dict = {}
@@ -65,6 +66,19 @@ def enrich_intelligence_request(
             updates["days_to_earnings"] = days
         if date is not None and request.next_earnings_date is None:
             updates["next_earnings_date"] = date
+
+    if dividend is not None and request.days_to_dividend is None:
+        try:
+            div_days, div_date, div_amount = dividend(ticker)
+        except Exception as exc:
+            logger.warning("Dividend fetch failed for %s: %s", ticker, exc)
+            div_days, div_date, div_amount = None, None, None
+        if div_days is not None:
+            updates["days_to_dividend"] = div_days
+        if div_date is not None and request.next_dividend_date is None:
+            updates["next_dividend_date"] = div_date
+        if div_amount is not None and request.next_dividend_amount is None:
+            updates["next_dividend_amount"] = div_amount
 
     if evidence is not None and not request.catalyst_evidence:
         try:

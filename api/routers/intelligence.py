@@ -26,6 +26,23 @@ from swing_screener.settings import get_settings_manager
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 
+
+def _dividend_for(ticker: str) -> tuple[int | None, str | None, float | None]:
+    try:
+        from swing_screener.fundamentals.providers.degiro import _load_isin_map
+        isin_map = _load_isin_map()
+        isin = isin_map.get(ticker.upper()) or isin_map.get(ticker.split(".")[0].upper())
+        if not isin:
+            return None, None, None
+        from api.services.portfolio.degiro_dividend import get_dividend_proximity
+        prox = get_dividend_proximity(isin)
+        if prox is None:
+            return None, None, None
+        return prox.days_until, prox.ex_date, prox.amount
+    except Exception as exc:
+        logger.debug("Dividend lookup failed for %s: %s", ticker, exc)
+        return None, None, None
+
 _analyzer: SymbolAnalyzer | None = None
 
 
@@ -98,6 +115,7 @@ def sweep(
                 item.request,
                 fundamentals=fundamentals_service,
                 earnings=lambda t: (lambda ep: (ep.days_until, ep.next_earnings_date))(portfolio_service.get_earnings_proximity(t)),
+                dividend=_dividend_for,
                 evidence=lambda t: collect_evidence(t),
             )
             try:
@@ -156,6 +174,7 @@ def analyze_symbol(
         request,
         fundamentals=fundamentals_service,
         earnings=_earnings,
+        dividend=_dividend_for,
         evidence=lambda t: collect_evidence(t),
     )
     request = enrich_with_polygon_prices(upper, request)
@@ -209,6 +228,7 @@ def analyze_position(
         request,
         fundamentals=fundamentals_service,
         earnings=_earnings,
+        dividend=_dividend_for,
         evidence=lambda t: collect_evidence(t),
     )
     try:

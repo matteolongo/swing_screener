@@ -50,9 +50,10 @@ def _load_isin_map() -> dict[str, str]:
 
 
 def _save_isin_map(mapping: dict[str, str]) -> None:
+    from swing_screener.utils.file_lock import write_json_with_lock
     p = _isin_map_path()
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(mapping, indent=2, sort_keys=True), encoding="utf-8")
+    write_json_with_lock(p, mapping)
 
 
 def update_isin_map_from_audit(records: list[dict[str, Any]]) -> None:

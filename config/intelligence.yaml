@@ -63,6 +63,7 @@ config:
     enabled_sources:
     - sec_edgar_catalysts   # SEC EDGAR submissions API: recent 8-K/6-K filings (US)
     - polygon_news          # Polygon.io ticker news + sentiment (needs POLYGON_IO_API_KEY; no-op without)
+    - degiro_news          # DeGiro company news (EU); needs DEGIRO_USERNAME/PASSWORD, no-op without
     recency_window_days: 30   # Discard items older than this many days
     max_items_per_symbol: 8   # Max curated items per ticker after dedup + sort
     sec_forms:

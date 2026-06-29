@@ -11,7 +11,6 @@ resolves ISIN for all held tickers.
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
 from typing import Any
 
 from pydantic import BaseModel
@@ -41,14 +40,9 @@ class DeGiroSyncResult(BaseModel):
 
 def _get_client() -> Any | None:
     try:
-        from swing_screener.integrations.degiro.credentials import (
-            credentials_configured,
-            load_credentials,
-        )
+        from swing_screener.integrations.degiro.credentials import load_credentials
         from swing_screener.integrations.degiro.client import DegiroClient
     except ImportError:
-        return None
-    if not credentials_configured():
         return None
     try:
         client = DegiroClient(load_credentials())
@@ -73,17 +67,17 @@ def _fetch_holdings(api: Any) -> list[DeGiroHolding]:
     holdings: list[DeGiroHolding] = []
 
     for item in portfolio_items:
-        value_map = {v["name"]: v.get("value") for v in item.get("value", [])}
+        value_map = {v["name"]: v.get("value") for v in item.get("value", []) if "name" in v}
         product_id = str(value_map.get("id", ""))
         qty = value_map.get("size", 0)
-        if not product_id or not qty or float(qty) == 0:
+        if not product_id or not qty or float(qty) <= 0:
             continue
 
         position_type = value_map.get("positionType")
         if position_type != "PRODUCT":
             continue
 
-        avg_cost_raw = value_map.get("averageFxRate") or value_map.get("breakEvenPrice")
+        avg_cost_raw = value_map.get("breakEvenPrice")
         holdings.append(
             DeGiroHolding(
                 product_id=product_id,
@@ -140,6 +134,26 @@ def sync_degiro_holdings(positions_repo: Any) -> DeGiroSyncResult:
 
     synced_at = datetime.now(tz=timezone.utc).isoformat()
 
+    try:
+        from swing_screener.integrations.degiro.credentials import credentials_configured
+    except ImportError:
+        return DeGiroSyncResult(
+            synced_at=synced_at,
+            holdings=[],
+            unregistered=[],
+            isin_map_updated=False,
+            error="DeGiro credentials not configured (DEGIRO_USERNAME / DEGIRO_PASSWORD)",
+        )
+
+    if not credentials_configured():
+        return DeGiroSyncResult(
+            synced_at=synced_at,
+            holdings=[],
+            unregistered=[],
+            isin_map_updated=False,
+            error="DeGiro credentials not configured (DEGIRO_USERNAME / DEGIRO_PASSWORD)",
+        )
+
     client = _get_client()
     if client is None:
         return DeGiroSyncResult(
@@ -147,7 +161,7 @@ def sync_degiro_holdings(positions_repo: Any) -> DeGiroSyncResult:
             holdings=[],
             unregistered=[],
             isin_map_updated=False,
-            error="DeGiro credentials not configured (DEGIRO_USERNAME / DEGIRO_PASSWORD)",
+            error="DeGiro connection failed (check credentials/session)",
         )
 
     try:
