@@ -6,6 +6,7 @@ from datetime import date
 from pathlib import Path
 
 from swing_screener.data.source_health import record_fallback
+from swing_screener.intelligence.evidence.collectors.degiro_news import DegiroNewsCollector
 from swing_screener.intelligence.evidence.collectors.polygon_news import PolygonNewsCollector
 from swing_screener.intelligence.evidence.collectors.sec_edgar import SecEdgarCatalystCollector
 from swing_screener.intelligence.evidence.config import EvidenceConfig, load_evidence_config
@@ -19,6 +20,7 @@ _CACHE_ROOT = Path("data/intelligence/evidence")
 _COLLECTORS = {
     SecEdgarCatalystCollector.SOURCE_ID: SecEdgarCatalystCollector,
     PolygonNewsCollector.SOURCE_ID: PolygonNewsCollector,
+    DegiroNewsCollector.SOURCE_ID: DegiroNewsCollector,
 }
 
 

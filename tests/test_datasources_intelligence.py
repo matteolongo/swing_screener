@@ -9,5 +9,5 @@ def test_sec_collector_probeable_in_inventory():
 def test_no_inert_intelligence_sources():
     assert INTELLIGENCE_SOURCES == []
     intel = [d for d in DatasourcesService().inventory() if d.domain == "intelligence"]
-    assert {d.id for d in intel} == {"sec_edgar_catalysts", "polygon_news"}
+    assert {d.id for d in intel} == {"sec_edgar_catalysts", "polygon_news", "degiro_news"}
     assert all(d.probeable or d.requires for d in intel)  # not inert: probeable or key-gated

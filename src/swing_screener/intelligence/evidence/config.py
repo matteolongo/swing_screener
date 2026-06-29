@@ -7,7 +7,7 @@ from swing_screener.settings import get_settings_manager
 
 @dataclass(frozen=True)
 class EvidenceConfig:
-    enabled_sources: tuple[str, ...] = ("sec_edgar_catalysts", "polygon_news")
+    enabled_sources: tuple[str, ...] = ("sec_edgar_catalysts", "polygon_news", "degiro_news")
     recency_window_days: int = 30
     max_items_per_symbol: int = 8
     sec_forms: tuple[str, ...] = ("8-K", "6-K", "SC 13D", "SC 13G", "424B", "DEF 14A")
