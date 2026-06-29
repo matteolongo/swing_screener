@@ -217,6 +217,12 @@ def analyze_position(
     except Exception:
         logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
     request = enrich_with_polygon_prices(pos.ticker, request)
+    # Re-pin close to the live position price after Polygon enrichment.
+    # Polygon OHLCV only carries completed-session closes, so during an open
+    # session it returns yesterday's close — contradicting r_now computed from
+    # today's intraday price and causing the LLM to misread position direction.
+    if pos.current_price is not None:
+        request = request.model_copy(update={"close": float(pos.current_price)})
     try:
         return _get_analyzer().analyze(pos.ticker.upper(), request)
     except Exception as exc:
