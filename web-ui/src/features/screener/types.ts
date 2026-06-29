@@ -34,7 +34,6 @@ export interface CandlePattern {
   keyLevel: number;
   context: 'at_breakout' | 'at_pullback' | 'extended' | 'none';
   volumeRatio?: number;
-  barPressure?: number;
   volumeConfirmed?: boolean;
 }
 
@@ -46,7 +45,6 @@ export interface CandlePatternRaw {
   key_level: number;
   context: string;
   volume_ratio?: number | null;
-  bar_pressure?: number | null;
   volume_confirmed?: boolean | null;
 }
 
@@ -59,7 +57,6 @@ export function transformCandlePattern(raw: CandlePatternRaw): CandlePattern {
     keyLevel: raw.key_level,
     context: raw.context as CandlePattern['context'],
     volumeRatio: raw.volume_ratio ?? undefined,
-    barPressure: raw.bar_pressure ?? undefined,
     volumeConfirmed: raw.volume_confirmed ?? undefined,
   };
 }

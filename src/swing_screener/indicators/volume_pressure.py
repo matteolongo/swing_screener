@@ -29,17 +29,6 @@ def intrabar_pressure(high: float, low: float, close: float) -> float:
     return float(max(0.0, min((close - low) / rng, 1.0)))
 
 
-def buy_sell_volume(
-    high: float, low: float, close: float, volume: float
-) -> tuple[float, float]:
-    """Split *volume* into ``(buy, sell)`` by intrabar pressure.
-
-    ``buy + sell == volume`` always.
-    """
-    p = intrabar_pressure(high, low, close)
-    return volume * p, volume * (1.0 - p)
-
-
 def windowed_buy_pressure_ratio(
     high: pd.Series,
     low: pd.Series,
@@ -120,7 +109,7 @@ def confirm_pattern_volume(
     if volume_ratio < threshold:
         return False
     if direction == "bearish":
-        return bool(bar_pressure <= 0.5)
+        return bool(bar_pressure < 0.5)
     if direction == "bullish":
-        return bool(bar_pressure >= 0.5)
+        return bool(bar_pressure > 0.5)
     return None

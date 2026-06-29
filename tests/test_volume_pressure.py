@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 
 from swing_screener.indicators.volume_pressure import (
-    buy_sell_volume,
     confirm_pattern_volume,
     intrabar_pressure,
     trailing_volume_ratio,
@@ -36,22 +35,6 @@ def test_pressure_clamped_when_close_outside_range():
     # defensive: close above high clamps to 1.0, below low clamps to 0.0
     assert intrabar_pressure(high=11.0, low=10.0, close=12.0) == pytest.approx(1.0)
     assert intrabar_pressure(high=11.0, low=10.0, close=9.0) == pytest.approx(0.0)
-
-
-# ── buy_sell_volume ───────────────────────────────────────────────────────────
-
-
-def test_buy_sell_volume_sums_to_total():
-    buy, sell = buy_sell_volume(high=12.0, low=10.0, close=11.5, volume=1000.0)
-    assert buy + sell == pytest.approx(1000.0)
-    assert buy == pytest.approx(750.0)  # pressure 0.75
-    assert sell == pytest.approx(250.0)
-
-
-def test_buy_sell_volume_zero_range_splits_evenly():
-    buy, sell = buy_sell_volume(high=10.0, low=10.0, close=10.0, volume=800.0)
-    assert buy == pytest.approx(400.0)
-    assert sell == pytest.approx(400.0)
 
 
 # ── windowed_buy_pressure_ratio ───────────────────────────────────────────────
@@ -230,6 +213,22 @@ def test_confirm_boundary_at_threshold():
             "bullish", bar_pressure=0.9, volume_ratio=1.5, threshold=1.5
         )
         is True
+    )
+
+
+def test_confirm_exact_midpoint_pressure_not_confirmed():
+    # pressure == 0.5 is direction-ambiguous; must not confirm either side
+    assert (
+        confirm_pattern_volume(
+            "bullish", bar_pressure=0.5, volume_ratio=2.0, threshold=1.5
+        )
+        is False
+    )
+    assert (
+        confirm_pattern_volume(
+            "bearish", bar_pressure=0.5, volume_ratio=2.0, threshold=1.5
+        )
+        is False
     )
 
 
