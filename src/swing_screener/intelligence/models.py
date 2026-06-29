@@ -159,6 +159,10 @@ class SymbolIntelligenceRequest(BaseModel):
     # Earnings proximity
     days_to_earnings: int | None = None
     next_earnings_date: str | None = None
+    # Dividend proximity (DeGiro agenda)
+    days_to_dividend: int | None = None
+    next_dividend_date: str | None = None
+    next_dividend_amount: float | None = None
     # Recent candlestick patterns as "name@context" strings, for the prompt
     recent_patterns: list[str] | None = None
     # Provenance: which provider supplied the price/technical inputs (e.g. "polygon")
