@@ -26,8 +26,10 @@ from api.models.portfolio import (
     EarningsProximityResponse,
     RegimeBreakdownResponse,
 )
-from api.dependencies import get_config_repo, get_orders_service, get_portfolio_service, get_regime_analytics_service
+from api.dependencies import get_config_repo, get_orders_service, get_portfolio_service, get_positions_repo, get_regime_analytics_service
 from api.dependencies import get_strategy_repo
+from api.repositories.positions_repo import PositionsRepository
+from api.services.portfolio.degiro_sync import DeGiroSyncResult, sync_degiro_holdings
 from api.models.position_intelligence import OpenPositionIntelligenceSummary
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.strategy_repo import StrategyRepository
@@ -293,3 +295,18 @@ async def fill_order(
 
 
 
+
+
+# ===== DeGiro sync =====
+
+@router.post("/sync-degiro", response_model=DeGiroSyncResult)
+async def sync_degiro(
+    positions_repo: PositionsRepository = Depends(get_positions_repo),
+):
+    """Fetch live DeGiro portfolio and reconcile against local positions.
+
+    Returns all held positions from DeGiro and flags which tickers are not yet
+    registered in positions.json. Updates the ISIN map as a side-effect.
+    Does not create positions automatically — use POST /positions for that.
+    """
+    return sync_degiro_holdings(positions_repo)
