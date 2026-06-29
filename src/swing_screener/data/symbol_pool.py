@@ -84,3 +84,160 @@ def pool_symbol_from_dict(d: dict) -> PoolSymbol:
         fetch_failure_count=int(d.get("fetch_failure_count") or 0),
         last_fetch_ok_at=d.get("last_fetch_ok_at"),
     )
+
+
+DEFAULT_CAP_THRESHOLDS = {"large": 10_000_000_000, "mid": 2_000_000_000, "small": 300_000_000}
+DEFAULT_LIQUIDITY_THRESHOLDS = {"high": 50_000_000, "mid": 5_000_000}
+
+PROVIDER_KEY_MAP = {
+    "yahoo_finance": "yfinance",
+    "yfinance": "yfinance",
+    "degiro": "degiro",
+    "eodhd": "eodhd",
+    "polygon": "polygon",
+}
+PROVIDER_PREFERENCE = ("yfinance", "polygon", "eodhd", "degiro")
+
+US_MICS = {"XNAS", "XNYS", "ARCX", "BATS", "XASE", "XOTC"}
+EUROPE_MICS = {
+    "XAMS",
+    "XETR",
+    "XPAR",
+    "XMAD",
+    "XMIL",
+    "XLON",
+    "XBRU",
+    "XLIS",
+    "XHEL",
+    "XSTO",
+    "XCSE",
+    "XOSL",
+    "XSWX",
+    "XWBO",
+    "XDUB",
+}
+ASIA_PACIFIC_MICS = {
+    "XSHE",
+    "XSHG",
+    "XHKG",
+    "XTKS",
+    "XKRX",
+    "XASX",
+    "XTAI",
+    "XBOM",
+    "XNSE",
+    "XSES",
+}
+
+_US_COUNTRIES = {"US", "USA"}
+_EUROPE_COUNTRIES = {
+    "NL",
+    "DE",
+    "FR",
+    "ES",
+    "IT",
+    "GB",
+    "UK",
+    "BE",
+    "PT",
+    "FI",
+    "SE",
+    "DK",
+    "NO",
+    "CH",
+    "AT",
+    "IE",
+}
+_ASIA_PACIFIC_COUNTRIES = {"CN", "HK", "JP", "KR", "AU", "TW", "IN", "SG"}
+
+
+def derive_region(exchange_mic: str | None, country_code: str | None) -> str:
+    mic = (exchange_mic or "").upper()
+    if mic in US_MICS:
+        return "us"
+    if mic in EUROPE_MICS:
+        return "europe"
+    if mic in ASIA_PACIFIC_MICS:
+        return "asia_pacific"
+    cc = (country_code or "").upper()
+    if cc in _US_COUNTRIES:
+        return "us"
+    if cc in _EUROPE_COUNTRIES:
+        return "europe"
+    if cc in _ASIA_PACIFIC_COUNTRIES:
+        return "asia_pacific"
+    return "other"
+
+
+def derive_cap_tier(market_cap: float | None, thresholds: dict | None = None) -> str | None:
+    if market_cap is None:
+        return None
+    t = thresholds or DEFAULT_CAP_THRESHOLDS
+    if market_cap >= t["large"]:
+        return "large"
+    if market_cap >= t["mid"]:
+        return "mid"
+    if market_cap >= t["small"]:
+        return "small"
+    return "micro"
+
+
+def derive_liquidity_tier(
+    avg_dollar_volume: float | None, thresholds: dict | None = None
+) -> str | None:
+    if avg_dollar_volume is None:
+        return None
+    t = thresholds or DEFAULT_LIQUIDITY_THRESHOLDS
+    if avg_dollar_volume >= t["high"]:
+        return "high"
+    if avg_dollar_volume >= t["mid"]:
+        return "mid"
+    return "low"
+
+
+def derive_instrument_detail(
+    quote_type: str | None, category: str | None, instrument_type: str | None
+) -> str | None:
+    qt = (quote_type or "").upper()
+    itype = (instrument_type or "").lower()
+    is_etf = qt == "ETF" or itype == "etf"
+    if not is_etf:
+        if qt in {"EQUITY", "STOCK"} or itype == "equity":
+            return "equity"
+        return instrument_type or None
+    cat = (category or "").lower()
+    if "leverag" in cat or "inverse" in cat or "ultra" in cat:
+        return "etf_leveraged"
+    if "bond" in cat or "fixed income" in cat or "treasury" in cat:
+        return "etf_bond"
+    if "commodit" in cat or "gold" in cat or "silver" in cat or "oil" in cat:
+        return "etf_commodity"
+    _SECTOR_WORDS = (
+        "technology",
+        "financial",
+        "energy",
+        "health",
+        "industrial",
+        "utilities",
+        "materials",
+        "consumer",
+        "real estate",
+        "communication",
+    )
+    if any(w in cat for w in _SECTOR_WORDS):
+        return "etf_sector"
+    return "etf_equity"
+
+
+def derive_providers(provider_symbol_map: dict | None) -> tuple[list[str], str | None]:
+    if not provider_symbol_map:
+        return (["yfinance"], "yfinance")
+    available: list[str] = []
+    for raw_key in provider_symbol_map:
+        mapped = PROVIDER_KEY_MAP.get(str(raw_key).lower())
+        if mapped and mapped not in available:
+            available.append(mapped)
+    if not available:
+        return (["yfinance"], "yfinance")
+    primary = next((p for p in PROVIDER_PREFERENCE if p in available), available[0])
+    return (available, primary)
