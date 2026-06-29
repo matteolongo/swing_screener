@@ -28,6 +28,47 @@ class DividendProximity(BaseModel):
     currency: str | None = None
 
 
+def _parse_nearest_dividend(result: dict | None, asof: date, isin: str) -> DividendProximity | None:
+    """Parse the raw agenda result dict into a DividendProximity, or None."""
+    if not result:
+        return None
+
+    items = (result.get("data") or {}).get("items") or []
+    if not items:
+        return None
+
+    # Items are sorted by date asc by default (sortColumn='date', sortType='asc')
+    nearest = items[0]
+    raw_date = nearest.get("exDate") or nearest.get("exDividendDate") or nearest.get("date")
+    if not raw_date:
+        return None
+
+    try:
+        ex_date = date.fromisoformat(str(raw_date)[:10])
+    except ValueError:
+        return None
+
+    days_until = (ex_date - asof).days
+    if days_until < 0:
+        return None
+
+    amount_raw = nearest.get("amount")
+    if amount_raw is None:
+        amount_raw = nearest.get("dividend")
+    try:
+        amount = float(amount_raw) if amount_raw is not None else None
+    except (TypeError, ValueError):
+        amount = None
+
+    return DividendProximity(
+        isin=isin,
+        ex_date=ex_date.isoformat(),
+        days_until=days_until,
+        amount=amount,
+        currency=nearest.get("currency"),
+    )
+
+
 def get_dividend_proximity(isin: str, *, asof: date | None = None) -> DividendProximity | None:
     """Return the nearest upcoming dividend for an ISIN, or None."""
     asof = asof or date.today()
@@ -70,35 +111,4 @@ def get_dividend_proximity(isin: str, *, asof: date | None = None) -> DividendPr
         if client is not None:
             client.disconnect()
 
-    if not result:
-        return None
-
-    items = (result.get("data") or {}).get("items") or []
-    if not items:
-        return None
-
-    # Items are sorted by date asc by default (sortColumn='date', sortType='asc')
-    nearest = items[0]
-    raw_date = nearest.get("date") or nearest.get("exDate") or nearest.get("paymentDate")
-    if not raw_date:
-        return None
-
-    try:
-        ex_date = date.fromisoformat(str(raw_date)[:10])
-    except ValueError:
-        return None
-
-    days_until = (ex_date - asof).days
-    if days_until < 0:
-        return None
-
-    amount_raw = nearest.get("amount") or nearest.get("dividend")
-    amount = float(amount_raw) if amount_raw is not None else None
-
-    return DividendProximity(
-        isin=isin,
-        ex_date=ex_date.isoformat(),
-        days_until=days_until,
-        amount=amount,
-        currency=nearest.get("currency"),
-    )
+    return _parse_nearest_dividend(result, asof, isin)

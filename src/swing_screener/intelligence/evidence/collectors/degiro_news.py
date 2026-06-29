@@ -96,6 +96,7 @@ class DegiroNewsCollector:
         cfg: EvidenceConfig,
         **_kwargs: Any,
     ) -> list[SourceEvidence]:
+        global _client_singleton
         client = _get_client()
         if client is None:
             return []
@@ -116,6 +117,7 @@ class DegiroNewsCollector:
             batch = client.api.get_news_by_company(news_request=req, raw=False)
         except Exception as exc:
             logger.warning("degiro_news: fetch failed for %r (ISIN %s): %s", ticker, isin, exc)
+            _client_singleton = None
             return []
 
         if batch is None:
@@ -129,14 +131,14 @@ class DegiroNewsCollector:
                 if item_date < cutoff:
                     continue
             except Exception:
-                pass
+                continue
             summary = item.brief or (item.content[:300] if item.content else "") or item.title
             out.append(
                 SourceEvidence(
                     title=item.title,
                     url=f"https://www.degiro.eu/news/{item.id}",
                     publisher=item.provider,
-                    published_at=item.date.isoformat() if item.date else None,
+                    published_at=item.date.isoformat() if hasattr(item.date, "isoformat") else (str(item.date) if item.date else None),
                     quote_or_summary=summary,
                     relevance=f"DeGiro news · {item.category or 'general'}",
                 )

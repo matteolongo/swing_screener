@@ -45,6 +45,9 @@ export interface IntelligenceRequestPayload {
   fundamentals_label?: string | null;
   days_to_earnings?: number | null;
   next_earnings_date?: string | null;
+  days_to_dividend?: number | null;
+  next_dividend_date?: string | null;
+  next_dividend_amount?: number | null;
   recent_patterns?: string[] | null;
 }
 
