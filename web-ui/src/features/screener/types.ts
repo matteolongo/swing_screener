@@ -340,6 +340,7 @@ export interface ScreenerRequest {
   pullbackMa?: number;
   minHistory?: number;
   requireWeeklyUptrend?: boolean;
+  forceRefresh?: boolean;
 }
 
 export interface ScreenerResponse {

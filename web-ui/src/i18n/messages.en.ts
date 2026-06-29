@@ -1140,6 +1140,8 @@ export const messagesEn = {
       requireWeeklyUptrend: 'Weekly uptrend only',
       adjustFilters: 'Advanced filters',
       hideFilters: 'Hide filters',
+      forceRefresh: 'Force cache refresh',
+      forceRefreshWarning: 'Slower — re-fetches all market data',
       members: 'members',
       memberCount: '{{count}} members',
       noOtc: 'No OTC',
