@@ -425,6 +425,16 @@ low_level:
       eu: ASML.AS
 
 # ---------------------------------------------------------------------------
+# Cache TTL settings for disk caches.
+# ---------------------------------------------------------------------------
+cache:
+  # Days before a ticker_meta.json entry is considered stale and re-fetched.
+  ticker_meta_ttl_days: 30
+  # Days before a Polygon OHLCV parquet cache file is considered stale.
+  # Only applies to ranges whose end date is today (historical ranges never expire).
+  polygon_cache_ttl_days: 7
+
+# ---------------------------------------------------------------------------
 # Paid provider roadmap only. These entries document intended future gates and
 # must not be treated as active runtime providers until provider implementations
 # and validation tests exist.
