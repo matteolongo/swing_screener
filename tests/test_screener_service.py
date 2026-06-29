@@ -496,3 +496,31 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
     assert "BBB" not in all_computed_dr, (
         f"daily-review should reuse cached BBB but recomputed it; got {computed_after_dr}"
     )
+
+
+def test_fetch_ohlcv_chunked_forwards_force_refresh():
+    """_fetch_ohlcv_chunked must pass force_refresh through to provider.fetch_ohlcv."""
+    from unittest.mock import MagicMock, call
+    from api.services.screener_service import _fetch_ohlcv_chunked
+    from swing_screener.data.providers import MarketDataProvider
+
+    ohlcv = _make_ohlcv(["AAA", "BBB"])
+
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = ohlcv
+
+    tickers = ["AAA", "BBB"]
+    _fetch_ohlcv_chunked(
+        mock_provider,
+        tickers,
+        start_date="2024-01-01",
+        end_date="2024-01-05",
+        chunk_size=100,
+        force_refresh=True,
+    )
+
+    assert mock_provider.fetch_ohlcv.call_count == 1
+    _, kwargs = mock_provider.fetch_ohlcv.call_args
+    assert kwargs.get("force_refresh") is True, (
+        f"expected force_refresh=True forwarded to provider; got {kwargs}"
+    )

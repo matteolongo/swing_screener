@@ -148,20 +148,24 @@ class AlpacaDataProvider(MarketDataProvider):
         tickers: list[str],
         start_date: str,
         end_date: str,
-        interval: str = "1d"
+        interval: str = "1d",
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
         Fetch OHLCV data from Alpaca.
-        
+
         Args:
             tickers: List of ticker symbols
             start_date: Start date in YYYY-MM-DD format
             end_date: End date in YYYY-MM-DD format
             interval: Bar interval (default: "1d")
-            
+            force_refresh: Accepted for interface parity; Alpaca bypasses its
+                cache for live-edge requests automatically, so this param is
+                intentionally ignored.
+
         Returns:
             DataFrame with MultiIndex columns (field, ticker)
-            
+
         Raises:
             ValueError: If invalid tickers or interval
             ConnectionError: If Alpaca API fails
