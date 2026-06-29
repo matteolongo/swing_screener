@@ -1156,7 +1156,7 @@ export const messagesEn = {
       adjustFilters: 'Advanced filters',
       hideFilters: 'Hide filters',
       forceRefresh: 'Force cache refresh',
-      forceRefreshWarning: 'Slower — re-fetches all market data',
+      forceRefreshWarning: 'Slower — re-evaluates all symbols',
       members: 'members',
       memberCount: '{{count}} members',
       noOtc: 'No OTC',

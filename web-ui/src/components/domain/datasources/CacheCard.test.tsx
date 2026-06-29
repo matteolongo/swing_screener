@@ -52,7 +52,7 @@ describe('CacheCard', () => {
     const { getByText } = renderWithProviders(
       <CacheCard entry={clearableEntry} onClear={onClear} clearing={false} />
     );
-    getByText('Clear').click();
+    getByText(t('datasources.cache.clear')).click();
     expect(onClear).toHaveBeenCalledWith('ticker_meta');
   });
 });

@@ -189,7 +189,7 @@ describe('ScreenerForm - forceRefresh', () => {
         setForceRefresh={vi.fn()}
       />
     );
-    const cb = getByLabelText('Force cache refresh') as HTMLInputElement;
+    const cb = getByLabelText(t('screener.controls.forceRefresh')) as HTMLInputElement;
     expect(cb.checked).toBe(false);
   });
 
@@ -225,6 +225,6 @@ describe('ScreenerForm - forceRefresh', () => {
         setForceRefresh={vi.fn()}
       />
     );
-    expect(getByText('Slower — re-fetches all market data')).toBeInTheDocument();
+    expect(getByText(t('screener.controls.forceRefreshWarning'))).toBeInTheDocument();
   });
 });
