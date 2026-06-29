@@ -219,3 +219,14 @@ the model surfaced in search, distinct from `upcoming_events` (forward-looking).
 backward-compatible: results from before this field default to `[]`. The prompt is responsible for
 filling each panel for the active status; a genuinely empty panel renders a muted placeholder rather
 than disappearing.
+
+## DeGiro agenda signals — availability note
+
+The `degiro-connector` library exposes an `AgendaRequest` API that supports:
+
+| CalendarType | Fields | Status |
+|---|---|---|
+| `EarningsCalendar` | date, company, isin | **Not implemented** — `days_to_earnings` is populated from Finnhub (US-only); EU tickers get `None`. DeGiro's earnings calendar (ISIN-filterable) is the natural fix. |
+| `DividendCalendar` | exDate, dividendAmount, currency, isin | Implemented in `api/services/portfolio/degiro_dividend.py` (`feat/degiro-dividend-calendar`). |
+
+To implement earnings calendar enrichment: create `DegiroEarningsEnricher` mirroring `degiro_dividend.py`, call `api.get_agenda(AgendaRequest(calendarType=CalendarType.EARNINGS_CALENDAR, isin=isin, ...))`, and wire the result into `enrich_intelligence_request()` alongside the Finnhub path.

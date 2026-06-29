@@ -217,6 +217,7 @@ class DegiroFundamentalsProvider:
 
         ratios_resp = api.get_company_ratios(product_isin=isin, raw=True) or {}
         estimates_resp = api.get_estimates_summaries(product_isin=isin, raw=True) or {}
+        profile_resp = api.get_company_profile(product_isin=isin, raw=True) or {}
 
         ratios_data = ratios_resp.get("data", {})
         if not ratios_data:
@@ -261,6 +262,12 @@ class DegiroFundamentalsProvider:
         # Most recent annual date (ISO date prefix)
         la_annual = ratios_data.get("laAnnual", "")
         most_recent_quarter = la_annual[:10] if la_annual else None
+
+        # Company profile: name, sector, currency
+        profile_data = profile_resp.get("data", {}) or {}
+        company_name: Optional[str] = profile_data.get("businessSummary", {}).get("companyName") or None
+        sector: Optional[str] = profile_data.get("businessSummary", {}).get("sector") or None
+        currency: Optional[str] = profile_data.get("companyHeader", {}).get("currency") or None
 
         # Data region from ISIN country prefix
         isin_country = isin[:2].upper() if len(isin) >= 2 else ""
@@ -344,9 +351,9 @@ class DegiroFundamentalsProvider:
             provider=self.name,
             instrument_type="equity",
             data_region=data_region,
-            company_name=None,   # available via get_company_profile if needed
-            sector=None,
-            currency=None,       # could infer from ISIN country; left for scoring layer
+            company_name=company_name,
+            sector=sector,
+            currency=currency,
             most_recent_quarter=most_recent_quarter,
             market_cap=market_cap,
             revenue_growth_yoy=revenue_growth_yoy,
