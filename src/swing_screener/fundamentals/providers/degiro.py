@@ -218,6 +218,7 @@ class DegiroFundamentalsProvider:
         ratios_resp = api.get_company_ratios(product_isin=isin, raw=True) or {}
         estimates_resp = api.get_estimates_summaries(product_isin=isin, raw=True) or {}
         profile_resp = api.get_company_profile(product_isin=isin, raw=True) or {}
+        statements_resp = api.get_financial_statements(product_isin=isin, raw=True) or {}
 
         ratios_data = ratios_resp.get("data", {})
         if not ratios_data:
@@ -300,7 +301,47 @@ class DegiroFundamentalsProvider:
             if eps is not None:
                 eps_points.append(FundamentalSeriesPoint(period_end=period_end, value=eps))
 
+        # ----- Historical financials from financial_statements -----
+        stmt_annual = (statements_resp.get("data") or {}).get("annual", [])
+        hist_revenue_points: list[FundamentalSeriesPoint] = []
+        hist_net_income_points: list[FundamentalSeriesPoint] = []
+
+        for period in sorted(stmt_annual, key=lambda p: p.get("year", 0)):
+            year = period.get("year")
+            if not year:
+                continue
+            period_end = f"{year}-12-31"
+            stmts = period.get("statements", [])
+            rev = _estimate_item(stmts, "Income Statement", "SAL")
+            ninc = _estimate_item(stmts, "Income Statement", "NINC")
+            if rev is not None:
+                hist_revenue_points.append(
+                    FundamentalSeriesPoint(period_end=period_end, value=rev * 1_000_000)
+                )
+            if ninc is not None:
+                hist_net_income_points.append(
+                    FundamentalSeriesPoint(period_end=period_end, value=ninc * 1_000_000)
+                )
+
         historical_series: dict[str, FundamentalMetricSeries] = {}
+        if hist_revenue_points:
+            historical_series["revenue"] = FundamentalMetricSeries(
+                label="Revenue (Actual)",
+                unit="currency",
+                frequency="annual",
+                direction="up",
+                source="degiro.financial_statements.SAL",
+                points=hist_revenue_points[-7:],
+            )
+        if hist_net_income_points:
+            historical_series["net_income"] = FundamentalMetricSeries(
+                label="Net Income (Actual)",
+                unit="currency",
+                frequency="annual",
+                direction="up",
+                source="degiro.financial_statements.NINC",
+                points=hist_net_income_points[-7:],
+            )
         if revenue_points:
             historical_series["revenue_estimate"] = FundamentalMetricSeries(
                 label="Revenue Estimate (Analyst Consensus)",
