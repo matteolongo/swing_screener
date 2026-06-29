@@ -1,6 +1,9 @@
 """Tests for PolygonProvider."""
 from __future__ import annotations
 
+import os
+import time
+from datetime import date, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -228,9 +231,6 @@ class TestFactoryPolygon:
 # Polygon OHLCV cache TTL tests
 # ---------------------------------------------------------------------------
 
-import time as _time
-import os as _os
-
 
 def _make_provider(tmp_path: Path, cache_ttl_days: float = 7.0) -> PolygonProvider:
     return PolygonProvider(
@@ -246,13 +246,12 @@ def _write_parquet_cache(path: Path, age_seconds: float) -> None:
     df = pd.DataFrame()
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(path)
-    old_mtime = _time.time() - age_seconds
-    _os.utime(path, (old_mtime, old_mtime))
+    old_mtime = time.time() - age_seconds
+    os.utime(path, (old_mtime, old_mtime))
 
 
 def test_polygon_recent_range_cache_expires(tmp_path):
     """A recent-range cache file older than TTL is re-fetched."""
-    from datetime import date, timedelta
     today = date.today().isoformat()
     start = (date.today() - timedelta(days=30)).isoformat()
 
@@ -276,7 +275,6 @@ def test_polygon_recent_range_cache_expires(tmp_path):
 
 def test_polygon_historical_range_never_expires(tmp_path):
     """A historical-range cache file is used regardless of age."""
-    from datetime import date, timedelta
     start = "2023-01-01"
     end = "2023-06-30"  # strictly in the past
 
@@ -287,8 +285,8 @@ def test_polygon_historical_range_never_expires(tmp_path):
     frames = [{"o": 150.0, "h": 155.0, "l": 149.0, "c": 152.0, "v": 1000000, "t": 1672531200000}]
     df_real = provider._bars_to_series(frames, "AAPL")
     df_real.to_parquet(cache_path)
-    old_mtime = _time.time() - (365 * 86400)
-    _os.utime(cache_path, (old_mtime, old_mtime))
+    old_mtime = time.time() - (365 * 86400)
+    os.utime(cache_path, (old_mtime, old_mtime))
 
     fetched = []
     with patch.object(provider, "_fetch_bars_from_api", side_effect=lambda t, s, e: fetched.append(t) or []):
@@ -299,7 +297,6 @@ def test_polygon_historical_range_never_expires(tmp_path):
 
 def test_polygon_recent_range_fresh_cache_used(tmp_path):
     """A recent-range cache file within TTL is returned without re-fetching."""
-    from datetime import date, timedelta
     today = date.today().isoformat()
     start = (date.today() - timedelta(days=30)).isoformat()
 
@@ -310,8 +307,8 @@ def test_polygon_recent_range_fresh_cache_used(tmp_path):
     frames = [{"o": 150.0, "h": 155.0, "l": 149.0, "c": 152.0, "v": 1000000, "t": 1672531200000}]
     df_real = provider._bars_to_series(frames, "AAPL")
     df_real.to_parquet(cache_path)
-    old_mtime = _time.time() - (1 * 86400)
-    _os.utime(cache_path, (old_mtime, old_mtime))
+    old_mtime = time.time() - (1 * 86400)
+    os.utime(cache_path, (old_mtime, old_mtime))
 
     fetched = []
     with patch.object(provider, "_fetch_bars_from_api", side_effect=lambda t, s, e: fetched.append(t) or []):
