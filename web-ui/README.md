@@ -1,34 +1,33 @@
 # Swing Screener Web UI
 
-React + TypeScript frontend for Swing Screener.
+React 18 + TypeScript frontend for Swing Screener.
 
 ## Pages
 
 | Page | Route | Purpose |
-|------|-------|---------|
-| Today | `/today` | Daily review compute, pending orders, open risk summary |
-| Calendar | `/calendar` | Earnings calendar and catalyst events |
-| Book | `/book` | Open positions and order management |
-| Research | `/research` | Screener candidates, symbol intelligence, watchlist |
-| Universes | `/universes` | Universe management and refresh |
-| Strategy | `/strategy` | Strategy config and activation |
-| Journal | `/journal` | Weekly reviews and trade log |
+| --- | --- | --- |
+| Today | `/today` | Screener candidates (Last Run tab), open positions and daily review (Today tab), Watchlist tab; symbol analysis canvas on the right |
+| Calendar | `/calendar` | Earnings calendar and upcoming catalyst events |
+| Book | `/book` | Open positions: stop updates, partial close, trail config; order management; trade journal; performance analytics; weekly review |
+| Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery |
+| Strategy | `/strategy` | Strategy CRUD, activation, and validation |
+| Data Sources | `/datasources` | Data source diagnostics: per-source health, live probe, fallback event feed |
 | Onboarding | `/onboarding` | Setup guide |
-| Analytics | `/analytics` | Regime breakdown and performance analytics |
-| Fundamentals | `/fundamentals` | Fundamental data browser |
-
-## Docs
-- `web-ui/docs/WEB_UI_GUIDE.md` — pages, feature map, testing patterns
-- `web-ui/docs/WEB_UI_ARCHITECTURE.md` — component and state architecture
-- `docs/overview/INDEX.md` — full documentation index
 
 ## Development
+
 ```bash
 cd web-ui
 npm install
-npm run dev
+npm run dev       # dev server (Vite, http://localhost:5173)
+npm run build     # production build
+npm test          # Vitest
+npm run typecheck # tsc --noEmit
+npm run lint      # ESLint strict, zero warnings allowed
 ```
 
-## Persistence Mode
-- `VITE_PERSISTENCE_MODE=api` (default) — uses backend API and file storage.
-- `VITE_PERSISTENCE_MODE=local` — activates browser localStorage (only when `VITE_ENABLE_LOCAL_PERSISTENCE=true`).
+## Docs
+
+- [`web-ui/docs/WEB_UI_GUIDE.md`](docs/WEB_UI_GUIDE.md) — full feature directory map, shared primitives, typical workflow, testing patterns
+- [`web-ui/docs/WEB_UI_ARCHITECTURE.md`](docs/WEB_UI_ARCHITECTURE.md) — directory structure, API contract rules, state management
+- [`web-ui/docs/DESIGN_TOKENS.md`](docs/DESIGN_TOKENS.md) — dark-theme semantic token system, ESLint enforcement

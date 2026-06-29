@@ -88,6 +88,20 @@ Configurable behavior goes in YAML, never hardcoded. Config files live in `confi
 ### Runtime State
 Primary state: `data/positions.json` (open trades), `data/orders.json` (order lifecycle). See `data/README.md` for schema notes and migration history.
 
+## Intraday Boundary
+
+The system may read a current or user-supplied price to preview position metrics or stop rules.
+
+- Preview endpoints must be read-only: they must not persist a stop change, submit an order, or mutate portfolio state.
+- Screener results based on an unclosed daily candle must be labeled `intraday`; only results labeled `final_close` are final end-of-day output.
+- Actionable recommendations remain part of the post-close review and require manual broker execution.
+
+## Additional Conventions
+
+- Configurable behavior routes through YAML config (`config/defaults.yaml`, `config/user.yaml`, `config/strategies.yaml`, `config/intelligence.yaml`, `config/mcp.yaml`). Never hardcode operator-tunable settings in source.
+- Secrets belong in environment variables, not committed YAML files.
+- Use `docker-compose.yml` for local service orchestration only, not as a substitute for app or strategy configuration.
+
 ## Testing Patterns
 
 **Backend:** prefer pure functions; keep behavior deterministic; use `pytest`. Tests requiring external API keys must be marked `@pytest.mark.integration` — they are skipped in CI.
@@ -112,6 +126,15 @@ Before finishing any code change, go through this checklist:
 
 When in doubt: read the relevant doc, check if it still describes what the code does, and update any section that no longer matches.
 
+## Documenting a module
+
+When asked to document a module or write a module README:
+
+1. Explore the module: read all `.py` files, understand the public API, find all config keys.
+2. Check `docs/engineering/MODULE_ARCHITECTURE.md` for the canonical module description.
+3. Draft a README covering: purpose, file map, public API surface (function signatures + return types), config keys, known limitations.
+4. Update `docs/overview/INDEX.md` to include the new README.
+
 ## PR Delivery
 
 When finishing branch-based work, provide a GitHub compare link:
@@ -130,4 +153,3 @@ For deeper context on a specific area:
 - Config options: `config/README.md`
 - Runtime data schema: `data/README.md`
 - Roadmap: `docs/engineering/ROADMAP.md`
-- Troubleshooting: `docs/engineering/TROUBLESHOOTING.md`
