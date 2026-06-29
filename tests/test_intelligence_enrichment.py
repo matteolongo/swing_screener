@@ -122,3 +122,58 @@ def test_enrich_with_technicals_does_not_overwrite_existing():
     req = SymbolIntelligenceRequest(close=200.0, signal="hold", sma_20=123.0)
     out = enrich_with_technicals("AAA", req, _synthetic_ohlcv())
     assert out.sma_20 == 123.0
+
+
+def test_enrich_with_technicals_force_overwrites_existing():
+    from api.services.intelligence_enrichment import enrich_with_technicals
+
+    req = SymbolIntelligenceRequest(close=200.0, signal="hold", sma_20=123.0)
+    out = enrich_with_technicals("AAA", req, _synthetic_ohlcv(), force=True)
+    assert out.sma_20 != 123.0
+    assert out.sma_20 is not None
+
+
+def test_enrich_with_polygon_prices_overrides_close_and_technicals():
+    from api.services.intelligence_enrichment import enrich_with_polygon_prices
+
+    req = SymbolIntelligenceRequest(close=999.0, signal="hold", sma_20=1.0)
+    out = enrich_with_polygon_prices(
+        "AAA", req, fetch_ohlcv=lambda t: _synthetic_ohlcv("AAA")
+    )
+    # close replaced with the last Polygon close (synthetic series ends at 200.0)
+    assert out.close == 200.0
+    assert out.sma_20 != 1.0
+    assert out.price_source == "polygon"
+
+
+def test_enrich_with_polygon_prices_degrades_without_data():
+    import pandas as pd
+
+    from api.services.intelligence_enrichment import enrich_with_polygon_prices
+
+    req = SymbolIntelligenceRequest(close=999.0, signal="hold")
+    out = enrich_with_polygon_prices("AAA", req, fetch_ohlcv=lambda t: pd.DataFrame())
+    assert out.close == 999.0
+    assert out.price_source is None
+
+
+def test_enrich_with_polygon_prices_degrades_on_fetch_error():
+    from api.services.intelligence_enrichment import enrich_with_polygon_prices
+
+    def boom(t):
+        raise RuntimeError("network")
+
+    req = SymbolIntelligenceRequest(close=999.0, signal="hold")
+    out = enrich_with_polygon_prices("AAA", req, fetch_ohlcv=boom)
+    assert out.close == 999.0
+    assert out.price_source is None
+
+
+def test_enrich_with_polygon_prices_noop_without_key(monkeypatch):
+    from api.services.intelligence_enrichment import enrich_with_polygon_prices
+
+    monkeypatch.delenv("POLYGON_IO_API_KEY", raising=False)
+    req = SymbolIntelligenceRequest(close=999.0, signal="hold")
+    out = enrich_with_polygon_prices("AAA", req)  # no injected fetch → uses env
+    assert out is req
+    assert out.price_source is None

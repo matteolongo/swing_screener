@@ -2,6 +2,7 @@
 
 from .base import MarketDataProvider
 from .yfinance_provider import YfinanceProvider
+from .polygon_provider import PolygonProvider
 from .factory import get_market_data_provider, get_default_provider
 
 try:
@@ -22,6 +23,7 @@ __all__ = [
     "MarketDataProvider",
     "YfinanceProvider",
     "AlpacaDataProvider",
+    "PolygonProvider",
     "get_market_data_provider",
     "get_default_provider",
 ]

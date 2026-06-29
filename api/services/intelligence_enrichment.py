@@ -80,13 +80,21 @@ def enrich_intelligence_request(
     return request.model_copy(update=updates)
 
 
-def enrich_with_technicals(ticker: str, request: SymbolIntelligenceRequest, ohlcv) -> SymbolIntelligenceRequest:
+def enrich_with_technicals(
+    ticker: str, request: SymbolIntelligenceRequest, ohlcv, *, force: bool = False
+) -> SymbolIntelligenceRequest:
     """Compute SMAs / momentum / ATR / 52w distance / candle patterns from an OHLCV frame.
 
     `ohlcv` is the MultiIndex (field, ticker) DataFrame from a provider. Any failure degrades
     to leaving the request untouched. Benchmark-relative fields (rel_strength) are intentionally
     not filled here: they need a benchmark + sector-ETF context this single-symbol path lacks.
+
+    When `force` is True, recomputed values overwrite any already present on the request
+    (used when a higher-trust provider's frame replaces the existing inputs).
     """
+    def _absent(field: str) -> bool:
+        return force or getattr(request, field, None) is None
+
     if ohlcv is None or getattr(ohlcv, "empty", True):
         return request
 
@@ -144,33 +152,33 @@ def enrich_with_technicals(ticker: str, request: SymbolIntelligenceRequest, ohlc
     if trow is not None:
         for req_field, col in (("sma_20", "sma20"), ("sma_50", "sma50"), ("sma_200", "sma200")):
             value = _num(trow, col)
-            if value is not None and getattr(request, req_field, None) is None:
+            if value is not None and _absent(req_field):
                 updates[req_field] = value
 
-    if vrow is not None and request.atr is None:
+    if vrow is not None and _absent("atr"):
         atr_col = next((c for c in vrow.index if str(c).startswith("atr") and c != "atr_pct"), None)
         if atr_col is not None:
             value = _num(vrow, atr_col)
             if value is not None:
                 updates["atr"] = value
 
-    if request.momentum_6m is None:
+    if _absent("momentum_6m"):
         m6 = _series_val(mom6)
         if m6 is not None:
             updates["momentum_6m"] = m6
-    if request.momentum_12m is None:
+    if _absent("momentum_12m"):
         m12 = _series_val(mom12)
         if m12 is not None:
             updates["momentum_12m"] = m12
 
     if srow is not None:
         dist = _num(srow, "dist_52w_high_pct")
-        if dist is not None and request.dist_52w_high_pct is None:
+        if dist is not None and _absent("dist_52w_high_pct"):
             updates["dist_52w_high_pct"] = dist
-        if "near_52w_high" in srow.index and pd.notna(srow["near_52w_high"]) and request.near_52w_high is None:
+        if "near_52w_high" in srow.index and pd.notna(srow["near_52w_high"]) and _absent("near_52w_high"):
             updates["near_52w_high"] = bool(srow["near_52w_high"])
 
-    if not request.recent_patterns:
+    if force or not request.recent_patterns:
         try:
             patterns = detect_patterns(ohlcv, tickers=[ticker])
             plist = patterns.get(ticker) or next(
@@ -184,3 +192,64 @@ def enrich_with_technicals(ticker: str, request: SymbolIntelligenceRequest, ohlc
     if not updates:
         return request
     return request.model_copy(update=updates)
+
+
+def _default_polygon_fetch(ticker: str):
+    """Fetch a recent Polygon OHLCV frame for one ticker, or None if unconfigured."""
+    import os
+    from datetime import date, timedelta
+
+    api_key = os.getenv("POLYGON_IO_API_KEY")
+    if not api_key:
+        return None
+    from swing_screener.data.providers.polygon_provider import PolygonProvider
+
+    provider = PolygonProvider(api_key=api_key)
+    end = date.today().isoformat()
+    start = (date.today() - timedelta(days=400)).isoformat()
+    return provider.fetch_ohlcv([ticker], start, end)
+
+
+def enrich_with_polygon_prices(
+    ticker: str,
+    request: SymbolIntelligenceRequest,
+    *,
+    fetch_ohlcv: Callable[[str], object] | None = None,
+) -> SymbolIntelligenceRequest:
+    """Replace price/technical inputs with Polygon.io data when configured.
+
+    Approach C: when Polygon is available, its OHLCV becomes the trusted source for
+    the intelligence analysis — `close` and all recomputable technicals are overwritten
+    and `price_source` is stamped to "polygon". Any failure (no key, empty frame, network
+    error) degrades to leaving the request untouched, never failing the analysis.
+    """
+    fetch = fetch_ohlcv or _default_polygon_fetch
+    try:
+        ohlcv = fetch(ticker)
+    except Exception as exc:  # degrade, never fail the analysis
+        logger.warning("Polygon price fetch failed for %s: %s", ticker, exc)
+        return request
+
+    if ohlcv is None or getattr(ohlcv, "empty", True):
+        return request
+
+    updates: dict = {"price_source": "polygon"}
+    try:
+        upper = ticker.upper()
+        close_col = next(
+            (
+                c
+                for c in ohlcv.columns
+                if c[0] == "Close" and str(c[1]).upper() == upper
+            ),
+            None,
+        )
+        if close_col is not None:
+            closes = ohlcv[close_col].dropna()
+            if not closes.empty:
+                updates["close"] = float(closes.iloc[-1])
+    except Exception:
+        logger.warning("Polygon close extraction failed for %s", ticker, exc_info=True)
+
+    request = request.model_copy(update=updates)
+    return enrich_with_technicals(ticker, request, ohlcv, force=True)

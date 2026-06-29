@@ -10,7 +10,11 @@ from pydantic import BaseModel
 from api.dependencies import get_fundamentals_service, get_portfolio_service, get_positions_repo
 from api.repositories.positions_repo import PositionsRepository
 from api.services.fundamentals_service import FundamentalsService
-from api.services.intelligence_enrichment import enrich_intelligence_request, enrich_with_technicals
+from api.services.intelligence_enrichment import (
+    enrich_intelligence_request,
+    enrich_with_polygon_prices,
+    enrich_with_technicals,
+)
 from swing_screener.intelligence.evidence.collect import collect_evidence
 from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
@@ -101,6 +105,7 @@ def sweep(
                 item_req = enrich_with_technicals(upper, item_req, ohlcv)
             except Exception:
                 logger.warning("Sweep technical enrichment skipped for %r", item.ticker, exc_info=True)
+            item_req = enrich_with_polygon_prices(upper, item_req)
             analyzer.analyze(upper, item_req, past_positions=past_positions)
             analyzed.append(upper)
         except Exception as exc:
@@ -153,6 +158,7 @@ def analyze_symbol(
         earnings=_earnings,
         evidence=lambda t: collect_evidence(t),
     )
+    request = enrich_with_polygon_prices(upper, request)
     try:
         past_positions, _ = positions_repo.list_positions(status="closed")
         return _get_analyzer().analyze(upper, request, past_positions=past_positions)
@@ -210,6 +216,7 @@ def analyze_position(
         request = enrich_with_technicals(pos.ticker, request, ohlcv)
     except Exception:
         logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
+    request = enrich_with_polygon_prices(pos.ticker, request)
     try:
         return _get_analyzer().analyze(pos.ticker.upper(), request)
     except Exception as exc:

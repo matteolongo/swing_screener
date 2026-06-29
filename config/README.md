@@ -82,7 +82,7 @@ Key LLM settings (under `config.llm`):
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `enabled_sources` | `[sec_edgar_catalysts]` | Collectors to fan-out to (SEC EDGAR only) |
+| `enabled_sources` | `[sec_edgar_catalysts, polygon_news]` | Collectors to fan-out to. `polygon_news` needs `POLYGON_IO_API_KEY` and no-ops without it |
 | `recency_window_days` | `30` | Discard items older than this many days |
 | `max_items_per_symbol` | `8` | Max curated items returned per ticker |
 | `sec_forms` | `[8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A]` | SEC form prefixes kept (prefix match: `424B` catches `424B5`, `SC 13D` catches `SC 13D/A`) |

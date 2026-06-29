@@ -153,12 +153,14 @@ Phase 3 (calibration scorer) will extend each history entry's `predictions` list
 | `evidence/curation.py` | `curate(items, *, window_days, max_items, asof_date)` — recency-window filter + dedup (normalized title+url) + newest-first + cap |
 | `evidence/collect.py` | `collect_evidence(ticker, *, asof_date, cfg, cache_root)` — per-date cache, fan-out across enabled collectors (fail-soft), curate |
 | `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR submissions API (`data.sec.gov/submissions/CIK…json`), material-event filings (8-K, 6-K, SC 13D/G, 424B, DEF 14A) |
+| `evidence/collectors/polygon_news.py` | `PolygonNewsCollector` — Polygon.io ticker news (`/v2/reference/news`) with per-symbol sentiment; key-gated, on-demand (one HTTP call per `collect`) |
 
 ### Collectors
 
-`SecEdgarCatalystCollector` implements the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py` as `sec_edgar_catalysts`.
+`SecEdgarCatalystCollector` and `PolygonNewsCollector` implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py` as `sec_edgar_catalysts` and `polygon_news`.
 
 - **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent material-event filings for US tickers. Forms are matched by prefix (`config.evidence.sec_forms`, default `8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A`, so `424B` catches `424B5` and `SC 13D` catches `SC 13D/A`), and each item carries a per-form relevance label. The HTTP User-Agent declares a contact email (`config.evidence.http.user_agent`) as required by SEC EDGAR fair-use policy. Fail-soft — returns empty on HTTP errors and records a fallback event.
+- **`polygon_news`** (`PolygonNewsCollector`): reads Polygon.io's `/v2/reference/news` for one ticker, filtered to `config.evidence.recency_window_days` and capped at `max_items_per_symbol`. Each article maps to a `SourceEvidence` with the per-symbol `insights.sentiment` rolled into the relevance label (`positive→bullish`, `negative→bearish`). Requires `POLYGON_IO_API_KEY`; without it the collector returns an empty list (no error). Enabled by default via `config.evidence.enabled_sources`; one HTTP call per ticker keeps API-credit usage bounded for on-demand use.
 
 The `company_ir_rss` collector (IR RSS feed auto-discovery) and the `exchange_announcements` collector (EU venue-wide RSS) were removed: IR feeds were unreliable and symbol-IR coverage was incomplete; exchange-wide notices are not symbol-specific and add no signal beyond the web-search pass.
 

@@ -179,6 +179,25 @@ def test_inputs_used_includes_recent_candle_patterns():
     }
 
 
+def test_inputs_used_includes_price_source():
+    request = SymbolIntelligenceRequest(
+        close=48.5,
+        signal="breakout",
+        sma_20=47.0,
+        price_source="polygon",
+    )
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, _FAKE_RESPONSE_JSON)
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("APAM", request)
+
+    assert result.inputs_used["technical"]["price_source"] == "polygon"
+
+
 def test_symbol_analyzer_raises_on_invalid_action():
     # _LLMAnalysis now validates action: DecisionAction at call-2 decode.
     # Simulate responses.parse raising (as the real API would) and confirm
