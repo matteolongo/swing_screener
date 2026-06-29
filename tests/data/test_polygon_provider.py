@@ -1,6 +1,12 @@
 """Tests for PolygonProvider."""
 from __future__ import annotations
 
+import os
+import time
+from datetime import date, timedelta
+from pathlib import Path
+from unittest.mock import patch
+
 import pandas as pd
 import pytest
 
@@ -252,3 +258,93 @@ class TestFactoryPolygon:
         p = get_market_data_provider(cfg)
         assert isinstance(p, PolygonProvider)
         assert p.get_provider_name() == "polygon"
+
+
+# ---------------------------------------------------------------------------
+# Polygon OHLCV cache TTL tests
+# ---------------------------------------------------------------------------
+
+
+def _make_provider(tmp_path: Path, cache_ttl_days: float = 7.0) -> PolygonProvider:
+    return PolygonProvider(
+        api_key="TEST_KEY",
+        cache_dir=str(tmp_path),
+        rate_limit_sleep=0,
+        cache_ttl_days=cache_ttl_days,
+    )
+
+
+def _write_parquet_cache(path: Path, age_seconds: float) -> None:
+    """Write an empty parquet at `path` with mtime set to `age_seconds` ago."""
+    df = pd.DataFrame()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(path)
+    old_mtime = time.time() - age_seconds
+    os.utime(path, (old_mtime, old_mtime))
+
+
+def test_polygon_recent_range_cache_expires(tmp_path):
+    """A recent-range cache file older than TTL is re-fetched."""
+    today = date.today().isoformat()
+    start = (date.today() - timedelta(days=30)).isoformat()
+
+    provider = _make_provider(tmp_path, cache_ttl_days=7)
+    cache_path = provider._cache_path("AAPL", start, today)
+
+    # Write a stale cache file (10 days old, TTL is 7)
+    _write_parquet_cache(cache_path, age_seconds=10 * 86400)
+
+    fetched = []
+
+    def mock_fetch(ticker, s, e):
+        fetched.append(ticker)
+        return []
+
+    with patch.object(provider, "_fetch_bars_from_api", side_effect=mock_fetch):
+        provider._fetch_ticker("AAPL", start, today)
+
+    assert fetched == ["AAPL"], "Expected re-fetch when recent-range cache is expired"
+
+
+def test_polygon_historical_range_never_expires(tmp_path):
+    """A historical-range cache file is used regardless of age."""
+    start = "2023-01-01"
+    end = "2023-06-30"  # strictly in the past
+
+    provider = _make_provider(tmp_path, cache_ttl_days=7)
+    cache_path = provider._cache_path("AAPL", start, end)
+
+    # Write a cache file with real content (365 days old)
+    frames = [{"o": 150.0, "h": 155.0, "l": 149.0, "c": 152.0, "v": 1000000, "t": 1672531200000}]
+    df_real = provider._bars_to_series(frames, "AAPL")
+    df_real.to_parquet(cache_path)
+    old_mtime = time.time() - (365 * 86400)
+    os.utime(cache_path, (old_mtime, old_mtime))
+
+    fetched = []
+    with patch.object(provider, "_fetch_bars_from_api", side_effect=lambda t, s, e: fetched.append(t) or []):
+        provider._fetch_ticker("AAPL", start, end)
+
+    assert fetched == [], "Historical range should use cache regardless of age"
+
+
+def test_polygon_recent_range_fresh_cache_used(tmp_path):
+    """A recent-range cache file within TTL is returned without re-fetching."""
+    today = date.today().isoformat()
+    start = (date.today() - timedelta(days=30)).isoformat()
+
+    provider = _make_provider(tmp_path, cache_ttl_days=7)
+    cache_path = provider._cache_path("AAPL", start, today)
+
+    # Write a fresh cache (1 day old, TTL is 7)
+    frames = [{"o": 150.0, "h": 155.0, "l": 149.0, "c": 152.0, "v": 1000000, "t": 1672531200000}]
+    df_real = provider._bars_to_series(frames, "AAPL")
+    df_real.to_parquet(cache_path)
+    old_mtime = time.time() - (1 * 86400)
+    os.utime(cache_path, (old_mtime, old_mtime))
+
+    fetched = []
+    with patch.object(provider, "_fetch_bars_from_api", side_effect=lambda t, s, e: fetched.append(t) or []):
+        provider._fetch_ticker("AAPL", start, today)
+
+    assert fetched == [], "Fresh cache should be used without re-fetching"

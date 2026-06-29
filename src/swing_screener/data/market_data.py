@@ -6,6 +6,7 @@ from typing import Iterable, Optional
 import datetime as dt
 import hashlib
 import json
+import time
 
 import pandas as pd
 import yfinance as yf
@@ -160,11 +161,24 @@ def fetch_ticker_metadata(
     cache_path: str = ".cache/ticker_meta.json",
     use_cache: bool = True,
     force_refresh: bool = False,
+    cache_ttl_days: float | None = None,
 ) -> pd.DataFrame:
     """
     Fetch lightweight metadata for tickers (name, currency, exchange) via yfinance.
     Uses a small JSON cache to avoid repeated network calls.
+    cache_ttl_days: override for how many days cache entries are valid (default: from config or 30).
     """
+    if cache_ttl_days is None:
+        try:
+            from swing_screener.settings import get_settings_manager
+            _doc = get_settings_manager().load_user_document()
+            cache_ttl_days = float(_doc.get("cache", {}).get("ticker_meta_ttl_days", 30))
+        except Exception:
+            cache_ttl_days = 30.0
+
+    _ttl_seconds = cache_ttl_days * 86400.0
+    _now = time.time()
+
     tks = normalize_tickers(tickers)
     cache_file = Path(cache_path)
     cache: dict[str, dict] = {}
@@ -176,9 +190,14 @@ def fetch_ticker_metadata(
 
     results: dict[str, dict] = {}
     for t in tks:
-        if (not force_refresh) and t in cache:
-            results[t] = cache[t]
-            continue
+        if not force_refresh and t in cache:
+            entry = cache[t]
+            # Legacy entries without fetched_at are treated as always fresh
+            # (backward compat). TTL only applies once fetched_at is present.
+            fetched_at = entry.get("fetched_at")
+            if fetched_at is None or (_now - float(fetched_at)) <= _ttl_seconds:
+                results[t] = {k: v for k, v in entry.items() if k != "fetched_at"}
+                continue
 
         name = None
         currency = None
@@ -210,7 +229,9 @@ def fetch_ticker_metadata(
         }
 
     if use_cache:
-        cache.update(results)
+        _now_write = time.time()
+        for t, v in results.items():
+            cache[t] = {**v, "fetched_at": _now_write}
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(json.dumps(cache, indent=2), encoding="utf-8")
 

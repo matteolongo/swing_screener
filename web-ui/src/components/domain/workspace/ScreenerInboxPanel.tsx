@@ -184,6 +184,7 @@ export default function ScreenerInboxPanel() {
     }
   );
   const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', true);
+  const [forceRefresh, setForceRefresh] = useState(false);
 
   const universesQuery = useUniverses();
   const screenerMutation = useRunScreenerMutation((data) => {
@@ -192,6 +193,7 @@ export default function ScreenerInboxPanel() {
       setSelectedTicker(data.candidates[0].ticker, 'screener');
     }
     setIsFormCollapsed(true);
+    setForceRefresh(false);
   });
 
   const handleRunScreener = useCallback(() => {
@@ -208,6 +210,7 @@ export default function ScreenerInboxPanel() {
       breakoutLookback: strategySignals?.breakoutLookback ?? defaultIndicators?.breakoutLookback ?? 50,
       pullbackMa: strategySignals?.pullbackMa ?? defaultIndicators?.pullbackMa ?? 20,
       minHistory: strategySignals?.minHistory ?? defaultIndicators?.minHistory ?? 260,
+      forceRefresh: forceRefresh || undefined,
     });
   }, [
     defaultIndicators?.breakoutLookback,
@@ -223,6 +226,7 @@ export default function ScreenerInboxPanel() {
     instrumentFilter,
     includeOtc,
     requireWeeklyUptrend,
+    forceRefresh,
     strategySignals?.breakoutLookback,
     strategySignals?.pullbackMa,
     strategySignals?.minHistory,
@@ -303,6 +307,8 @@ export default function ScreenerInboxPanel() {
         onRun={handleRunScreener}
         isCollapsed={isFormCollapsed}
         onToggleCollapsed={() => setIsFormCollapsed(!isFormCollapsed)}
+        forceRefresh={forceRefresh}
+        setForceRefresh={setForceRefresh}
       />
 
       {screenerMutation.isPending && <ScreenerRunningPanel />}

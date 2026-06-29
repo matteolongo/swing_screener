@@ -54,6 +54,8 @@ const defaultProps = {
   onRun: vi.fn(),
   isCollapsed: false,
   onToggleCollapsed: vi.fn(),
+  forceRefresh: false,
+  setForceRefresh: vi.fn(),
 };
 
 describe('ScreenerForm - collapsed state', () => {
@@ -147,5 +149,82 @@ describe('ScreenerForm - expanded state', () => {
   it('shows universe selector in expanded view', () => {
     renderWithProviders(<ScreenerForm {...defaultProps} isCollapsed={false} />);
     expect(screen.getByRole('combobox', { name: t('screener.controls.universe') })).toBeInTheDocument();
+  });
+});
+
+describe('ScreenerForm - forceRefresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders forceRefresh checkbox unchecked by default', () => {
+    const { getByLabelText } = renderWithProviders(
+      <ScreenerForm
+        selectedUniverse="broad_market_stocks"
+        setSelectedUniverse={vi.fn()}
+        topN={20}
+        setTopN={vi.fn()}
+        minPrice={5}
+        setMinPrice={vi.fn()}
+        maxPrice={500}
+        setMaxPrice={vi.fn()}
+        currencyFilter="all"
+        setCurrencyFilter={vi.fn()}
+        exchangeFilter="all"
+        setExchangeFilter={vi.fn()}
+        instrumentFilter="all"
+        setInstrumentFilter={vi.fn()}
+        includeOtc={false}
+        setIncludeOtc={vi.fn()}
+        recommendedOnly={false}
+        setRecommendedOnly={vi.fn()}
+        requireWeeklyUptrend={false}
+        setRequireWeeklyUptrend={vi.fn()}
+        actionFilter="all"
+        setActionFilter={vi.fn()}
+        universes={[]}
+        isLoading={false}
+        onRun={vi.fn()}
+        forceRefresh={false}
+        setForceRefresh={vi.fn()}
+      />
+    );
+    const cb = getByLabelText(t('screener.controls.forceRefresh')) as HTMLInputElement;
+    expect(cb.checked).toBe(false);
+  });
+
+  it('shows warning when forceRefresh is true', () => {
+    const { getByText } = renderWithProviders(
+      <ScreenerForm
+        selectedUniverse="broad_market_stocks"
+        setSelectedUniverse={vi.fn()}
+        topN={20}
+        setTopN={vi.fn()}
+        minPrice={5}
+        setMinPrice={vi.fn()}
+        maxPrice={500}
+        setMaxPrice={vi.fn()}
+        currencyFilter="all"
+        setCurrencyFilter={vi.fn()}
+        exchangeFilter="all"
+        setExchangeFilter={vi.fn()}
+        instrumentFilter="all"
+        setInstrumentFilter={vi.fn()}
+        includeOtc={false}
+        setIncludeOtc={vi.fn()}
+        recommendedOnly={false}
+        setRecommendedOnly={vi.fn()}
+        requireWeeklyUptrend={false}
+        setRequireWeeklyUptrend={vi.fn()}
+        actionFilter="all"
+        setActionFilter={vi.fn()}
+        universes={[]}
+        isLoading={false}
+        onRun={vi.fn()}
+        forceRefresh={true}
+        setForceRefresh={vi.fn()}
+      />
+    );
+    expect(getByText(t('screener.controls.forceRefreshWarning'))).toBeInTheDocument();
   });
 });

@@ -79,6 +79,8 @@ interface ScreenerFormProps {
   onRun: () => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  forceRefresh: boolean;
+  setForceRefresh: (value: boolean) => void;
 }
 
 export default function ScreenerForm({
@@ -109,6 +111,8 @@ export default function ScreenerForm({
   onRun,
   isCollapsed = false,
   onToggleCollapsed,
+  forceRefresh,
+  setForceRefresh,
 }: ScreenerFormProps) {
   const selectedUniverseMeta = universes.find((universe) => universe.id === selectedUniverse);
 
@@ -388,6 +392,20 @@ export default function ScreenerForm({
                 disabled={isLoading}
               />
               <span className="text-sm font-medium text-muted">{t('screener.controls.requireWeeklyUptrend')}</span>
+            </label>
+            <label className="flex min-h-11 items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={forceRefresh}
+                onChange={(e) => setForceRefresh(e.target.checked)}
+                aria-label={t('screener.controls.forceRefresh')}
+                className="w-5 h-5 text-primary border-border rounded focus:ring-primary"
+                disabled={isLoading}
+              />
+              <span className="text-sm font-medium text-muted">{t('screener.controls.forceRefresh')}</span>
+              {forceRefresh && (
+                <span className="text-xs text-warning">{t('screener.controls.forceRefreshWarning')}</span>
+              )}
             </label>
           </div>
 

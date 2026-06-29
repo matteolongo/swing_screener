@@ -112,6 +112,10 @@ Weekly Reviews (`/api/weekly-reviews`):
 - `GET /api/weekly-reviews/{week_id}`
 - `PUT /api/weekly-reviews/{week_id}`
 
+Cache Management (`/api/cache`):
+- `GET /api/cache/status` — list all caches with storage type, TTL, last modified, and entry count
+- `POST /api/cache/clear/{cache_id}` — clear a named cache. Returns 400 for unknown or non-clearable (memory) caches
+
 Data Sources (`/api/datasources`) — read-only diagnostics, no config mutation:
 - `GET /api/datasources` — inventory of all known sources. Response: `{sources: [SourceDescriptorOut, ...]}`. Each `SourceDescriptorOut` has `id`, `display_name`, `domain`, `role` (`primary`/`fallback`/`enrichment`), `requires` (env var or pkg name; null if unconditional), `configured` (bool), `probeable` (bool), `canary_market` (`us`/`eu`/null), `note` (null or a free-text annotation), and `last_probe` (null or `ProbeResultOut` from the most recent probe run). One intelligence collector (`sec_edgar_catalysts`) appears with `probeable=true`. The enrichment pipeline injects curated SEC filings into the LLM prompt via `collect.py` (no new endpoint).
 - `POST /api/datasources/probe` — probe all probeable sources concurrently. Response: `[ProbeResultOut, ...]`. `ProbeResultOut` has `id`, `status` (`ok`/`down`/`not_configured`), `latency_ms`, `detail`, `sample` (small dict of live data), `error`.

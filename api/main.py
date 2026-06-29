@@ -19,6 +19,7 @@ from swing_screener.runtime_env import ensure_runtime_env_loaded
 from api.routers import (
     backtest,
     calendar,
+    cache as cache_router,
     config,
     daily_review,
     datasources,
@@ -318,6 +319,7 @@ app.include_router(datasources.router, prefix="/api/datasources", tags=["datasou
 app.include_router(market_data.router, prefix="/api", tags=["market-data"])
 app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["weekly-reviews"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
+app.include_router(cache_router.router, prefix="/api/cache", tags=["cache"])
 
 
 @app.api_route(

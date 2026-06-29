@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import time
+from datetime import date
 from pathlib import Path
 
 import httpx
@@ -33,11 +34,21 @@ class PolygonProvider(MarketDataProvider):
         api_key: str,
         cache_dir: str = ".cache/polygon_data",
         rate_limit_sleep: float = 12.0,
+        cache_ttl_days: float | None = None,
     ) -> None:
         self.api_key = api_key
         self.cache_dir = Path(cache_dir)
         self.rate_limit_sleep = rate_limit_sleep
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        if cache_ttl_days is not None:
+            self._cache_ttl_days = float(cache_ttl_days)
+        else:
+            try:
+                from swing_screener.settings import get_settings_manager
+                _doc = get_settings_manager().load_user_document()
+                self._cache_ttl_days = float(_doc.get("cache", {}).get("polygon_cache_ttl_days", 7))
+            except Exception:
+                self._cache_ttl_days = 7.0
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -98,9 +109,14 @@ class PolygonProvider(MarketDataProvider):
     ) -> pd.DataFrame:
         cache = self._cache_path(ticker, start_date, end_date)
         if cache.exists():
-            try:
-                return pd.read_parquet(cache)
-            except Exception:
+            is_historical = end_date < date.today().isoformat()
+            cache_age_s = time.time() - cache.stat().st_mtime
+            if is_historical or cache_age_s <= self._cache_ttl_days * 86400:
+                try:
+                    return pd.read_parquet(cache)
+                except Exception:
+                    cache.unlink(missing_ok=True)
+            else:
                 cache.unlink(missing_ok=True)
 
         bars = self._fetch_bars_from_api(ticker, start_date, end_date)

@@ -33,6 +33,7 @@ export async function runScreener(request: ScreenerRequest): Promise<ScreenerRes
     pullback_ma: request.pullbackMa,
     min_history: request.minHistory,
     require_weekly_uptrend: request.requireWeeklyUptrend,
+    force_refresh: request.forceRefresh,
   };
 
   const res = await fetch(apiUrl(API_ENDPOINTS.screenerRun), {
