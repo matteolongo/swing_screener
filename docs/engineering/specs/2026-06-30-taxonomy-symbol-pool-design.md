@@ -200,8 +200,8 @@ Badge on nav/header showing count of pending entries. Click opens a drawer/modal
 
 ---
 
-## Unresolved Questions
+## Decisions
 
-- Default `fetch_failure_threshold`: 3 seems right — confirm or adjust
-- Backwards-compat window for `universe_id` alias: deprecate silently now, remove in a future PR?
-- Symbol pool initial size target: no hard cap, but what's the floor filter (e.g. liquidity_tier != low by default)?
+- `fetch_failure_threshold`: **3**
+- `universe_id` alias: kept in this PR as a silent deprecated alias; **removed in a separate stacked PR**
+- Symbol pool floor filter: **none** — all symbols included regardless of liquidity tier; filter bar controls exclusion at screen time
