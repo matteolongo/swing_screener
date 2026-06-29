@@ -25,6 +25,40 @@ describe('transformCandlePattern', () => {
       context: 'at_pullback',
     });
   });
+
+  it('maps volume-pressure annotations when present', () => {
+    const result = transformCandlePattern({
+      bar_index: 9,
+      date: '2024-02-02',
+      name: 'shooting_star',
+      direction: 'bearish',
+      key_level: 12,
+      context: 'extended',
+      volume_ratio: 2.1,
+      bar_pressure: 0.12,
+      volume_confirmed: true,
+    });
+    expect(result.volumeRatio).toBe(2.1);
+    expect(result.barPressure).toBe(0.12);
+    expect(result.volumeConfirmed).toBe(true);
+  });
+
+  it('leaves volume-pressure annotations undefined when null/absent', () => {
+    const result = transformCandlePattern({
+      bar_index: 3,
+      date: '2024-03-03',
+      name: 'doji',
+      direction: 'neutral',
+      key_level: 10,
+      context: 'none',
+      volume_ratio: null,
+      bar_pressure: null,
+      volume_confirmed: null,
+    });
+    expect(result.volumeRatio).toBeUndefined();
+    expect(result.barPressure).toBeUndefined();
+    expect(result.volumeConfirmed).toBeUndefined();
+  });
 });
 
 describe('transformScreenerResponse', () => {

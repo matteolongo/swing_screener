@@ -33,6 +33,9 @@ export interface CandlePattern {
   direction: 'bullish' | 'bearish' | 'neutral';
   keyLevel: number;
   context: 'at_breakout' | 'at_pullback' | 'extended' | 'none';
+  volumeRatio?: number;
+  barPressure?: number;
+  volumeConfirmed?: boolean;
 }
 
 export interface CandlePatternRaw {
@@ -42,6 +45,9 @@ export interface CandlePatternRaw {
   direction: string;
   key_level: number;
   context: string;
+  volume_ratio?: number | null;
+  bar_pressure?: number | null;
+  volume_confirmed?: boolean | null;
 }
 
 export function transformCandlePattern(raw: CandlePatternRaw): CandlePattern {
@@ -52,6 +58,9 @@ export function transformCandlePattern(raw: CandlePatternRaw): CandlePattern {
     direction: raw.direction as CandlePattern['direction'],
     keyLevel: raw.key_level,
     context: raw.context as CandlePattern['context'],
+    volumeRatio: raw.volume_ratio ?? undefined,
+    barPressure: raw.bar_pressure ?? undefined,
+    volumeConfirmed: raw.volume_confirmed ?? undefined,
   };
 }
 

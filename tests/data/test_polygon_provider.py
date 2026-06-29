@@ -26,6 +26,8 @@ def _fake_bars(ticker: str, n: int = 5) -> list[dict]:
             "l": 99.0 + i,
             "c": 101.0 + i,
             "v": 1_000_000 + i,
+            "vw": 100.5 + i,
+            "n": 5_000 + i,
         }
         for i in range(n)
     ]
@@ -111,9 +113,40 @@ class TestPolygonProviderFetchOHLCV:
         assert isinstance(df.columns, pd.MultiIndex)
         assert df.columns.nlevels == 2
         fields = set(df.columns.get_level_values(0))
-        assert fields == {"Open", "High", "Low", "Close", "Volume"}
+        assert fields == {"Open", "High", "Low", "Close", "Volume", "VWAP", "TradeCount"}
         assert "AAPL" in df.columns.get_level_values(1)
         assert not df.empty
+
+    def test_captures_vwap_and_trade_count(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            polygon_module.PolygonProvider,
+            "_fetch_bars_from_api",
+            lambda self, ticker, start, end: _fake_bars(ticker, n=1),
+        )
+        p = PolygonProvider(api_key="test-key", cache_dir=str(tmp_path))
+        df = p.fetch_ohlcv(["AAPL"], "2025-01-01", "2025-01-02")
+
+        assert df[("VWAP", "AAPL")].iloc[0] == pytest.approx(100.5)
+        assert df[("TradeCount", "AAPL")].iloc[0] == pytest.approx(5_000)
+
+    def test_missing_vwap_trade_count_tolerated(self, monkeypatch, tmp_path):
+        # bars without vw/n (older payloads / partial data) must not raise
+        def _bars_no_extras(self, ticker, start, end):
+            bars = _fake_bars(ticker, n=1)
+            for b in bars:
+                b.pop("vw", None)
+                b.pop("n", None)
+            return bars
+
+        monkeypatch.setattr(
+            polygon_module.PolygonProvider, "_fetch_bars_from_api", _bars_no_extras
+        )
+        p = PolygonProvider(api_key="test-key", cache_dir=str(tmp_path))
+        df = p.fetch_ohlcv(["AAPL"], "2025-01-01", "2025-01-02")
+
+        assert ("VWAP", "AAPL") in df.columns
+        assert pd.isna(df[("VWAP", "AAPL")].iloc[0])
+        assert df[("Close", "AAPL")].iloc[0] == pytest.approx(101.0)
 
     def test_multiple_tickers_all_present(self, monkeypatch, tmp_path):
         monkeypatch.setattr(

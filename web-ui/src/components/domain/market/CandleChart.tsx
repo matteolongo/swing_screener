@@ -92,10 +92,11 @@ export function computeSMA(closes: number[], period: number): (number | null)[] 
   });
 }
 
-function patternLabel(p: CandlePattern): string {
+export function patternLabel(p: CandlePattern): string {
   const name = t(`chart.pattern.${p.name}` as MessageKey);
   const context = t(`chart.context.${p.context}` as MessageKey);
-  return context ? `${name} · ${context}` : name;
+  const base = context ? `${name} · ${context}` : name;
+  return p.volumeConfirmed === true ? `${base} · ${t('chart.volumeConfirmed')}` : base;
 }
 
 export function CandleChart({
