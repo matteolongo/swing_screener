@@ -137,11 +137,48 @@ When asked to document a module or write a module README:
 
 ## PR Delivery
 
-When finishing branch-based work, provide a GitHub compare link:
+### GitHub CLI constraint
+
+The `gh` CLI is authenticated as `mlwallapop` (Wallapop work account). It does **not** have write access to `matteolongo/swing_screener` PRs. Never use `gh pr create` or `gh pr edit` — both will return a permission error. PRs must always be created manually.
+
+### Compare URL format
+
 ```
 https://github.com/matteolongo/swing_screener/compare/<base>...<head>?expand=1
 ```
-Use the branch the work was created from as `<base>` (not `main` by default). If uncertain, state the assumed base explicitly.
+
+Use the branch the work was created from as `<base>`, not `main`, unless the work branches directly from `main`. If uncertain, state the assumed base explicitly.
+
+### prs.md output — required after every implementation
+
+Whenever implementation work is complete (or the user asks to implement something), write a file called `prs.md` to the session scratchpad directory and paste its contents in the response. Format:
+
+```
+<compare URL>
+
+<title>
+
+<description>
+
+---
+
+<compare URL for next PR if stacked>
+
+<title>
+
+<description>
+```
+
+No narrative around the block — just the file contents. Titles and descriptions follow the `matteo-tone-of-voice` skill (imperative title, freeform prose body, backticks on identifiers, no fluff openers).
+
+### Stacked PRs
+
+When a feature needs more than one branch (refactor that unblocks a feature, large feature split into layers, etc.), generate stacked PRs:
+
+- List them **in merge order**: first PR listed is the first to merge.
+- Each PR's `<base>` is the branch directly below it in the stack (only the bottom PR targets `main`).
+- Each description references the one below it: "Stack: merge #N first."
+- All PRs go in the same `prs.md`, separated by `---`.
 
 ## Feature Context
 
