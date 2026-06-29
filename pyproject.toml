@@ -32,7 +32,8 @@ dependencies = [
   "langchain-openai>=0.3.0",
   "openai>=1.66",
   "langgraph>=0.2.0",
-  "ta-lib (>=0.6.8,<0.7.0)"
+  "ta-lib (>=0.6.8,<0.7.0)",
+  "degiro-connector>=3.0.35"
 ]
 
 [project.optional-dependencies]
