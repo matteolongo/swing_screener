@@ -202,6 +202,18 @@ def get_datasources_service() -> DatasourcesService:
     return _datasources_service
 
 
+from api.services.cache_service import CacheService
+
+_cache_service: CacheService | None = None
+
+
+def get_cache_service() -> CacheService:
+    global _cache_service
+    if _cache_service is None:
+        _cache_service = CacheService()
+    return _cache_service
+
+
 SCREENER_HISTORY_FILE = DATA_DIR / "screener_history.json"
 
 def get_screener_history_repo() -> ScreenerHistoryRepository:
