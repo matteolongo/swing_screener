@@ -512,6 +512,49 @@ class ScreenerService:
                     f"{', '.join(missing)}"
                 )
 
+        self._record_fetch_health(ctx)
+
+    def _record_fetch_health(self, ctx: _RunContext) -> None:
+        """Update per-symbol fetch counters; enqueue symbols that cross the threshold.
+
+        Best-effort: a failure here never aborts the screen.
+        """
+        try:
+            from swing_screener.data.symbol_pool import load_symbol_pool_thresholds
+
+            _, _, threshold = load_symbol_pool_thresholds()
+            present: set[str] = set()
+            if (
+                ctx.ohlcv is not None
+                and not ctx.ohlcv.empty
+                and "Close" in ctx.ohlcv.columns.get_level_values(0)
+            ):
+                present = set(ctx.ohlcv["Close"].columns)
+            requested = list(ctx.screening_tickers)
+            ok = [t for t in requested if t in present]
+            failed = [t for t in requested if t not in present]
+            crossed = self._pool_repo.apply_fetch_results(
+                ok, failed, ctx.asof_str, threshold
+            )
+            if crossed:
+                entries = [
+                    {
+                        "symbol": c["symbol"],
+                        "exchange_mic": c.get("exchange_mic"),
+                        "failure_count": c.get("fetch_failure_count"),
+                        "first_failed_at": c.get("last_fetch_ok_at") or ctx.asof_str,
+                        "last_failed_at": ctx.asof_str,
+                        "reason": "OHLCV fetch returned no data",
+                    }
+                    for c in crossed
+                ]
+                self._review_repo.upsert(entries)
+        except (
+            Exception
+        ) as exc:  # noqa: BLE001 - health tracking must never break a screen
+            logger.warning("Fetch-health tracking failed: %s", exc)
+            ctx.warnings.append("Fetch-health tracking unavailable this run.")
+
     def _build_run_configs(self, ctx: _RunContext, requested_top: int) -> None:
         """Apply request filter overrides and build ranking/risk/report configs.
 

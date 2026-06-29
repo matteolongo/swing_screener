@@ -703,3 +703,68 @@ def test_universe_alias_maps_to_index_membership(tmp_path):
     svc._resolve_universe_and_window(ctx)
     assert "AAPL" in ctx.screening_tickers
     assert "XYZ" not in ctx.screening_tickers
+
+
+def test_record_fetch_health_enqueues_on_threshold(tmp_path):
+    import json
+
+    from api.services.screener_service import ScreenerService, _RunContext
+    from api.repositories.strategy_repo import StrategyRepository
+    from api.repositories.symbol_pool_repo import SymbolPoolRepository
+    from api.repositories.review_queue_repo import ReviewQueueRepository
+    from api.services.portfolio_service import PortfolioService
+    from api.models.screener import ScreenerRequest
+    from swing_screener.selection.eval_cache import EvalCache
+    from swing_screener.data.providers import MarketDataProvider
+
+    pool_path = tmp_path / "symbol_pool.json"
+    pool_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "asof": "2026-06-29",
+                "symbols": [
+                    {"symbol": "AAPL", "fetch_failure_count": 2},
+                    {"symbol": "MSFT", "fetch_failure_count": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path = tmp_path / "review_queue.json"
+
+    mock_strategy_repo = MagicMock(spec=StrategyRepository)
+    mock_portfolio = MagicMock(spec=PortfolioService)
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.get_provider_name.return_value = "mock"
+
+    svc = ScreenerService(
+        strategy_repo=mock_strategy_repo,
+        portfolio_service=mock_portfolio,
+        provider=mock_provider,
+        eval_cache=EvalCache(root=tmp_path / "eval_cache"),
+        pool_repo=SymbolPoolRepository(pool_path),
+        review_repo=ReviewQueueRepository(queue_path),
+    )
+
+    # OHLCV contains MSFT only → AAPL failed this run, crossing 2 -> 3 (threshold 3).
+    idx = pd.date_range("2024-01-01", periods=2, freq="B")
+    cols = pd.MultiIndex.from_tuples([("Close", "MSFT")], names=["field", "ticker"])
+    ohlcv = pd.DataFrame([[10.0], [10.5]], index=idx, columns=cols)
+
+    req = ScreenerRequest(top=5)
+    ctx = _RunContext(request=req, strategy={})
+    ctx.ohlcv = ohlcv
+    ctx.screening_tickers = ["AAPL", "MSFT"]
+    ctx.asof_str = "2026-06-30"
+
+    svc._record_fetch_health(ctx)
+
+    queue_symbols = [
+        e["symbol"] for e in ReviewQueueRepository(queue_path).list_entries()
+    ]
+    assert "AAPL" in queue_symbols
+    # MSFT fetched OK → counter reset + last_fetch_ok_at stamped.
+    pool = {s["symbol"]: s for s in SymbolPoolRepository(pool_path).list_symbols()}
+    assert pool["MSFT"]["fetch_failure_count"] == 0
+    assert pool["MSFT"]["last_fetch_ok_at"] == "2026-06-30"
