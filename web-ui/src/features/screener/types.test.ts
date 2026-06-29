@@ -35,11 +35,9 @@ describe('transformCandlePattern', () => {
       key_level: 12,
       context: 'extended',
       volume_ratio: 2.1,
-      bar_pressure: 0.12,
       volume_confirmed: true,
     });
     expect(result.volumeRatio).toBe(2.1);
-    expect(result.barPressure).toBe(0.12);
     expect(result.volumeConfirmed).toBe(true);
   });
 
@@ -52,11 +50,9 @@ describe('transformCandlePattern', () => {
       key_level: 10,
       context: 'none',
       volume_ratio: null,
-      bar_pressure: null,
       volume_confirmed: null,
     });
     expect(result.volumeRatio).toBeUndefined();
-    expect(result.barPressure).toBeUndefined();
     expect(result.volumeConfirmed).toBeUndefined();
   });
 });

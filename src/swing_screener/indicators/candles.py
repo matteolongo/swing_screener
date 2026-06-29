@@ -212,14 +212,6 @@ def detect_patterns(
             date = str(frame.index[i].date())
             ctx = latest_ctx if i == n - 1 else "none"
 
-            # Volume-pressure for this bar (shared across patterns found on it).
-            bar_pressure = intrabar_pressure(row.h, row.l, row.c)
-            vol_ratio = (
-                trailing_volume_ratio(vol_aligned, i, 20)  # 20-bar trailing avg, matches setup_quality
-                if vol_aligned is not None
-                else None
-            )
-
             found: list[tuple[str, str, float]] = []  # (name, direction, key_level)
             if _is_hammer(m, cfg):
                 found.append(("hammer", "bullish", m.low))
@@ -232,7 +224,7 @@ def detect_patterns(
             if _is_bearish_engulfing(pm, m):
                 found.append(("bearish_engulfing", "bearish", m.h))
             if _is_inside_bar(pm, m):
-                found.append(("inside_bar", "bullish", m.low))
+                found.append(("inside_bar", "neutral", m.low))
             if _is_outside_bar(pm, m):
                 direction = "bullish" if m.c >= m.o else "bearish"
                 found.append(
@@ -242,6 +234,17 @@ def detect_patterns(
                         m.low if direction == "bullish" else m.h,
                     )
                 )
+
+            if not found:
+                continue
+
+            # Volume-pressure computed only when a pattern fired on this bar.
+            bar_pressure = intrabar_pressure(row.h, row.l, row.c)
+            vol_ratio = (
+                trailing_volume_ratio(vol_aligned, i, 20)
+                if vol_aligned is not None
+                else None
+            )
 
             for name, direction, key_level in found:
                 patterns.append(

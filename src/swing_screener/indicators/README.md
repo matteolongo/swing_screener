@@ -36,7 +36,6 @@ Deterministic proxies for where a bar closes within its range (a stand-in for
 buy vs sell balance; true delta volume needs tick/bid-ask data we don't have):
 
 - `intrabar_pressure(high, low, close) -> float` — close-location in `[0,1]`; `0.5` for a zero-range bar.
-- `buy_sell_volume(high, low, close, volume) -> (buy, sell)` — volume split by pressure.
 - `windowed_buy_pressure_ratio(high, low, close, volume, n=20) -> float` — volume-weighted mean close-location over the last `n` bars; `NaN` when insufficient. Feeds `setup_quality.buy_pressure_ratio`.
 - `trailing_volume_ratio(volume, idx, window=20) -> float | None` — bar volume ÷ trailing average.
 - `confirm_pattern_volume(direction, bar_pressure, volume_ratio, threshold) -> bool | None` — whether a candle pattern fired on elevated, direction-aligned volume. Feeds `candles.CandlePattern.volume_confirmed`.
