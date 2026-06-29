@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from swing_screener.indicators.candles import (
     CandleConfig,
@@ -140,6 +141,54 @@ def test_detect_patterns_handles_missing_ohlc():
     )
     result = detect_patterns(df)
     assert result == {} or result == {"AAA": []}
+
+
+def test_pattern_volume_confirmed_on_high_volume_shooting_star():
+    # 59 quiet bars, then a shooting star (long upper wick, close near low) on 2x volume
+    rows = [(10, 10.1, 9.9, 10.0, 1000)] * 59
+    rows.append((10.0, 12.0, 9.9, 10.05, 2000))  # shooting star, close near low, volume spike
+    out = detect_patterns(_ohlcv(rows), lookback=5)
+    star = next(p for p in out["AAA"] if p.name == "shooting_star")
+    assert star.direction == "bearish"
+    assert star.volume_ratio == pytest.approx(2.0)
+    assert star.bar_pressure is not None and star.bar_pressure < 0.5  # closed near low
+    assert star.volume_confirmed is True
+
+
+def test_pattern_not_volume_confirmed_on_quiet_volume():
+    rows = [(10, 10.1, 9.9, 10.0, 1000)] * 59
+    rows.append((10.0, 12.0, 9.9, 10.05, 1000))  # same shooting star, no volume spike
+    out = detect_patterns(_ohlcv(rows), lookback=5)
+    star = next(p for p in out["AAA"] if p.name == "shooting_star")
+    assert star.volume_ratio == pytest.approx(1.0)
+    assert star.volume_confirmed is False
+
+
+def test_pattern_volume_confirmed_none_for_doji():
+    rows = [(10, 10.1, 9.9, 10.0, 1000)] * 59
+    rows.append((10.0, 10.5, 9.5, 10.01, 3000))  # doji on high volume
+    out = detect_patterns(_ohlcv(rows), lookback=5)
+    doji = next(p for p in out["AAA"] if p.name == "doji")
+    assert doji.direction == "neutral"
+    assert doji.volume_confirmed is None  # neutral patterns are not confirmable
+
+
+def test_pattern_volume_fields_none_when_volume_absent():
+    # build OHLC-only frame (no Volume field)
+    idx = pd.date_range("2024-01-01", periods=60, freq="B")
+    rows = [(10, 10.1, 9.9, 10.0)] * 59 + [(10.0, 10.2, 8.0, 10.1)]
+    data = {}
+    for fi, fname in enumerate(["Open", "High", "Low", "Close"]):
+        data[(fname, "AAA")] = [r[fi] for r in rows]
+    cols = pd.MultiIndex.from_tuples(list(data.keys()), names=["field", "ticker"])
+    df = pd.DataFrame({k: v for k, v in data.items()}, index=idx).reindex(columns=cols)
+
+    out = detect_patterns(df, lookback=5)
+    hammer = next(p for p in out["AAA"] if p.name == "hammer")
+    assert hammer.volume_ratio is None
+    assert hammer.volume_confirmed is None
+    # pressure is OHLC-derived, so it is still populated
+    assert hammer.bar_pressure is not None
 
 
 def test_detect_patterns_filters_requested_tickers():

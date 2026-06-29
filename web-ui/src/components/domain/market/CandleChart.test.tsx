@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
-import { CandleChart, rebaseBenchmark, computeSMA } from './CandleChart';
-import type { PriceHistoryPoint } from '@/features/screener/types';
+import { CandleChart, rebaseBenchmark, computeSMA, patternLabel } from './CandleChart';
+import type { CandlePattern, PriceHistoryPoint } from '@/features/screener/types';
+import { t } from '@/i18n/t';
 
 vi.mock('lightweight-charts');
 
@@ -46,6 +47,28 @@ describe('CandleChart', () => {
   it('hides benchmark legend when no benchmark label', () => {
     renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={[]} />);
     expect(screen.queryByText('SPY')).not.toBeInTheDocument();
+  });
+});
+
+describe('patternLabel', () => {
+  const base: CandlePattern = {
+    barIndex: 9,
+    date: '2024-02-02',
+    name: 'shooting_star',
+    direction: 'bearish',
+    keyLevel: 12,
+    context: 'at_breakout',
+  };
+
+  it('appends the volume-confirmed badge when volumeConfirmed is true', () => {
+    const label = patternLabel({ ...base, volumeConfirmed: true });
+    expect(label).toContain(t('chart.volumeConfirmed'));
+    expect(label).toContain(t('chart.pattern.shooting_star'));
+  });
+
+  it('omits the badge when volume is not confirmed', () => {
+    expect(patternLabel({ ...base, volumeConfirmed: false })).not.toContain(t('chart.volumeConfirmed'));
+    expect(patternLabel({ ...base })).not.toContain(t('chart.volumeConfirmed'));
   });
 });
 

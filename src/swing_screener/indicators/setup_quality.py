@@ -10,6 +10,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from swing_screener.indicators.volume_pressure import windowed_buy_pressure_ratio
+
 
 def _get_field(ohlcv: pd.DataFrame, field: str) -> pd.DataFrame | None:
     """Return the (date × ticker) sub-DataFrame for *field*, or None if absent."""
@@ -144,6 +146,12 @@ def compute_setup_quality(
                 if avg_vol_20 > 0:
                     row["volume_ratio"] = today_vol / avg_vol_20
                 row["avg_daily_volume_eur"] = last_close * avg_vol_20
+
+            # ── buy_pressure_ratio: volume-weighted close-location over 20 bars ──
+            # >0.5 = recent range accumulated (buy-dominated), <0.5 = distributed.
+            bpr = windowed_buy_pressure_ratio(h, l, c, vol_m[ticker], n=20)
+            if pd.notna(bpr):
+                row["buy_pressure_ratio"] = bpr
 
         rows.append(row)
 

@@ -68,17 +68,25 @@ class PolygonProvider(MarketDataProvider):
     ) -> pd.DataFrame:
         if not bars:
             cols = pd.MultiIndex.from_tuples(
-                [(f, ticker) for f in ("Open", "High", "Low", "Close", "Volume")]
+                [
+                    (f, ticker)
+                    for f in ("Open", "High", "Low", "Close", "Volume", "VWAP", "TradeCount")
+                ]
             )
             return pd.DataFrame(columns=cols)
 
         ts = pd.to_datetime([b["t"] for b in bars], unit="ms", utc=True).tz_convert(None)
+        # `vw` (volume-weighted average price) and `n` (trade count) are returned
+        # by Polygon in every daily bar; captured here for observability. They are
+        # provider-specific (yfinance has no equivalent) and consumed by nothing yet.
         data = {
             ("Open", ticker): [b["o"] for b in bars],
             ("High", ticker): [b["h"] for b in bars],
             ("Low", ticker): [b["l"] for b in bars],
             ("Close", ticker): [b["c"] for b in bars],
             ("Volume", ticker): [b["v"] for b in bars],
+            ("VWAP", ticker): [b.get("vw") for b in bars],
+            ("TradeCount", ticker): [b.get("n") for b in bars],
         }
         df = pd.DataFrame(data, index=ts)
         df.columns = pd.MultiIndex.from_tuples(df.columns)

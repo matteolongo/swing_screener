@@ -12,6 +12,11 @@ from typing import Iterable
 
 import pandas as pd
 
+from swing_screener.indicators.volume_pressure import (
+    confirm_pattern_volume,
+    intrabar_pressure,
+    trailing_volume_ratio,
+)
 from swing_screener.selection.entries import breakout_signal, pullback_reclaim_signal
 from swing_screener.settings.manager import get_settings_manager
 
@@ -49,6 +54,11 @@ class CandleConfig:
     )
     pullback_ma: int = field(
         default_factory=lambda: int(_candle_defaults().get("pullback_ma", 20))
+    )
+    volume_confirm_ratio: float = field(
+        default_factory=lambda: float(
+            _candle_defaults().get("volume_confirm_ratio", 1.5)
+        )
     )
 
 
@@ -135,6 +145,10 @@ class CandlePattern:
     direction: str  # bullish | bearish | neutral
     key_level: float
     context: str  # at_breakout | at_pullback | extended | none
+    # Volume-pressure annotations (None when volume data is absent/insufficient).
+    volume_ratio: float | None = None  # bar volume ÷ trailing 20-bar average
+    bar_pressure: float | None = None  # intrabar close-location, 0..1
+    volume_confirmed: bool | None = None  # elevated + direction-aligned volume
 
 
 def _field(ohlcv: pd.DataFrame, name: str) -> pd.DataFrame | None:
@@ -159,6 +173,7 @@ def detect_patterns(
     o_m, h_m, low_m, c_m = (_field(ohlcv, f) for f in ("Open", "High", "Low", "Close"))
     if any(x is None for x in (o_m, h_m, low_m, c_m)) or c_m.empty:
         return {}
+    vol_m = _field(ohlcv, "Volume")
 
     lb = lookback if lookback is not None else cfg.lookback
     all_tickers = list(c_m.columns)
@@ -178,6 +193,13 @@ def detect_patterns(
             out[tk] = []
             continue
 
+        # Volume aligned to the OHLC bars (NaN where absent); None when no volume field.
+        vol_aligned = (
+            vol_m[tk].reindex(frame.index).to_numpy(dtype=float)
+            if vol_m is not None and tk in vol_m.columns
+            else None
+        )
+
         latest_ctx = _context_for_latest(c, cfg)
         n = len(frame)
         start = max(1, n - lb)
@@ -189,6 +211,14 @@ def detect_patterns(
             pm = _bar_metrics(prev.o, prev.h, prev.l, prev.c)
             date = str(frame.index[i].date())
             ctx = latest_ctx if i == n - 1 else "none"
+
+            # Volume-pressure for this bar (shared across patterns found on it).
+            bar_pressure = intrabar_pressure(row.h, row.l, row.c)
+            vol_ratio = (
+                trailing_volume_ratio(vol_aligned, i, 20)  # 20-bar trailing avg, matches setup_quality
+                if vol_aligned is not None
+                else None
+            )
 
             found: list[tuple[str, str, float]] = []  # (name, direction, key_level)
             if _is_hammer(m, cfg):
@@ -223,6 +253,11 @@ def detect_patterns(
                         direction=direction,
                         key_level=float(key_level),
                         context=ctx,
+                        volume_ratio=vol_ratio,
+                        bar_pressure=bar_pressure,
+                        volume_confirmed=confirm_pattern_volume(
+                            direction, bar_pressure, vol_ratio, cfg.volume_confirm_ratio
+                        ),
                     )
                 )
         out[tk] = patterns

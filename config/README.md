@@ -18,7 +18,9 @@ Candlestick pattern + structural-stop settings live under `low_level`:
 - `low_level.candles` — thresholds for the deterministic candlestick engine
   (`indicators/candles.py`): `lookback`, `doji_body_ratio`,
   `hammer_lower_wick_mult`, `hammer_max_opposite_wick_ratio`,
-  `extension_threshold_pct`, `breakout_lookback`, `pullback_ma`.
+  `extension_threshold_pct`, `breakout_lookback`, `pullback_ma`,
+  `volume_confirm_ratio` (min bar-volume multiple of the trailing 20-bar average
+  for a pattern to be flagged `volume_confirmed`; default `1.5`).
 - `low_level.execution.pattern_stop_enabled` / `pattern_stop_atr_buffer` —
   toggle and ATR buffer for the structural stop derived from a bullish pattern on
   the latest bar (`execution/guidance.apply_pattern_stop`). When available it

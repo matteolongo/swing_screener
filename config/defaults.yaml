@@ -395,6 +395,10 @@ low_level:
     extension_threshold_pct: 0.10
     breakout_lookback: 50
     pullback_ma: 20
+    # A candle pattern is flagged volume_confirmed when its bar volume is at least
+    # this multiple of the trailing 20-bar average AND intrabar pressure agrees with
+    # the pattern direction. Matches breakout_volume_confirmation's 1.5x convention.
+    volume_confirm_ratio: 1.5
   # ---------------------------------------------------------------------------
   # Tier 1 free-first data provider stack
   # ---------------------------------------------------------------------------
