@@ -25,6 +25,9 @@ class CandlePatternOut(BaseModel):
     direction: str
     key_level: float
     context: str
+    volume_ratio: Optional[float] = None
+    bar_pressure: Optional[float] = None
+    volume_confirmed: Optional[bool] = None
 
 
 SameSymbolMode = Literal["NEW_ENTRY", "ADD_ON", "MANAGE_ONLY", "RE_ENTRY", "SCALE_BACK"]

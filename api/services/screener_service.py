@@ -642,6 +642,9 @@ class ScreenerService:
                     direction=p.direction,
                     key_level=p.key_level,
                     context=p.context,
+                    volume_ratio=p.volume_ratio,
+                    bar_pressure=p.bar_pressure,
+                    volume_confirmed=p.volume_confirmed,
                 )
                 for p in patterns_map.get(ticker_str, [])
             ]

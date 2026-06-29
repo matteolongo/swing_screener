@@ -111,6 +111,47 @@ def test_missing_volume_produces_nan_no_crash() -> None:
     assert "breakout_volume_confirmation" not in result.columns or result["breakout_volume_confirmation"].isna().all()
 
 
+# ── buy_pressure_ratio column ────────────────────────────────────────────────
+
+def test_buy_pressure_ratio_high_when_closes_near_high() -> None:
+    """A base that consistently closes near the high on solid volume should
+    report buy_pressure_ratio well above 0.5 (accumulation)."""
+    n = 60
+    close = [100.0] * n
+    high = [101.0] * n
+    low = [99.0] * n
+    # every bar closes at its high → strong buy pressure
+    close = [101.0] * n
+    volume = [1_000_000.0] * n
+    ohlcv = _make_ohlcv(close, high=high, low=low, volume=volume, ticker="ACC")
+
+    result = compute_setup_quality(ohlcv, ["ACC"])
+    bpr = result.loc["ACC", "buy_pressure_ratio"]
+    assert not math.isnan(bpr)
+    assert bpr > 0.9
+
+
+def test_buy_pressure_ratio_low_when_closes_near_low() -> None:
+    n = 60
+    high = [101.0] * n
+    low = [99.0] * n
+    close = [99.0] * n  # every bar closes at its low → distribution
+    volume = [1_000_000.0] * n
+    ohlcv = _make_ohlcv(close, high=high, low=low, volume=volume, ticker="DIST")
+
+    result = compute_setup_quality(ohlcv, ["DIST"])
+    bpr = result.loc["DIST", "buy_pressure_ratio"]
+    assert not math.isnan(bpr)
+    assert bpr < 0.1
+
+
+def test_buy_pressure_ratio_absent_without_volume() -> None:
+    close = list(np.linspace(100.0, 110.0, 60))
+    ohlcv = _make_ohlcv(close, ticker="NOVOL2")  # no volume
+    result = compute_setup_quality(ohlcv, ["NOVOL2"])
+    assert "buy_pressure_ratio" not in result.columns or result["buy_pressure_ratio"].isna().all()
+
+
 # ── test 3: new ranking columns optional and backward-compatible ─────────────
 
 def test_ranking_without_new_columns_unchanged() -> None:
