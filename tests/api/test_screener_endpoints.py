@@ -581,8 +581,8 @@ def test_screener_exchange_filter_reduces_working_list(monkeypatch):
     captured: dict[str, list[str]] = {}
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_fetch_ohlcv(tickers, start_date=None, end_date=None):
-        del start_date, end_date
+    def fake_fetch_ohlcv(tickers, start_date=None, end_date=None, force_refresh=False):
+        del start_date, end_date, force_refresh
         captured["tickers"] = list(tickers)
         return ohlcv
 
