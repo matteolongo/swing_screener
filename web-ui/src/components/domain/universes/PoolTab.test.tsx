@@ -1,11 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 
 import { server } from '@/test/mocks/server';
 import { renderWithProviders, screen, waitFor } from '@/test/utils';
+import { t } from '@/i18n/t';
 import PoolTab from './PoolTab';
 
+const tabName = (key: Parameters<typeof t>[0], count: number) => `${t(key)} (${count})`;
+
 describe('PoolTab', () => {
+  beforeEach(() => {
+    // The enrich hook persists its job id; isolate tests from each other.
+    localStorage.clear();
+  });
+
   it('rebuilds the pool and renders the structural diff', async () => {
     server.use(
       http.post('*/api/pool/rebuild', () =>
@@ -27,9 +35,11 @@ describe('PoolTab', () => {
     );
 
     const { user } = renderWithProviders(<PoolTab />);
-    await user.click(screen.getByRole('button', { name: 'Rebuild' }));
+    await user.click(screen.getByRole('button', { name: t('poolAdmin.rebuild.button') }));
 
-    await waitFor(() => expect(screen.getByText('+1 added')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(t('poolAdmin.rebuild.added', { count: 1 }))).toBeInTheDocument(),
+    );
     expect(screen.getByText('NVDA')).toBeInTheDocument();
   });
 
@@ -51,12 +61,13 @@ describe('PoolTab', () => {
           total_additions: 1,
           total_removals: 0,
           total_changed: 1,
+          skipped_auto: 0,
         }),
       ),
     );
 
     const { user } = renderWithProviders(<PoolTab />);
-    await user.click(screen.getByRole('button', { name: 'Refresh All' }));
+    await user.click(screen.getByRole('button', { name: t('poolAdmin.refreshAll.button') }));
 
     await waitFor(() => expect(screen.getByText('us_sp500')).toBeInTheDocument());
     expect(screen.getByText('SMCI')).toBeInTheDocument();
@@ -81,9 +92,11 @@ describe('PoolTab', () => {
     );
 
     const { user } = renderWithProviders(<PoolTab />);
-    await user.click(screen.getByRole('button', { name: 'Enrich' }));
+    await user.click(screen.getByRole('button', { name: t('poolAdmin.enrich.button') }));
 
     await waitFor(() => expect(screen.getByText('TSLA')).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'Failed (1)' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: tabName('poolAdmin.diff.failed', 1) }),
+    ).toBeInTheDocument();
   });
 });

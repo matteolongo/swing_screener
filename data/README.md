@@ -127,9 +127,12 @@ The pool is a committed build artifact. The **Universes page → Pool tab** driv
 the full loop from the UI: *Refresh All Universes* (`POST /api/universes/refresh-all`),
 *Rebuild Pool Structure* (`POST /api/pool/rebuild`, the base build below), and
 *Enrich Taxonomy* (`POST /api/pool/enrich`, the enrichment step below). The rebuild
-preserves existing enrichment for surviving symbols. The one-off snippets below
-remain valid for headless/CI regeneration from the repo root (use the project
-venv: `.venv/bin/python`); commit the resulting `symbol_pool.json`.
+preserves existing enrichment for surviving symbols, and both UI operations stamp
+the pool's `asof` to the run date (it tracks the last build/enrich write). Pool
+writes are serialized: a rebuild or enrich started while another is running gets
+`409`. The one-off snippets below remain valid for headless/CI regeneration from
+the repo root (use the project venv: `.venv/bin/python`); commit the resulting
+`symbol_pool.json`.
 
 **1. Base build (network-free).** Merges the 25 universe snapshots with the
 instrument master. Populates everything except the yfinance-derived fields.
