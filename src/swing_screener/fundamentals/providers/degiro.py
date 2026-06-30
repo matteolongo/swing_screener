@@ -295,10 +295,12 @@ class DegiroFundamentalsProvider:
         most_recent_quarter = la_annual[:10] if la_annual else None
 
         # Company profile: name, sector, currency
+        # Actual shape: data.contacts.NAME, data.sector (str), data.currency (str)
         profile_data = profile_resp.get("data", {}) or {}
-        company_name: Optional[str] = profile_data.get("businessSummary", {}).get("companyName") or None
-        sector: Optional[str] = profile_data.get("businessSummary", {}).get("sector") or None
-        currency: Optional[str] = profile_data.get("companyHeader", {}).get("currency") or None
+        contacts = profile_data.get("contacts") or {}
+        company_name: Optional[str] = (contacts.get("NAME") if isinstance(contacts, dict) else None) or None
+        sector: Optional[str] = profile_data.get("sector") or None
+        currency: Optional[str] = profile_data.get("currency") or None
 
         # Data region from ISIN country prefix
         isin_country = isin[:2].upper() if len(isin) >= 2 else ""
