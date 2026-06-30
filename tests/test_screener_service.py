@@ -575,14 +575,17 @@ class _FakePoolRepo:
 
 
 class _FakeReviewRepo:
-    def __init__(self, entries=None):
-        self._entries = list(entries or [])
+    def __init__(self, queued=None):
+        # `queued` is a list of {"symbol": ...} dicts or plain symbol strings.
+        self._queued = {
+            (q["symbol"] if isinstance(q, dict) else q).upper() for q in (queued or [])
+        }
 
-    def list_entries(self):
-        return self._entries
+    def queued_symbols(self, threshold):
+        return set(self._queued)
 
-    def upsert(self, entries):
-        self._entries.extend(entries)
+    def apply_fetch_results(self, ok, failed, asof, threshold):
+        return None
 
 
 def _pool_symbol(symbol, **kw):
@@ -723,28 +726,31 @@ def test_record_fetch_health_enqueues_on_threshold(tmp_path):
             {
                 "schema_version": 1,
                 "asof": "2026-06-29",
-                "symbols": [
-                    {"symbol": "AAPL", "fetch_failure_count": 2},
-                    {"symbol": "MSFT", "fetch_failure_count": 0},
-                ],
+                "symbols": [{"symbol": "AAPL"}, {"symbol": "MSFT"}],
             }
         ),
         encoding="utf-8",
     )
+    # Review queue: AAPL already failed twice (count 2, below threshold 3).
     queue_path = tmp_path / "review_queue.json"
+    queue_path.write_text(
+        json.dumps({"symbols": {"AAPL": {"symbol": "AAPL", "fetch_failure_count": 2}}}),
+        encoding="utf-8",
+    )
 
     mock_strategy_repo = MagicMock(spec=StrategyRepository)
     mock_portfolio = MagicMock(spec=PortfolioService)
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.get_provider_name.return_value = "mock"
 
+    review_repo = ReviewQueueRepository(queue_path)
     svc = ScreenerService(
         strategy_repo=mock_strategy_repo,
         portfolio_service=mock_portfolio,
         provider=mock_provider,
         eval_cache=EvalCache(root=tmp_path / "eval_cache"),
         pool_repo=SymbolPoolRepository(pool_path),
-        review_repo=ReviewQueueRepository(queue_path),
+        review_repo=review_repo,
     )
 
     # OHLCV contains MSFT only → AAPL failed this run, crossing 2 -> 3 (threshold 3).
@@ -760,11 +766,7 @@ def test_record_fetch_health_enqueues_on_threshold(tmp_path):
 
     svc._record_fetch_health(ctx)
 
-    queue_symbols = [
-        e["symbol"] for e in ReviewQueueRepository(queue_path).list_entries()
-    ]
-    assert "AAPL" in queue_symbols
-    # MSFT fetched OK → counter reset + last_fetch_ok_at stamped.
-    pool = {s["symbol"]: s for s in SymbolPoolRepository(pool_path).list_symbols()}
-    assert pool["MSFT"]["fetch_failure_count"] == 0
-    assert pool["MSFT"]["last_fetch_ok_at"] == "2026-06-30"
+    assert review_repo.queued_symbols(3) == {"AAPL"}
+    # The committed pool file is never mutated by a screener run.
+    pool_data = json.loads(pool_path.read_text(encoding="utf-8"))
+    assert all("fetch_failure_count" not in s for s in pool_data["symbols"])

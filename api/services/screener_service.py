@@ -307,7 +307,19 @@ class ScreenerService:
             if request.universe not in existing:
                 existing.append(request.universe)
             base = base.model_copy(update={"index_memberships": existing})
-        return base.to_spec()
+        spec = base.to_spec()
+        # Backward-compat: legacy top-level filter fields map onto unset dimensions
+        # (the web UI sends these until the taxonomy filter bar lands).
+        overrides: dict = {}
+        if spec.currency is None and request.currencies:
+            overrides["currency"] = tuple(request.currencies)
+        if spec.exchange_mics is None and request.exchange_mics:
+            overrides["exchange_mics"] = tuple(request.exchange_mics)
+        if request.instrument_types:
+            overrides["instrument_type"] = tuple(request.instrument_types)
+        if overrides:
+            spec = replace(spec, **overrides)
+        return spec
 
     def _resolve_strategy(
         self, strategy_id: Optional[str], strategy_override: Optional[dict] = None
@@ -352,15 +364,19 @@ class ScreenerService:
                     )
                     ctx.benchmark = uni_benchmark
 
+            from swing_screener.data.symbol_pool import load_symbol_pool_thresholds
+
+            _, _, fail_threshold = load_symbol_pool_thresholds()
             spec = self._build_taxonomy_spec(request)
             pool = deserialize_pool({"symbols": self._pool_repo.list_symbols()})
-            queued = {
-                str(e.get("symbol", "")).upper()
-                for e in self._review_repo.list_entries()
-            }
+            queued = self._review_repo.queued_symbols(fail_threshold)
             pool = [s for s in pool if s.symbol not in queued]
             pool = [s for s in pool if self._provider_available(s.primary_provider)]
+            pool_size = len(pool)
             filtered = filter_pool_by_taxonomy(pool, spec)
+            # Legacy include_otc=False drops OTC listings (XOTC).
+            if request.include_otc is False:
+                filtered = [s for s in filtered if (s.exchange_mic or "") != "XOTC"]
             universe_cap = max(500, requested_top * 2)
             symbols = [s.symbol for s in filtered]
             if len(symbols) > universe_cap:
@@ -369,6 +385,11 @@ class ScreenerService:
                     f"capped to {universe_cap}."
                 )
                 symbols = symbols[:universe_cap]
+            if len(symbols) < pool_size:
+                ctx.warnings.append(
+                    f"Taxonomy filters reduced the working list from {pool_size} "
+                    f"to {len(symbols)} tickers."
+                )
             if ctx.benchmark not in symbols:
                 symbols.append(ctx.benchmark)
             ctx.tickers = symbols
@@ -533,22 +554,7 @@ class ScreenerService:
             requested = list(ctx.screening_tickers)
             ok = [t for t in requested if t in present]
             failed = [t for t in requested if t not in present]
-            crossed = self._pool_repo.apply_fetch_results(
-                ok, failed, ctx.asof_str, threshold
-            )
-            if crossed:
-                entries = [
-                    {
-                        "symbol": c["symbol"],
-                        "exchange_mic": c.get("exchange_mic"),
-                        "failure_count": c.get("fetch_failure_count"),
-                        "first_failed_at": c.get("last_fetch_ok_at") or ctx.asof_str,
-                        "last_failed_at": ctx.asof_str,
-                        "reason": "OHLCV fetch returned no data",
-                    }
-                    for c in crossed
-                ]
-                self._review_repo.upsert(entries)
+            self._review_repo.apply_fetch_results(ok, failed, ctx.asof_str, threshold)
         except (
             Exception
         ) as exc:  # noqa: BLE001 - health tracking must never break a screen

@@ -222,6 +222,12 @@ def test_filter_index_membership_matches_any():
     assert {s.symbol for s in out} == {"A"}
 
 
+def test_filter_coarse_instrument_type():
+    pool = [_mk("A", instrument_type="equity"), _mk("B", instrument_type="etf")]
+    out = filter_pool_by_taxonomy(pool, TaxonomyFilterSpec(instrument_type=("equity",)))
+    assert {s.symbol for s in out} == {"A"}
+
+
 def test_filter_provider_matches_available():
     pool = [
         _mk("A", available_providers=["yfinance", "degiro"]),

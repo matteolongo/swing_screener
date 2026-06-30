@@ -1,4 +1,10 @@
-"""Review queue JSON repository."""
+"""Review queue / fetch-health JSON repository.
+
+This is the single runtime store for per-symbol OHLCV fetch health. The
+committed ``symbol_pool.json`` is immutable; all mutable counters live here so
+the pool file never drifts from its built state. Symbols whose consecutive
+failure count reaches the threshold are the "review queue" shown in the UI.
+"""
 
 from __future__ import annotations
 
@@ -18,37 +24,71 @@ class ReviewQueueRepository:
 
     def read(self) -> dict:
         if not self.path.exists():
-            return {"entries": []}
-        return locked_read_json(self.path)
+            return {"symbols": {}}
+        data = locked_read_json(self.path)
+        data.setdefault("symbols", {})
+        return data
 
     def write(self, data: dict) -> None:
         locked_write_json(self.path, data)
 
-    def list_entries(self) -> list[dict]:
-        return self.read().get("entries", [])
-
-    def upsert(self, entries: list[dict]) -> None:
-        incoming = {str(e["symbol"]).upper(): e for e in entries}
+    def apply_fetch_results(
+        self, ok: list[str], failed: list[str], asof: str, threshold: int
+    ) -> None:
+        """Reset counters for fetched symbols; increment for failed ones."""
+        ok_set = {s.upper() for s in ok}
+        failed_set = {s.upper() for s in failed}
 
         def _modify(data: dict) -> dict:
-            data.setdefault("entries", [])
-            by_symbol = {str(e["symbol"]).upper(): e for e in data["entries"]}
-            by_symbol.update(incoming)
-            data["entries"] = list(by_symbol.values())
+            symbols = data.setdefault("symbols", {})
+            for name in ok_set:
+                entry = symbols.get(name)
+                if entry is not None:
+                    entry["fetch_failure_count"] = 0
+                    entry["last_fetch_ok_at"] = asof
+            for name in failed_set:
+                entry = symbols.get(name)
+                if entry is None:
+                    entry = {
+                        "symbol": name,
+                        "fetch_failure_count": 0,
+                        "first_failed_at": asof,
+                        "last_fetch_ok_at": None,
+                    }
+                    symbols[name] = entry
+                entry["fetch_failure_count"] = (
+                    int(entry.get("fetch_failure_count") or 0) + 1
+                )
+                entry.setdefault("first_failed_at", asof)
+                entry["last_failed_at"] = asof
+                entry["reason"] = "OHLCV fetch returned no data"
             return data
 
         self._ensure_file()
         locked_read_modify_write(self.path, _modify)
+
+    def queued_symbols(self, threshold: int) -> set[str]:
+        return {
+            name
+            for name, e in self.read().get("symbols", {}).items()
+            if int(e.get("fetch_failure_count") or 0) >= threshold
+        }
+
+    def list_entries(self, threshold: int) -> list[dict]:
+        """Threshold-crossed entries shown in the review queue UI."""
+        return [
+            e
+            for e in self.read().get("symbols", {}).values()
+            if int(e.get("fetch_failure_count") or 0) >= threshold
+        ]
 
     def remove(self, symbol: str) -> bool:
         target = symbol.upper()
         removed = {"flag": False}
 
         def _modify(data: dict) -> dict:
-            entries = data.get("entries", [])
-            kept = [e for e in entries if str(e["symbol"]).upper() != target]
-            removed["flag"] = len(kept) != len(entries)
-            data["entries"] = kept
+            symbols = data.setdefault("symbols", {})
+            removed["flag"] = symbols.pop(target, None) is not None
             return data
 
         self._ensure_file()
@@ -60,14 +100,10 @@ class ReviewQueueRepository:
         popped: dict = {}
 
         def _modify(data: dict) -> dict:
-            entries = data.get("entries", [])
-            kept = []
-            for e in entries:
-                if str(e["symbol"]).upper() == target and not popped:
-                    popped.update(e)
-                else:
-                    kept.append(e)
-            data["entries"] = kept
+            symbols = data.setdefault("symbols", {})
+            entry = symbols.pop(target, None)
+            if entry is not None:
+                popped.update(entry)
             return data
 
         self._ensure_file()
@@ -77,4 +113,4 @@ class ReviewQueueRepository:
     def _ensure_file(self) -> None:
         if not self.path.exists():
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.write({"entries": []})
+            self.write({"symbols": {}})

@@ -108,7 +108,9 @@ def _stub_earnings_proximity(monkeypatch):
     monkeypatch.setattr(
         screener_service,
         "fetch_next_earnings_days",
-        lambda tickers, finnhub_api_key, asof_date, **kwargs: {ticker: None for ticker in tickers},
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {
+            ticker: None for ticker in tickers
+        },
     )
 
 
@@ -116,7 +118,9 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = [f"T{i:03d}" for i in range(150)]
         data = {
             "atr14": [1.2] * len(idx),
@@ -134,12 +138,18 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
         return pd.DataFrame(data, index=idx)
 
     # Mock the provider factory to return our mock provider
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 200})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 200}
+    )
     assert res.status_code == 200
     data = res.json()
     assert len(data["candidates"]) == 150
@@ -154,12 +164,16 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
 def test_screener_empty_ohlcv_returns_404(monkeypatch):
     empty_df = pd.DataFrame()
     mock_provider = _create_mock_provider(empty_df)
-    
+
     # Mock the provider factory to return our mock provider
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 200})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 200}
+    )
     assert res.status_code == 404
 
 
@@ -167,7 +181,9 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["AAA"]
         data = {
             "atr14": [1.2],
@@ -189,17 +205,25 @@ def test_screener_recommendation_payload_shape(monkeypatch):
             "realized_risk": [20.0],
             "suggested_order_type": ["BUY_STOP"],
             "suggested_order_price": [50.1],
-            "execution_note": ["Breakout not triggered yet. Place BUY STOP slightly above breakout_level."],
+            "execution_note": [
+                "Breakout not triggered yet. Place BUY STOP slightly above breakout_level."
+            ],
         }
         return pd.DataFrame(data, index=idx)
 
     # Mock the provider factory to return our mock provider
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+    )
     assert res.status_code == 200
 
     candidate = res.json()["candidates"][0]
@@ -236,7 +260,9 @@ def test_screener_response_includes_market_data_source_summary(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         return pd.DataFrame(
             {
                 "atr14": [1.2],
@@ -254,12 +280,18 @@ def test_screener_response_includes_market_data_source_summary(monkeypatch):
             index=["AAA"],
         )
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 1})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 1}
+    )
     assert res.status_code == 200
 
     candidate = res.json()["candidates"][0]
@@ -273,7 +305,9 @@ def test_screener_candidate_includes_days_to_earnings(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         return pd.DataFrame(
             {
                 "atr14": [1.2],
@@ -291,16 +325,22 @@ def test_screener_candidate_includes_days_to_earnings(monkeypatch):
             index=["AAA"],
         )
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
     monkeypatch.setattr(
         "api.services.screener_service.fetch_next_earnings_days",
         lambda tickers, finnhub_api_key, asof_date, **kwargs: {"AAA": 12},
     )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 1})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 1}
+    )
     assert res.status_code == 200
     candidate = res.json()["candidates"][0]
     assert candidate.get("days_to_earnings") == 12
@@ -311,7 +351,9 @@ def test_screener_candidate_includes_sector_rotation_context(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured: dict[str, object] = {}
 
-    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         captured["sector_benchmark_returns"] = sector_benchmark_returns
         return pd.DataFrame(
             {
@@ -331,7 +373,9 @@ def test_screener_candidate_includes_sector_rotation_context(monkeypatch):
             index=["AAA"],
         )
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
     monkeypatch.setattr(
         screener_service,
@@ -341,11 +385,15 @@ def test_screener_candidate_includes_sector_rotation_context(monkeypatch):
 
     from swing_screener.data import sector_rotation as sr
 
-    monkeypatch.setattr(sr, "compute_sector_benchmark_returns", lambda ohlcv, **kw: {"XLK": 0.07})
+    monkeypatch.setattr(
+        sr, "compute_sector_benchmark_returns", lambda ohlcv, **kw: {"XLK": 0.07}
+    )
     monkeypatch.setattr(
         sr,
         "compute_sector_rotation_scores",
-        lambda ohlcv, **kw: {"XLK": {"fast_rs": 0.04, "slow_rs": 0.02, "in_rotation": True}},
+        lambda ohlcv, **kw: {
+            "XLK": {"fast_rs": 0.04, "slow_rs": 0.02, "in_rotation": True}
+        },
     )
 
     client = TestClient(app)
@@ -365,7 +413,9 @@ def test_screener_filters_candidates_too_close_to_earnings(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         return pd.DataFrame(
             {
                 "atr14": [1.2, 1.2],
@@ -383,9 +433,13 @@ def test_screener_filters_candidates_too_close_to_earnings(monkeypatch):
             index=["AAA", "BBB"],
         )
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
     monkeypatch.setattr(screener_service, "_min_days_to_earnings_default", lambda: 10)
     monkeypatch.setattr(
         "api.services.screener_service.fetch_next_earnings_days",
@@ -393,7 +447,9 @@ def test_screener_filters_candidates_too_close_to_earnings(monkeypatch):
     )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 2})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 2}
+    )
     assert res.status_code == 200
     candidates = res.json()["candidates"]
     assert [candidate["ticker"] for candidate in candidates] == ["BBB"]
@@ -404,7 +460,9 @@ def test_screener_attaches_benchmark_comparison(monkeypatch):
     ohlcv = _ohlcv_with_symbol_and_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["AAA"]
         data = {
             "atr14": [1.2],
@@ -421,12 +479,18 @@ def test_screener_attaches_benchmark_comparison(monkeypatch):
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+    )
     assert res.status_code == 200
 
     payload = res.json()
@@ -436,14 +500,20 @@ def test_screener_attaches_benchmark_comparison(monkeypatch):
     assert payload["benchmark_change_pct"] == 2.0
     assert candidate["symbol_change_pct"] == 20.0
     assert candidate["benchmark_outperformance_pct"] == 18.0
-    assert [point["close"] for point in candidate["benchmark_price_history"]] == pytest.approx([10.0, 10.1, 10.2])
+    assert [
+        point["close"] for point in candidate["benchmark_price_history"]
+    ] == pytest.approx([10.0, 10.1, 10.2])
 
 
-def test_screener_response_is_prioritized_by_decision_action_and_conviction(monkeypatch):
+def test_screener_response_is_prioritized_by_decision_action_and_conviction(
+    monkeypatch,
+):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["AAA", "BBB", "CCC"]
         data = {
             "atr14": [1.2, 1.2, 1.2],
@@ -489,13 +559,23 @@ def test_screener_response_is_prioritized_by_decision_action_and_conviction(monk
             )
         return enriched
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
-    monkeypatch.setattr(screener_service, "apply_decision_summary_context", fake_apply_decision_summary_context)
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
+    monkeypatch.setattr(
+        screener_service,
+        "apply_decision_summary_context",
+        fake_apply_decision_summary_context,
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+    )
     assert res.status_code == 200
 
     candidates = res.json()["candidates"]
@@ -508,7 +588,9 @@ def test_screener_currency_comes_from_metadata(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["ASML.AS"]
         data = {
             "atr14": [1.2],
@@ -525,16 +607,22 @@ def test_screener_currency_comes_from_metadata(monkeypatch):
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,
         "get_multiple_ticker_info",
-        lambda tickers: {"ASML.AS": {"name": "ASML", "sector": "Technology", "currency": "EUR"}},
+        lambda tickers: {
+            "ASML.AS": {"name": "ASML", "sector": "Technology", "currency": "EUR"}
+        },
     )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+    )
     assert res.status_code == 200
     candidate = res.json()["candidates"][0]
     assert candidate["currency"] == "EUR"
@@ -545,7 +633,9 @@ def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured = {}
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         captured["currencies"] = cfg.universe.filt.currencies
         idx = ["AAPL"]
         data = {
@@ -563,9 +653,13 @@ def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
     res = client.post(
@@ -576,7 +670,13 @@ def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
     assert captured["currencies"] == ["EUR"]
 
 
-def test_screener_exchange_filter_reduces_working_list(monkeypatch):
+def test_screener_exchange_filter_reduces_working_list(monkeypatch, tmp_path):
+    """Legacy top-level exchange_mics still filters the pool (back-compat path)."""
+    import json
+
+    from api.dependencies import get_symbol_pool_repo
+    from api.repositories.symbol_pool_repo import SymbolPoolRepository
+
     ohlcv = _ohlcv_with_spy()
     captured: dict[str, list[str]] = {}
     mock_provider = _create_mock_provider(ohlcv)
@@ -586,7 +686,9 @@ def test_screener_exchange_filter_reduces_working_list(monkeypatch):
         captured["tickers"] = list(tickers)
         return ohlcv
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         del ohlcv, cfg, exclude_tickers
         return pd.DataFrame(
             {
@@ -605,24 +707,58 @@ def test_screener_exchange_filter_reduces_working_list(monkeypatch):
             index=["AAPL"],
         )
 
-    mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
-    monkeypatch.setattr(screener_service, "load_universe_from_package", lambda name, cfg: ["AAPL", "ASML.AS", "ACWI"])
-    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
-
-    client = TestClient(app)
-    res = client.post(
-        "/api/screener/run",
-        json={
-            "universe": "broad_market_stocks",
-            "top": 20,
-            "exchange_mics": ["XNAS", "XNYS"],
-            "include_otc": False,
-        },
+    pool_path = tmp_path / "symbol_pool.json"
+    pool_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "asof": "2026-06-30",
+                "symbols": [
+                    {
+                        "symbol": "AAPL",
+                        "exchange_mic": "XNAS",
+                        "primary_provider": "yfinance",
+                    },
+                    {
+                        "symbol": "ASML.AS",
+                        "exchange_mic": "XAMS",
+                        "primary_provider": "yfinance",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
     )
+    app.dependency_overrides[get_symbol_pool_repo] = lambda: SymbolPoolRepository(
+        pool_path
+    )
+
+    mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
+
+    try:
+        client = TestClient(app)
+        res = client.post(
+            "/api/screener/run",
+            json={
+                "top": 20,
+                "exchange_mics": ["XNAS", "XNYS"],
+                "include_otc": False,
+            },
+        )
+    finally:
+        app.dependency_overrides.pop(get_symbol_pool_repo, None)
+
     assert res.status_code == 200
-    assert captured["tickers"] == ["AAPL", "ACWI"]
+    # ASML.AS (XAMS) is excluded; AAPL (XNAS) survives. Benchmark SPY appended.
+    assert "ASML.AS" not in captured["tickers"]
+    assert "AAPL" in captured["tickers"]
     assert "reduced the working list" in res.json()["warnings"][0].lower()
 
 
@@ -630,7 +766,9 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["REP.MC"]
         data = {
             "atr14": [0.8],
@@ -682,18 +820,24 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
             del position_id
             return SimpleNamespace(action="NO_ACTION")
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,
         "get_multiple_ticker_info",
-        lambda tickers: {"REP.MC": {"name": "Repsol", "sector": "Energy", "currency": "EUR"}},
+        lambda tickers: {
+            "REP.MC": {"name": "Repsol", "sector": "Energy", "currency": "EUR"}
+        },
     )
 
     app.dependency_overrides[get_portfolio_service] = lambda: StubPortfolioService()
     try:
         client = TestClient(app)
-        res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+        res = client.post(
+            "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+        )
         assert res.status_code == 200
 
         body = res.json()
@@ -713,7 +857,9 @@ def test_screener_anchors_entry_stop_to_structural_pattern_stop(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["REP.MC"]
         data = {
             "atr14": [0.8],
@@ -752,12 +898,16 @@ def test_screener_anchors_entry_stop_to_structural_pattern_stop(monkeypatch):
             del position_id
             return SimpleNamespace(action="NO_ACTION")
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,
         "get_multiple_ticker_info",
-        lambda tickers: {"REP.MC": {"name": "Repsol", "sector": "Energy", "currency": "EUR"}},
+        lambda tickers: {
+            "REP.MC": {"name": "Repsol", "sector": "Energy", "currency": "EUR"}
+        },
     )
     # Force a valid, tighter structural stop (above the 21.62 ATR stop, below entry).
     monkeypatch.setattr(
@@ -769,7 +919,9 @@ def test_screener_anchors_entry_stop_to_structural_pattern_stop(monkeypatch):
     app.dependency_overrides[get_portfolio_service] = lambda: StubPortfolioService()
     try:
         client = TestClient(app)
-        res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+        res = client.post(
+            "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+        )
         assert res.status_code == 200
 
         candidate = res.json()["candidates"][0]
@@ -789,7 +941,9 @@ def test_screener_loads_each_fundamentals_snapshot_once(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     load_calls: list[str] = []
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["AAA", "BBB"]
         data = {
             "atr14": [1.2, 1.1],
@@ -811,13 +965,21 @@ def test_screener_loads_each_fundamentals_snapshot_once(monkeypatch):
         load_calls.append(symbol)
         return None
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
-    monkeypatch.setattr(decision_context.FundamentalsStorage, "load_snapshot", fake_load_snapshot)
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
+    monkeypatch.setattr(
+        decision_context.FundamentalsStorage, "load_snapshot", fake_load_snapshot
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 5})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 5}
+    )
     assert res.status_code == 200
     assert len(res.json()["candidates"]) == 2
 
@@ -852,12 +1014,18 @@ def test_screener_fetches_rolling_window_not_fixed_start(monkeypatch):
 
     mock_provider.fetch_ohlcv.side_effect = record_fetch
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         return pd.DataFrame()
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
     res = client.post(
@@ -880,7 +1048,9 @@ def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured: dict = {}
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         captured["ranking_top_n"] = cfg.ranking.top_n
         idx = [f"T{i:03d}" for i in range(min(cfg.ranking.top_n, 200))]
         data = {
@@ -899,12 +1069,18 @@ def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 50})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 50}
+    )
     assert res.status_code == 200
 
     multiplier = CombinedPriorityConfig().prefilter_multiplier
@@ -912,12 +1088,13 @@ def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
     assert len(res.json()["candidates"]) == 50
 
 
-
 def test_screener_pending_entry_order_blocks_add_on(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["REP.MC"]
         data = {
             "atr14": [0.8],
@@ -976,19 +1153,25 @@ def test_screener_pending_entry_order_blocks_add_on(monkeypatch):
                 ]
             }
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,
         "get_multiple_ticker_info",
-        lambda tickers: {"REP.MC": {"name": "Repsol", "sector": "Energy", "currency": "EUR"}},
+        lambda tickers: {
+            "REP.MC": {"name": "Repsol", "sector": "Energy", "currency": "EUR"}
+        },
     )
 
     app.dependency_overrides[get_portfolio_service] = lambda: StubPortfolioService()
     app.dependency_overrides[get_orders_service] = lambda: StubOrdersService()
     try:
         client = TestClient(app)
-        res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+        res = client.post(
+            "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+        )
         assert res.status_code == 200
 
         body = res.json()
@@ -1039,7 +1222,9 @@ def test_screener_uses_universe_currency_for_european_close(monkeypatch):
     ohlcv = _ohlcv_with_abn_and_aex()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         idx = ["ABN.AS"]
         data = {
             "atr14": [1.0],
@@ -1061,11 +1246,15 @@ def test_screener_uses_universe_currency_for_european_close(monkeypatch):
             "realized_risk": [142.0],
             "suggested_order_type": ["BUY_LIMIT"],
             "suggested_order_price": [35.18],
-            "execution_note": ["European session is closed; use the latest same-day close."],
+            "execution_note": [
+                "European session is closed; use the latest same-day close."
+            ],
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,
@@ -1074,7 +1263,9 @@ def test_screener_uses_universe_currency_for_european_close(monkeypatch):
     )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "amsterdam_aex", "top": 20})
+    res = client.post(
+        "/api/screener/run", json={"universe": "amsterdam_aex", "top": 20}
+    )
     assert res.status_code == 200
     payload = res.json()
 
@@ -1099,7 +1290,9 @@ def test_screener_async_mode_returns_job_and_status(monkeypatch):
     monkeypatch.setattr(screener_service.ScreenerService, "run_screener", fake_run)
 
     client = TestClient(app)
-    launch_res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+    launch_res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+    )
     assert launch_res.status_code == 202
     launch_payload = launch_res.json()
     assert launch_payload["status"] in {"queued", "running", "completed"}
@@ -1161,7 +1354,9 @@ def test_screener_async_mode_records_history(monkeypatch):
     app.dependency_overrides[get_screener_history_repo] = lambda: StubHistoryRepo()
     try:
         client = TestClient(app)
-        launch_res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+        launch_res = client.post(
+            "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+        )
         assert launch_res.status_code == 202
         job_id = launch_res.json()["job_id"]
 
@@ -1207,26 +1402,14 @@ def test_screener_universes_route_removed_in_favor_of_canonical_universes():
     assert "exchange_mics" in body["universes"][0]
 
 
-def test_screener_run_returns_422_for_removed_universe_with_replacement():
+def test_screener_run_unknown_universe_alias_yields_no_matches():
+    # `universe` is now a deprecated alias for taxonomy_filter.index_memberships.
+    # A removed/unknown id simply matches no pool symbols → 404 (no tickers left),
+    # rather than the old 422 validation error.
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 20})
-    assert res.status_code == 422
-    detail = res.json()["detail"]
-    assert "mega_all" in detail
-    assert "broad_market_stocks" in detail
-
-
-def test_screener_run_returns_422_for_removed_universe_no_replacement():
-    client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "eur_all", "top": 20})
-    assert res.status_code == 422
-    assert "eur_all" in res.json()["detail"]
-
-
-def test_screener_run_returns_422_for_unknown_universe():
-    client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "totally_unknown_id", "top": 20})
-    assert res.status_code == 422
+    for bogus in ("mega_all", "eur_all", "totally_unknown_id"):
+        res = client.post("/api/screener/run", json={"universe": bogus, "top": 20})
+        assert res.status_code == 404, bogus
 
 
 def test_screener_candidate_has_weekly_trend_field():
@@ -1269,7 +1452,9 @@ def test_screener_require_weekly_uptrend_overrides_strategy(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured: list = []
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
         captured.append(cfg)
         idx = ["AAPL"]
         data = {
@@ -1287,14 +1472,22 @@ def test_screener_require_weekly_uptrend_overrides_strategy(monkeypatch):
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
     res = client.post(
         "/api/screener/run",
-        json={"universe": "broad_market_stocks", "top": 5, "require_weekly_uptrend": True},
+        json={
+            "universe": "broad_market_stocks",
+            "top": 5,
+            "require_weekly_uptrend": True,
+        },
     )
     assert res.status_code == 200
     assert captured, "build_daily_report was never called"
@@ -1341,12 +1534,18 @@ def test_screener_candidate_includes_52w_high_fields(monkeypatch):
             index=["AAA"],
         )
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_service, "get_multiple_ticker_info", lambda tickers: {}
+    )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 1})
+    res = client.post(
+        "/api/screener/run", json={"universe": "broad_market_stocks", "top": 1}
+    )
     assert res.status_code == 200
     candidate = res.json()["candidates"][0]
     assert "dist_52w_high_pct" in candidate
