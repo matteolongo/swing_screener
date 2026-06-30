@@ -1,4 +1,5 @@
 import Badge from '@/components/common/Badge';
+import { t } from '@/i18n/t';
 import type { UniverseRefreshRow } from '@/features/pool/admin';
 
 interface UniverseRefreshSummaryProps {
@@ -12,12 +13,12 @@ export default function UniverseRefreshSummary({ rows }: UniverseRefreshSummaryP
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-3 py-2">Universe</th>
-            <th className="px-3 py-2">Before</th>
-            <th className="px-3 py-2">After</th>
-            <th className="px-3 py-2">Added</th>
-            <th className="px-3 py-2">Removed</th>
-            <th className="px-3 py-2">Applied</th>
+            <th className="px-3 py-2">{t('poolAdmin.summary.universe')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.summary.before')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.summary.after')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.summary.added')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.summary.removed')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.summary.applied')}</th>
           </tr>
         </thead>
         <tbody>
@@ -27,7 +28,7 @@ export default function UniverseRefreshSummary({ rows }: UniverseRefreshSummaryP
               {row.error ? (
                 <td className="px-3 py-2" colSpan={5}>
                   <span title={row.error} className="cursor-help">
-                    <Badge variant="error">Error</Badge>
+                    <Badge variant="error">{t('poolAdmin.summary.errorBadge')}</Badge>
                   </span>
                 </td>
               ) : (

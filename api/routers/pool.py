@@ -11,8 +11,8 @@ from api.models.screener import TaxonomyFilter
 from api.repositories.review_queue_repo import ReviewQueueRepository
 from api.repositories.symbol_pool_repo import SymbolPoolRepository
 from api.services.pool_admin_service import (
-    enrich_job_to_dict,
-    get_enrich_job,
+    PoolBusyError,
+    get_enrich_status,
     rebuild_pool,
     start_enrich_job,
 )
@@ -80,20 +80,27 @@ def get_presets():
 
 @router.post("/rebuild")
 def rebuild(repo: SymbolPoolRepository = Depends(get_symbol_pool_repo)):
-    return rebuild_pool(repo)
+    try:
+        return rebuild_pool(repo)
+    except PoolBusyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=500, detail="Failed to rebuild symbol pool"
+        ) from exc
 
 
 @router.post("/enrich")
 def enrich(repo: SymbolPoolRepository = Depends(get_symbol_pool_repo)):
-    return {"job_id": start_enrich_job(repo)}
+    try:
+        return {"job_id": start_enrich_job(repo)}
+    except PoolBusyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/enrich/{job_id}")
 def enrich_status(job_id: str):
-    job = get_enrich_job(job_id)
-    if job is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Enrichment job not found (server may have restarted).",
-        )
-    return enrich_job_to_dict(job)
+    status = get_enrich_status(job_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Enrichment job not found.")
+    return status

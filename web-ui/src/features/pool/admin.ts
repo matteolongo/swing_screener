@@ -24,6 +24,23 @@ export interface ModifiedSymbol {
   changes: FieldChange[];
 }
 
+// Backend field identifiers are snake_case; present them as readable labels at
+// the API boundary so no snake_case leaks into the UI.
+function humanizeField(field: string): string {
+  return field
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function transformModifications(rows: ModifiedSymbol[] | undefined): ModifiedSymbol[] {
+  return (rows ?? []).map((row) => ({
+    symbol: row.symbol,
+    changes: row.changes.map((c) => ({ ...c, field: humanizeField(c.field) })),
+  }));
+}
+
 export interface PoolDiff {
   additions: PoolSymbolRow[];
   removals: PoolSymbolRow[];
@@ -65,7 +82,7 @@ function transformDiff(body: PoolDiffApi): PoolDiff {
   return {
     additions: body.additions.map(transformSymbolRow),
     removals: body.removals.map(transformSymbolRow),
-    modifications: body.modifications ?? [],
+    modifications: transformModifications(body.modifications),
     summary: body.summary,
   };
 }
@@ -184,7 +201,10 @@ export async function fetchEnrichStatus(jobId: string): Promise<EnrichStatus> {
     progress: body.progress,
     error: body.error,
     diff: body.diff
-      ? { modified: body.diff.modified ?? [], failedSymbols: body.diff.failed_symbols ?? [] }
+      ? {
+          modified: transformModifications(body.diff.modified),
+          failedSymbols: body.diff.failed_symbols ?? [],
+        }
       : null,
   };
 }

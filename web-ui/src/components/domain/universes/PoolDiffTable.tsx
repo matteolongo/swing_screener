@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { cn } from '@/utils/cn';
+import { t } from '@/i18n/t';
 import type { ModifiedSymbol, PoolSymbolRow } from '@/features/pool/admin';
 
 type DiffTab = 'additions' | 'removals' | 'modified' | 'failed';
@@ -25,13 +26,13 @@ function SymbolRowTable({ rows }: { rows: PoolSymbolRow[] }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-3 py-2">Symbol</th>
-            <th className="px-3 py-2">Region</th>
-            <th className="px-3 py-2">Exchange</th>
-            <th className="px-3 py-2">Currency</th>
-            <th className="px-3 py-2">Cap Tier</th>
-            <th className="px-3 py-2">Sector</th>
-            <th className="px-3 py-2">Index Memberships</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.symbol')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.region')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.exchange')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.currency')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.capTier')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.sector')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.indexMemberships')}</th>
           </tr>
         </thead>
         <tbody>
@@ -59,10 +60,10 @@ function ModifiedTable({ rows }: { rows: ModifiedSymbol[] }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-3 py-2">Symbol</th>
-            <th className="px-3 py-2">Field</th>
-            <th className="px-3 py-2">Before</th>
-            <th className="px-3 py-2">After</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.symbol')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.field')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.before')}</th>
+            <th className="px-3 py-2">{t('poolAdmin.diff.after')}</th>
           </tr>
         </thead>
         <tbody>
@@ -101,7 +102,7 @@ function FailedTable({ symbols }: { symbols: string[] }) {
 }
 
 function EmptyState() {
-  return <div className="py-6 text-center text-sm text-muted">None</div>;
+  return <div className="py-6 text-center text-sm text-muted">{t('poolAdmin.diff.none')}</div>;
 }
 
 export default function PoolDiffTable({
@@ -116,12 +117,12 @@ export default function PoolDiffTable({
 
   const tabs: { id: DiffTab; label: string; count: number }[] = [];
   if (hasAddRemove) {
-    tabs.push({ id: 'additions', label: 'Additions', count: additions?.length ?? 0 });
-    tabs.push({ id: 'removals', label: 'Removals', count: removals?.length ?? 0 });
+    tabs.push({ id: 'additions', label: t('poolAdmin.diff.additions'), count: additions?.length ?? 0 });
+    tabs.push({ id: 'removals', label: t('poolAdmin.diff.removals'), count: removals?.length ?? 0 });
   }
-  tabs.push({ id: 'modified', label: 'Modified', count: modifications.length });
+  tabs.push({ id: 'modified', label: t('poolAdmin.diff.modified'), count: modifications.length });
   if (hasFailed) {
-    tabs.push({ id: 'failed', label: 'Failed', count: failedSymbols?.length ?? 0 });
+    tabs.push({ id: 'failed', label: t('poolAdmin.diff.failed'), count: failedSymbols?.length ?? 0 });
   }
 
   return (
