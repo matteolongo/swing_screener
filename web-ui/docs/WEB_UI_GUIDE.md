@@ -27,7 +27,8 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 |---|---|---|
 | `features/portfolio` | Book | Positions: CRUD, stop updates, partial close, trail method |
 | `features/orders` | Book, Today | Order lifecycle: create, fill, cancel |
-| `features/screener` | Today | Screener run, candidates, recurrence state |
+| `features/screener` | Today | Screener run, candidates, recurrence state. The screener filters the unified symbol pool by taxonomy (`taxonomyFilter` + `preset`) via `QuickFilterBar` (region/cap/type/sector/index) above the table; currency/exchange/OTC/price stay in the collapsible panel. The `universe` field is a deprecated index-membership alias. |
+| `features/pool` | Today (filter bar), Header (review queue) | Taxonomy presets, pool browse, and review-queue health. `QuickFilterBar` consumes presets; `components/domain/pool/ReviewQueueDrawer` + the Header badge surface symbols that repeatedly failed OHLCV fetch (Keep restores, Remove drops the queue entry). |
 | `features/intelligence` | Today | Symbol analysis (LLM), cached results, sweep, pre-open gap outlook, thesis-delta, analysis-history timeline |
 | `features/watchlist` | Today | Watchlist CRUD (Watchlist tab) |
 | `features/dailyReview` | Today | Daily review compute and structured result |
