@@ -16,8 +16,9 @@ export async function fetchUniverses(): Promise<UniversesResponse> {
   });
 }
 
-export async function runScreener(request: ScreenerRequest): Promise<ScreenerResponse> {
-  const apiRequest = {
+export function toScreenerRequestPayload(request: ScreenerRequest): Record<string, unknown> {
+  const tf = request.taxonomyFilter;
+  return {
     universe: request.universe,
     tickers: request.tickers,
     top: request.top,
@@ -34,7 +35,23 @@ export async function runScreener(request: ScreenerRequest): Promise<ScreenerRes
     min_history: request.minHistory,
     require_weekly_uptrend: request.requireWeeklyUptrend,
     force_refresh: request.forceRefresh,
+    preset: request.preset,
+    taxonomy_filter: tf && {
+      region: tf.region,
+      market_cap_tier: tf.marketCapTier,
+      sector: tf.sector,
+      index_memberships: tf.indexMemberships,
+      instrument_type_detail: tf.instrumentTypeDetail,
+      provider: tf.provider,
+      currency: tf.currency,
+      exchange_mics: tf.exchangeMics,
+      liquidity_tier: tf.liquidityTier,
+    },
   };
+}
+
+export async function runScreener(request: ScreenerRequest): Promise<ScreenerResponse> {
+  const apiRequest = toScreenerRequestPayload(request);
 
   const res = await fetch(apiUrl(API_ENDPOINTS.screenerRun), {
     method: 'POST',

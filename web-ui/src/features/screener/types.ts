@@ -1,6 +1,7 @@
 // Screener types
 
 import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
+import type { TaxonomyFilterValues } from '@/features/pool/types';
 
 export type SameSymbolMode = 'NEW_ENTRY' | 'ADD_ON' | 'MANAGE_ONLY' | 'RE_ENTRY' | 'SCALE_BACK';
 
@@ -331,6 +332,7 @@ export interface ScreenerCandidateAPI {
 }
 
 export interface ScreenerRequest {
+  /** @deprecated use taxonomyFilter; resolves to index-membership filter. */
   universe?: string;
   tickers?: string[];
   top?: number;
@@ -347,6 +349,8 @@ export interface ScreenerRequest {
   minHistory?: number;
   requireWeeklyUptrend?: boolean;
   forceRefresh?: boolean;
+  taxonomyFilter?: TaxonomyFilterValues;
+  preset?: string;
 }
 
 export interface ScreenerResponse {
