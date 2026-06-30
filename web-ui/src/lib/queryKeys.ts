@@ -9,6 +9,8 @@ export const queryKeys = {
     payloadHash == null ? (['strategy-validation'] as const) : (['strategy-validation', payloadHash] as const),
   universes: () => ['universes'] as const,
   universeDetail: (id?: string | null) => ['universe-detail', id ?? null] as const,
+  taxonomyPresets: () => ['taxonomy-presets'] as const,
+  reviewQueue: () => ['review-queue'] as const,
   dailyReview: (topN: number, universe?: string | null) => ['dailyReview', topN, universe ?? null] as const,
   orders: (status?: OrderFilterStatus) =>
     status == null ? (['orders'] as const) : (['orders', status] as const),
