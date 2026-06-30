@@ -38,7 +38,7 @@ Strategy (`/api/strategy`):
 - `DELETE /api/strategy/{strategy_id}`
 
 Screener (`/api/screener`):
-- `POST /api/screener/run` (sync locally, async job launch on dyno by default). Accepts `taxonomy_filter` (region / market_cap_tier / sector / index_memberships / instrument_type_detail / provider / currency / exchange_mics / liquidity_tier) and `preset` to pre-filter the unified symbol pool. The `universe` field is **deprecated** — it now resolves to `taxonomy_filter.index_memberships=[universe]` and will be removed in a later release.
+- `POST /api/screener/run` (sync locally, async job launch on dyno by default). Accepts `taxonomy_filter` (region / market_cap_tier / sector / index_memberships / **instrument_type** (coarse equity/etf) / instrument_type_detail / provider / currency / exchange_mics / liquidity_tier) and `preset` to pre-filter the unified symbol pool. Filtering on enrichment-derived dimensions (sector / market_cap_tier / instrument_type_detail / liquidity_tier) excludes symbols whose data is not yet enriched and surfaces a warning counting them. The `universe` field is **deprecated** — it now resolves to `taxonomy_filter.index_memberships=[universe]` and will be removed in a later release.
 - `GET /api/screener/run/{job_id}` (poll async screener status/result)
 - `GET /api/screener/recurrence`
 
@@ -84,8 +84,8 @@ Portfolio (`/api/portfolio`):
 - `DELETE /api/portfolio/orders/{order_id}`
 
 Daily Review (`/api/daily-review`):
-- `GET /api/daily-review`
-- `POST /api/daily-review/compute`
+- `GET /api/daily-review` — accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) so the review mirrors the screener's taxonomy selection (plus the deprecated `universe` alias).
+- `POST /api/daily-review/compute` — same `preset` / `taxonomy_filter` fields on the request body for local-persistence mode.
 
 Intelligence (`/api/intelligence`):
 - `POST /api/intelligence/{ticker}?force=false` — enriches with full data (fundamentals + Finnhub + earnings + SEC evidence, server-side blocking) then runs the two-call LLM analysis. Same-day cache is returned unless `force=true`. Responses carry nullable `pre_open_outlook` (US pre-market) and `thesis_delta` (when prior analyses exist), plus a `news` list (`{headline, url, date, sentiment}`, additive; defaults to `[]` for pre-existing cached results). Returns 503 when `llm.analyzer_enabled: false` or `OPENAI_API_KEY` is unset.

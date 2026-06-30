@@ -3,7 +3,7 @@ import Button from '@/components/common/Button';
 import Select from '@/components/common/Select';
 import { cn } from '@/utils/cn';
 import { usePresets } from '@/features/pool/hooks';
-import { SECTORS, INDEX_OPTIONS } from '@/features/pool/sectors';
+import { SECTOR_OPTIONS, INDEX_OPTIONS } from '@/features/pool/sectors';
 import type { TaxonomyFilterValues } from '@/features/pool/types';
 
 interface QuickFilterBarProps {
@@ -11,8 +11,6 @@ interface QuickFilterBarProps {
   onChange: (next: TaxonomyFilterValues) => void;
   presetId: string | null;
   onPresetChange: (presetId: string | null) => void;
-  sectors?: readonly string[];
-  indexOptions?: { id: string; label: string }[];
   disabled?: boolean;
 }
 
@@ -29,15 +27,6 @@ const CAP_OPTIONS: { value: string; label: string }[] = [
   { value: 'micro', label: t('screener.taxonomy.capTier.micro') },
 ];
 
-const ETF_BUCKET = ['etf_equity', 'etf_sector', 'etf_leveraged', 'etf_bond', 'etf_commodity'];
-const EQUITY_BUCKET = ['equity'];
-
-function sameSet(a: string[] | undefined, b: string[]): boolean {
-  if (!a || a.length !== b.length) return false;
-  const sa = new Set(a);
-  return b.every((x) => sa.has(x));
-}
-
 function pruned(values: TaxonomyFilterValues): TaxonomyFilterValues {
   const out: TaxonomyFilterValues = {};
   (Object.keys(values) as (keyof TaxonomyFilterValues)[]).forEach((k) => {
@@ -49,8 +38,8 @@ function pruned(values: TaxonomyFilterValues): TaxonomyFilterValues {
 
 export default function QuickFilterBar(props: QuickFilterBarProps) {
   const { value, onChange, presetId, onPresetChange, disabled } = props;
-  const sectors = props.sectors ?? SECTORS;
-  const indexOptions = props.indexOptions ?? INDEX_OPTIONS;
+  const sectorOptions = SECTOR_OPTIONS.map((o) => ({ id: o.id, label: t(o.labelKey) }));
+  const indexOptions = INDEX_OPTIONS.map((o) => ({ id: o.id, label: t(o.labelKey) }));
   const { data: presets = [] } = usePresets();
 
   function patch(next: Partial<TaxonomyFilterValues>) {
@@ -77,11 +66,13 @@ export default function QuickFilterBar(props: QuickFilterBarProps) {
     onChange(preset ? pruned(preset.filter) : {});
   }
 
-  const typeEquityActive = sameSet(value.instrumentTypeDetail, EQUITY_BUCKET);
-  const typeEtfActive = sameSet(value.instrumentTypeDetail, ETF_BUCKET);
+  // Filter on the coarse, always-populated instrument_type (equity/etf), not the
+  // enrichment-dependent instrument_type_detail.
+  const typeEquityActive = (value.instrumentType ?? []).includes('equity');
+  const typeEtfActive = (value.instrumentType ?? []).includes('etf');
 
-  function toggleType(bucket: string[], active: boolean) {
-    patch({ instrumentTypeDetail: active ? [] : bucket });
+  function toggleType(item: 'equity' | 'etf', active: boolean) {
+    patch({ instrumentType: active ? [] : [item] });
   }
 
   const chip = (active: boolean) =>
@@ -157,7 +148,7 @@ export default function QuickFilterBar(props: QuickFilterBarProps) {
           aria-pressed={typeEquityActive}
           disabled={disabled}
           className={chip(typeEquityActive)}
-          onClick={() => toggleType(EQUITY_BUCKET, typeEquityActive)}
+          onClick={() => toggleType('equity', typeEquityActive)}
         >
           {t('screener.taxonomy.type.equity')}
         </Button>
@@ -168,7 +159,7 @@ export default function QuickFilterBar(props: QuickFilterBarProps) {
           aria-pressed={typeEtfActive}
           disabled={disabled}
           className={chip(typeEtfActive)}
-          onClick={() => toggleType(ETF_BUCKET, typeEtfActive)}
+          onClick={() => toggleType('etf', typeEtfActive)}
         >
           {t('screener.taxonomy.type.etf')}
         </Button>
@@ -177,7 +168,7 @@ export default function QuickFilterBar(props: QuickFilterBarProps) {
       <MultiSelectDropdown
         label={t('screener.taxonomy.sector.label')}
         placeholder={t('screener.taxonomy.sector.placeholder')}
-        options={sectors.map((s) => ({ id: s, label: s }))}
+        options={sectorOptions}
         selected={value.sector ?? []}
         disabled={disabled}
         onToggle={(id) => toggleScalar('sector', id)}

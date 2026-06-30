@@ -1,5 +1,6 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
+import { toTaxonomyFilterPayload } from '@/features/pool/types';
 import {
   ScreenerRequest,
   ScreenerRunLaunchResponseAPI,
@@ -36,17 +37,7 @@ export function toScreenerRequestPayload(request: ScreenerRequest): Record<strin
     require_weekly_uptrend: request.requireWeeklyUptrend,
     force_refresh: request.forceRefresh,
     preset: request.preset,
-    taxonomy_filter: tf && {
-      region: tf.region,
-      market_cap_tier: tf.marketCapTier,
-      sector: tf.sector,
-      index_memberships: tf.indexMemberships,
-      instrument_type_detail: tf.instrumentTypeDetail,
-      provider: tf.provider,
-      currency: tf.currency,
-      exchange_mics: tf.exchangeMics,
-      liquidity_tier: tf.liquidityTier,
-    },
+    taxonomy_filter: tf && toTaxonomyFilterPayload(tf),
   };
 }
 

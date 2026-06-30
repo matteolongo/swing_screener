@@ -3,6 +3,7 @@ export interface TaxonomyFilterValues {
   marketCapTier?: string[];
   sector?: string[];
   indexMemberships?: string[];
+  instrumentType?: string[];
   instrumentTypeDetail?: string[];
   provider?: string[];
   currency?: string[];
@@ -14,6 +15,24 @@ export interface TaxonomyPreset {
   id: string;
   label: string;
   filter: TaxonomyFilterValues;
+}
+
+/** Map a camelCase TaxonomyFilter to the snake_case API shape. */
+export function toTaxonomyFilterPayload(
+  filter: TaxonomyFilterValues,
+): Record<string, string[] | undefined> {
+  return {
+    region: filter.region,
+    market_cap_tier: filter.marketCapTier,
+    sector: filter.sector,
+    index_memberships: filter.indexMemberships,
+    instrument_type: filter.instrumentType,
+    instrument_type_detail: filter.instrumentTypeDetail,
+    provider: filter.provider,
+    currency: filter.currency,
+    exchange_mics: filter.exchangeMics,
+    liquidity_tier: filter.liquidityTier,
+  };
 }
 
 export interface ReviewQueueEntry {
@@ -70,6 +89,7 @@ export function transformPreset(api: TaxonomyPresetAPI): TaxonomyPreset {
       marketCapTier: f.market_cap_tier,
       sector: f.sector,
       indexMemberships: f.index_memberships,
+      instrumentType: f.instrument_type,
       instrumentTypeDetail: f.instrument_type_detail,
       provider: f.provider,
       currency: f.currency,

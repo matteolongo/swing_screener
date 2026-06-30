@@ -37,7 +37,7 @@ describe('QuickFilterBar', () => {
     expect(onChange).toHaveBeenCalledWith({});
   });
 
-  it('maps the Type chip to instrumentTypeDetail buckets', () => {
+  it('maps the Type chip to the coarse instrumentType', () => {
     const onChange = vi.fn();
     renderWithProviders(
       <QuickFilterBar
@@ -48,8 +48,6 @@ describe('QuickFilterBar', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: tx.type.etf }));
-    expect(onChange).toHaveBeenCalledWith({
-      instrumentTypeDetail: ['etf_equity', 'etf_sector', 'etf_leveraged', 'etf_bond', 'etf_commodity'],
-    });
+    expect(onChange).toHaveBeenCalledWith({ instrumentType: ['etf'] });
   });
 });

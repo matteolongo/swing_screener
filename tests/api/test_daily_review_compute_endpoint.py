@@ -11,13 +11,24 @@ class StubDailyReviewService:
     def __init__(self) -> None:
         self.received = None
 
-    def compute_daily_review_from_state(self, strategy, positions, orders, top_n=10, universe=None):
+    def compute_daily_review_from_state(
+        self,
+        strategy,
+        positions,
+        orders,
+        top_n=10,
+        universe=None,
+        preset=None,
+        taxonomy_filter=None,
+    ):
         self.received = {
             "strategy": strategy,
             "positions": positions,
             "orders": orders,
             "top_n": top_n,
             "universe": universe,
+            "preset": preset,
+            "taxonomy_filter": taxonomy_filter,
         }
         return DailyReview(
             new_candidates=[],

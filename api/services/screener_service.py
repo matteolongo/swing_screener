@@ -34,6 +34,7 @@ from swing_screener.indicators.candles import detect_patterns, CandleConfig
 from swing_screener.execution.guidance import apply_pattern_stop, ExecutionConfig
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
+    filter_tickers_by_metadata,
     get_instrument_record,
     get_universe_benchmark,
 )
@@ -163,7 +164,9 @@ def _fetch_ohlcv_chunked(
     frames: list[pd.DataFrame] = []
     for i in range(0, len(tickers), chunk_size):
         chunk = tickers[i : i + chunk_size]
-        df = provider.fetch_ohlcv(chunk, start_date=start_date, end_date=end_date, force_refresh=force_refresh)
+        df = provider.fetch_ohlcv(
+            chunk, start_date=start_date, end_date=end_date, force_refresh=force_refresh
+        )
         if df is None or df.empty:
             logger.warning("OHLCV chunk returned empty data (%s)", chunk)
             continue
@@ -211,6 +214,7 @@ class _RunContext:
     now_utc: datetime | None = None
     benchmark_change_pct: float | None = None
     benchmark_last_bar: pd.Series | None = None
+    pool_meta: dict = field(default_factory=dict)
 
 
 class ScreenerService:
@@ -315,7 +319,7 @@ class ScreenerService:
             overrides["currency"] = tuple(request.currencies)
         if spec.exchange_mics is None and request.exchange_mics:
             overrides["exchange_mics"] = tuple(request.exchange_mics)
-        if request.instrument_types:
+        if spec.instrument_type is None and request.instrument_types:
             overrides["instrument_type"] = tuple(request.instrument_types)
         if overrides:
             spec = replace(spec, **overrides)
@@ -350,9 +354,21 @@ class ScreenerService:
         ctx.benchmark = ctx.universe_cfg.mom.benchmark
 
         if request.tickers:
-            ctx.tickers = [t.upper() for t in request.tickers]
-            if ctx.benchmark not in ctx.tickers:
-                ctx.tickers.append(ctx.benchmark)
+            tickers = [t.upper() for t in request.tickers]
+            # Apply the same metadata filters as the pool path so explicit-ticker
+            # requests still honour currency/exchange/instrument/OTC constraints.
+            tickers = filter_tickers_by_metadata(
+                tickers,
+                currencies=request.currencies,
+                exchange_mics=request.exchange_mics,
+                include_otc=(
+                    request.include_otc if request.include_otc is not None else True
+                ),
+                instrument_types=request.instrument_types,
+            )
+            if ctx.benchmark not in tickers:
+                tickers.append(ctx.benchmark)
+            ctx.tickers = tickers
         else:
             # Deprecated alias: a universe id still informs the benchmark override.
             if request.universe:
@@ -369,6 +385,7 @@ class ScreenerService:
             _, _, fail_threshold = load_symbol_pool_thresholds()
             spec = self._build_taxonomy_spec(request)
             pool = deserialize_pool({"symbols": self._pool_repo.list_symbols()})
+            ctx.pool_meta = {s.symbol: s for s in pool}
             queued = self._review_repo.queued_symbols(fail_threshold)
             pool = [s for s in pool if s.symbol not in queued]
             pool = [s for s in pool if self._provider_available(s.primary_provider)]
@@ -390,6 +407,28 @@ class ScreenerService:
                     f"Taxonomy filters reduced the working list from {pool_size} "
                     f"to {len(symbols)} tickers."
                 )
+            # Distinguish "no match" from "data not yet enriched": when a filter
+            # uses an enrichment-derived dimension, surface how many symbols were
+            # excluded only because that field is still null.
+            enrich_dims = [
+                d
+                for d in (
+                    "sector",
+                    "market_cap_tier",
+                    "instrument_type_detail",
+                    "liquidity_tier",
+                )
+                if getattr(spec, d)
+            ]
+            if enrich_dims:
+                unenriched = sum(
+                    1 for s in pool if any(getattr(s, d) is None for d in enrich_dims)
+                )
+                if unenriched:
+                    ctx.warnings.append(
+                        f"{unenriched} symbols lack {', '.join(enrich_dims)} data and were "
+                        f"excluded; refresh pool enrichment to include them."
+                    )
             if ctx.benchmark not in symbols:
                 symbols.append(ctx.benchmark)
             ctx.tickers = symbols
@@ -554,7 +593,30 @@ class ScreenerService:
             requested = list(ctx.screening_tickers)
             ok = [t for t in requested if t in present]
             failed = [t for t in requested if t not in present]
-            self._review_repo.apply_fetch_results(ok, failed, ctx.asof_str, threshold)
+            # Guard against transient/systemic outages poisoning healthy symbols:
+            # on a large-enough batch, if at least half returned no data, treat
+            # it as a provider hiccup and do not increment per-symbol counters.
+            # Small batches (e.g. explicit-ticker runs) keep the per-symbol signal.
+            if len(requested) >= 10 and len(failed) >= len(requested) * 0.5:
+                logger.warning(
+                    "Skipping fetch-health increment: %d/%d tickers missing "
+                    "(likely a provider outage, not per-symbol delisting).",
+                    len(failed),
+                    len(requested),
+                )
+                failed = []
+            meta = {
+                sym: {
+                    "exchange_mic": ps.exchange_mic,
+                    "sector": ps.sector,
+                    "cap_tier": ps.market_cap_tier,
+                    "provider": ps.primary_provider,
+                }
+                for sym, ps in (ctx.pool_meta or {}).items()
+            }
+            self._review_repo.apply_fetch_results(
+                ok, failed, ctx.asof_str, threshold, meta=meta
+            )
         except (
             Exception
         ) as exc:  # noqa: BLE001 - health tracking must never break a screen

@@ -5,7 +5,7 @@ import { t } from '@/i18n/t';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import { useDailyReview } from '@/features/dailyReview/api';
-import { parseUniverseFromStorage, SCREENER_UNIVERSE_STORAGE_KEY } from '@/features/screener/universeStorage';
+import { readScreenerSelection } from '@/features/screener/selectionStorage';
 import {
   usePositions,
   useOpenPositionsIntelligence,
@@ -26,8 +26,10 @@ interface TodayActionListProps {
 }
 
 export default function TodayActionList({ onTickerSelect }: TodayActionListProps) {
-  const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
-  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(200, selectedUniverse);
+  // Mirror the screener's persisted taxonomy selection so the daily review
+  // covers the same pool the user is screening.
+  const selection = readScreenerSelection();
+  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(200, selection);
 
   const { data: intelligenceSummaries } = useOpenPositionsIntelligence();
   const intelligenceByTicker = useMemo(

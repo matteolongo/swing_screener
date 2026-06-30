@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
 from pathlib import Path
 from typing import Optional
-
-import yaml
 
 from api.models.screener import TaxonomyFilter
 from swing_screener.data.symbol_pool import (
@@ -14,20 +11,23 @@ from swing_screener.data.symbol_pool import (
     filter_pool_by_taxonomy,
     pool_symbol_to_dict,
 )
+from swing_screener.settings.io import CachedYamlFile
 from swing_screener.settings.paths import config_dir
+
+_presets_store: CachedYamlFile | None = None
 
 
 def _presets_path() -> Path:
     return config_dir() / "taxonomy_presets.yaml"
 
 
-@lru_cache(maxsize=1)
 def _load_presets_document() -> dict:
-    path = _presets_path()
-    if not path.exists():
-        return {}
-    with open(path, encoding="utf-8") as f:
-        payload = yaml.safe_load(f) or {}
+    # mtime-cached like the rest of the YAML config, so edits to
+    # taxonomy_presets.yaml are picked up without a restart.
+    global _presets_store
+    if _presets_store is None or _presets_store.path != _presets_path():
+        _presets_store = CachedYamlFile(_presets_path(), default_factory=dict)
+    payload = _presets_store.load()
     return payload if isinstance(payload, dict) else {}
 
 

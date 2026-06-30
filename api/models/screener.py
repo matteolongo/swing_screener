@@ -123,6 +123,10 @@ class TaxonomyFilter(BaseModel):
     market_cap_tier: Optional[list[str]] = None
     sector: Optional[list[str]] = None
     index_memberships: Optional[list[str]] = None
+    # Coarse equity/etf (always populated from the instrument master); the Type
+    # chip writes this. instrument_type_detail (etf_sector, …) is enrichment-
+    # dependent and used only for granular ETF refinement.
+    instrument_type: Optional[list[str]] = None
     instrument_type_detail: Optional[list[str]] = None
     provider: Optional[list[str]] = None
     currency: Optional[list[str]] = None
@@ -138,6 +142,7 @@ class TaxonomyFilter(BaseModel):
             market_cap_tier=_t(self.market_cap_tier),
             sector=_t(self.sector),
             index_memberships=_t(self.index_memberships),
+            instrument_type=_t(self.instrument_type),
             instrument_type_detail=_t(self.instrument_type_detail),
             provider=_t(self.provider),
             currency=_t(self.currency),
