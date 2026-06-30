@@ -1,7 +1,11 @@
 """API endpoints for daily review."""
+
+import json
+
 from fastapi import APIRouter, Depends, Query
 
 from api.models.daily_review import DailyReview, DailyReviewComputeRequest
+from api.models.screener import TaxonomyFilter
 from api.services.daily_review_service import DailyReviewService
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
@@ -29,21 +33,33 @@ def get_daily_review_service(
     watchlist_service: WatchlistService = Depends(get_watchlist_service),
 ) -> DailyReviewService:
     """Dependency injection for DailyReviewService."""
-    return DailyReviewService(screener_service, portfolio_service, watchlist_service=watchlist_service)
+    return DailyReviewService(
+        screener_service, portfolio_service, watchlist_service=watchlist_service
+    )
 
 
 @router.get("", response_model=DailyReview)
 def get_daily_review(
-    top_n: int = Query(default=200, ge=1, le=200, description="Number of top candidates to include"),
+    top_n: int = Query(
+        default=200, ge=1, le=200, description="Number of top candidates to include"
+    ),
     universe: str | None = Query(
         default=None,
-        description="Optional universe name (e.g., amsterdam_all). Defaults to screener service default.",
+        description="Deprecated universe alias. Defaults to screener service default.",
+    ),
+    preset: str | None = Query(
+        default=None,
+        description="Taxonomy preset id mirroring the screener selection.",
+    ),
+    taxonomy_filter: str | None = Query(
+        default=None,
+        description="JSON-encoded TaxonomyFilter mirroring the screener selection.",
     ),
     service: DailyReviewService = Depends(get_daily_review_service),
 ) -> DailyReview:
     """
     Get daily review with new trade candidates and position actions.
-    
+
     Returns:
         - Top N screener candidates
         - Positions requiring no action
@@ -51,7 +67,17 @@ def get_daily_review(
         - Positions suggested for closing
         - Summary statistics
     """
-    return service.generate_daily_review(top_n=top_n, universe=universe)
+    parsed_filter: TaxonomyFilter | None = None
+    if taxonomy_filter:
+        try:
+            payload = json.loads(taxonomy_filter)
+            if isinstance(payload, dict) and payload:
+                parsed_filter = TaxonomyFilter(**payload)
+        except (ValueError, TypeError):
+            parsed_filter = None
+    return service.generate_daily_review(
+        top_n=top_n, universe=universe, preset=preset, taxonomy_filter=parsed_filter
+    )
 
 
 @router.post("/compute", response_model=DailyReview)
@@ -66,4 +92,6 @@ def compute_daily_review(
         orders=[_dump_payload_item(order) for order in request.orders],
         top_n=request.top_n,
         universe=request.universe,
+        preset=request.preset,
+        taxonomy_filter=request.taxonomy_filter,
     )

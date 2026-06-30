@@ -1,10 +1,11 @@
 """Data models for daily review endpoint."""
+
 from datetime import date
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 from api.models.recommendation import Recommendation
 from api.models.portfolio import Position
-from api.models.screener import SameSymbolCandidateContext
+from api.models.screener import SameSymbolCandidateContext, TaxonomyFilter
 from api.models.strategy import Strategy
 from api.models.watchlist import WatchlistItemView
 from swing_screener.recommendation.models import DecisionSummary
@@ -12,6 +13,7 @@ from swing_screener.recommendation.models import DecisionSummary
 
 class DailyReviewCandidate(BaseModel):
     """A new trade candidate from the screener."""
+
     ticker: str
     currency: str = "USD"
     rank: int | None = None
@@ -43,12 +45,14 @@ class DailyReviewCandidate(BaseModel):
 
 class TrimSuggestion(BaseModel):
     """Rules-based trim opportunity detected for a held position."""
+
     r_threshold: float
     r_now: float
 
 
 class DailyReviewPositionHold(BaseModel):
     """A position that requires no action (keep current stop)."""
+
     position_id: str
     ticker: str
     entry_price: float
@@ -65,6 +69,7 @@ class DailyReviewPositionHold(BaseModel):
 
 class DailyReviewPositionUpdate(BaseModel):
     """A position that needs stop price update."""
+
     position_id: str
     ticker: str
     entry_price: float
@@ -81,6 +86,7 @@ class DailyReviewPositionUpdate(BaseModel):
 
 class DailyReviewPositionClose(BaseModel):
     """A position that should be closed."""
+
     position_id: str
     ticker: str
     entry_price: float
@@ -94,6 +100,7 @@ class DailyReviewPositionClose(BaseModel):
 
 class DailyReviewPositionExitSignal(BaseModel):
     """A position with a technical deterioration signal (advisory, not a forced close)."""
+
     position_id: str
     ticker: str
     entry_price: float
@@ -106,6 +113,7 @@ class DailyReviewPositionExitSignal(BaseModel):
 
 class DailyReviewSummary(BaseModel):
     """Summary statistics for the daily review."""
+
     total_positions: int
     no_action: int
     update_stop: int
@@ -119,22 +127,28 @@ class DailyReviewSummary(BaseModel):
 
 class PendingOrderReview(BaseModel):
     """Review item for a single pending entry order."""
+
     order_id: str
     ticker: str
-    category: Literal['stale', 'still_valid', 'no_data']
+    category: Literal["stale", "still_valid", "no_data"]
     days_pending: int
     note: Optional[str] = None
 
 
 class DailyReview(BaseModel):
     """Complete daily review with action items."""
+
     watchlist_near_trigger: list[WatchlistItemView] = Field(default_factory=list)
     new_candidates: list[DailyReviewCandidate]
-    positions_add_on_candidates: list[DailyReviewCandidate] = Field(default_factory=list)
+    positions_add_on_candidates: list[DailyReviewCandidate] = Field(
+        default_factory=list
+    )
     positions_hold: list[DailyReviewPositionHold]
     positions_update_stop: list[DailyReviewPositionUpdate]
     positions_close: list[DailyReviewPositionClose]
-    positions_exit_signal: list[DailyReviewPositionExitSignal] = Field(default_factory=list)
+    positions_exit_signal: list[DailyReviewPositionExitSignal] = Field(
+        default_factory=list
+    )
     summary: DailyReviewSummary
     pending_orders_review: list[PendingOrderReview] = Field(default_factory=list)
 
@@ -145,3 +159,5 @@ class DailyReviewComputeRequest(BaseModel):
     orders: list = Field(default_factory=list)
     top_n: int = Field(default=200, ge=1, le=200)
     universe: Optional[str] = None
+    preset: Optional[str] = None
+    taxonomy_filter: Optional[TaxonomyFilter] = None

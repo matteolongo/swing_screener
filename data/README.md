@@ -185,8 +185,15 @@ remove/restore. Gitignored. Schema:
 ```json
 { "symbols": { "AAPL": { "symbol": "AAPL", "fetch_failure_count": 3,
   "first_failed_at": "2026-06-28", "last_failed_at": "2026-06-30",
-  "reason": "OHLCV fetch returned no data" } } }
+  "reason": "OHLCV fetch returned no data",
+  "exchange_mic": "XNAS", "sector": "Technology", "cap_tier": "large",
+  "provider": "yfinance" } } }
 ```
+
+`exchange_mic` / `sector` / `cap_tier` / `provider` are stamped from the pool
+when a symbol is enqueued so the review-queue UI can show them. A systemic
+fetch outage (a large fraction of the batch missing on one run) does not
+increment counters, so transient provider hiccups don't poison healthy symbols.
 
 ## Optional Database
 - `swing_screener.db`: SQLite database (module exists but not wired by default)

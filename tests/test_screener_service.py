@@ -654,9 +654,9 @@ def test_fetch_ohlcv_chunked_forwards_force_refresh():
 
     assert mock_provider.fetch_ohlcv.call_count == 1
     _, kwargs = mock_provider.fetch_ohlcv.call_args
-    assert kwargs.get("force_refresh") is True, (
-        f"expected force_refresh=True forwarded to provider; got {kwargs}"
-    )
+    assert (
+        kwargs.get("force_refresh") is True
+    ), f"expected force_refresh=True forwarded to provider; got {kwargs}"
 
 
 def test_resolve_universe_prefilters_from_pool(tmp_path):
@@ -770,3 +770,52 @@ def test_record_fetch_health_enqueues_on_threshold(tmp_path):
     # The committed pool file is never mutated by a screener run.
     pool_data = json.loads(pool_path.read_text(encoding="utf-8"))
     assert all("fetch_failure_count" not in s for s in pool_data["symbols"])
+
+
+def test_record_fetch_health_skips_increment_on_systemic_outage(tmp_path):
+    import json
+
+    from api.services.screener_service import ScreenerService, _RunContext
+    from api.repositories.strategy_repo import StrategyRepository
+    from api.repositories.symbol_pool_repo import SymbolPoolRepository
+    from api.repositories.review_queue_repo import ReviewQueueRepository
+    from api.services.portfolio_service import PortfolioService
+    from api.models.screener import ScreenerRequest
+    from swing_screener.selection.eval_cache import EvalCache
+    from swing_screener.data.providers import MarketDataProvider
+
+    pool_path = tmp_path / "symbol_pool.json"
+    pool_path.write_text(
+        json.dumps({"schema_version": 1, "symbols": []}), encoding="utf-8"
+    )
+    queue_path = tmp_path / "review_queue.json"
+
+    review_repo = ReviewQueueRepository(queue_path)
+    svc = ScreenerService(
+        strategy_repo=MagicMock(spec=StrategyRepository),
+        portfolio_service=MagicMock(spec=PortfolioService),
+        provider=MagicMock(spec=MarketDataProvider),
+        eval_cache=EvalCache(root=tmp_path / "eval_cache"),
+        pool_repo=SymbolPoolRepository(pool_path),
+        review_repo=review_repo,
+    )
+
+    # 12 screening tickers, OHLCV only returns 5 (>50% missing on a >=10 batch)
+    # -> systemic-outage guard skips all increments.
+    requested = [f"T{i}" for i in range(12)]
+    present = requested[:5]
+    idx = pd.date_range("2024-01-01", periods=2, freq="B")
+    cols = pd.MultiIndex.from_tuples(
+        [("Close", t) for t in present], names=["field", "ticker"]
+    )
+    ohlcv = pd.DataFrame(
+        [[1.0] * len(present), [1.1] * len(present)], index=idx, columns=cols
+    )
+
+    ctx = _RunContext(request=ScreenerRequest(top=5), strategy={})
+    ctx.ohlcv = ohlcv
+    ctx.screening_tickers = requested
+    ctx.asof_str = "2026-06-30"
+
+    svc._record_fetch_health(ctx)
+    assert review_repo.read().get("symbols", {}) == {}

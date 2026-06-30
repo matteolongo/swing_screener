@@ -1,4 +1,5 @@
 """Service for generating daily review with action items."""
+
 import logging
 from dataclasses import dataclass, field
 from datetime import date
@@ -19,7 +20,7 @@ from api.models.daily_review import (
     TrimSuggestion,
 )
 from api.models.portfolio import PositionUpdate
-from api.models.screener import ScreenerRequest
+from api.models.screener import ScreenerRequest, TaxonomyFilter
 from api.repositories.orders_repo import OrdersRepository
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
@@ -66,6 +67,7 @@ def to_daily_review_candidate(c) -> DailyReviewCandidate:
 @dataclass
 class _ActionBuckets:
     """Collects categorized position actions while iterating positions."""
+
     hold: list[DailyReviewPositionHold] = field(default_factory=list)
     update: list[DailyReviewPositionUpdate] = field(default_factory=list)
     close: list[DailyReviewPositionClose] = field(default_factory=list)
@@ -81,6 +83,7 @@ class _PositionActionContext:
     payload and position_id differently. Capturing those as resolved scalars plus
     two small callables lets one classifier handle both.
     """
+
     position_id: str
     err_ticker: str
     err_entry_price: float
@@ -120,22 +123,30 @@ class DailyReviewService:
         self,
         top_n: int = 200,
         universe: str | None = None,
+        preset: str | None = None,
+        taxonomy_filter: "TaxonomyFilter | None" = None,
     ) -> DailyReview:
         """
         Generate comprehensive daily review.
-        
+
         Args:
             top_n: Number of top screener candidates to include (default: 200)
-            universe: Optional named universe to screen (e.g., "amsterdam_all")
-        
+            universe: Deprecated named-universe alias.
+            preset: Taxonomy preset id mirroring the screener's selection.
+            taxonomy_filter: Taxonomy filter mirroring the screener's selection.
+
         Returns:
             DailyReview with new candidates and position actions categorized
         """
-        # 1. Run screener to get new candidates
+        # 1. Run screener to get new candidates, mirroring the screener's
+        # taxonomy selection so the daily review covers the same pool the user
+        # is screening.
         selected_universe = universe.strip() if isinstance(universe, str) else None
         screener_request = ScreenerRequest(
             top=top_n,
             universe=selected_universe or None,
+            preset=preset or None,
+            taxonomy_filter=taxonomy_filter,
         )
         screener_result = self.screener.run_screener(screener_request)
         candidates = screener_result.candidates[:top_n]
@@ -143,15 +154,27 @@ class DailyReviewService:
         # Re-entries are fresh buy decisions (no open position), so rank them
         # among new opportunities by screener priority. Add-ons / scale-backs
         # depend on an existing position and stay in the portfolio sub-group.
-        new_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
-        add_on_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
+        new_candidates = [
+            to_daily_review_candidate(c)
+            for c in candidates
+            if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")
+        ]
+        add_on_candidates = [
+            to_daily_review_candidate(c)
+            for c in candidates
+            if c.same_symbol is not None
+            and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")
+        ]
         screener_tickers = {c.ticker.upper() for c in candidates}
         watchlist_near_trigger = [
-            item for item in self._watchlist_near_trigger_items()
-            if (item.ticker if hasattr(item, "ticker") else item.get("ticker", "")).upper()
+            item
+            for item in self._watchlist_near_trigger_items()
+            if (
+                item.ticker if hasattr(item, "ticker") else item.get("ticker", "")
+            ).upper()
             not in screener_tickers
         ]
-        
+
         # 2. Analyze all open positions
         active_manage = self._active_manage_cfg_payload()
         trim_r_threshold = float(active_manage.get("trim_r_threshold", 2.0))
@@ -171,8 +194,14 @@ class DailyReviewService:
                 err_stop_price=pos.stop_price,
                 err_current_price=pos.current_price or pos.entry_price,
                 trim_r_threshold=trim_r_threshold,
-                success_fields=lambda _s, p=pos: (p.ticker, p.entry_price, p.stop_price),
-                time_stop=lambda r, p=pos: self._time_stop_payload_from_position(p, r, active_manage),
+                success_fields=lambda _s, p=pos: (
+                    p.ticker,
+                    p.entry_price,
+                    p.stop_price,
+                ),
+                time_stop=lambda r, p=pos: self._time_stop_payload_from_position(
+                    p, r, active_manage
+                ),
             )
             try:
                 suggestion = self.portfolio.suggest_position_stop(pos.position_id)
@@ -182,14 +211,18 @@ class DailyReviewService:
                     pos.ticker,
                     exc.detail,
                 )
-                buckets.hold.append(self._error_hold(ctx, f"Stop suggestion unavailable: {exc.detail}"))
+                buckets.hold.append(
+                    self._error_hold(ctx, f"Stop suggestion unavailable: {exc.detail}")
+                )
                 continue
             except Exception as exc:
                 logger.exception(
                     "Unexpected error generating stop suggestion for %s",
                     pos.ticker,
                 )
-                buckets.hold.append(self._error_hold(ctx, f"Stop suggestion unavailable: {exc}"))
+                buckets.hold.append(
+                    self._error_hold(ctx, f"Stop suggestion unavailable: {exc}")
+                )
                 continue
 
             self._classify_position_action(suggestion, ctx, buckets)
@@ -228,7 +261,7 @@ class DailyReviewService:
 
         # Save to historical file (use "default" as strategy name for now)
         self._writer.save(review, "default")
-        
+
         return review
 
     def _build_pending_orders_review(self) -> list[PendingOrderReview]:
@@ -252,7 +285,11 @@ class DailyReviewService:
             try:
                 order_date = date.fromisoformat(str(raw_date))
                 days_pending = max((today - order_date).days, 0)
-                category: Literal['stale', 'still_valid', 'no_data'] = "stale" if days_pending >= self.STALE_DAYS_THRESHOLD else "still_valid"
+                category: Literal["stale", "still_valid", "no_data"] = (
+                    "stale"
+                    if days_pending >= self.STALE_DAYS_THRESHOLD
+                    else "still_valid"
+                )
             except (ValueError, TypeError):
                 days_pending = 0
                 category = "no_data"
@@ -272,7 +309,9 @@ class DailyReviewService:
         try:
             items = self.watchlist.list_items()
         except Exception:
-            logger.exception("Unable to build watchlist near-trigger section for daily review")
+            logger.exception(
+                "Unable to build watchlist near-trigger section for daily review"
+            )
             return []
         near_trigger = []
         for item in items:
@@ -292,7 +331,9 @@ class DailyReviewService:
         try:
             strategy = strategy_repo.get_active_strategy()
         except Exception:
-            logger.exception("Unable to resolve active strategy manage config for daily review")
+            logger.exception(
+                "Unable to resolve active strategy manage config for daily review"
+            )
             return {}
         manage = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
         return manage if isinstance(manage, dict) else {}
@@ -315,11 +356,16 @@ class DailyReviewService:
             ),
         }
 
-    def _time_stop_payload_from_position(self, position, r_now: float, manage_payload: dict) -> dict:
+    def _time_stop_payload_from_position(
+        self, position, r_now: float, manage_payload: dict
+    ) -> dict:
         days_open = getattr(position, "days_open", None)
         time_stop_warning = getattr(position, "time_stop_warning", None)
         if days_open is not None and time_stop_warning is not None:
-            return {"days_open": int(days_open), "time_stop_warning": bool(time_stop_warning)}
+            return {
+                "days_open": int(days_open),
+                "time_stop_warning": bool(time_stop_warning),
+            }
         model_dump = getattr(position, "model_dump", None)
         payload = model_dump() if callable(model_dump) else dict(position)
         return self._time_stop_payload(payload, r_now, manage_payload)
@@ -349,7 +395,9 @@ class DailyReviewService:
         }
 
     @staticmethod
-    def _error_hold(ctx: _PositionActionContext, reason: str) -> DailyReviewPositionHold:
+    def _error_hold(
+        ctx: _PositionActionContext, reason: str
+    ) -> DailyReviewPositionHold:
         """Build a hold entry for a position whose stop suggestion failed."""
         return DailyReviewPositionHold(
             position_id=ctx.position_id,
@@ -445,35 +493,56 @@ class DailyReviewService:
         orders: list[dict],
         top_n: int = 200,
         universe: str | None = None,
+        preset: str | None = None,
+        taxonomy_filter: "TaxonomyFilter | None" = None,
     ) -> DailyReview:
         """Compute daily review from client-provided strategy/portfolio state."""
         _ = orders  # Reserved for future order-aware categorization logic.
 
         selected_universe = universe.strip() if isinstance(universe, str) else None
         signals = strategy.get("signals", {}) if isinstance(strategy, dict) else {}
-        universe_cfg = strategy.get("universe", {}) if isinstance(strategy, dict) else {}
-        filt_cfg = universe_cfg.get("filt", {}) if isinstance(universe_cfg, dict) else {}
+        universe_cfg = (
+            strategy.get("universe", {}) if isinstance(strategy, dict) else {}
+        )
+        filt_cfg = (
+            universe_cfg.get("filt", {}) if isinstance(universe_cfg, dict) else {}
+        )
 
         screener_request = ScreenerRequest(
             top=top_n,
             universe=selected_universe or None,
+            preset=preset or None,
+            taxonomy_filter=taxonomy_filter,
             breakout_lookback=signals.get("breakout_lookback"),
             pullback_ma=signals.get("pullback_ma"),
             min_history=signals.get("min_history"),
             currencies=filt_cfg.get("currencies"),
         )
-        screener_result = self.screener.run_screener(screener_request, strategy_override=strategy)
+        screener_result = self.screener.run_screener(
+            screener_request, strategy_override=strategy
+        )
         candidates = screener_result.candidates[:top_n]
 
         # Re-entries are fresh buy decisions (no open position), so rank them
         # among new opportunities by screener priority. Add-ons / scale-backs
         # depend on an existing position and stay in the portfolio sub-group.
-        new_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")]
-        add_on_candidates = [to_daily_review_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")]
+        new_candidates = [
+            to_daily_review_candidate(c)
+            for c in candidates
+            if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")
+        ]
+        add_on_candidates = [
+            to_daily_review_candidate(c)
+            for c in candidates
+            if c.same_symbol is not None
+            and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")
+        ]
 
         manage_payload = self._manage_cfg_payload_from_strategy(strategy)
         trim_r_threshold_state = float(
-            (strategy.get("manage", {}) if isinstance(strategy, dict) else {}).get("trim_r_threshold", 2.0)
+            (strategy.get("manage", {}) if isinstance(strategy, dict) else {}).get(
+                "trim_r_threshold", 2.0
+            )
         )
 
         buckets = _ActionBuckets()
@@ -481,33 +550,45 @@ class DailyReviewService:
             if pos.get("status") != "open":
                 continue
 
-            position_id = str(pos.get("position_id") or f"LOCAL-{pos.get('ticker', 'UNKNOWN')}")
+            position_id = str(
+                pos.get("position_id") or f"LOCAL-{pos.get('ticker', 'UNKNOWN')}"
+            )
             ctx = _PositionActionContext(
                 position_id=position_id,
                 err_ticker=str(pos.get("ticker", "")),
                 err_entry_price=float(pos.get("entry_price", 0.0)),
                 err_stop_price=float(pos.get("stop_price", 0.0)),
-                err_current_price=float(pos.get("current_price") or pos.get("entry_price") or 0.0),
+                err_current_price=float(
+                    pos.get("current_price") or pos.get("entry_price") or 0.0
+                ),
                 trim_r_threshold=trim_r_threshold_state,
                 success_fields=lambda s: (s.ticker, s.entry, s.stop_old),
-                time_stop=lambda r, p=pos: self._time_stop_payload(p, r, manage_payload),
+                time_stop=lambda r, p=pos: self._time_stop_payload(
+                    p, r, manage_payload
+                ),
             )
             try:
-                suggestion = self.portfolio.compute_position_stop_suggestion(pos, manage_payload)
+                suggestion = self.portfolio.compute_position_stop_suggestion(
+                    pos, manage_payload
+                )
             except DomainError as exc:
                 logger.warning(
                     "Stateless daily review stop suggestion unavailable for %s: %s",
                     pos.get("ticker"),
                     exc.detail,
                 )
-                buckets.hold.append(self._error_hold(ctx, f"Stop suggestion unavailable: {exc.detail}"))
+                buckets.hold.append(
+                    self._error_hold(ctx, f"Stop suggestion unavailable: {exc.detail}")
+                )
                 continue
             except Exception as exc:
                 logger.exception(
                     "Unexpected stateless stop suggestion error for %s",
                     pos.get("ticker"),
                 )
-                buckets.hold.append(self._error_hold(ctx, f"Stop suggestion unavailable: {exc}"))
+                buckets.hold.append(
+                    self._error_hold(ctx, f"Stop suggestion unavailable: {exc}")
+                )
                 continue
 
             self._classify_position_action(suggestion, ctx, buckets)
@@ -526,7 +607,13 @@ class DailyReviewService:
             positions_close=positions_close,
             positions_exit_signal=positions_exit_signal,
             summary=DailyReviewSummary(
-                total_positions=len([position for position in positions if position.get("status") == "open"]),
+                total_positions=len(
+                    [
+                        position
+                        for position in positions
+                        if position.get("status") == "open"
+                    ]
+                ),
                 no_action=len(positions_hold),
                 update_stop=len(positions_update),
                 close_positions=len(positions_close),
@@ -537,4 +624,3 @@ class DailyReviewService:
                 review_date=date.today(),
             ),
         )
-    

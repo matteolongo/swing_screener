@@ -1,11 +1,16 @@
 """Tests for daily review service."""
+
 from datetime import date, timedelta
 from unittest.mock import Mock
 import pytest
 from swing_screener.errors import UpstreamError
 
 from api.models.daily_review import DailyReview, PendingOrderReview
-from api.models.screener import ScreenerResponse, ScreenerCandidate, SameSymbolCandidateContext
+from api.models.screener import (
+    ScreenerResponse,
+    ScreenerCandidate,
+    SameSymbolCandidateContext,
+)
 from api.models.portfolio import Position, PositionUpdate, PositionsResponse
 from api.services.daily_review_service import DailyReviewService
 from swing_screener.recommendation.models import DecisionSummary
@@ -103,7 +108,7 @@ def mock_screener_service():
 def mock_portfolio_service():
     """Mock portfolio service."""
     service = Mock()
-    
+
     # Mock positions (return PositionsResponse, not list)
     service.list_positions.return_value = PositionsResponse(
         positions=[
@@ -137,7 +142,7 @@ def mock_portfolio_service():
         ],
         asof="2026-02-11",
     )
-    
+
     # Mock stop suggestions (different actions for each position)
     def mock_suggest_stop(position_id: str) -> PositionUpdate:
         if position_id == "pos1":
@@ -182,25 +187,29 @@ def mock_portfolio_service():
                 action="CLOSE_STOP_HIT",
                 reason="Stop hit at $190.00",
             )
-    
+
     service.suggest_position_stop.side_effect = mock_suggest_stop
-    
+
     return service
 
 
-def test_generate_daily_review_basic(mock_screener_service, mock_portfolio_service, tmp_path):
+def test_generate_daily_review_basic(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
     """Test basic daily review generation."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
-    
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
     review = service.generate_daily_review(top_n=10)
-    
+
     # Verify structure
     assert isinstance(review, DailyReview)
     assert len(review.new_candidates) == 2
     assert len(review.positions_hold) == 1
     assert len(review.positions_update_stop) == 1
     assert len(review.positions_close) == 1
-    
+
     # Verify summary
     assert review.summary.total_positions == 3
     assert review.summary.no_action == 1
@@ -210,21 +219,29 @@ def test_generate_daily_review_basic(mock_screener_service, mock_portfolio_servi
     assert review.summary.review_date == date.today()
 
 
-def test_generate_daily_review_top_n_limit(mock_screener_service, mock_portfolio_service, tmp_path):
+def test_generate_daily_review_top_n_limit(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
     """Test that top_n correctly limits candidates."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
-    
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
     review = service.generate_daily_review(top_n=1)
-    
+
     # Should only include 1 candidate (not 2)
     assert len(review.new_candidates) == 1
     assert review.new_candidates[0].ticker == "AAPL"  # First one
     assert review.summary.new_candidates == 1
 
 
-def test_generate_daily_review_passes_universe_to_screener(mock_screener_service, mock_portfolio_service, tmp_path):
+def test_generate_daily_review_passes_universe_to_screener(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
     """Daily review should reuse the requested screener universe when provided."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
 
     service.generate_daily_review(top_n=10, universe="amsterdam_all")
 
@@ -233,12 +250,36 @@ def test_generate_daily_review_passes_universe_to_screener(mock_screener_service
     assert request.universe == "amsterdam_all"
 
 
-def test_generate_daily_review_candidates_fields(mock_screener_service, mock_portfolio_service, tmp_path):
+def test_generate_daily_review_passes_taxonomy_selection_to_screener(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    """Daily review mirrors the screener's preset/taxonomy selection."""
+    from api.models.screener import TaxonomyFilter
+
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
+    service.generate_daily_review(
+        top_n=10, preset="broad_market", taxonomy_filter=TaxonomyFilter(region=["us"])
+    )
+
+    request = mock_screener_service.run_screener.call_args[0][0]
+    assert request.preset == "broad_market"
+    assert request.taxonomy_filter is not None
+    assert request.taxonomy_filter.region == ["us"]
+
+
+def test_generate_daily_review_candidates_fields(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
     """Test that candidate fields are correctly mapped."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
-    
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
     review = service.generate_daily_review(top_n=10)
-    
+
     candidate = review.new_candidates[0]
     assert candidate.ticker == "AAPL"
     assert candidate.currency == "USD"
@@ -268,12 +309,16 @@ def test_generate_daily_review_candidates_fields(mock_screener_service, mock_por
     assert candidate.decision_summary.action == "BUY_NOW"
 
 
-def test_generate_daily_review_position_hold(mock_screener_service, mock_portfolio_service, tmp_path):
+def test_generate_daily_review_position_hold(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
     """Test position categorized as 'hold' (no action)."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
-    
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
     review = service.generate_daily_review(top_n=10)
-    
+
     hold_pos = review.positions_hold[0]
     assert hold_pos.position_id == "pos1"
     assert hold_pos.ticker == "NVDA"
@@ -284,12 +329,16 @@ def test_generate_daily_review_position_hold(mock_screener_service, mock_portfol
     assert "no trailing signal" in hold_pos.reason.lower()
 
 
-def test_generate_daily_review_position_update(mock_screener_service, mock_portfolio_service, tmp_path):
+def test_generate_daily_review_position_update(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
     """Test position categorized as 'update stop'."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
-    
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
     review = service.generate_daily_review(top_n=10)
-    
+
     update_pos = review.positions_update_stop[0]
     assert update_pos.position_id == "pos2"
     assert update_pos.ticker == "GOOGL"
@@ -299,7 +348,9 @@ def test_generate_daily_review_position_update(mock_screener_service, mock_portf
     assert "breakeven" in update_pos.reason.lower()
 
 
-def test_generate_daily_review_separates_add_on_candidates(mock_portfolio_service, tmp_path):
+def test_generate_daily_review_separates_add_on_candidates(
+    mock_portfolio_service, tmp_path
+):
     screener_service = Mock()
     screener_service.run_screener.return_value = ScreenerResponse(
         candidates=[
@@ -371,12 +422,16 @@ def test_generate_daily_review_separates_add_on_candidates(mock_portfolio_servic
         total_screened=100,
     )
 
-    service = DailyReviewService(screener_service, mock_portfolio_service, data_dir=tmp_path)
+    service = DailyReviewService(
+        screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
 
     review = service.generate_daily_review(top_n=10)
 
     assert [candidate.ticker for candidate in review.new_candidates] == ["AAPL"]
-    assert [candidate.ticker for candidate in review.positions_add_on_candidates] == ["REP.MC"]
+    assert [candidate.ticker for candidate in review.positions_add_on_candidates] == [
+        "REP.MC"
+    ]
     assert review.summary.new_candidates == 1
     assert review.summary.add_on_candidates == 1
 
@@ -430,7 +485,9 @@ def test_reentries_rank_with_new_candidates(mock_portfolio_service, tmp_path):
         total_screened=100,
     )
 
-    service = DailyReviewService(screener_service, mock_portfolio_service, data_dir=tmp_path)
+    service = DailyReviewService(
+        screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
     review = service.generate_daily_review(top_n=10)
 
     # Re-entry interleaved with new entries, preserving screener priority order.
@@ -439,12 +496,16 @@ def test_reentries_rank_with_new_candidates(mock_portfolio_service, tmp_path):
     assert [c.ticker for c in review.positions_add_on_candidates] == ["REP"]
 
 
-def test_generate_daily_review_position_close(mock_screener_service, mock_portfolio_service, tmp_path):
+def test_generate_daily_review_position_close(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
     """Test position categorized as 'close'."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
-    
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
     review = service.generate_daily_review(top_n=10)
-    
+
     close_pos = review.positions_close[0]
     assert close_pos.position_id == "pos3"
     assert close_pos.ticker == "TSLA"
@@ -458,11 +519,15 @@ def test_generate_daily_review_position_close(mock_screener_service, mock_portfo
 def test_generate_daily_review_no_positions(mock_screener_service, tmp_path):
     """Test daily review with no open positions."""
     empty_portfolio = Mock()
-    empty_portfolio.list_positions.return_value = PositionsResponse(positions=[], asof="2026-02-11")
-    
-    service = DailyReviewService(mock_screener_service, empty_portfolio, data_dir=tmp_path)
+    empty_portfolio.list_positions.return_value = PositionsResponse(
+        positions=[], asof="2026-02-11"
+    )
+
+    service = DailyReviewService(
+        mock_screener_service, empty_portfolio, data_dir=tmp_path
+    )
     review = service.generate_daily_review(top_n=10)
-    
+
     assert len(review.positions_hold) == 0
     assert len(review.positions_update_stop) == 0
     assert len(review.positions_close) == 0
@@ -478,10 +543,12 @@ def test_generate_daily_review_no_candidates(mock_portfolio_service, tmp_path):
         asof_date=str(date.today()),
         total_screened=0,
     )
-    
-    service = DailyReviewService(empty_screener, mock_portfolio_service, data_dir=tmp_path)
+
+    service = DailyReviewService(
+        empty_screener, mock_portfolio_service, data_dir=tmp_path
+    )
     review = service.generate_daily_review(top_n=10)
-    
+
     assert len(review.new_candidates) == 0
     assert review.summary.new_candidates == 0
     # Positions should still be analyzed
@@ -547,7 +614,9 @@ def test_generate_daily_review_survives_stop_suggestion_error(
 
     mock_portfolio_service.suggest_position_stop.side_effect = side_effect
 
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
     review = service.generate_daily_review(top_n=10)
 
     assert isinstance(review, DailyReview)
@@ -560,7 +629,9 @@ def test_compute_daily_review_from_state_uses_client_payload(
     mock_portfolio_service,
     tmp_path,
 ):
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
     strategy = _default_strategy_payload()  # noqa: SLF001
     position_payload = {
         "position_id": "local-pos-1",
@@ -573,17 +644,19 @@ def test_compute_daily_review_from_state_uses_client_payload(
         "current_price": 104.0,
     }
 
-    mock_portfolio_service.compute_position_stop_suggestion.return_value = PositionUpdate(
-        ticker="AAPL",
-        status="open",
-        last=104.0,
-        entry=100.0,
-        stop_old=95.0,
-        stop_suggested=100.0,
-        shares=10,
-        r_now=0.8,
-        action="MOVE_STOP_UP",
-        reason="Breakeven: R=1.00 >= 1.0",
+    mock_portfolio_service.compute_position_stop_suggestion.return_value = (
+        PositionUpdate(
+            ticker="AAPL",
+            status="open",
+            last=104.0,
+            entry=100.0,
+            stop_old=95.0,
+            stop_suggested=100.0,
+            shares=10,
+            r_now=0.8,
+            action="MOVE_STOP_UP",
+            reason="Breakeven: R=1.00 >= 1.0",
+        )
     )
 
     review = service.compute_daily_review_from_state(
@@ -607,6 +680,7 @@ def test_compute_daily_review_from_state_uses_client_payload(
 
 
 # ── Pending orders review tests ──────────────────────────────────────────────
+
 
 def _make_mock_orders_repo(orders: list[dict]) -> Mock:
     """Build a mock OrdersRepository returning the given orders."""
@@ -637,15 +711,17 @@ def test_pending_orders_review_still_valid_for_recent_order(
 ):
     """A pending entry order created 2 days ago is categorised as still_valid."""
     two_days_ago = (date.today() - timedelta(days=2)).isoformat()
-    orders_repo = _make_mock_orders_repo([
-        {
-            "order_id": "ORD-AAPL-001",
-            "ticker": "AAPL",
-            "status": "pending",
-            "order_kind": "entry",
-            "order_date": two_days_ago,
-        }
-    ])
+    orders_repo = _make_mock_orders_repo(
+        [
+            {
+                "order_id": "ORD-AAPL-001",
+                "ticker": "AAPL",
+                "status": "pending",
+                "order_kind": "entry",
+                "order_date": two_days_ago,
+            }
+        ]
+    )
     service = DailyReviewService(
         mock_screener_service,
         mock_portfolio_service,
@@ -669,15 +745,17 @@ def test_pending_orders_review_stale_for_old_order(
 ):
     """A pending entry order created 7 days ago is categorised as stale."""
     seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
-    orders_repo = _make_mock_orders_repo([
-        {
-            "order_id": "ORD-MSFT-001",
-            "ticker": "MSFT",
-            "status": "pending",
-            "order_kind": "entry",
-            "order_date": seven_days_ago,
-        }
-    ])
+    orders_repo = _make_mock_orders_repo(
+        [
+            {
+                "order_id": "ORD-MSFT-001",
+                "ticker": "MSFT",
+                "status": "pending",
+                "order_kind": "entry",
+                "order_date": seven_days_ago,
+            }
+        ]
+    )
     service = DailyReviewService(
         mock_screener_service,
         mock_portfolio_service,
