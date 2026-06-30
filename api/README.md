@@ -38,9 +38,16 @@ Strategy (`/api/strategy`):
 - `DELETE /api/strategy/{strategy_id}`
 
 Screener (`/api/screener`):
-- `POST /api/screener/run` (sync locally, async job launch on dyno by default)
+- `POST /api/screener/run` (sync locally, async job launch on dyno by default). Accepts `taxonomy_filter` (region / market_cap_tier / sector / index_memberships / instrument_type_detail / provider / currency / exchange_mics / liquidity_tier) and `preset` to pre-filter the unified symbol pool. The `universe` field is **deprecated** — it now resolves to `taxonomy_filter.index_memberships=[universe]` and will be removed in a later release.
 - `GET /api/screener/run/{job_id}` (poll async screener status/result)
 - `GET /api/screener/recurrence`
+
+Symbol pool (`/api/pool`):
+- `GET /api/pool/symbols` — browse the unified pool with taxonomy query params (`region`, `market_cap_tier`, `sector`, `index_memberships`, `instrument_type_detail`, `provider`, `currency`, `exchange_mics`, `liquidity_tier`), paginated (`page`, `page_size`). Returns `{symbols, total, page, page_size}`.
+- `GET /api/pool/review-queue` — symbols flagged after repeated OHLCV fetch failures. Returns `{entries}`.
+- `POST /api/pool/review-queue/{symbol}/remove` — clear the symbol's review-queue entry. Returns `{removed: bool}`. (Clears the queue entry only; the symbol re-enters screening on the next run unless it fails again. Hard removal from `symbol_pool.json` is deferred with the pool-edit work.)
+- `POST /api/pool/review-queue/{symbol}/restore` — reset the symbol's failure counter and return it to the active pool. Returns `{restored: bool}`.
+- `GET /api/pool/presets` — list taxonomy presets from `config/taxonomy_presets.yaml`. Returns `{presets: [{id, label, filter}]}`.
 
 Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
 

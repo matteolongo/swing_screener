@@ -26,6 +26,7 @@ from api.routers import (
     fundamentals,
     intelligence,
     market_data,
+    pool as pool_router,
     portfolio,
     screener,
     screener_history,
@@ -320,6 +321,7 @@ app.include_router(market_data.router, prefix="/api", tags=["market-data"])
 app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["weekly-reviews"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
 app.include_router(cache_router.router, prefix="/api/cache", tags=["cache"])
+app.include_router(pool_router.router, prefix="/api/pool", tags=["pool"])
 
 
 @app.api_route(

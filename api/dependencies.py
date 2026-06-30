@@ -14,8 +14,10 @@ from api.repositories.config_repo import ConfigRepository
 from api.repositories.fundamentals_config_repo import FundamentalsConfigRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
+from api.repositories.review_queue_repo import ReviewQueueRepository
 from api.repositories.screener_history_repo import ScreenerHistoryRepository
 from api.repositories.strategy_repo import StrategyRepository
+from api.repositories.symbol_pool_repo import SymbolPoolRepository
 from api.repositories.watchlist_repo import WatchlistRepository
 from api.repositories.weekly_reviews_repo import WeeklyReviewsRepository
 from api.services.fundamentals_service import FundamentalsService
@@ -61,6 +63,8 @@ DATA_DIR = data_dir()
 POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", DATA_DIR / "positions.json")
 ORDERS_FILE = DATA_DIR / "orders.json"
 WATCHLIST_FILE = get_settings_manager().resolve_runtime_path("watchlist_file", DATA_DIR / "watchlist.json")
+SYMBOL_POOL_FILE = get_settings_manager().resolve_runtime_path("symbol_pool_file", DATA_DIR / "symbol_pool.json")
+REVIEW_QUEUE_FILE = get_settings_manager().resolve_runtime_path("review_queue_file", DATA_DIR / "review_queue.json")
 
 # Patchable path aliases used by tests (monkeypatch these to redirect I/O).
 # Set to None to fall through to the module-level constants.
@@ -160,15 +164,27 @@ def get_strategy_service(
     return StrategyService(strategy_repo=strategy_repo)
 
 
+def get_symbol_pool_repo() -> SymbolPoolRepository:
+    return SymbolPoolRepository(SYMBOL_POOL_FILE)
+
+
+def get_review_queue_repo() -> ReviewQueueRepository:
+    return ReviewQueueRepository(REVIEW_QUEUE_FILE)
+
+
 def get_screener_service(
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
     orders_service: OrdersService = Depends(get_orders_service),
+    pool_repo: SymbolPoolRepository = Depends(get_symbol_pool_repo),
+    review_repo: ReviewQueueRepository = Depends(get_review_queue_repo),
 ) -> ScreenerService:
     return ScreenerService(
         strategy_repo=strategy_repo,
         portfolio_service=portfolio_service,
         orders_service=orders_service,
+        pool_repo=pool_repo,
+        review_repo=review_repo,
     )
 
 

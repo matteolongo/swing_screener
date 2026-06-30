@@ -126,6 +126,7 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
     # downstream ranking (must have is_eligible, mom_6m, mom_12m, rs_6m so
     # build_momentum_report can rank and write to cache).
     import json
+
     computed_tickers: list[set] = []
 
     def _spying_compute(ohlcv, cfg, sector_benchmark_returns=None):
@@ -136,9 +137,20 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
         computed_tickers.append(close_tickers)
         # Return a minimal but valid records DataFrame so the cache can write.
         tickers_list = sorted(close_tickers)
-        feature_cols = ["mom_6m", "mom_12m", "rs_6m", "atr14", "atr_pct",
-                        "last", "currency", "dist_sma50_pct", "dist_sma200_pct",
-                        "trend_ok", "is_eligible", "signal"]
+        feature_cols = [
+            "mom_6m",
+            "mom_12m",
+            "rs_6m",
+            "atr14",
+            "atr_pct",
+            "last",
+            "currency",
+            "dist_sma50_pct",
+            "dist_sma200_pct",
+            "trend_ok",
+            "is_eligible",
+            "signal",
+        ]
         data = {
             "mom_6m": [0.10] * len(tickers_list),
             "mom_12m": [0.20] * len(tickers_list),
@@ -162,7 +174,9 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
     monkeypatch.setattr(momentum_mod, "compute_symbol_records", _spying_compute)
 
     # Stub out the heavy / network-dependent parts of _run_daily_report.
-    monkeypatch.setattr(screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {}
+    )
     monkeypatch.setattr(
         screener_svc_mod.sector_rotation,
         "compute_sector_benchmark_returns",
@@ -180,7 +194,9 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
     )
 
     from swing_screener.strategy.report_config import ReportConfig
-    from swing_screener.selection.universe import UniverseConfig as SelectionUniverseConfig
+    from swing_screener.selection.universe import (
+        UniverseConfig as SelectionUniverseConfig,
+    )
     from swing_screener.selection.entries import EntrySignalConfig
     from swing_screener.selection.ranking import RankingConfig
     from swing_screener.risk.position_sizing import RiskConfig
@@ -201,6 +217,7 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
         ctx.ticker_info = {}
         ctx.sector_rotation_by_name = {}
         from swing_screener.recommendation.priority import CombinedPriorityConfig
+
         ctx.combined_priority_cfg = CombinedPriorityConfig()
         return ctx
 
@@ -219,16 +236,26 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
 
     # Run 1 must have computed at least AAA and BBB (SPY is the benchmark and
     # excluded from screening, so it may or may not appear).
-    all_computed_run1 = set().union(*computed_after_run1) if computed_after_run1 else set()
-    assert "AAA" in all_computed_run1, f"Run 1 should compute AAA; got {computed_after_run1}"
-    assert "BBB" in all_computed_run1, f"Run 1 should compute BBB; got {computed_after_run1}"
+    all_computed_run1 = (
+        set().union(*computed_after_run1) if computed_after_run1 else set()
+    )
+    assert (
+        "AAA" in all_computed_run1
+    ), f"Run 1 should compute AAA; got {computed_after_run1}"
+    assert (
+        "BBB" in all_computed_run1
+    ), f"Run 1 should compute BBB; got {computed_after_run1}"
 
     # Run 2 must NOT recompute BBB (cache hit) and MUST compute CCC (cache miss).
-    all_computed_run2 = set().union(*computed_after_run2) if computed_after_run2 else set()
-    assert "CCC" in all_computed_run2, f"Run 2 should compute CCC; got {computed_after_run2}"
-    assert "BBB" not in all_computed_run2, (
-        f"Run 2 should reuse cached BBB but recomputed it; got {computed_after_run2}"
+    all_computed_run2 = (
+        set().union(*computed_after_run2) if computed_after_run2 else set()
     )
+    assert (
+        "CCC" in all_computed_run2
+    ), f"Run 2 should compute CCC; got {computed_after_run2}"
+    assert (
+        "BBB" not in all_computed_run2
+    ), f"Run 2 should reuse cached BBB but recomputed it; got {computed_after_run2}"
 
 
 def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
@@ -246,6 +273,7 @@ def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
     svc, _eval_cache, _mock_provider = _make_screener_service(tmp_path)
 
     import json
+
     computed_tickers: list[set] = []
 
     def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None):
@@ -256,9 +284,18 @@ def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
         computed_tickers.append(close_tickers)
         tickers_list = sorted(close_tickers)
         feature_cols = [
-            "mom_6m", "mom_12m", "rs_6m", "atr14", "atr_pct",
-            "last", "currency", "dist_sma50_pct", "dist_sma200_pct",
-            "trend_ok", "is_eligible", "signal",
+            "mom_6m",
+            "mom_12m",
+            "rs_6m",
+            "atr14",
+            "atr_pct",
+            "last",
+            "currency",
+            "dist_sma50_pct",
+            "dist_sma200_pct",
+            "trend_ok",
+            "is_eligible",
+            "signal",
         ]
         data = {
             "mom_6m": [0.10] * len(tickers_list),
@@ -279,7 +316,9 @@ def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
 
     monkeypatch.setattr(momentum_mod, "compute_symbol_records", _spying_compute)
 
-    monkeypatch.setattr(screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {}
+    )
     monkeypatch.setattr(
         screener_svc_mod.sector_rotation,
         "compute_sector_benchmark_returns",
@@ -303,7 +342,9 @@ def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
 
     def _make_ctx(tickers_list, ohlcv_df, asof="2024-01-05", force_refresh=False):
         req = ScreenerRequest(asof_date=asof, top=10, force_refresh=force_refresh)
-        ctx = _RunContext(request=req, strategy={}, combined_priority_cfg=CombinedPriorityConfig())
+        ctx = _RunContext(
+            request=req, strategy={}, combined_priority_cfg=CombinedPriorityConfig()
+        )
         ctx.ohlcv = ohlcv_df
         ctx.asof_str = asof
         ctx.screening_tickers = [t for t in tickers_list if t != "SPY"]
@@ -322,8 +363,12 @@ def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
     svc._run_daily_report(ctx2, requested_top=10)
 
     all_computed = set().union(*computed_tickers) if computed_tickers else set()
-    assert "AAA" in all_computed, f"force_refresh should recompute AAA; got {computed_tickers}"
-    assert "BBB" in all_computed, f"force_refresh should recompute BBB; got {computed_tickers}"
+    assert (
+        "AAA" in all_computed
+    ), f"force_refresh should recompute AAA; got {computed_tickers}"
+    assert (
+        "BBB" in all_computed
+    ), f"force_refresh should recompute BBB; got {computed_tickers}"
 
 
 def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
@@ -359,6 +404,7 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
 
     # --- Spy on compute_symbol_records ---
     import json
+
     computed_tickers: list[set] = []
 
     def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None):
@@ -369,9 +415,18 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
         computed_tickers.append(close_tickers)
         tickers_list = sorted(close_tickers)
         feature_cols = [
-            "mom_6m", "mom_12m", "rs_6m", "atr14", "atr_pct",
-            "last", "currency", "dist_sma50_pct", "dist_sma200_pct",
-            "trend_ok", "is_eligible", "signal",
+            "mom_6m",
+            "mom_12m",
+            "rs_6m",
+            "atr14",
+            "atr_pct",
+            "last",
+            "currency",
+            "dist_sma50_pct",
+            "dist_sma200_pct",
+            "trend_ok",
+            "is_eligible",
+            "signal",
         ]
         data = {
             "mom_6m": [0.10] * len(tickers_list),
@@ -392,7 +447,9 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
 
     monkeypatch.setattr(momentum_mod, "compute_symbol_records", _spying_compute)
 
-    monkeypatch.setattr(screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {}
+    )
     monkeypatch.setattr(
         screener_svc_mod.sector_rotation,
         "compute_sector_benchmark_returns",
@@ -411,7 +468,9 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
 
     def _make_ctx(tickers_list, ohlcv_df, asof=ASOF):
         req = ScreenerRequest(asof_date=asof, top=10)
-        ctx = _RunContext(request=req, strategy={}, combined_priority_cfg=CombinedPriorityConfig())
+        ctx = _RunContext(
+            request=req, strategy={}, combined_priority_cfg=CombinedPriorityConfig()
+        )
         ctx.ohlcv = ohlcv_df
         ctx.asof_str = asof
         ctx.screening_tickers = [t for t in tickers_list if t != "SPY"]
@@ -450,14 +509,16 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
 
     computed_after_warmup = list(computed_tickers)
     all_warmed = set().union(*computed_after_warmup) if computed_after_warmup else set()
-    assert "AAA" in all_warmed and "BBB" in all_warmed, (
-        f"Warmup must compute AAA and BBB; got {computed_after_warmup}"
-    )
+    assert (
+        "AAA" in all_warmed and "BBB" in all_warmed
+    ), f"Warmup must compute AAA and BBB; got {computed_after_warmup}"
     computed_tickers.clear()
 
     # --- Build DailyReviewService whose screener shares the same EvalCache ---
     dr_portfolio = MagicMock(spec=PortfolioService)
-    dr_portfolio.list_positions.return_value = PositionsResponse(positions=[], asof="2024-01-05")
+    dr_portfolio.list_positions.return_value = PositionsResponse(
+        positions=[], asof="2024-01-05"
+    )
 
     dr_screener = ScreenerService(
         strategy_repo=mock_strategy_repo,
@@ -474,7 +535,9 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
     def _patched_run_screener(request, strategy_override=None):
         ctx = _make_ctx(tickers, ohlcv, asof=ASOF)
         dr_screener._run_daily_report(ctx, requested_top=10)
-        return ScreenerResponse(candidates=[], asof_date=ASOF, total_screened=len(tickers))
+        return ScreenerResponse(
+            candidates=[], asof_date=ASOF, total_screened=len(tickers)
+        )
 
     monkeypatch.setattr(dr_screener, "run_screener", _patched_run_screener)
 
@@ -490,17 +553,87 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
     all_computed_dr = set().union(*computed_after_dr) if computed_after_dr else set()
 
     # Neither AAA nor BBB should have been recomputed — they're both cache hits.
-    assert "AAA" not in all_computed_dr, (
-        f"daily-review should reuse cached AAA but recomputed it; got {computed_after_dr}"
+    assert (
+        "AAA" not in all_computed_dr
+    ), f"daily-review should reuse cached AAA but recomputed it; got {computed_after_dr}"
+    assert (
+        "BBB" not in all_computed_dr
+    ), f"daily-review should reuse cached BBB but recomputed it; got {computed_after_dr}"
+
+
+# ---------------------------------------------------------------------------
+# Taxonomy pool pre-filter (_resolve_universe_and_window)
+# ---------------------------------------------------------------------------
+
+
+class _FakePoolRepo:
+    def __init__(self, symbols):
+        self._symbols = symbols
+
+    def list_symbols(self):
+        return self._symbols
+
+
+class _FakeReviewRepo:
+    def __init__(self, queued=None):
+        # `queued` is a list of {"symbol": ...} dicts or plain symbol strings.
+        self._queued = {
+            (q["symbol"] if isinstance(q, dict) else q).upper() for q in (queued or [])
+        }
+
+    def queued_symbols(self, threshold):
+        return set(self._queued)
+
+    def apply_fetch_results(self, ok, failed, asof, threshold):
+        return None
+
+
+def _pool_symbol(symbol, **kw):
+    base = {
+        "symbol": symbol,
+        "region": "us",
+        "available_providers": ["yfinance"],
+        "primary_provider": "yfinance",
+        "index_memberships": [],
+    }
+    base.update(kw)
+    return base
+
+
+def _make_screener_service_with_pool(tmp_path, symbols, queue=None):
+    from api.services.screener_service import ScreenerService
+    from api.repositories.strategy_repo import StrategyRepository
+    from api.services.portfolio_service import PortfolioService
+    from swing_screener.selection.eval_cache import EvalCache
+    from swing_screener.data.source_health import DataSourceHealth
+    from swing_screener.data.providers import MarketDataProvider
+
+    mock_strategy_repo = MagicMock(spec=StrategyRepository)
+    mock_strategy_repo.get_active_strategy.return_value = {}
+    mock_portfolio = MagicMock(spec=PortfolioService)
+    mock_portfolio.list_positions.return_value = MagicMock(positions=[])
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.get_provider_name.return_value = "mock"
+    mock_provider.get_source_health.return_value = DataSourceHealth(
+        provider="mock",
+        domain="market_data",
+        status="ok",
+        quality_score=0.7,
+        delay_policy="test",
     )
-    assert "BBB" not in all_computed_dr, (
-        f"daily-review should reuse cached BBB but recomputed it; got {computed_after_dr}"
+    return ScreenerService(
+        strategy_repo=mock_strategy_repo,
+        portfolio_service=mock_portfolio,
+        provider=mock_provider,
+        eval_cache=EvalCache(root=tmp_path / "eval_cache"),
+        pool_repo=_FakePoolRepo(symbols),
+        review_repo=_FakeReviewRepo(queue),
     )
 
 
 def test_fetch_ohlcv_chunked_forwards_force_refresh():
     """_fetch_ohlcv_chunked must pass force_refresh through to provider.fetch_ohlcv."""
-    from unittest.mock import MagicMock, call
+    from unittest.mock import MagicMock
     from api.services.screener_service import _fetch_ohlcv_chunked
     from swing_screener.data.providers import MarketDataProvider
 
@@ -524,3 +657,116 @@ def test_fetch_ohlcv_chunked_forwards_force_refresh():
     assert kwargs.get("force_refresh") is True, (
         f"expected force_refresh=True forwarded to provider; got {kwargs}"
     )
+
+
+def test_resolve_universe_prefilters_from_pool(tmp_path):
+    from api.services.screener_service import _RunContext
+    from api.models.screener import ScreenerRequest, TaxonomyFilter
+
+    symbols = [
+        _pool_symbol("AAPL", region="us"),
+        _pool_symbol("ASML", region="europe"),
+        _pool_symbol("TSM", region="asia_pacific"),
+    ]
+    svc = _make_screener_service_with_pool(tmp_path, symbols)
+    req = ScreenerRequest(taxonomy_filter=TaxonomyFilter(region=["us"]), top=5)
+    ctx = _RunContext(request=req, strategy={})
+    svc._resolve_universe_and_window(ctx)
+    assert "AAPL" in ctx.screening_tickers
+    assert "ASML" not in ctx.screening_tickers
+    assert "TSM" not in ctx.screening_tickers
+
+
+def test_resolve_universe_excludes_review_queue(tmp_path):
+    from api.services.screener_service import _RunContext
+    from api.models.screener import ScreenerRequest, TaxonomyFilter
+
+    symbols = [_pool_symbol("AAPL", region="us"), _pool_symbol("MSFT", region="us")]
+    svc = _make_screener_service_with_pool(
+        tmp_path, symbols, queue=[{"symbol": "AAPL"}]
+    )
+    req = ScreenerRequest(taxonomy_filter=TaxonomyFilter(region=["us"]), top=5)
+    ctx = _RunContext(request=req, strategy={})
+    svc._resolve_universe_and_window(ctx)
+    assert "AAPL" not in ctx.screening_tickers
+    assert "MSFT" in ctx.screening_tickers
+
+
+def test_universe_alias_maps_to_index_membership(tmp_path):
+    from api.services.screener_service import _RunContext
+    from api.models.screener import ScreenerRequest
+
+    symbols = [
+        _pool_symbol("AAPL", index_memberships=["us_sp500"]),
+        _pool_symbol("XYZ", index_memberships=["other_index"]),
+    ]
+    svc = _make_screener_service_with_pool(tmp_path, symbols)
+    req = ScreenerRequest(universe="us_sp500", top=5)
+    ctx = _RunContext(request=req, strategy={})
+    svc._resolve_universe_and_window(ctx)
+    assert "AAPL" in ctx.screening_tickers
+    assert "XYZ" not in ctx.screening_tickers
+
+
+def test_record_fetch_health_enqueues_on_threshold(tmp_path):
+    import json
+
+    from api.services.screener_service import ScreenerService, _RunContext
+    from api.repositories.strategy_repo import StrategyRepository
+    from api.repositories.symbol_pool_repo import SymbolPoolRepository
+    from api.repositories.review_queue_repo import ReviewQueueRepository
+    from api.services.portfolio_service import PortfolioService
+    from api.models.screener import ScreenerRequest
+    from swing_screener.selection.eval_cache import EvalCache
+    from swing_screener.data.providers import MarketDataProvider
+
+    pool_path = tmp_path / "symbol_pool.json"
+    pool_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "asof": "2026-06-29",
+                "symbols": [{"symbol": "AAPL"}, {"symbol": "MSFT"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    # Review queue: AAPL already failed twice (count 2, below threshold 3).
+    queue_path = tmp_path / "review_queue.json"
+    queue_path.write_text(
+        json.dumps({"symbols": {"AAPL": {"symbol": "AAPL", "fetch_failure_count": 2}}}),
+        encoding="utf-8",
+    )
+
+    mock_strategy_repo = MagicMock(spec=StrategyRepository)
+    mock_portfolio = MagicMock(spec=PortfolioService)
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.get_provider_name.return_value = "mock"
+
+    review_repo = ReviewQueueRepository(queue_path)
+    svc = ScreenerService(
+        strategy_repo=mock_strategy_repo,
+        portfolio_service=mock_portfolio,
+        provider=mock_provider,
+        eval_cache=EvalCache(root=tmp_path / "eval_cache"),
+        pool_repo=SymbolPoolRepository(pool_path),
+        review_repo=review_repo,
+    )
+
+    # OHLCV contains MSFT only → AAPL failed this run, crossing 2 -> 3 (threshold 3).
+    idx = pd.date_range("2024-01-01", periods=2, freq="B")
+    cols = pd.MultiIndex.from_tuples([("Close", "MSFT")], names=["field", "ticker"])
+    ohlcv = pd.DataFrame([[10.0], [10.5]], index=idx, columns=cols)
+
+    req = ScreenerRequest(top=5)
+    ctx = _RunContext(request=req, strategy={})
+    ctx.ohlcv = ohlcv
+    ctx.screening_tickers = ["AAPL", "MSFT"]
+    ctx.asof_str = "2026-06-30"
+
+    svc._record_fetch_health(ctx)
+
+    assert review_repo.queued_symbols(3) == {"AAPL"}
+    # The committed pool file is never mutated by a screener run.
+    pool_data = json.loads(pool_path.read_text(encoding="utf-8"))
+    assert all("fetch_failure_count" not in s for s in pool_data["symbols"])

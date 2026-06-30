@@ -1,4 +1,5 @@
 """Screener service."""
+
 from __future__ import annotations
 
 from dataclasses import replace, asdict, dataclass, field
@@ -33,13 +34,10 @@ from swing_screener.indicators.candles import detect_patterns, CandleConfig
 from swing_screener.execution.guidance import apply_pattern_stop, ExecutionConfig
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
-    filter_tickers_by_metadata,
     get_instrument_record,
-    load_universe_from_package,
-    list_package_universes,
-    UniverseConfig as DataUniverseConfig,
     get_universe_benchmark,
 )
+from swing_screener.data.symbol_pool import deserialize_pool, filter_pool_by_taxonomy
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.data.currency import detect_currency
 from swing_screener.data.ticker_info import get_multiple_ticker_info
@@ -47,7 +45,10 @@ from swing_screener.data import sector_rotation
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
 from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
-from swing_screener.recommendation.priority import CombinedPriorityConfig, compute_combined_priority
+from swing_screener.recommendation.priority import (
+    CombinedPriorityConfig,
+    compute_combined_priority,
+)
 from swing_screener.settings import get_settings_manager
 from swing_screener.strategy.config import (
     build_entry_config,
@@ -138,7 +139,9 @@ logger = logging.getLogger(__name__)
 
 
 def _min_days_to_earnings_default() -> int:
-    selection_defaults = get_settings_manager().get_low_level_defaults_payload("selection")
+    selection_defaults = get_settings_manager().get_low_level_defaults_payload(
+        "selection"
+    )
     universe_defaults = selection_defaults.get("universe", {})
     if not isinstance(universe_defaults, dict):
         return 0
@@ -180,6 +183,7 @@ class _RunContext:
     Holds everything the steps hand to each other so step signatures stay
     small. Created fresh per run_screener call; never shared across calls.
     """
+
     request: ScreenerRequest
     strategy: dict
     warnings: list[str] = field(default_factory=list)
@@ -217,6 +221,8 @@ class ScreenerService:
         provider: Optional[MarketDataProvider] = None,
         orders_service=None,
         eval_cache: Optional[EvalCache] = None,
+        pool_repo=None,
+        review_repo=None,
     ) -> None:
         self._strategy_repo = strategy_repo
         self._portfolio_service = portfolio_service
@@ -226,10 +232,98 @@ class ScreenerService:
             self._eval_cache: EvalCache = eval_cache
         else:
             self._eval_cache = EvalCache(
-                root=get_settings_manager().resolve_runtime_path("eval_cache_dir", ".cache/eval")
+                root=get_settings_manager().resolve_runtime_path(
+                    "eval_cache_dir", ".cache/eval"
+                )
             )
+        if pool_repo is not None:
+            self._pool_repo = pool_repo
+        else:
+            from api.repositories.symbol_pool_repo import SymbolPoolRepository
 
-    def _resolve_strategy(self, strategy_id: Optional[str], strategy_override: Optional[dict] = None) -> dict:
+            self._pool_repo = SymbolPoolRepository(
+                get_settings_manager().resolve_runtime_path(
+                    "symbol_pool_file", "data/symbol_pool.json"
+                )
+            )
+        if review_repo is not None:
+            self._review_repo = review_repo
+        else:
+            from api.repositories.review_queue_repo import ReviewQueueRepository
+
+            self._review_repo = ReviewQueueRepository(
+                get_settings_manager().resolve_runtime_path(
+                    "review_queue_file", "data/review_queue.json"
+                )
+            )
+        self._available_providers = self._resolve_available_providers()
+
+    @staticmethod
+    def _resolve_available_providers() -> set[str]:
+        import os
+
+        from swing_screener.integrations.degiro.credentials import (
+            credentials_configured,
+        )
+
+        available = {"yfinance"}
+        if credentials_configured():
+            available.add("degiro")
+        if os.getenv("POLYGON_IO_API_KEY") or os.getenv("POLYGON_API_KEY"):
+            available.add("polygon")
+        if os.getenv("EODHD_API_KEY"):
+            available.add("eodhd")
+        return available
+
+    def _provider_available(self, provider: str | None) -> bool:
+        if provider in (None, "yfinance"):
+            return True
+        return provider in self._available_providers
+
+    @staticmethod
+    def _safe_universe_benchmark(universe_id: str) -> str | None:
+        try:
+            return get_universe_benchmark(universe_id)
+        except Exception:  # noqa: BLE001 - unknown id just yields no benchmark override
+            return None
+
+    def _build_taxonomy_spec(self, request: ScreenerRequest):
+        from api.models.screener import TaxonomyFilter
+        from api.services.pool_service import resolve_preset
+
+        base = TaxonomyFilter()
+        if request.preset:
+            resolved = resolve_preset(request.preset)
+            if resolved is not None:
+                base = resolved
+        if request.taxonomy_filter is not None:
+            data = base.model_dump()
+            for key, value in request.taxonomy_filter.model_dump().items():
+                if value:
+                    data[key] = value
+            base = TaxonomyFilter(**data)
+        if request.universe:  # deprecated alias → index membership
+            existing = list(base.index_memberships or [])
+            if request.universe not in existing:
+                existing.append(request.universe)
+            base = base.model_copy(update={"index_memberships": existing})
+        spec = base.to_spec()
+        # Backward-compat: legacy top-level filter fields map onto unset dimensions
+        # (the web UI sends these until the taxonomy filter bar lands).
+        overrides: dict = {}
+        if spec.currency is None and request.currencies:
+            overrides["currency"] = tuple(request.currencies)
+        if spec.exchange_mics is None and request.exchange_mics:
+            overrides["exchange_mics"] = tuple(request.exchange_mics)
+        if request.instrument_types:
+            overrides["instrument_type"] = tuple(request.instrument_types)
+        if overrides:
+            spec = replace(spec, **overrides)
+        return spec
+
+    def _resolve_strategy(
+        self, strategy_id: Optional[str], strategy_override: Optional[dict] = None
+    ) -> dict:
         if strategy_override is not None:
             return strategy_override
         if strategy_id:
@@ -254,59 +348,57 @@ class ScreenerService:
         ctx.universe_cfg = build_universe_config(ctx.strategy)
         ctx.now_utc = dt.datetime.now(dt.timezone.utc)
         ctx.benchmark = ctx.universe_cfg.mom.benchmark
-        if request.universe:
-            valid_ids = set(list_package_universes())
-            if request.universe not in valid_ids:
-                replacement = _REMOVED_UNIVERSE_IDS.get(request.universe)
-                if replacement:
-                    detail = (
-                        f"Universe '{request.universe}' was removed. "
-                        f"Use '{replacement}' instead."
-                    )
-                else:
-                    detail = (
-                        f"Universe '{request.universe}' is not available. "
-                        f"Available universes: {sorted(valid_ids)}"
-                    )
-                raise UnprocessableError(detail)
-            uni_benchmark = get_universe_benchmark(request.universe)
-            if uni_benchmark and uni_benchmark != ctx.benchmark:
-                ctx.universe_cfg = replace(
-                    ctx.universe_cfg,
-                    mom=replace(ctx.universe_cfg.mom, benchmark=uni_benchmark),
-                )
-                ctx.benchmark = uni_benchmark
 
         if request.tickers:
             ctx.tickers = [t.upper() for t in request.tickers]
             if ctx.benchmark not in ctx.tickers:
                 ctx.tickers.append(ctx.benchmark)
-        elif request.universe:
-            universe_cap = max(500, requested_top * 2)
-            ucfg = DataUniverseConfig(benchmark=ctx.benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-            ctx.tickers = load_universe_from_package(request.universe, ucfg)
         else:
-            universe_cap = max(500, requested_top * 2)
-            ucfg = DataUniverseConfig(benchmark=ctx.benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-            ctx.tickers = load_universe_from_package("broad_market_stocks", ucfg)
+            # Deprecated alias: a universe id still informs the benchmark override.
+            if request.universe:
+                uni_benchmark = self._safe_universe_benchmark(request.universe)
+                if uni_benchmark and uni_benchmark != ctx.benchmark:
+                    ctx.universe_cfg = replace(
+                        ctx.universe_cfg,
+                        mom=replace(ctx.universe_cfg.mom, benchmark=uni_benchmark),
+                    )
+                    ctx.benchmark = uni_benchmark
 
-        filtered_tickers = filter_tickers_by_metadata(
-            ctx.tickers,
-            currencies=request.currencies,
-            exchange_mics=request.exchange_mics,
-            include_otc=request.include_otc if request.include_otc is not None else True,
-            instrument_types=request.instrument_types,
-        )
-        if ctx.benchmark not in filtered_tickers:
-            filtered_tickers.append(ctx.benchmark)
-        if len(filtered_tickers) < len(ctx.tickers):
-            ctx.warnings.append(
-                f"Universe filters reduced the working list from {len(ctx.tickers)} to {len(filtered_tickers)} tickers."
-            )
-        ctx.tickers = filtered_tickers
+            from swing_screener.data.symbol_pool import load_symbol_pool_thresholds
+
+            _, _, fail_threshold = load_symbol_pool_thresholds()
+            spec = self._build_taxonomy_spec(request)
+            pool = deserialize_pool({"symbols": self._pool_repo.list_symbols()})
+            queued = self._review_repo.queued_symbols(fail_threshold)
+            pool = [s for s in pool if s.symbol not in queued]
+            pool = [s for s in pool if self._provider_available(s.primary_provider)]
+            pool_size = len(pool)
+            filtered = filter_pool_by_taxonomy(pool, spec)
+            # Legacy include_otc=False drops OTC listings (XOTC).
+            if request.include_otc is False:
+                filtered = [s for s in filtered if (s.exchange_mic or "") != "XOTC"]
+            universe_cap = max(500, requested_top * 2)
+            symbols = [s.symbol for s in filtered]
+            if len(symbols) > universe_cap:
+                ctx.warnings.append(
+                    f"Symbol pool filter matched {len(symbols)} symbols; "
+                    f"capped to {universe_cap}."
+                )
+                symbols = symbols[:universe_cap]
+            if len(symbols) < pool_size:
+                ctx.warnings.append(
+                    f"Taxonomy filters reduced the working list from {pool_size} "
+                    f"to {len(symbols)} tickers."
+                )
+            if ctx.benchmark not in symbols:
+                symbols.append(ctx.benchmark)
+            ctx.tickers = symbols
+
         ctx.market_health = self._provider.get_source_health().to_dict()
 
-        ctx.screening_tickers = [ticker for ticker in ctx.tickers if ticker != ctx.benchmark]
+        ctx.screening_tickers = [
+            ticker for ticker in ctx.tickers if ticker != ctx.benchmark
+        ]
         ctx.active_currencies = resolve_screening_currencies(
             request,
             strategy_currencies=ctx.universe_cfg.filt.currencies,
@@ -316,14 +408,18 @@ class ScreenerService:
         if request.asof_date:
             ctx.asof_str = request.asof_date
         else:
-            ctx.asof_str = resolve_default_asof_date(ctx.now_utc, ctx.active_currencies).isoformat()
+            ctx.asof_str = resolve_default_asof_date(
+                ctx.now_utc, ctx.active_currencies
+            ).isoformat()
 
         if len(ctx.tickers) <= 1 and ctx.benchmark in ctx.tickers:
             raise NotFoundError("No tickers left after applying screener filters")
 
         return requested_top
 
-    def _build_signals_and_fetch_ohlcv(self, ctx: _RunContext, requested_top: int) -> None:
+    def _build_signals_and_fetch_ohlcv(
+        self, ctx: _RunContext, requested_top: int
+    ) -> None:
         """Build signals config, fetch and shape OHLCV, compute freshness + last-bar maps.
 
         Populates ctx.signals_cfg, start_date, end_date, ohlcv, last_bar_map,
@@ -333,14 +429,25 @@ class ScreenerService:
         fields_set = ctx.request.model_fields_set
 
         ctx.signals_cfg = build_entry_config(ctx.strategy)
-        if "breakout_lookback" in fields_set and ctx.request.breakout_lookback is not None:
-            ctx.signals_cfg = replace(ctx.signals_cfg, breakout_lookback=ctx.request.breakout_lookback)
+        if (
+            "breakout_lookback" in fields_set
+            and ctx.request.breakout_lookback is not None
+        ):
+            ctx.signals_cfg = replace(
+                ctx.signals_cfg, breakout_lookback=ctx.request.breakout_lookback
+            )
         if "pullback_ma" in fields_set and ctx.request.pullback_ma is not None:
-            ctx.signals_cfg = replace(ctx.signals_cfg, pullback_ma=ctx.request.pullback_ma)
+            ctx.signals_cfg = replace(
+                ctx.signals_cfg, pullback_ma=ctx.request.pullback_ma
+            )
         if "min_history" in fields_set and ctx.request.min_history is not None:
-            ctx.signals_cfg = replace(ctx.signals_cfg, min_history=ctx.request.min_history)
+            ctx.signals_cfg = replace(
+                ctx.signals_cfg, min_history=ctx.request.min_history
+            )
 
-        ctx.start_date = resolve_fetch_start_date(ctx.asof_str, ctx.signals_cfg.min_history)
+        ctx.start_date = resolve_fetch_start_date(
+            ctx.asof_str, ctx.signals_cfg.min_history
+        )
         ctx.end_date = ctx.asof_str
         force_refresh = bool(getattr(ctx.request, "force_refresh", False))
         sector_context_tickers = ["SPY", *sector_rotation.SECTOR_ETFS.keys()]
@@ -364,26 +471,55 @@ class ScreenerService:
         )
 
         if len(ctx.tickers) > 120:
-            ctx.ohlcv = _fetch_ohlcv_chunked(self._provider, ctx.tickers, ctx.start_date, ctx.end_date, chunk_size=100, force_refresh=force_refresh)
+            ctx.ohlcv = _fetch_ohlcv_chunked(
+                self._provider,
+                ctx.tickers,
+                ctx.start_date,
+                ctx.end_date,
+                chunk_size=100,
+                force_refresh=force_refresh,
+            )
         else:
-            ctx.ohlcv = self._provider.fetch_ohlcv(ctx.tickers, start_date=ctx.start_date, end_date=ctx.end_date, force_refresh=force_refresh)
+            ctx.ohlcv = self._provider.fetch_ohlcv(
+                ctx.tickers,
+                start_date=ctx.start_date,
+                end_date=ctx.end_date,
+                force_refresh=force_refresh,
+            )
 
         if ctx.ohlcv is None or ctx.ohlcv.empty:
-            logger.error("OHLCV fetch returned empty data (tickers=%s)", len(ctx.tickers))
+            logger.error(
+                "OHLCV fetch returned empty data (tickers=%s)", len(ctx.tickers)
+            )
             raise NotFoundError("No market data found for requested tickers")
 
         ctx.ohlcv = merge_ohlcv(ctx.ohlcv, sector_ohlcv)
 
-        if "Close" not in ctx.ohlcv.columns.get_level_values(0) or ctx.benchmark not in ctx.ohlcv["Close"].columns:
-            logger.warning("Benchmark %s missing from OHLCV; fetching separately.", ctx.benchmark)
-            bench_df = self._provider.fetch_ohlcv([ctx.benchmark], start_date=ctx.start_date, end_date=ctx.end_date, force_refresh=force_refresh)
+        if (
+            "Close" not in ctx.ohlcv.columns.get_level_values(0)
+            or ctx.benchmark not in ctx.ohlcv["Close"].columns
+        ):
+            logger.warning(
+                "Benchmark %s missing from OHLCV; fetching separately.", ctx.benchmark
+            )
+            bench_df = self._provider.fetch_ohlcv(
+                [ctx.benchmark],
+                start_date=ctx.start_date,
+                end_date=ctx.end_date,
+                force_refresh=force_refresh,
+            )
             ctx.ohlcv = merge_ohlcv(ctx.ohlcv, bench_df)
-            if "Close" not in ctx.ohlcv.columns.get_level_values(0) or ctx.benchmark not in ctx.ohlcv["Close"].columns:
+            if (
+                "Close" not in ctx.ohlcv.columns.get_level_values(0)
+                or ctx.benchmark not in ctx.ohlcv["Close"].columns
+            ):
                 raise ServiceError("Benchmark data missing; cannot compute momentum.")
 
         ctx.last_bar_map = last_bar_map(ctx.ohlcv)
         ctx.overall_last_bar = _to_iso(ctx.ohlcv.index.max())
-        ctx.data_freshness = resolve_data_freshness(ctx.asof_str, ctx.now_utc, ctx.active_currencies)
+        ctx.data_freshness = resolve_data_freshness(
+            ctx.asof_str, ctx.now_utc, ctx.active_currencies
+        )
 
         # Detect tickers that failed to download and surface them as warnings
         if "Close" in ctx.ohlcv.columns.get_level_values(0):
@@ -397,6 +533,34 @@ class ScreenerService:
                     f"{', '.join(missing)}"
                 )
 
+        self._record_fetch_health(ctx)
+
+    def _record_fetch_health(self, ctx: _RunContext) -> None:
+        """Update per-symbol fetch counters; enqueue symbols that cross the threshold.
+
+        Best-effort: a failure here never aborts the screen.
+        """
+        try:
+            from swing_screener.data.symbol_pool import load_symbol_pool_thresholds
+
+            _, _, threshold = load_symbol_pool_thresholds()
+            present: set[str] = set()
+            if (
+                ctx.ohlcv is not None
+                and not ctx.ohlcv.empty
+                and "Close" in ctx.ohlcv.columns.get_level_values(0)
+            ):
+                present = set(ctx.ohlcv["Close"].columns)
+            requested = list(ctx.screening_tickers)
+            ok = [t for t in requested if t in present]
+            failed = [t for t in requested if t not in present]
+            self._review_repo.apply_fetch_results(ok, failed, ctx.asof_str, threshold)
+        except (
+            Exception
+        ) as exc:  # noqa: BLE001 - health tracking must never break a screen
+            logger.warning("Fetch-health tracking failed: %s", exc)
+            ctx.warnings.append("Fetch-health tracking unavailable this run.")
+
     def _build_run_configs(self, ctx: _RunContext, requested_top: int) -> None:
         """Apply request filter overrides and build ranking/risk/report configs.
 
@@ -407,9 +571,20 @@ class ScreenerService:
 
         if "min_price" in fields_set or "max_price" in fields_set:
             filt = ctx.universe_cfg.filt
-            min_price = ctx.request.min_price if ctx.request.min_price is not None else filt.min_price
-            max_price = ctx.request.max_price if ctx.request.max_price is not None else filt.max_price
-            ctx.universe_cfg = replace(ctx.universe_cfg, filt=replace(filt, min_price=min_price, max_price=max_price))
+            min_price = (
+                ctx.request.min_price
+                if ctx.request.min_price is not None
+                else filt.min_price
+            )
+            max_price = (
+                ctx.request.max_price
+                if ctx.request.max_price is not None
+                else filt.max_price
+            )
+            ctx.universe_cfg = replace(
+                ctx.universe_cfg,
+                filt=replace(filt, min_price=min_price, max_price=max_price),
+            )
         if "currencies" in fields_set and ctx.request.currencies is not None:
             filt = ctx.universe_cfg.filt
             requested_currencies = [
@@ -419,10 +594,20 @@ class ScreenerService:
             ]
             if not requested_currencies:
                 requested_currencies = ["USD", "EUR"]
-            ctx.universe_cfg = replace(ctx.universe_cfg, filt=replace(filt, currencies=requested_currencies))
-        if "require_weekly_uptrend" in fields_set and ctx.request.require_weekly_uptrend is not None:
+            ctx.universe_cfg = replace(
+                ctx.universe_cfg, filt=replace(filt, currencies=requested_currencies)
+            )
+        if (
+            "require_weekly_uptrend" in fields_set
+            and ctx.request.require_weekly_uptrend is not None
+        ):
             filt = ctx.universe_cfg.filt
-            ctx.universe_cfg = replace(ctx.universe_cfg, filt=replace(filt, require_weekly_uptrend=ctx.request.require_weekly_uptrend))
+            ctx.universe_cfg = replace(
+                ctx.universe_cfg,
+                filt=replace(
+                    filt, require_weekly_uptrend=ctx.request.require_weekly_uptrend
+                ),
+            )
 
         ctx.ranking_cfg = build_ranking_config(ctx.strategy)
         # Rank a pool of top * prefilter_multiplier so the combined-priority
@@ -432,14 +617,22 @@ class ScreenerService:
             ctx.ranking_cfg = replace(ctx.ranking_cfg, top_n=prefilter_pool)
 
         ctx.risk_cfg = build_risk_config(ctx.strategy)
-        multiplier, regime_meta = compute_regime_risk_multiplier(ctx.ohlcv, ctx.benchmark, ctx.risk_cfg)
+        multiplier, regime_meta = compute_regime_risk_multiplier(
+            ctx.ohlcv, ctx.benchmark, ctx.risk_cfg
+        )
         if multiplier != 1.0:
-            ctx.risk_cfg = replace(ctx.risk_cfg, risk_pct=ctx.risk_cfg.risk_pct * multiplier)
+            ctx.risk_cfg = replace(
+                ctx.risk_cfg, risk_pct=ctx.risk_cfg.risk_pct * multiplier
+            )
             if regime_meta.get("reasons"):
                 reasons = ", ".join(regime_meta["reasons"])
-                ctx.warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime: {reasons}")
+                ctx.warnings.append(
+                    f"Risk scaled by {multiplier:.2f}x due to regime: {reasons}"
+                )
             else:
-                ctx.warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime conditions.")
+                ctx.warnings.append(
+                    f"Risk scaled by {multiplier:.2f}x due to regime conditions."
+                )
 
         ctx.report_cfg = ReportConfig(
             universe=ctx.universe_cfg,
@@ -448,14 +641,20 @@ class ScreenerService:
             risk=ctx.risk_cfg,
         )
 
-    def _run_daily_report(self, ctx: _RunContext, requested_top: int) -> "pd.DataFrame | None":
+    def _run_daily_report(
+        self, ctx: _RunContext, requested_top: int
+    ) -> "pd.DataFrame | None":
         """Build sector context and run the daily report.
 
         Returns the ranked results DataFrame, or None when there are no
         candidates (orchestrator then returns the empty ScreenerResponse).
         Populates ctx.ticker_info and ctx.sector_rotation_by_name.
         """
-        ticker_info = get_multiple_ticker_info(ctx.screening_tickers) if ctx.screening_tickers else {}
+        ticker_info = (
+            get_multiple_ticker_info(ctx.screening_tickers)
+            if ctx.screening_tickers
+            else {}
+        )
         etf_returns = sector_rotation.compute_sector_benchmark_returns(ctx.ohlcv)
         rotation_scores = sector_rotation.compute_sector_rotation_scores(ctx.ohlcv)
         ticker_sectors = {
@@ -501,7 +700,9 @@ class ScreenerService:
             results = results.sort_values("confidence", ascending=False)
             if ctx.request.top:
                 # Stage 1: widen prefilter to allow combined priority stage to re-rank
-                prefilter_n = ctx.request.top * ctx.combined_priority_cfg.prefilter_multiplier
+                prefilter_n = (
+                    ctx.request.top * ctx.combined_priority_cfg.prefilter_multiplier
+                )
                 results = results.head(prefilter_n)
             results["rank"] = range(1, len(results) + 1)
 
@@ -512,7 +713,9 @@ class ScreenerService:
 
         return results
 
-    def _build_candidates(self, ctx: _RunContext, results: "pd.DataFrame") -> list[ScreenerCandidate]:
+    def _build_candidates(
+        self, ctx: _RunContext, results: "pd.DataFrame"
+    ) -> list[ScreenerCandidate]:
         """Construct ScreenerCandidate objects for each ranked result row.
 
         Reads ctx.ohlcv, ticker_info, benchmark, last_bar_map, overall_last_bar,
@@ -536,7 +739,9 @@ class ScreenerService:
         price_history_by_ticker = price_history_map(ohlcv, tickers=ticker_list)
         patterns_map = detect_patterns(ohlcv, tickers=ticker_list, cfg=CandleConfig())
         exec_cfg = ExecutionConfig()
-        benchmark_history = price_history_map(ohlcv, tickers=[benchmark]).get(benchmark, [])
+        benchmark_history = price_history_map(ohlcv, tickers=[benchmark]).get(
+            benchmark, []
+        )
         benchmark_change_pct = price_history_change_pct(benchmark_history)
         benchmark_last_bar = last_bar_map.get(benchmark) or overall_last_bar
 
@@ -549,8 +754,16 @@ class ScreenerService:
             sma200_dist = safe_float(row.get("dist_sma200_pct"))
             last_price = safe_float(row.get("last"))
 
-            sma50 = last_price / (1 + sma50_dist / 100) if last_price and sma50_dist else last_price
-            sma200 = last_price / (1 + sma200_dist / 100) if last_price and sma200_dist else last_price
+            sma50 = (
+                last_price / (1 + sma50_dist / 100)
+                if last_price and sma50_dist
+                else last_price
+            )
+            sma200 = (
+                last_price / (1 + sma200_dist / 100)
+                if last_price and sma200_dist
+                else last_price
+            )
 
             ticker_str = str(idx)
             info = ticker_info.get(ticker_str, {})
@@ -575,7 +788,11 @@ class ScreenerService:
             shares_val = safe_optional_int(row.get("shares"))
             position_size = safe_optional_float(row.get("position_value"))
             risk_usd = safe_optional_float(row.get("realized_risk"))
-            risk_pct = (risk_usd / risk_cfg.account_size) if risk_usd and risk_cfg.account_size else None
+            risk_pct = (
+                (risk_usd / risk_cfg.account_size)
+                if risk_usd and risk_cfg.account_size
+                else None
+            )
 
             # Anchor the entry stop to the setup's structural invalidation when a
             # tighter pattern stop is available, so 1R reflects the real risk level
@@ -599,7 +816,9 @@ class ScreenerService:
                 risk_pct = None
 
             rr_target = safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
-            commission_pct = safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0)
+            commission_pct = safe_float(
+                getattr(risk_cfg, "commission_pct", 0.0), default=0.0
+            )
 
             rec_payload = evaluate_recommendation(
                 signal=str(signal) if not is_na_scalar(signal) else None,
@@ -622,15 +841,17 @@ class ScreenerService:
                 sma_200=sma200,
                 atr=safe_float(row.get(atr_col)),
                 momentum_6m=safe_float(row.get("mom_6m")),
-                    momentum_12m=safe_float(row.get("mom_12m")),
-                    rel_strength=safe_float(row.get("rs_6m")),
-                    confidence=safe_float(row.get("confidence")),
+                momentum_12m=safe_float(row.get("mom_12m")),
+                rel_strength=safe_float(row.get("rs_6m")),
+                confidence=safe_float(row.get("confidence")),
             )
             recommendation = Recommendation.model_validate(asdict(rec_payload))
             rec_risk = recommendation.risk
             candidate_history = price_history_by_ticker.get(ticker_str, [])
             symbol_change_pct = price_history_change_pct(candidate_history)
-            benchmark_price_history = aligned_benchmark_price_history(candidate_history, benchmark_history)
+            benchmark_price_history = aligned_benchmark_price_history(
+                candidate_history, benchmark_history
+            )
             benchmark_outperformance_pct = (
                 symbol_change_pct - benchmark_change_pct
                 if symbol_change_pct is not None and benchmark_change_pct is not None
@@ -655,8 +876,10 @@ class ScreenerService:
                 ScreenerCandidate(
                     ticker=ticker_str,
                     currency=currency,
-                    exchange_mic=str(instrument.get("exchange_mic") or "").upper() or None,
-                    instrument_type=str(instrument.get("instrument_type") or "").lower() or None,
+                    exchange_mic=str(instrument.get("exchange_mic") or "").upper()
+                    or None,
+                    instrument_type=str(instrument.get("instrument_type") or "").lower()
+                    or None,
                     is_otc=str(instrument.get("exchange_mic") or "").upper() == "XOTC",
                     name=info.get("name"),
                     sector=info.get("sector"),
@@ -675,9 +898,15 @@ class ScreenerService:
                     rank=int(row.get("rank", len(candidates) + 1)),
                     sma20_slope=safe_optional_float(row.get("sma20_slope")),
                     sma50_slope=safe_optional_float(row.get("sma50_slope")),
-                    consolidation_tightness=safe_optional_float(row.get("consolidation_tightness")),
-                    close_location_in_range=safe_optional_float(row.get("close_location_in_range")),
-                    above_breakout_extension=safe_optional_float(row.get("above_breakout_extension")),
+                    consolidation_tightness=safe_optional_float(
+                        row.get("consolidation_tightness")
+                    ),
+                    close_location_in_range=safe_optional_float(
+                        row.get("close_location_in_range")
+                    ),
+                    above_breakout_extension=safe_optional_float(
+                        row.get("above_breakout_extension")
+                    ),
                     breakout_volume_confirmation=(
                         bool(row.get("breakout_volume_confirmation"))
                         if not is_na_scalar(row.get("breakout_volume_confirmation"))
@@ -695,10 +924,14 @@ class ScreenerService:
                         else None
                     ),
                     volume_ratio=safe_optional_float(row.get("volume_ratio")),
-                    avg_daily_volume_eur=safe_optional_float(row.get("avg_daily_volume_eur")),
+                    avg_daily_volume_eur=safe_optional_float(
+                        row.get("avg_daily_volume_eur")
+                    ),
                     symbol_change_pct=symbol_change_pct,
                     benchmark_outperformance_pct=benchmark_outperformance_pct,
-                    sector_rotation_context=sector_rotation_by_name.get(info.get("sector")),
+                    sector_rotation_context=sector_rotation_by_name.get(
+                        info.get("sector")
+                    ),
                     data_source_summary={"market_data": market_health},
                     signal=str(signal) if not is_na_scalar(signal) else None,
                     entry=rec_risk.entry,
@@ -706,7 +939,11 @@ class ScreenerService:
                     target=rec_risk.target,
                     rr=rec_risk.rr,
                     shares=shares_val if shares_val is not None else rec_risk.shares,
-                    position_size_usd=position_size if position_size is not None else rec_risk.position_size,
+                    position_size_usd=(
+                        position_size
+                        if position_size is not None
+                        else rec_risk.position_size
+                    ),
                     risk_usd=risk_usd if risk_usd is not None else rec_risk.risk_amount,
                     risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
                     recommendation=recommendation,
@@ -720,7 +957,9 @@ class ScreenerService:
                         if not is_na_scalar(row.get("suggested_order_type"))
                         else None
                     ),
-                    suggested_order_price=safe_optional_float(row.get("suggested_order_price")),
+                    suggested_order_price=safe_optional_float(
+                        row.get("suggested_order_price")
+                    ),
                     execution_note=(
                         str(row.get("execution_note"))
                         if not is_na_scalar(row.get("execution_note"))
@@ -744,14 +983,22 @@ class ScreenerService:
         strategy = ctx.strategy
         risk_cfg = ctx.risk_cfg
 
-        portfolio_positions = self._portfolio_service.list_positions(status="open").positions
-        portfolio_closed = self._portfolio_service.list_positions(status="closed").positions
+        portfolio_positions = self._portfolio_service.list_positions(
+            status="open"
+        ).positions
+        portfolio_closed = self._portfolio_service.list_positions(
+            status="closed"
+        ).positions
         portfolio_orders: list = []
         if self._orders_service is not None:
             try:
-                portfolio_orders = self._orders_service.list_local_orders().get("orders", [])
+                portfolio_orders = self._orders_service.list_local_orders().get(
+                    "orders", []
+                )
             except Exception as exc:
-                logger.warning("Failed to load orders for same-symbol evaluation: %s", exc)
+                logger.warning(
+                    "Failed to load orders for same-symbol evaluation: %s", exc
+                )
         same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
         same_symbol_suppressed_count = 0
         same_symbol_add_on_count = 0
@@ -786,7 +1033,11 @@ class ScreenerService:
             if enriched_candidate is not None:
                 filtered_candidates.append(enriched_candidate)
 
-        return filtered_candidates, same_symbol_suppressed_count, same_symbol_add_on_count
+        return (
+            filtered_candidates,
+            same_symbol_suppressed_count,
+            same_symbol_add_on_count,
+        )
 
     def _enrich_and_rank(
         self,
@@ -809,8 +1060,12 @@ class ScreenerService:
         warnings = ctx.warnings
 
         fundamentals_snapshots = load_fundamentals_snapshots(candidates)
-        candidates = apply_cached_fundamentals_context(candidates, snapshots=fundamentals_snapshots)
-        candidates = apply_decision_summary_context(candidates, snapshots=fundamentals_snapshots)
+        candidates = apply_cached_fundamentals_context(
+            candidates, snapshots=fundamentals_snapshots
+        )
+        candidates = apply_decision_summary_context(
+            candidates, snapshots=fundamentals_snapshots
+        )
 
         finnhub_key = os.environ.get("FINNHUB_API_KEY")
         earnings_asof_date = dt.date.fromisoformat(asof_str)
@@ -821,7 +1076,9 @@ class ScreenerService:
             cache_path=".cache/earnings_days.json",
         )
         candidates = [
-            candidate.model_copy(update={"days_to_earnings": earnings_days.get(candidate.ticker)})
+            candidate.model_copy(
+                update={"days_to_earnings": earnings_days.get(candidate.ticker)}
+            )
             for candidate in candidates
         ]
 
@@ -830,7 +1087,8 @@ class ScreenerService:
             candidates = [
                 candidate
                 for candidate in candidates
-                if candidate.days_to_earnings is None or candidate.days_to_earnings >= min_days_to_earnings
+                if candidate.days_to_earnings is None
+                or candidate.days_to_earnings >= min_days_to_earnings
             ]
 
         # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
@@ -840,7 +1098,9 @@ class ScreenerService:
             candidates,
             risk_cfg=risk_cfg,
             rr_target=safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0),
-            commission_pct=safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0),
+            commission_pct=safe_float(
+                getattr(risk_cfg, "commission_pct", 0.0), default=0.0
+            ),
         )
         candidates = apply_decision_priority_ranking(candidates)
         if same_symbol_suppressed_count > 0:
@@ -855,7 +1115,9 @@ class ScreenerService:
 
         return candidates
 
-    def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
+    def run_screener(
+        self, request: ScreenerRequest, strategy_override: Optional[dict] = None
+    ) -> ScreenerResponse:
         try:
             ctx = _RunContext(
                 request=request,
@@ -916,12 +1178,15 @@ class ScreenerService:
             logger.exception("Unexpected screener error")
             raise ServiceError("Screener failed unexpectedly")
 
-    def start_run_async(self, request: ScreenerRequest, on_complete=None) -> ScreenerRunLaunchResponse:
+    def start_run_async(
+        self, request: ScreenerRequest, on_complete=None
+    ) -> ScreenerRunLaunchResponse:
         """Start screener run in background and return job metadata.
 
         ``on_complete`` is invoked with the ScreenerResponse after a successful
         run (e.g. to record screener history); its failures never fail the job.
         """
+
         def _run() -> ScreenerResponse:
             result = self.run_screener(request)
             if on_complete is not None:

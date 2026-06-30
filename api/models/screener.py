@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
+from swing_screener.data.symbol_pool import TaxonomyFilterSpec
 from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.recommendation.models import DecisionSummary
 
@@ -117,9 +118,41 @@ class ScreenerCandidate(BaseModel):
     pattern_stop_reason: str | None = None
 
 
+class TaxonomyFilter(BaseModel):
+    region: Optional[list[str]] = None
+    market_cap_tier: Optional[list[str]] = None
+    sector: Optional[list[str]] = None
+    index_memberships: Optional[list[str]] = None
+    instrument_type_detail: Optional[list[str]] = None
+    provider: Optional[list[str]] = None
+    currency: Optional[list[str]] = None
+    exchange_mics: Optional[list[str]] = None
+    liquidity_tier: Optional[list[str]] = None
+
+    def to_spec(self) -> TaxonomyFilterSpec:
+        def _t(v: Optional[list[str]]) -> Optional[tuple[str, ...]]:
+            return tuple(v) if v else None
+
+        return TaxonomyFilterSpec(
+            region=_t(self.region),
+            market_cap_tier=_t(self.market_cap_tier),
+            sector=_t(self.sector),
+            index_memberships=_t(self.index_memberships),
+            instrument_type_detail=_t(self.instrument_type_detail),
+            provider=_t(self.provider),
+            currency=_t(self.currency),
+            exchange_mics=_t(self.exchange_mics),
+            liquidity_tier=_t(self.liquidity_tier),
+        )
+
+
 class ScreenerRequest(BaseModel):
     universe: Optional[str] = Field(
-        default=None, description="Named universe (e.g., 'sp500')"
+        default=None,
+        description=(
+            "DEPRECATED alias: resolves to taxonomy_filter.index_memberships=[universe]. "
+            "Removed in a later release."
+        ),
     )
     tickers: Optional[list[str]] = Field(
         default=None, description="Explicit ticker list"
@@ -178,6 +211,14 @@ class ScreenerRequest(BaseModel):
     force_refresh: bool = Field(
         default=False,
         description="Bypass the per-symbol eval cache and recompute all symbols",
+    )
+    taxonomy_filter: Optional[TaxonomyFilter] = Field(
+        default=None,
+        description="Taxonomy pre-filter applied to the unified symbol pool.",
+    )
+    preset: Optional[str] = Field(
+        default=None,
+        description="Named taxonomy preset id (config/taxonomy_presets.yaml).",
     )
 
     @field_validator("currencies")

@@ -87,6 +87,7 @@ data/screener_history.json
 data/orders.json
 data/positions.json
 data/watchlist.json
+data/review_queue.json
 orders.json
 positions.json
 # =========================

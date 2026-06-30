@@ -320,6 +320,7 @@ class TaxonomyFilterSpec:
     sector: tuple[str, ...] | None = None
     index_memberships: tuple[str, ...] | None = None
     instrument_type_detail: tuple[str, ...] | None = None
+    instrument_type: tuple[str, ...] | None = None
     provider: tuple[str, ...] | None = None
     currency: tuple[str, ...] | None = None
     exchange_mics: tuple[str, ...] | None = None
@@ -352,6 +353,8 @@ def filter_pool_by_taxonomy(
         if not _matches_scalar(s.sector, spec.sector):
             continue
         if not _matches_scalar(s.instrument_type_detail, spec.instrument_type_detail):
+            continue
+        if not _matches_scalar(s.instrument_type, spec.instrument_type):
             continue
         if not _matches_scalar(s.currency, spec.currency):
             continue
