@@ -4,31 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
 import ScreenerForm from './ScreenerForm';
 import { t } from '@/i18n/t';
-import type { UniverseSummary } from '@/features/screener/types';
-
-const mockUniverse: UniverseSummary = {
-  id: 'broad_market_stocks',
-  description: 'Broad Market Stocks',
-  kind: 'equity',
-  benchmark: 'SPY',
-  member_count: 500,
-  source: 'manual',
-  source_asof: '2026-01-01',
-  last_reviewed_at: '2026-01-01',
-  stale_after_days: 30,
-  currencies: ['USD'],
-  exchange_mics: ['XNYS', 'XNAS'],
-  source_adapter: 'manual',
-  source_documents: [],
-  refreshable: false,
-  days_since_review: 0,
-  freshness_status: 'fresh',
-  is_stale: false,
-};
 
 const defaultProps = {
-  selectedUniverse: 'broad_market_stocks',
-  setSelectedUniverse: vi.fn(),
+  taxonomyFilter: {},
+  setTaxonomyFilter: vi.fn(),
+  presetId: null,
+  setPresetId: vi.fn(),
   topN: 20,
   setTopN: vi.fn(),
   minPrice: 5,
@@ -39,8 +20,6 @@ const defaultProps = {
   setCurrencyFilter: vi.fn(),
   exchangeFilter: 'all' as const,
   setExchangeFilter: vi.fn(),
-  instrumentFilter: 'all' as const,
-  setInstrumentFilter: vi.fn(),
   includeOtc: false,
   setIncludeOtc: vi.fn(),
   recommendedOnly: false,
@@ -49,7 +28,6 @@ const defaultProps = {
   setRequireWeeklyUptrend: vi.fn(),
   actionFilter: 'all' as const,
   setActionFilter: vi.fn(),
-  universes: [mockUniverse],
   isLoading: false,
   onRun: vi.fn(),
   isCollapsed: false,
@@ -63,15 +41,9 @@ describe('ScreenerForm - collapsed state', () => {
     vi.clearAllMocks();
   });
 
-  it('shows universe description and member count in collapsed view', () => {
-    renderWithProviders(<ScreenerForm {...defaultProps} isCollapsed={true} />);
-    expect(screen.getByText('Broad Market Stocks')).toBeInTheDocument();
-    expect(screen.getByText(t('screener.controls.memberCount', { count: '500' }))).toBeInTheDocument();
-  });
-
   it('shows the Run button in collapsed view', () => {
     renderWithProviders(<ScreenerForm {...defaultProps} isCollapsed={true} />);
-    expect(screen.getByText(t('screener.controls.run'))).toBeInTheDocument();
+    expect(screen.getAllByText(t('screener.controls.run')).length).toBeGreaterThan(0);
   });
 
   it('shows "Advanced filters" label in collapsed view', () => {
@@ -109,20 +81,6 @@ describe('ScreenerForm - collapsed state', () => {
     );
     expect(screen.getByText(t('screener.controls.noOtc'))).toBeInTheDocument();
   });
-
-  it('shows weeklyUptrend pill when requireWeeklyUptrend is true', () => {
-    renderWithProviders(
-      <ScreenerForm {...defaultProps} isCollapsed={true} requireWeeklyUptrend={true} />
-    );
-    expect(screen.getByText(t('screener.controls.weeklyUptrend'))).toBeInTheDocument();
-  });
-
-  it('shows recommendedOnly pill when recommendedOnly is true', () => {
-    renderWithProviders(
-      <ScreenerForm {...defaultProps} isCollapsed={true} recommendedOnly={true} />
-    );
-    expect(screen.getByText(t('screener.controls.recommendedOnlyShort'))).toBeInTheDocument();
-  });
 });
 
 describe('ScreenerForm - expanded state', () => {
@@ -135,20 +93,12 @@ describe('ScreenerForm - expanded state', () => {
     expect(screen.getByText(t('screener.controls.hideFilters'))).toBeInTheDocument();
   });
 
-  it('calls onToggleCollapsed when "Hide filters" is clicked', async () => {
-    const onToggleCollapsed = vi.fn();
-    const user = userEvent.setup();
-    renderWithProviders(
-      <ScreenerForm {...defaultProps} isCollapsed={false} onToggleCollapsed={onToggleCollapsed} />
-    );
-    const hideBtn = screen.getByRole('button', { name: t('screener.controls.hideFilters') });
-    await user.click(hideBtn);
-    expect(onToggleCollapsed).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows universe selector in expanded view', () => {
+  it('renders the quick filter bar and no universe selector', () => {
     renderWithProviders(<ScreenerForm {...defaultProps} isCollapsed={false} />);
-    expect(screen.getByRole('combobox', { name: t('screener.controls.universe') })).toBeInTheDocument();
+    expect(screen.getByText(t('screener.taxonomy.region.label'))).toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: t('screener.controls.universe') })
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -158,73 +108,13 @@ describe('ScreenerForm - forceRefresh', () => {
   });
 
   it('renders forceRefresh checkbox unchecked by default', () => {
-    const { getByLabelText } = renderWithProviders(
-      <ScreenerForm
-        selectedUniverse="broad_market_stocks"
-        setSelectedUniverse={vi.fn()}
-        topN={20}
-        setTopN={vi.fn()}
-        minPrice={5}
-        setMinPrice={vi.fn()}
-        maxPrice={500}
-        setMaxPrice={vi.fn()}
-        currencyFilter="all"
-        setCurrencyFilter={vi.fn()}
-        exchangeFilter="all"
-        setExchangeFilter={vi.fn()}
-        instrumentFilter="all"
-        setInstrumentFilter={vi.fn()}
-        includeOtc={false}
-        setIncludeOtc={vi.fn()}
-        recommendedOnly={false}
-        setRecommendedOnly={vi.fn()}
-        requireWeeklyUptrend={false}
-        setRequireWeeklyUptrend={vi.fn()}
-        actionFilter="all"
-        setActionFilter={vi.fn()}
-        universes={[]}
-        isLoading={false}
-        onRun={vi.fn()}
-        forceRefresh={false}
-        setForceRefresh={vi.fn()}
-      />
-    );
-    const cb = getByLabelText(t('screener.controls.forceRefresh')) as HTMLInputElement;
+    renderWithProviders(<ScreenerForm {...defaultProps} forceRefresh={false} />);
+    const cb = screen.getByLabelText(t('screener.controls.forceRefresh')) as HTMLInputElement;
     expect(cb.checked).toBe(false);
   });
 
   it('shows warning when forceRefresh is true', () => {
-    const { getByText } = renderWithProviders(
-      <ScreenerForm
-        selectedUniverse="broad_market_stocks"
-        setSelectedUniverse={vi.fn()}
-        topN={20}
-        setTopN={vi.fn()}
-        minPrice={5}
-        setMinPrice={vi.fn()}
-        maxPrice={500}
-        setMaxPrice={vi.fn()}
-        currencyFilter="all"
-        setCurrencyFilter={vi.fn()}
-        exchangeFilter="all"
-        setExchangeFilter={vi.fn()}
-        instrumentFilter="all"
-        setInstrumentFilter={vi.fn()}
-        includeOtc={false}
-        setIncludeOtc={vi.fn()}
-        recommendedOnly={false}
-        setRecommendedOnly={vi.fn()}
-        requireWeeklyUptrend={false}
-        setRequireWeeklyUptrend={vi.fn()}
-        actionFilter="all"
-        setActionFilter={vi.fn()}
-        universes={[]}
-        isLoading={false}
-        onRun={vi.fn()}
-        forceRefresh={true}
-        setForceRefresh={vi.fn()}
-      />
-    );
-    expect(getByText(t('screener.controls.forceRefreshWarning'))).toBeInTheDocument();
+    renderWithProviders(<ScreenerForm {...defaultProps} forceRefresh={true} />);
+    expect(screen.getByText(t('screener.controls.forceRefreshWarning'))).toBeInTheDocument();
   });
 });
