@@ -11,12 +11,14 @@ interface Props {
 
 const STATUS_KEY: Record<string, MessageKey> = {
   ok: 'datasources.status.ok',
+  degraded: 'datasources.status.degraded',
   down: 'datasources.status.down',
   not_configured: 'datasources.status.not_configured',
 };
 
 const STATUS_CLASS: Record<string, string> = {
   ok: 'text-success',
+  degraded: 'text-warning',
   down: 'text-danger',
   not_configured: 'text-muted',
 };

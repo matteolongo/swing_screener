@@ -17,7 +17,7 @@ SourceDomain = Literal[
 ]
 SourceStatus = Literal["ok", "degraded", "failed", "unknown"]
 
-ProbeStatus = Literal["ok", "down", "not_configured"]
+ProbeStatus = Literal["ok", "degraded", "down", "not_configured"]
 SourceRole = Literal["primary", "fallback", "enrichment"]
 CanaryMarket = Literal["us", "eu"]
 

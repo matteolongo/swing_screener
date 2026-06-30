@@ -60,9 +60,20 @@ def _resolve_isin(ticker: str) -> str | None:
         if not isin:
             base = ticker.split(".")[0]
             isin = isin_map.get(base)
-        return isin
+        if isin:
+            return isin
     except Exception:
-        return None
+        pass
+
+    # fallback: DeGiro product search (requires connected client)
+    if _client_singleton is not None:
+        try:
+            from swing_screener.fundamentals.providers.degiro import _resolve_isin_via_degiro_search
+            return _resolve_isin_via_degiro_search(_client_singleton.api, ticker)
+        except Exception:
+            pass
+
+    return None
 
 
 class DegiroNewsCollector:
@@ -157,7 +168,7 @@ class DegiroNewsCollector:
             return ProbeResult(
                 id=cls.SOURCE_ID,
                 status="degraded",
-                detail=f"no ISIN in map for {canary!r}; populate via portfolio sync",
+                detail=f"cannot resolve ISIN for {canary!r}",
             )
 
         from swing_screener.intelligence.evidence.config import load_evidence_config

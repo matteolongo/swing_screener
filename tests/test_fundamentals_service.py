@@ -446,7 +446,9 @@ def test_yfinance_provider_populates_balance_sheet_fields():
 
 
 def test_default_fundamentals_config_excludes_degiro_when_integration_unavailable():
-    cfg = build_fundamentals_config({})
+    from unittest.mock import patch
+    with patch("swing_screener.fundamentals.config.TIER1_PROVIDERS", ("sec_edgar", "yfinance")):
+        cfg = build_fundamentals_config({})
 
     assert cfg.providers == ("sec_edgar", "yfinance")
 

@@ -1,4 +1,4 @@
-export type ProbeStatus = 'ok' | 'down' | 'not_configured';
+export type ProbeStatus = 'ok' | 'degraded' | 'down' | 'not_configured';
 export type SourceRole = 'primary' | 'fallback' | 'enrichment';
 
 export interface ProbeResultAPI {
