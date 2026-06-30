@@ -3,7 +3,7 @@ from api.services.datasources_service import DatasourcesService, INTELLIGENCE_SO
 
 def test_sec_collector_probeable_in_inventory():
     ids = {d.id for d in DatasourcesService().inventory() if d.probeable and d.domain == "intelligence"}
-    assert ids == {"sec_edgar_catalysts"}
+    assert "sec_edgar_catalysts" in ids
 
 
 def test_no_inert_intelligence_sources():

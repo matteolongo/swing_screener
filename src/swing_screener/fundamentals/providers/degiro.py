@@ -2,7 +2,7 @@
 
 Fetches company ratios and analyst estimates from DeGiro via get_company_ratios()
 and get_estimates_summaries(). Resolves ticker → ISIN via a disk-based map
-(populated by the portfolio audit) with yfinance info as fallback.
+(populated by the portfolio audit) with DeGiro product_search as fallback.
 
 All degiro_connector imports are lazy. If credentials are missing or the ISIN
 cannot be resolved, raises ValueError so the provider chain falls through to
@@ -37,6 +37,38 @@ def _isin_map_path() -> Path:
         return data_dir() / "degiro" / _ISIN_MAP_FILENAME
     except Exception:
         return Path("data") / "degiro" / _ISIN_MAP_FILENAME
+
+
+def _resolve_isin_via_degiro_search(api: Any, ticker: str) -> Optional[str]:
+    """ISIN lookup using DeGiro's product search (EU-aware).
+
+    Strips exchange suffix (e.g. ASML.AS → ASML), searches for the base
+    symbol, and returns the first ISIN that doesn't start with 'US' when the
+    ticker has a non-US suffix — avoiding ADR/US-listed shares for EU stocks.
+    Falls back to the first exact-symbol match if no non-US ISIN is found.
+    """
+    try:
+        from degiro_connector.trading.models.product_search import StocksRequest
+        parts = ticker.rsplit(".", 1)
+        base = parts[0].upper()
+        has_eu_suffix = len(parts) == 2 and parts[1].upper() not in ("", "US")
+        req = StocksRequest(search_text=base, limit=10, offset=0, is_in_us_exchanges=False)
+        results = api.product_search(req, raw=True) or {}
+        products = results.get("products", [])
+        first_exact: Optional[str] = None
+        for p in products:
+            if p.get("symbol", "").upper() != base:
+                continue
+            isin = p.get("isin", "")
+            if not isin:
+                continue
+            if first_exact is None:
+                first_exact = isin
+            if has_eu_suffix and not isin.startswith("US"):
+                return isin
+        return first_exact
+    except Exception:
+        return None
 
 
 def _load_isin_map() -> dict[str, str]:
@@ -154,7 +186,7 @@ class DegiroFundamentalsProvider:
         Priority:
           1. In-memory cache (fastest)
           2. Disk ISIN map populated by portfolio audit
-          3. yfinance ticker.info (fallback, adds latency)
+          3. DeGiro product_search (EU-aware; requires connected client)
         """
         if symbol in self._isin_cache:
             return self._isin_cache[symbol]
@@ -168,14 +200,11 @@ class DegiroFundamentalsProvider:
             base = symbol.split(".")[0]
             isin = isin_map.get(base)
 
-        # 2. yfinance info dict
-        if not isin:
-            try:
-                import yfinance as yf  # already a dependency
-                info = yf.Ticker(symbol).info
-                isin = info.get("isin") or None
-            except Exception:
-                logger.warning("yfinance ISIN lookup failed for %r; ISIN unresolved", symbol, exc_info=True)
+        # 2. DeGiro product search (requires self._client already connected)
+        if not isin and self._client is not None:
+            isin = _resolve_isin_via_degiro_search(self._client.api, symbol)
+            if not isin:
+                logger.warning("degiro: product_search ISIN lookup failed for %r", symbol)
 
         self._isin_cache[symbol] = isin
         return isin
@@ -266,10 +295,12 @@ class DegiroFundamentalsProvider:
         most_recent_quarter = la_annual[:10] if la_annual else None
 
         # Company profile: name, sector, currency
+        # Actual shape: data.contacts.NAME, data.sector (str), data.currency (str)
         profile_data = profile_resp.get("data", {}) or {}
-        company_name: Optional[str] = profile_data.get("businessSummary", {}).get("companyName") or None
-        sector: Optional[str] = profile_data.get("businessSummary", {}).get("sector") or None
-        currency: Optional[str] = profile_data.get("companyHeader", {}).get("currency") or None
+        contacts = profile_data.get("contacts") or {}
+        company_name: Optional[str] = (contacts.get("NAME") if isinstance(contacts, dict) else None) or None
+        sector: Optional[str] = profile_data.get("sector") or None
+        currency: Optional[str] = profile_data.get("currency") or None
 
         # Data region from ISIN country prefix
         isin_country = isin[:2].upper() if len(isin) >= 2 else ""

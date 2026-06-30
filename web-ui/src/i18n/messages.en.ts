@@ -618,6 +618,7 @@ export const messagesEn = {
     },
     status: {
       ok: 'OK',
+      degraded: 'Degraded',
       down: 'Down',
       not_configured: 'Not configured',
     },

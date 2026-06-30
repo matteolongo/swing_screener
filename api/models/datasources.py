@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 class ProbeResultOut(BaseModel):
     id: str
-    status: Literal["ok", "down", "not_configured"]
+    status: Literal["ok", "degraded", "down", "not_configured"]
     latency_ms: Optional[float] = None
     detail: Optional[str] = None
     sample: Optional[dict] = None

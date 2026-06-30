@@ -13,6 +13,8 @@ from __future__ import annotations
 import os
 from typing import Optional
 
+from swing_screener.runtime_env import ensure_runtime_env_loaded
+
 _ENV_USERNAME = "DEGIRO_USERNAME"
 _ENV_PASSWORD = "DEGIRO_PASSWORD"
 _ENV_INT_ACCOUNT = "DEGIRO_INT_ACCOUNT"
@@ -20,10 +22,12 @@ _ENV_TOTP_SECRET = "DEGIRO_TOTP_SECRET"
 
 
 def credentials_configured() -> bool:
+    ensure_runtime_env_loaded()
     return bool(os.getenv(_ENV_USERNAME)) and bool(os.getenv(_ENV_PASSWORD))
 
 
 def load_credentials() -> "Credentials":
+    ensure_runtime_env_loaded()
     from degiro_connector.trading.models.credentials import Credentials
 
     username = os.getenv(_ENV_USERNAME)
