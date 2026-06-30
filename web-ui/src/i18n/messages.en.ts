@@ -1187,6 +1187,37 @@ export const messagesEn = {
         etfs: 'ETFs',
       },
     },
+    taxonomy: {
+      preset: 'Preset',
+      presetPlaceholder: 'Choose a preset',
+      presetCustom: 'Custom',
+      region: {
+        label: 'Region',
+        us: 'US',
+        europe: 'Europe',
+        asiaPacific: 'Asia-Pac',
+      },
+      capTier: {
+        label: 'Cap',
+        large: 'Large',
+        mid: 'Mid',
+        small: 'Small',
+        micro: 'Micro',
+      },
+      type: {
+        label: 'Type',
+        equity: 'Equity',
+        etf: 'ETF',
+      },
+      sector: {
+        label: 'Sector',
+        placeholder: 'All sectors',
+      },
+      index: {
+        label: 'Index',
+        placeholder: 'Any index',
+      },
+    },
     universe: {
       freshness: {
         fresh: 'Fresh',
