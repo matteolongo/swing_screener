@@ -17,6 +17,12 @@ export const API_ENDPOINTS = {
   screenerRun: '/api/screener/run',
   screenerRunStatus: (jobId: string) => `/api/screener/run/${jobId}`,
 
+  // Symbol pool
+  poolPresets: '/api/pool/presets',
+  poolReviewQueue: '/api/pool/review-queue',
+  poolReviewQueueRemove: (s: string) => `/api/pool/review-queue/${encodeURIComponent(s)}/remove`,
+  poolReviewQueueRestore: (s: string) => `/api/pool/review-queue/${encodeURIComponent(s)}/restore`,
+
   // Backtest
   backtestEventStudy: '/api/backtest/event-study',
   backtestEventStudyStatus: (jobId: string) => `/api/backtest/event-study/${jobId}`,

@@ -88,6 +88,106 @@ python -m swing_screener.cli universes refresh --name <id> --apply
 Omit `--apply` for a dry-run preview. See
 `docs/engineering/MODULE_ARCHITECTURE.md` for the adapter modules.
 
+## Symbol Pool (`symbol_pool.json`)
+
+The unified, taxonomy-tagged set of symbols the screener is allowed to touch.
+It replaces one-at-a-time universe selection: the screener pre-filters this
+file by taxonomy (no network) and only then fetches OHLCV for the survivors.
+
+Schema:
+
+```json
+{
+  "schema_version": 1,
+  "asof": "2026-06-30",
+  "symbols": [ { /* PoolSymbol */ } ]
+}
+```
+
+`PoolSymbol` fields:
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| `symbol` | merge | uppercased ticker |
+| `exchange_mic`, `currency` | snapshots + instrument master | populated network-free |
+| `region` | derived from MIC/country | `us` / `europe` / `asia_pacific` / `other` |
+| `index_memberships` | which universe snapshots contained the symbol | replaces universe identity; filterable |
+| `instrument_type` | instrument master | coarse `equity` / `etf` (populated network-free) |
+| `available_providers`, `primary_provider` | `provider_symbol_map` | defaults to `["yfinance"]` / `yfinance` |
+| `sector`, `industry` | yfinance enrichment | **null until enrichment runs** |
+| `market_cap_tier` | yfinance enrichment | `large`/`mid`/`small`/`micro`; **null until enrichment** |
+| `liquidity_tier` | yfinance enrichment (avg $ volume) | `high`/`mid`/`low`; null unless a provider exposes volume+price |
+| `instrument_type_detail` | yfinance enrichment | `equity`/`etf_*`; **null until enrichment** |
+| `taxonomy_refreshed_at` | enrichment timestamp | |
+| `fetch_failure_count`, `last_fetch_ok_at` | review queue (runtime) | not stored here; the pool file is immutable |
+
+### Building / refreshing the pool
+
+The pool is a committed build artifact. There is no UI/CLI trigger yet, so
+(re)generate it with these one-off snippets from the repo root (use the project
+venv: `.venv/bin/python`).
+
+**1. Base build (network-free).** Merges the 25 universe snapshots with the
+instrument master. Populates everything except the yfinance-derived fields.
+
+```bash
+.venv/bin/python - <<'PY'
+import json
+from swing_screener.data.symbol_pool import build_pool_base, serialize_pool
+pool = build_pool_base()
+with open("data/symbol_pool.json", "w", encoding="utf-8") as f:
+    json.dump(serialize_pool(pool, asof_date="2026-06-30"), f, indent=2, ensure_ascii=False)
+print("symbols:", len(pool))
+PY
+```
+
+**2. Taxonomy enrichment (network, ~0.7s/symbol).** Required before
+`sector` / `market_cap_tier` / `instrument_type_detail` filters (and presets
+that use them, e.g. *EU Blue Chips*) return anything. Best-effort: per-symbol
+failures are skipped, not fatal. `liquidity_tier` stays null because
+`get_ticker_info` does not expose volume/price.
+
+```bash
+.venv/bin/python - <<'PY'
+import json
+from swing_screener.data.symbol_pool import (
+    deserialize_pool, enrich_pool_taxonomy, serialize_pool, load_symbol_pool_thresholds,
+)
+from swing_screener.data.providers.factory import get_default_provider
+
+with open("data/symbol_pool.json", encoding="utf-8") as f:
+    payload = json.load(f)
+pool = deserialize_pool(payload)
+provider = get_default_provider()
+cap, liq, _ = load_symbol_pool_thresholds()
+failed = enrich_pool_taxonomy(
+    pool, info_fn=lambda s: provider.get_ticker_info(s) or None,
+    asof_date=payload.get("asof", "2026-06-30"), cap_thresholds=cap, liquidity_thresholds=liq,
+)
+with open("data/symbol_pool.json", "w", encoding="utf-8") as f:
+    json.dump(serialize_pool(pool, asof_date=payload.get("asof")), f, indent=2, ensure_ascii=False)
+print(f"enriched sector={sum(1 for s in pool if s.sector)}/{len(pool)} failed={len(failed)}")
+PY
+```
+
+The backend reads the file fresh on each request, so a running server picks up
+the refreshed pool with no restart. **Migration:** no backfill — the file is a
+regenerable build artifact.
+
+## Review Queue (`review_queue.json`)
+
+The single runtime store for per-symbol OHLCV fetch health (the committed pool
+stays immutable). A symbol whose consecutive failure count reaches
+`fetch_failure_threshold` (default 3, `config/defaults.yaml` →
+`low_level.symbol_pool`) becomes a review-queue entry the UI surfaces for manual
+remove/restore. Gitignored. Schema:
+
+```json
+{ "symbols": { "AAPL": { "symbol": "AAPL", "fetch_failure_count": 3,
+  "first_failed_at": "2026-06-28", "last_failed_at": "2026-06-30",
+  "reason": "OHLCV fetch returned no data" } } }
+```
+
 ## Optional Database
 - `swing_screener.db`: SQLite database (module exists but not wired by default)
 - Migration notes: `docs/engineering/DATABASE_MIGRATION.md`

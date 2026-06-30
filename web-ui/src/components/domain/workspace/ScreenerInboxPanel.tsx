@@ -6,8 +6,9 @@ import ScreenerForm from '@/components/domain/screener/ScreenerForm';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
-import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
+import { useRunScreenerMutation } from '@/features/screener/hooks';
 import { filterCandidates, filterOutAddOns, prioritizeCandidates, type DecisionActionFilter } from '@/features/screener/prioritization';
+import type { TaxonomyFilterValues } from '@/features/pool/types';
 import OpenPositionIntelligencePanel from '@/components/domain/positions/OpenPositionIntelligencePanel';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -15,16 +16,11 @@ import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
-import {
-  parseUniverseValue,
-  SCREENER_UNIVERSE_STORAGE_KEY,
-} from '@/features/screener/universeStorage';
 
 const TOP_N_MAX = 200;
 
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 type ExchangeFilter = 'all' | 'us_primary' | 'europe_primary' | 'xams' | 'xetr' | 'xpar' | 'xmil' | 'xmad';
-type InstrumentFilter = 'all' | 'equity' | 'etf';
 const DECISION_ACTION_FILTERS: DecisionActionFilter[] = [
   'all',
   'BUY_NOW',
@@ -62,11 +58,6 @@ const exchangeFilterToRequest = (value: ExchangeFilter): string[] | undefined =>
     default:
       return undefined;
   }
-};
-
-const instrumentFilterToRequest = (value: InstrumentFilter): Array<'equity' | 'etf'> | undefined => {
-  if (value === 'all') return undefined;
-  return [value];
 };
 
 const RUNNING_STEPS = [
@@ -135,10 +126,15 @@ export default function ScreenerInboxPanel() {
 
   const riskConfig = activeStrategy?.risk ?? configDefaultsQuery.data?.risk;
 
-  const [selectedUniverse, setSelectedUniverse] = useLocalStorage(
-    SCREENER_UNIVERSE_STORAGE_KEY,
-    'broad_market_stocks',
-    (value: unknown) => parseUniverseValue(value) ?? 'broad_market_stocks'
+  const [taxonomyFilter, setTaxonomyFilter] = useLocalStorage<TaxonomyFilterValues>(
+    'screener.taxonomyFilter',
+    {},
+    (value: unknown) => (value && typeof value === 'object' ? (value as TaxonomyFilterValues) : {})
+  );
+  const [presetId, setPresetId] = useLocalStorage<string | null>(
+    'screener.presetId',
+    null,
+    (value: unknown) => (typeof value === 'string' ? value : null)
   );
   const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {
     const parsed = typeof val === 'number' ? val : parseInt(String(val), 10);
@@ -165,11 +161,6 @@ export default function ScreenerInboxPanel() {
       return 'all';
     }
   );
-  const [instrumentFilter, setInstrumentFilter] = useLocalStorage<InstrumentFilter>(
-    'screener.instrumentFilter',
-    'all',
-    (val: unknown) => (val === 'equity' || val === 'etf' || val === 'all' ? val : 'all')
-  );
   const [includeOtc, setIncludeOtc] = useLocalStorage('screener.includeOtc', false);
   const [recommendedOnly, setRecommendedOnly] = useLocalStorage('screener.recommendedOnly', false);
   const [requireWeeklyUptrend, setRequireWeeklyUptrend] = useLocalStorage('screener.requireWeeklyUptrend', false);
@@ -186,7 +177,6 @@ export default function ScreenerInboxPanel() {
   const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', true);
   const [forceRefresh, setForceRefresh] = useState(false);
 
-  const universesQuery = useUniverses();
   const screenerMutation = useRunScreenerMutation((data) => {
     setLastResult(data);
     if (data.candidates.length > 0) {
@@ -198,7 +188,8 @@ export default function ScreenerInboxPanel() {
 
   const handleRunScreener = useCallback(() => {
     screenerMutation.mutate({
-      universe: selectedUniverse,
+      taxonomyFilter,
+      preset: presetId ?? undefined,
       top: topN,
       minPrice,
       maxPrice,
@@ -206,7 +197,6 @@ export default function ScreenerInboxPanel() {
       exchangeMics: exchangeFilterToRequest(exchangeFilter),
       includeOtc,
       requireWeeklyUptrend: requireWeeklyUptrend || undefined,
-      instrumentTypes: instrumentFilterToRequest(instrumentFilter),
       breakoutLookback: strategySignals?.breakoutLookback ?? defaultIndicators?.breakoutLookback ?? 50,
       pullbackMa: strategySignals?.pullbackMa ?? defaultIndicators?.pullbackMa ?? 20,
       minHistory: strategySignals?.minHistory ?? defaultIndicators?.minHistory ?? 260,
@@ -217,13 +207,13 @@ export default function ScreenerInboxPanel() {
     defaultIndicators?.minHistory,
     defaultIndicators?.pullbackMa,
     screenerMutation.mutate,
-    selectedUniverse,
+    taxonomyFilter,
+    presetId,
     topN,
     minPrice,
     maxPrice,
     currencyFilter,
     exchangeFilter,
-    instrumentFilter,
     includeOtc,
     requireWeeklyUptrend,
     forceRefresh,
@@ -280,8 +270,10 @@ export default function ScreenerInboxPanel() {
   return (
     <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-y-auto">
       <ScreenerForm
-        selectedUniverse={selectedUniverse}
-        setSelectedUniverse={setSelectedUniverse}
+        taxonomyFilter={taxonomyFilter}
+        setTaxonomyFilter={setTaxonomyFilter}
+        presetId={presetId}
+        setPresetId={setPresetId}
         topN={topN}
         setTopN={setTopN}
         minPrice={minPrice}
@@ -292,8 +284,6 @@ export default function ScreenerInboxPanel() {
         setCurrencyFilter={setCurrencyFilter}
         exchangeFilter={exchangeFilter}
         setExchangeFilter={setExchangeFilter}
-        instrumentFilter={instrumentFilter}
-        setInstrumentFilter={setInstrumentFilter}
         includeOtc={includeOtc}
         setIncludeOtc={setIncludeOtc}
         recommendedOnly={recommendedOnly}
@@ -302,7 +292,6 @@ export default function ScreenerInboxPanel() {
         setRequireWeeklyUptrend={setRequireWeeklyUptrend}
         actionFilter={actionFilter}
         setActionFilter={setActionFilter}
-        universes={universesQuery.data?.universes ?? []}
         isLoading={screenerMutation.isPending}
         onRun={handleRunScreener}
         isCollapsed={isFormCollapsed}

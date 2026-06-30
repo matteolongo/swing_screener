@@ -1,59 +1,31 @@
 import { PlayCircle, RefreshCw, ChevronUp, Settings2 } from 'lucide-react';
 import { useCallback, type ChangeEvent } from 'react';
 import Button from '@/components/common/Button';
-import Badge from '@/components/common/Badge';
 import Field from '@/components/common/Field';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
+import QuickFilterBar from '@/components/domain/screener/QuickFilterBar';
 import type { DecisionActionFilter } from '@/features/screener/prioritization';
 import { formatDecisionAction } from '@/features/screener/decisionSummary';
-import type { UniverseSummary } from '@/features/screener/types';
+import type { TaxonomyFilterValues } from '@/features/pool/types';
 import { t } from '@/i18n/t';
 
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 type ExchangeFilter = 'all' | 'us_primary' | 'europe_primary' | 'xams' | 'xetr' | 'xpar' | 'xmil' | 'xmad';
-type InstrumentFilter = 'all' | 'equity' | 'etf';
 
 const TOP_N_MAX = 200;
-
-const universeFreshnessVariant = (status: UniverseSummary['freshness_status']): 'default' | 'success' | 'warning' | 'error' => {
-  switch (status) {
-    case 'fresh':
-      return 'success';
-    case 'review_due':
-      return 'warning';
-    case 'stale':
-      return 'error';
-    default:
-      return 'default';
-  }
-};
-
-const universeFreshnessLabel = (status: UniverseSummary['freshness_status']): string => {
-  switch (status) {
-    case 'fresh':
-      return t('screener.universe.freshness.fresh');
-    case 'review_due':
-      return t('screener.universe.freshness.reviewDue');
-    case 'stale':
-      return t('screener.universe.freshness.stale');
-    default:
-      return t('screener.universe.freshness.unknown');
-  }
-};
-
-const universeSourceLabel = (source: string): string => {
-  if (source === 'euronext_review') return t('screener.universe.source.euronextReview');
-  if (source === 'manual') return t('screener.universe.source.manual');
-  return source;
-};
 
 const formatActionFilterLabel = (value: DecisionActionFilter): string =>
   value === 'all' ? t('screener.controls.allActions') : formatDecisionAction(value);
 
+const activeFilterCount = (filter: TaxonomyFilterValues): number =>
+  Object.values(filter).reduce((sum, v) => sum + (v?.length ?? 0), 0);
+
 interface ScreenerFormProps {
-  selectedUniverse: string;
-  setSelectedUniverse: (value: string) => void;
+  taxonomyFilter: TaxonomyFilterValues;
+  setTaxonomyFilter: (value: TaxonomyFilterValues) => void;
+  presetId: string | null;
+  setPresetId: (value: string | null) => void;
   topN: number;
   setTopN: (value: number) => void;
   minPrice: number;
@@ -64,8 +36,6 @@ interface ScreenerFormProps {
   setCurrencyFilter: (value: CurrencyFilter) => void;
   exchangeFilter: ExchangeFilter;
   setExchangeFilter: (value: ExchangeFilter) => void;
-  instrumentFilter: InstrumentFilter;
-  setInstrumentFilter: (value: InstrumentFilter) => void;
   includeOtc: boolean;
   setIncludeOtc: (value: boolean) => void;
   recommendedOnly: boolean;
@@ -74,7 +44,6 @@ interface ScreenerFormProps {
   setRequireWeeklyUptrend: (value: boolean) => void;
   actionFilter: DecisionActionFilter;
   setActionFilter: (value: DecisionActionFilter) => void;
-  universes: UniverseSummary[];
   isLoading: boolean;
   onRun: () => void;
   isCollapsed?: boolean;
@@ -84,8 +53,10 @@ interface ScreenerFormProps {
 }
 
 export default function ScreenerForm({
-  selectedUniverse,
-  setSelectedUniverse,
+  taxonomyFilter,
+  setTaxonomyFilter,
+  presetId,
+  setPresetId,
   topN,
   setTopN,
   minPrice,
@@ -96,8 +67,6 @@ export default function ScreenerForm({
   setCurrencyFilter,
   exchangeFilter,
   setExchangeFilter,
-  instrumentFilter,
-  setInstrumentFilter,
   includeOtc,
   setIncludeOtc,
   recommendedOnly,
@@ -106,7 +75,6 @@ export default function ScreenerForm({
   setRequireWeeklyUptrend,
   actionFilter,
   setActionFilter,
-  universes,
   isLoading,
   onRun,
   isCollapsed = false,
@@ -114,8 +82,6 @@ export default function ScreenerForm({
   forceRefresh,
   setForceRefresh,
 }: ScreenerFormProps) {
-  const selectedUniverseMeta = universes.find((universe) => universe.id === selectedUniverse);
-
   const handleTopNChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const parsed = parseInt(e.target.value) || 20;
     setTopN(Math.min(Math.max(parsed, 1), TOP_N_MAX));
@@ -129,20 +95,24 @@ export default function ScreenerForm({
     setMaxPrice(parseFloat(e.target.value) || 1000);
   }, [setMaxPrice]);
 
+  const filterCount = activeFilterCount(taxonomyFilter);
+
   if (isCollapsed) {
     return (
       <div className="rounded-lg border border-border bg-surface/60 p-3 space-y-2">
-        {/* Row 1: Universe name + Run CTA */}
+        {/* Row 1: filter summary + Run CTA */}
         <div className="flex items-center justify-between gap-3">
           <div>
             <span className="text-sm font-semibold text-foreground">
-              {selectedUniverseMeta?.description ?? selectedUniverse}
+              {presetId
+                ? t('screener.taxonomy.preset')
+                : filterCount > 0
+                  ? t('screener.taxonomy.preset')
+                  : t('screener.controls.run')}
             </span>
-            {selectedUniverseMeta && (
-              <span className="ml-2 text-xs text-muted">
-                {t('screener.controls.memberCount', { count: String(selectedUniverseMeta.member_count) })}
-              </span>
-            )}
+            <span className="ml-2 text-xs text-muted">
+              {presetId ?? (filterCount > 0 ? `${filterCount}` : t('screener.taxonomy.sector.placeholder'))}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Button onClick={onRun} disabled={isLoading} size="sm">
@@ -183,11 +153,6 @@ export default function ScreenerForm({
               {exchangeFilter}
             </span>
           )}
-          {instrumentFilter !== 'all' && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-foreground/10 text-muted">
-              {instrumentFilter}
-            </span>
-          )}
           {!includeOtc && (
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-foreground/10 text-muted">
               {t('screener.controls.noOtc')}
@@ -225,21 +190,15 @@ export default function ScreenerForm({
       )}
 
       <div className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3 items-end">
-          <Field label={t('screener.controls.universe')}>
-            <Select
-              value={selectedUniverse}
-              onChange={(e) => setSelectedUniverse(e.target.value)}
-              disabled={isLoading}
-            >
-              {universes.map((universe) => (
-                <option key={universe.id} value={universe.id}>
-                  {universe.description} ({universe.member_count})
-                </option>
-              ))}
-            </Select>
-          </Field>
+        <QuickFilterBar
+          value={taxonomyFilter}
+          onChange={setTaxonomyFilter}
+          presetId={presetId}
+          onPresetChange={setPresetId}
+          disabled={isLoading}
+        />
 
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 items-end">
           <Field label={t('screener.controls.topN')}>
             <Input
               type="number"
@@ -301,19 +260,6 @@ export default function ScreenerForm({
               <option value="xmad">{t('screener.controls.venue.madrid')}</option>
             </Select>
           </Field>
-
-          <Field label={t('screener.controls.instrument.label')}>
-            <Select
-              value={instrumentFilter}
-              onChange={(e) => setInstrumentFilter(e.target.value as InstrumentFilter)}
-              disabled={isLoading}
-            >
-              <option value="all">{t('screener.controls.instrument.all')}</option>
-              <option value="equity">{t('screener.controls.instrument.stocks')}</option>
-              <option value="etf">{t('screener.controls.instrument.etfs')}</option>
-            </Select>
-          </Field>
-
         </div>
 
         <div className="flex justify-end">
@@ -335,28 +281,6 @@ export default function ScreenerForm({
             )}
           </Button>
         </div>
-
-        {selectedUniverseMeta ? (
-          <div className="rounded-lg border border-border bg-surface px-3 py-2">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="text-xs text-muted">
-                {t('screener.controls.memberCount', { count: String(selectedUniverseMeta.member_count) })}
-                {' · '}
-                {universeSourceLabel(selectedUniverseMeta.source)}
-                {' · '}
-                source as of {selectedUniverseMeta.source_asof}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant={universeFreshnessVariant(selectedUniverseMeta.freshness_status)}>
-                  {universeFreshnessLabel(selectedUniverseMeta.freshness_status)}
-                </Badge>
-                {selectedUniverseMeta.exchange_mics.map((mic) => (
-                  <Badge key={mic} variant="default">{mic}</Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
 
         <div className="flex flex-col gap-3 border-t border-border pt-3 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
