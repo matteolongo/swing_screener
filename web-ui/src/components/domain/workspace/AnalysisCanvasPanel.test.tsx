@@ -30,7 +30,6 @@ vi.mock('@/features/intelligence/catalysts/hooks', () => ({
 }));
 
 vi.mock('@/features/screener/hooks', () => ({
-  useUniverses: vi.fn(),
   useRunScreenerMutation: vi.fn(),
 }));
 

@@ -1,16 +1,9 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { fetchUniverses, runScreener } from './api';
+import { runScreener } from './api';
 import { ScreenerRequest, ScreenerResponse, PriceHistoryPoint, CandlePattern, transformCandlePattern } from './types';
 import { queryKeys } from '@/lib/queryKeys';
 import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
-
-export function useUniverses() {
-  return useQuery({
-    queryKey: queryKeys.universes(),
-    queryFn: fetchUniverses,
-  });
-}
 
 export function useRunScreenerMutation(
   onSuccess?: (data: ScreenerResponse) => void,
