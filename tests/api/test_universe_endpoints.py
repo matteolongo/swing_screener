@@ -37,6 +37,39 @@ def test_refresh_manual_universe_returns_preview_without_changes():
     assert payload["notes"]
 
 
+def test_refresh_all_endpoint_aggregates(monkeypatch):
+    from api.services import pool_admin_service
+
+    monkeypatch.setattr(
+        pool_admin_service,
+        "list_package_universe_entries",
+        lambda: [{"id": "us_sp500"}, {"id": "broken"}],
+    )
+
+    def fake_refresh(uid, apply):
+        if uid == "broken":
+            raise RuntimeError("source down")
+        return {
+            "applied": True,
+            "changed": True,
+            "current_member_count": 503,
+            "proposed_member_count": 504,
+            "additions": ["SMCI"],
+            "removals": [],
+            "notes": [],
+        }
+
+    monkeypatch.setattr(pool_admin_service, "refresh_package_universe", fake_refresh)
+
+    response = client.post("/api/universes/refresh-all")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total_additions"] == 1
+    assert payload["total_changed"] == 1
+    by_id = {u["id"]: u for u in payload["universes"]}
+    assert by_id["broken"]["error"] == "source down"
+
+
 def test_update_universe_benchmark_persists_snapshot(monkeypatch):
     snapshot = {
         "id": "broad_market_stocks",

@@ -21,6 +21,7 @@ from swing_screener.data.universe import (
     update_package_universe_benchmark,
 )
 from swing_screener.data.universe_sources import UniverseSourceError
+from api.services.pool_admin_service import refresh_all_universes
 
 
 router = APIRouter()
@@ -131,6 +132,16 @@ def refresh_auto_universe(request: AutoUniverseRefreshRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Failed to refresh auto universe") from exc
+
+
+@router.post("/refresh-all")
+def refresh_all():
+    try:
+        return refresh_all_universes()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail="Failed to refresh universes"
+        ) from exc
 
 
 @router.get("/{universe_id}")

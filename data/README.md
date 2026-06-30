@@ -123,9 +123,13 @@ Schema:
 
 ### Building / refreshing the pool
 
-The pool is a committed build artifact. There is no UI/CLI trigger yet, so
-(re)generate it with these one-off snippets from the repo root (use the project
-venv: `.venv/bin/python`).
+The pool is a committed build artifact. The **Universes page → Pool tab** drives
+the full loop from the UI: *Refresh All Universes* (`POST /api/universes/refresh-all`),
+*Rebuild Pool Structure* (`POST /api/pool/rebuild`, the base build below), and
+*Enrich Taxonomy* (`POST /api/pool/enrich`, the enrichment step below). The rebuild
+preserves existing enrichment for surviving symbols. The one-off snippets below
+remain valid for headless/CI regeneration from the repo root (use the project
+venv: `.venv/bin/python`); commit the resulting `symbol_pool.json`.
 
 **1. Base build (network-free).** Merges the 25 universe snapshots with the
 instrument master. Populates everything except the yfinance-derived fields.

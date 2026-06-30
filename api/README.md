@@ -48,6 +48,9 @@ Symbol pool (`/api/pool`):
 - `POST /api/pool/review-queue/{symbol}/remove` — clear the symbol's review-queue entry. Returns `{removed: bool}`. (Clears the queue entry only; the symbol re-enters screening on the next run unless it fails again. Hard removal from `symbol_pool.json` is deferred with the pool-edit work.)
 - `POST /api/pool/review-queue/{symbol}/restore` — reset the symbol's failure counter and return it to the active pool. Returns `{restored: bool}`.
 - `GET /api/pool/presets` — list taxonomy presets from `config/taxonomy_presets.yaml`. Returns `{presets: [{id, label, filter}]}`.
+- `POST /api/pool/rebuild` — re-merge the universe snapshots + instrument master into `symbol_pool.json` (the runtime equivalent of the base-build runbook in `data/README.md`). Structural fields (`index_memberships`, `exchange_mic`, `currency`, `region`, `instrument_type`, providers) are recomputed; yfinance enrichment is carried over for surviving symbols. Returns `{applied, additions, removals, modifications, summary}` where additions/removals are full symbol snapshots and modifications are `[{symbol, changes: [{field, before, after}]}]`.
+- `POST /api/pool/enrich` — launch a best-effort yfinance enrichment job over the current pool (`sector`, `market_cap_tier`, `liquidity_tier`, `instrument_type_detail`). Runs in a background thread; returns `{job_id}` immediately.
+- `GET /api/pool/enrich/{job_id}` — poll enrichment status. Returns `{status: running|done|failed, progress: {processed, total, failed}, error, diff}`. `diff` is `{modified: [{symbol, changes}], failed_symbols}` and is populated only when `status == done`. Unknown/expired job id → 404 (jobs are in-memory and lost on restart).
 
 Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
 
@@ -61,6 +64,7 @@ Universes (`/api/universes`):
 - `GET /api/universes`
 - `GET /api/universes/{universe_id}`
 - `POST /api/universes/auto-refresh`
+- `POST /api/universes/refresh-all` — refresh every universe snapshot from its source (`apply=true` for each), aggregating per-universe diffs. Per-universe failures are surfaced inline (`{id, error}`), never as a 500. Returns `{universes: [{id, applied, changed, current_member_count, proposed_member_count, additions, removals}], total_additions, total_removals, total_changed}`.
 - `POST /api/universes/{universe_id}/refresh`
 - `POST /api/universes/{universe_id}/benchmark`
 

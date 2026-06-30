@@ -22,6 +22,9 @@ export const API_ENDPOINTS = {
   poolReviewQueue: '/api/pool/review-queue',
   poolReviewQueueRemove: (s: string) => `/api/pool/review-queue/${encodeURIComponent(s)}/remove`,
   poolReviewQueueRestore: (s: string) => `/api/pool/review-queue/${encodeURIComponent(s)}/restore`,
+  poolRebuild: '/api/pool/rebuild',
+  poolEnrich: '/api/pool/enrich',
+  poolEnrichStatus: (jobId: string) => `/api/pool/enrich/${encodeURIComponent(jobId)}`,
 
   // Backtest
   backtestEventStudy: '/api/backtest/event-study',
@@ -33,6 +36,7 @@ export const API_ENDPOINTS = {
   universeAutoRefresh: '/api/universes/auto-refresh',
   universeById: (id: string) => `/api/universes/${encodeURIComponent(id)}`,
   universeRefresh: (id: string) => `/api/universes/${encodeURIComponent(id)}/refresh`,
+  universeRefreshAll: '/api/universes/refresh-all',
   universeBenchmark: (id: string) => `/api/universes/${encodeURIComponent(id)}/benchmark`,
   
   // Portfolio - Positions

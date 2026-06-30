@@ -118,11 +118,12 @@ export const actionLabel = (candidate: ScreenerCandidate): string => {
   return candidate.signal ?? '—';
 };
 
-export type DetailTab = 'config' | 'constituents' | 'discovery' | 'screener';
+export type DetailTab = 'config' | 'constituents' | 'discovery' | 'screener' | 'pool';
 
 export const DETAIL_TABS: { id: DetailTab; label: string }[] = [
   { id: 'config', label: 'Config' },
   { id: 'constituents', label: 'Constituents' },
   { id: 'discovery', label: 'Discovery' },
   { id: 'screener', label: 'Screener' },
+  { id: 'pool', label: 'Pool' },
 ];

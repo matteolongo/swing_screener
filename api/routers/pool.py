@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.dependencies import get_review_queue_repo, get_symbol_pool_repo
 from api.models.screener import TaxonomyFilter
 from api.repositories.review_queue_repo import ReviewQueueRepository
 from api.repositories.symbol_pool_repo import SymbolPoolRepository
+from api.services.pool_admin_service import (
+    enrich_job_to_dict,
+    get_enrich_job,
+    rebuild_pool,
+    start_enrich_job,
+)
 from api.services.pool_service import list_pool_symbols, load_taxonomy_presets
 
 router = APIRouter()
@@ -70,3 +76,24 @@ def restore_to_pool(
 @router.get("/presets")
 def get_presets():
     return {"presets": load_taxonomy_presets()}
+
+
+@router.post("/rebuild")
+def rebuild(repo: SymbolPoolRepository = Depends(get_symbol_pool_repo)):
+    return rebuild_pool(repo)
+
+
+@router.post("/enrich")
+def enrich(repo: SymbolPoolRepository = Depends(get_symbol_pool_repo)):
+    return {"job_id": start_enrich_job(repo)}
+
+
+@router.get("/enrich/{job_id}")
+def enrich_status(job_id: str):
+    job = get_enrich_job(job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Enrichment job not found (server may have restarted).",
+        )
+    return enrich_job_to_dict(job)
