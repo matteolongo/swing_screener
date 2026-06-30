@@ -35,16 +35,18 @@ class MarketDataProvider(ABC):
         tickers: list[str],
         start_date: str,
         end_date: str,
-        interval: str = "1d"
+        interval: str = "1d",
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
         """
         Fetch OHLCV data for multiple tickers.
-        
+
         Args:
             tickers: List of ticker symbols (e.g., ["AAPL", "MSFT", "TSLA"])
             start_date: Start date in YYYY-MM-DD format
             end_date: End date in YYYY-MM-DD format
             interval: Bar interval (e.g., "1d", "1h", "1m")
+            force_refresh: If True, bypass any disk cache and re-fetch from source
             
         Returns:
             DataFrame with MultiIndex columns (field, ticker) and DatetimeIndex
