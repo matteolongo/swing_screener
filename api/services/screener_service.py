@@ -91,49 +91,6 @@ from swing_screener.selection.screening_window import (
     resolve_fetch_start_date,
 )
 
-# Map of removed universe ids to their replacements (or None if dropped with no replacement).
-_REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
-    "usd_all": "broad_market_stocks",
-    "mega": "broad_market_stocks",
-    "mega_all": "broad_market_stocks",
-    "eur_all": None,
-    "usd_mega_stocks": "broad_market_stocks",
-    "mega_stocks": "broad_market_stocks",
-    "usd_core_etfs": "broad_market_etfs",
-    "core_etfs": "broad_market_etfs",
-    "usd_defense_all": "defense_stocks",
-    "defense_all": "defense_stocks",
-    "mega_defense": "defense_stocks",
-    "usd_defense_stocks": "defense_stocks",
-    "defense_stocks": "defense_stocks",
-    "usd_defense_etfs": "defense_etfs",
-    "defense_etfs": "defense_etfs",
-    "usd_healthcare_all": "healthcare_stocks",
-    "healthcare_all": "healthcare_stocks",
-    "mega_healthcare_biotech": "healthcare_stocks",
-    "usd_healthcare_stocks": "healthcare_stocks",
-    "healthcare_stocks": "healthcare_stocks",
-    "usd_healthcare_etfs": "healthcare_etfs",
-    "healthcare_etfs": "healthcare_etfs",
-    "eur_europe_large": "europe_large_caps",
-    "europe_large": "europe_large_caps",
-    "mega_europe": "europe_large_caps",
-    "usd_europe_large": "global_proxy_stocks",
-    "eur_amsterdam_all": "amsterdam_all",
-    "eur_amsterdam_aex": "amsterdam_aex",
-    "eur_amsterdam_amx": "amsterdam_amx",
-    "us_all": "broad_market_stocks",
-    "us_mega_stocks": "broad_market_stocks",
-    "us_core_etfs": "broad_market_etfs",
-    "us_defense_all": "defense_stocks",
-    "us_defense_stocks": "defense_stocks",
-    "us_defense_etfs": "defense_etfs",
-    "us_healthcare_all": "healthcare_stocks",
-    "us_healthcare_stocks": "healthcare_stocks",
-    "us_healthcare_etfs": "healthcare_etfs",
-    "europe_large_eur": "europe_large_caps",
-    "europe_proxies_usd": "global_proxy_stocks",
-}
 from api.services.screener_run_manager import get_screener_run_manager
 
 logger = logging.getLogger(__name__)
@@ -342,7 +299,8 @@ class ScreenerService:
 
         Returns requested_top. Populates ctx.universe_cfg, benchmark, tickers,
         screening_tickers, active_currencies, asof_str, market_health, now_utc,
-        warnings. Raises UnprocessableError/NotFoundError exactly as before.
+        warnings. Raises UnprocessableError on a non-positive top and
+        NotFoundError when no tickers survive the taxonomy pre-filter.
         """
         request = ctx.request
         requested_top = request.top or 20

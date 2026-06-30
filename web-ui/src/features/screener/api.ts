@@ -7,15 +7,8 @@ import {
   ScreenerRunStatusResponseAPI,
   ScreenerResponse,
   ScreenerResponseAPI,
-  UniversesResponse,
   transformScreenerResponse,
 } from './types';
-
-export async function fetchUniverses(): Promise<UniversesResponse> {
-  return fetchJson<UniversesResponse>(API_ENDPOINTS.universes, {
-    errorMessage: 'Failed to fetch universes',
-  });
-}
 
 export function toScreenerRequestPayload(request: ScreenerRequest): Record<string, unknown> {
   const tf = request.taxonomyFilter;
