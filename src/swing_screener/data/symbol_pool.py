@@ -399,8 +399,11 @@ def enrich_pool_taxonomy(
             continue
         s.sector = info.get("sector") or s.sector
         s.industry = info.get("industry") or s.industry
+        # Accept both raw yfinance `.info` (`marketCap`) and the provider's
+        # curated `get_ticker_info` dict (`market_cap`).
         s.market_cap_tier = derive_cap_tier(
-            _coerce_float(info.get("marketCap")), cap_thresholds
+            _coerce_float(info.get("marketCap") or info.get("market_cap")),
+            cap_thresholds,
         )
         avg_vol = _coerce_float(info.get("averageDailyVolume3Month")) or _coerce_float(
             info.get("averageVolume")

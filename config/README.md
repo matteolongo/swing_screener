@@ -133,6 +133,21 @@ Runtime path keys are defined under `paths` in `defaults.yaml` and control where
 | Key | Default | Purpose |
 |-----|---------|---------|
 | `eval_cache_dir` | `.cache/eval` | Root directory for the per-symbol evaluation cache. Parquets are stored at `{eval_cache_dir}/{strategy_sig}/{asof_date}/{SYMBOL}.parquet`. Files older than 24 h are pruned automatically on each run. |
+| `symbol_pool_file` | `data/symbol_pool.json` | Committed taxonomy symbol pool the screener pre-filters. |
+| `review_queue_file` | `data/review_queue.json` | Runtime fetch-health / review queue (gitignored). |
+
+### `low_level.symbol_pool`
+
+Thresholds for the unified taxonomy symbol pool (`data/symbol_pool.json`),
+consumed by `swing_screener.data.symbol_pool.load_symbol_pool_thresholds()`.
+
+| Group | Keys | Purpose |
+|-------|------|---------|
+| `market_cap_thresholds` | `large`, `mid`, `small` | USD market-cap bounds (>= bound assigns the tier; below `small` = `micro`). |
+| `liquidity_thresholds` | `high`, `mid` | USD average daily dollar-volume bounds (below `mid` = `low`). |
+| `fetch_failure_threshold` | — | Consecutive OHLCV fetch failures before a symbol moves to the review queue (default 3). |
+
+See `data/README.md` for how to (re)build and enrich the pool.
 
 ## Notes
 
