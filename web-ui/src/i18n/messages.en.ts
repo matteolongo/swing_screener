@@ -1135,6 +1135,24 @@ export const messagesEn = {
       },
     },
   },
+  reviewQueue: {
+    title: 'Review queue',
+    empty: 'No symbols need review',
+    badgeLabel: 'Symbols needing review',
+    columns: {
+      symbol: 'Symbol',
+      exchange: 'Exchange',
+      capTier: 'Cap',
+      sector: 'Sector',
+      failures: 'Failures',
+      lastFailed: 'Last failed',
+      reason: 'Reason',
+    },
+    actions: {
+      keep: 'Keep',
+      remove: 'Remove',
+    },
+  },
   screener: {
     header: {
       title: 'Screener',
