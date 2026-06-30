@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
+import Badge from '@/components/common/Badge';
 import Select from '@/components/common/Select';
 import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
+import ReviewQueueDrawer from '@/components/domain/pool/ReviewQueueDrawer';
 import { usePortfolioSummary } from '@/features/portfolio/hooks';
+import { useReviewQueue } from '@/features/pool/hooks';
 import {
   useActiveStrategyQuery,
   useSetActiveStrategyMutation,
@@ -34,6 +38,9 @@ function BrandMark() {
 export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: HeaderProps) {
   const now = new Date();
   const { locale, t } = useI18n();
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const reviewQueueQuery = useReviewQueue();
+  const reviewCount = reviewQueueQuery.data?.length ?? 0;
 
   const strategiesQuery = useStrategiesQuery();
   const activeStrategyQuery = useActiveStrategyQuery();
@@ -110,8 +117,19 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
         </Select>
       </div>
 
-      {/* Right: risk summary + clock */}
+      {/* Right: review queue + risk summary + clock */}
       <div className="flex items-center gap-3 shrink-0">
+        {reviewCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setReviewOpen(true)}
+            aria-label={t('reviewQueue.badgeLabel')}
+            className="inline-flex items-center"
+          >
+            <Badge variant="warning">{reviewCount}</Badge>
+          </button>
+        )}
+        <ReviewQueueDrawer open={reviewOpen} onClose={() => setReviewOpen(false)} />
         <div className="hidden xl:block">
           <StrategyCapitalRiskSummary
             strategy={activeStrategyQuery.data}
