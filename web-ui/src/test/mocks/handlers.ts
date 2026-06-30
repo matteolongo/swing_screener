@@ -518,6 +518,31 @@ export function resetMockApiState(): void {
 
 // MSW request handlers
 export const handlers = [
+  // Symbol pool endpoints
+  http.get(`${API_BASE_URL}/api/pool/presets`, () => {
+    return HttpResponse.json({
+      presets: [
+        {
+          id: 'us_large_cap_equities',
+          label: 'US Large Cap Equities',
+          filter: { region: ['us'], market_cap_tier: ['large'], instrument_type_detail: ['equity'] },
+        },
+      ],
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/pool/review-queue`, () => {
+    return HttpResponse.json({ entries: [] })
+  }),
+
+  http.post(`${API_BASE_URL}/api/pool/review-queue/:symbol/remove`, () => {
+    return HttpResponse.json({ removed: true })
+  }),
+
+  http.post(`${API_BASE_URL}/api/pool/review-queue/:symbol/restore`, () => {
+    return HttpResponse.json({ restored: true })
+  }),
+
   // Config endpoints
   http.get(`${API_BASE_URL}/api/config`, () => {
     return HttpResponse.json(mockConfig)
