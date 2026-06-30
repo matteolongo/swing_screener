@@ -133,7 +133,7 @@ export default function ScreenerInboxPanel() {
   );
   const [presetId, setPresetId] = useLocalStorage<string | null>(
     'screener.presetId',
-    null,
+    'broad_market',
     (value: unknown) => (typeof value === 'string' ? value : null)
   );
   const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {

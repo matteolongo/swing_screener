@@ -1,23 +1,28 @@
 # Named taxonomy presets for the unified symbol pool screener.
 # Each preset pre-fills the quick filter bar. Selecting one then editing a
 # chip marks the selection "custom" in the UI.
+#
+# Prefer always-populated dimensions (region, instrument_type, index_memberships,
+# currency) so a preset returns matches even before pool enrichment runs.
+# market_cap_tier is enrichment-derived: presets that use it only match enriched
+# symbols, and the screener surfaces a warning counting the excluded unenriched.
 presets:
   us_large_cap_equities:
     label: "US Large Cap Equities"
     filter:
       region: [us]
+      instrument_type: [equity]
       market_cap_tier: [large]
-      instrument_type_detail: [equity]
   eu_blue_chips:
     label: "EU Blue Chips"
     filter:
       region: [europe]
+      instrument_type: [equity]
       market_cap_tier: [large]
-      instrument_type_detail: [equity]
-  sector_etfs:
-    label: "Sector ETFs"
+  etfs:
+    label: "ETFs"
     filter:
-      instrument_type_detail: [etf_sector]
+      instrument_type: [etf]
   broad_market:
     label: "Broad Market"
     filter:

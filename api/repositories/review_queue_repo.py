@@ -33,11 +33,31 @@ class ReviewQueueRepository:
         locked_write_json(self.path, data)
 
     def apply_fetch_results(
-        self, ok: list[str], failed: list[str], asof: str, threshold: int
+        self,
+        ok: list[str],
+        failed: list[str],
+        asof: str,
+        threshold: int,
+        meta: dict | None = None,
     ) -> None:
-        """Reset counters for fetched symbols; increment for failed ones."""
+        """Reset counters for fetched symbols; increment for failed ones.
+
+        ``meta`` optionally carries per-symbol pool metadata (exchange_mic,
+        sector, cap_tier, provider) stamped onto entries so the review-queue UI
+        can show them. Skips the write lock entirely when nothing changes (the
+        common steady state: no failures and no tracked ok symbols).
+        """
         ok_set = {s.upper() for s in ok}
         failed_set = {s.upper() for s in failed}
+        meta = meta or {}
+
+        # Fast path: when there were no failures, the only work is resetting
+        # counters for ok symbols. If none of them is currently tracked, there
+        # is nothing to write — avoid taking the exclusive lock.
+        if not failed_set:
+            current = self.read().get("symbols", {})
+            if not any(name in current for name in ok_set):
+                return
 
         def _modify(data: dict) -> dict:
             symbols = data.setdefault("symbols", {})
@@ -62,6 +82,11 @@ class ReviewQueueRepository:
                 entry.setdefault("first_failed_at", asof)
                 entry["last_failed_at"] = asof
                 entry["reason"] = "OHLCV fetch returned no data"
+                m = meta.get(name)
+                if m:
+                    for key in ("exchange_mic", "sector", "cap_tier", "provider"):
+                        if m.get(key) is not None:
+                            entry[key] = m[key]
             return data
 
         self._ensure_file()

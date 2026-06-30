@@ -46,12 +46,16 @@ def pool_client(tmp_path):
 
 def test_taxonomy_filter_to_spec():
     tf = TaxonomyFilter(
-        region=["us"], market_cap_tier=["large", "mid"], provider=["yfinance"]
+        region=["us"],
+        market_cap_tier=["large", "mid"],
+        provider=["yfinance"],
+        instrument_type=["equity"],
     )
     spec = tf.to_spec()
     assert spec.region == ("us",)
     assert spec.market_cap_tier == ("large", "mid")
     assert spec.provider == ("yfinance",)
+    assert spec.instrument_type == ("equity",)
     assert spec.sector is None
 
 

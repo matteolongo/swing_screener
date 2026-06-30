@@ -1135,6 +1135,24 @@ export const messagesEn = {
       },
     },
   },
+  reviewQueue: {
+    title: 'Review queue',
+    empty: 'No symbols need review',
+    badgeLabel: 'Symbols needing review',
+    columns: {
+      symbol: 'Symbol',
+      exchange: 'Exchange',
+      capTier: 'Cap',
+      sector: 'Sector',
+      failures: 'Failures',
+      lastFailed: 'Last failed',
+      reason: 'Reason',
+    },
+    actions: {
+      keep: 'Keep',
+      remove: 'Remove',
+    },
+  },
   screener: {
     header: {
       title: 'Screener',
@@ -1216,6 +1234,32 @@ export const messagesEn = {
       index: {
         label: 'Index',
         placeholder: 'Any index',
+      },
+      sectorLabels: {
+        technology: 'Technology',
+        healthcare: 'Healthcare',
+        financialServices: 'Financial Services',
+        consumerCyclical: 'Consumer Cyclical',
+        consumerDefensive: 'Consumer Defensive',
+        energy: 'Energy',
+        industrials: 'Industrials',
+        basicMaterials: 'Basic Materials',
+        utilities: 'Utilities',
+        realEstate: 'Real Estate',
+        communicationServices: 'Communication Services',
+      },
+      indexLabels: {
+        us_sp500: 'S&P 500',
+        us_nasdaq100: 'NASDAQ 100',
+        us_dow30: 'Dow 30',
+        germany_dax: 'DAX',
+        france_cac40: 'CAC 40',
+        uk_ftse100: 'FTSE 100',
+        spain_ibex35: 'IBEX 35',
+        europe_eurostoxx50: 'Euro Stoxx 50',
+        amsterdam_aex: 'AEX',
+        italy_ftse_mib: 'FTSE MIB',
+        broad_market_stocks: 'Broad Market',
       },
     },
     universe: {
