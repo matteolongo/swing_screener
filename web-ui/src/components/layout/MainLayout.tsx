@@ -1,23 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { cn } from '@/utils/cn';
-import { useOrders, usePositions } from '@/features/portfolio/hooks';
-import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export default function MainLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { status: onboardingStatus } = useOnboardingStore();
-  const ordersQuery = useOrders('all');
-  const positionsQuery = usePositions('all');
   const isWorkspaceRoute = useMemo(
     () => location.pathname === '/workspace' || location.pathname.startsWith('/workspace/'),
-    [location.pathname]
-  );
-  const isOnboardingRoute = useMemo(
-    () => location.pathname === '/onboarding' || location.pathname.startsWith('/onboarding/'),
     [location.pathname]
   );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isWorkspaceRoute);
@@ -25,35 +15,6 @@ export default function MainLayout() {
   useEffect(() => {
     setIsSidebarCollapsed(isWorkspaceRoute);
   }, [isWorkspaceRoute]);
-
-  useEffect(() => {
-    if (onboardingStatus !== 'new' || isOnboardingRoute) {
-      return;
-    }
-    if (!ordersQuery.isFetched || !positionsQuery.isFetched) {
-      return;
-    }
-    if (ordersQuery.isError || positionsQuery.isError) {
-      return;
-    }
-
-    const hasNoOrders = (ordersQuery.data ?? []).length === 0;
-    const hasNoPositions = (positionsQuery.data ?? []).length === 0;
-
-    if (hasNoOrders && hasNoPositions) {
-      navigate('/onboarding', { replace: true });
-    }
-  }, [
-    isOnboardingRoute,
-    navigate,
-    onboardingStatus,
-    ordersQuery.data,
-    ordersQuery.isError,
-    ordersQuery.isFetched,
-    positionsQuery.data,
-    positionsQuery.isError,
-    positionsQuery.isFetched,
-  ]);
 
   return (
     <div className="min-h-dvh flex flex-col bg-background">
@@ -63,12 +24,7 @@ export default function MainLayout() {
       />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {!isSidebarCollapsed ? <Sidebar className="w-56 shrink-0" /> : null}
-        <main
-          className={cn(
-            'flex-1 overflow-y-auto bg-background',
-            isWorkspaceRoute ? 'p-5' : 'p-6'
-          )}
-        >
+        <main className={cn('flex-1 overflow-y-auto bg-background', isWorkspaceRoute ? 'p-5' : 'p-6')}>
           <Outlet />
         </main>
       </div>

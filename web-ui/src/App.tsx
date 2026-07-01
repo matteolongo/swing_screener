@@ -8,7 +8,6 @@ import { migrateRemovedUniverseIds } from '@/features/screener/universeStorage';
 migrateRemovedUniverseIds(localStorage);
 
 const Strategy = lazy(() => import('./pages/Strategy'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 // New primary destination pages
 const Today = lazy(() => import('./pages/Today'));
@@ -45,9 +44,6 @@ function App() {
                 {/* Strategy / settings — still accessible */}
                 <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />
                 <Route path="settings" element={<Navigate to="/strategy" replace />} />
-
-                {/* Onboarding */}
-                <Route path="onboarding" element={<Onboarding />} />
 
                 {/* Legacy routes → redirects to new destinations */}
                 <Route path="workspace" element={<Navigate to="/today" replace />} />
