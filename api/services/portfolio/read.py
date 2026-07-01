@@ -97,6 +97,7 @@ class PortfolioReadService:
         eurusd_rate: float,
         account_currency: str = "EUR",
         *,
+        live_tickers: frozenset[str] = frozenset(),
         time_stop_days: int | None = None,
         time_stop_min_r: float | None = None,
     ) -> PositionWithMetrics:
@@ -115,9 +116,9 @@ class PortfolioReadService:
         if state_position.status == "open" and live_price is not None:
             payload["current_price"] = live_price
 
-        if live_price is not None:
+        if live_price is not None and ticker in live_tickers:
             price_source = "live"
-        elif position.get("current_price") is not None:
+        elif live_price is not None or position.get("current_price") is not None:
             price_source = "cached"
         else:
             price_source = "entry"
@@ -191,7 +192,7 @@ class PortfolioReadService:
         time_stop_min_r: float | None = None,
     ) -> PositionsWithMetricsResponse:
         positions, asof = self._positions_repo.list_positions(status=status)
-        current_prices = self._pricing._attach_live_prices(positions)
+        current_prices, live_tickers = self._pricing._attach_live_prices(positions)
         has_usd_positions = any(
             detect_currency(str(position.get("ticker", "")).upper()) == "USD"
             for position in positions
@@ -205,6 +206,7 @@ class PortfolioReadService:
                 current_prices,
                 eurusd_rate,
                 account_currency,
+                live_tickers=live_tickers,
                 time_stop_days=time_stop_days,
                 time_stop_min_r=time_stop_min_r,
             )
@@ -225,12 +227,23 @@ class PortfolioReadService:
 
         ticker = str(position.get("ticker", "")).upper()
         current_price = self._pricing._fallback_price(position)
+        # Non-open positions (closed) have a fixed, recorded price - label unchanged from prior behavior.
+        price_source = "live"
 
         if position.get("status") == "open" and ticker:
-            try:
-                current_price = self._pricing._fetch_last_prices([ticker]).get(ticker, current_price)
-            except Exception as exc:
-                logger.warning("Failed to fetch current price for %s metrics: %s", ticker, exc)
+            live_quote = self._pricing._fetch_live_quote(ticker)
+            if live_quote is not None:
+                current_price = live_quote
+                price_source = "live"
+            else:
+                try:
+                    last_close = self._pricing._fetch_last_prices([ticker]).get(ticker)
+                except Exception as exc:
+                    logger.warning("Failed to fetch current price for %s metrics: %s", ticker, exc)
+                    last_close = None
+                if last_close is not None:
+                    current_price = last_close
+                    price_source = "cached"
 
         state_position = to_state_position(position)
         entry_fee_eur = float(position.get("entry_fee_eur") or 0.0)
@@ -297,7 +310,7 @@ class PortfolioReadService:
             partial_closes=partial_close_events,
             blended_r=blended_r,
             r_fx_adjusted=r_fx_adjusted,
-            price_source="live",
+            price_source=price_source,
             r_uses_initial_risk=r_uses_initial_risk_metrics,
         )
 
