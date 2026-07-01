@@ -14,7 +14,7 @@ Daily trading workflow through the Swing Screener web interface.
 | Today | `/today` | Left panel with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right (Overview / Fundamentals / Order / Backtest tabs; the Backtest tab runs a per-symbol event study inline). For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
-| Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |
+| Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal). **Pool tab**: refresh-all-universes, rebuild symbol pool, and enrich taxonomy — each with a field-level diff table (`PoolTab` / `PoolDiffTable` / `UniverseRefreshSummary`) |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Onboarding | `/onboarding` | Setup guide for new users |
 | Data Sources | `/datasources` | Data source diagnostics: inventory of all sources with configured/probeable status, per-source Test button (fires a live canary probe), Test All (concurrent probe of all probeable sources), and a fallback event feed. One intelligence source is probeable: `sec_edgar_catalysts`. |
@@ -28,7 +28,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/portfolio` | Book | Positions: CRUD, stop updates, partial close, trail method |
 | `features/orders` | Book, Today | Order lifecycle: create, fill, cancel |
 | `features/screener` | Today | Screener run, candidates, recurrence state. The screener filters the unified symbol pool by taxonomy (`taxonomyFilter` + `preset`) via `QuickFilterBar` (region/cap/type/sector/index) above the table; currency/exchange/OTC/price stay in the collapsible panel. The `universe` field is a deprecated index-membership alias. |
-| `features/pool` | Today (filter bar), Header (review queue) | Taxonomy presets, pool browse, and review-queue health. `QuickFilterBar` consumes presets; `components/domain/pool/ReviewQueueDrawer` + the Header badge surface symbols that repeatedly failed OHLCV fetch (Keep restores, Remove drops the queue entry). |
+| `features/pool` | Today (filter bar), Header (review queue), Universes (Pool tab) | Taxonomy presets, pool browse, and review-queue health. `QuickFilterBar` consumes presets; `components/domain/pool/ReviewQueueDrawer` + the Header badge surface symbols that repeatedly failed OHLCV fetch (Keep restores, Remove drops the queue entry). `admin.ts` + `adminHooks.ts` drive the Pool tab's rebuild/enrich/refresh-all operations. |
 | `features/intelligence` | Today | Symbol analysis (LLM), cached results, sweep, pre-open gap outlook, thesis-delta, analysis-history timeline |
 | `features/watchlist` | Today | Watchlist CRUD (Watchlist tab) |
 | `features/dailyReview` | Today | Daily review compute and structured result |

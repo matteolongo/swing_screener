@@ -101,3 +101,30 @@ def test_review_queue_remove(pool_client):
         pool_client.post("/api/pool/review-queue/AAPL/remove").json()["removed"]
         is False
     )
+
+
+def test_pool_rebuild_endpoint(pool_client, monkeypatch):
+    from swing_screener.data.symbol_pool import PoolSymbol
+    from api.services import pool_admin_service
+
+    monkeypatch.setattr(
+        pool_admin_service,
+        "build_pool_base",
+        lambda: [
+            PoolSymbol(symbol="AAPL", region="us"),
+            PoolSymbol(symbol="MSFT", region="us"),
+            PoolSymbol(symbol="NVDA", region="us"),
+        ],
+    )
+    resp = pool_client.post("/api/pool/rebuild")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["applied"] is True
+    # ASML in fixture but not in rebuilt base -> removed; NVDA -> added.
+    assert {a["symbol"] for a in body["additions"]} == {"NVDA"}
+    assert {r["symbol"] for r in body["removals"]} == {"ASML"}
+
+
+def test_pool_enrich_unknown_job_returns_404(pool_client):
+    resp = pool_client.get("/api/pool/enrich/does-not-exist")
+    assert resp.status_code == 404

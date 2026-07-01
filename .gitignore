@@ -52,6 +52,7 @@ data/fundamentals/
 data/daily_reviews/
 data/screener/
 data/backtest/
+data/pool/enrich_jobs/
 data/*.db
 data/*.db-journal
 # data/intelligence — ignore runtime output, track seed/config files

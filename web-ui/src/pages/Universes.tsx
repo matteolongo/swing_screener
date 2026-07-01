@@ -9,6 +9,7 @@ import UniverseConfigTab from '@/components/domain/universes/UniverseConfigTab';
 import UniverseConstituentsTab from '@/components/domain/universes/UniverseConstituentsTab';
 import UniverseDiscoveryTab from '@/components/domain/universes/UniverseDiscoveryTab';
 import UniverseScreenerTab from '@/components/domain/universes/UniverseScreenerTab';
+import PoolTab from '@/components/domain/universes/PoolTab';
 import {
   CURRENCY_PRESETS,
   DETAIL_TABS,
@@ -245,6 +246,8 @@ export default function Universes() {
               onSelectTicker={setDetailTicker}
             />
           )}
+
+          {activeDetailTab === 'pool' && <PoolTab />}
         </div>
       </div>
 
