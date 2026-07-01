@@ -5,8 +5,8 @@
   "benchmark": "^NDX",
   "source": "wikipedia",
   "source_adapter": "wikipedia_index_review",
-  "source_asof": "2026-06-13",
-  "last_reviewed_at": "2026-06-13",
+  "source_asof": "2026-06-30",
+  "last_reviewed_at": "2026-06-30",
   "stale_after_days": 100,
   "rules": {
     "exchange_mics": [
@@ -125,6 +125,13 @@
       "source_symbol": "ASML"
     },
     {
+      "symbol": "ALAB",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Astera Labs",
+      "source_symbol": "ALAB"
+    },
+    {
       "symbol": "ADSK",
       "exchange_mic": "XNAS",
       "currency": "USD",
@@ -174,13 +181,6 @@
       "source_symbol": "CDNS"
     },
     {
-      "symbol": "CHTR",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "source_name": "Charter Communications",
-      "source_symbol": "CHTR"
-    },
-    {
       "symbol": "CTAS",
       "exchange_mic": "XNAS",
       "currency": "USD",
@@ -202,13 +202,6 @@
       "source_symbol": "CCEP"
     },
     {
-      "symbol": "CTSH",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "source_name": "Cognizant",
-      "source_symbol": "CTSH"
-    },
-    {
       "symbol": "CMCSA",
       "exchange_mic": "XNAS",
       "currency": "USD",
@@ -228,6 +221,13 @@
       "currency": "USD",
       "source_name": "Copart",
       "source_symbol": "CPRT"
+    },
+    {
+      "symbol": "CRWV",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "CoreWeave",
+      "source_symbol": "CRWV"
     },
     {
       "symbol": "COST",
@@ -340,13 +340,6 @@
       "currency": "USD",
       "source_name": "Idexx Laboratories",
       "source_symbol": "IDXX"
-    },
-    {
-      "symbol": "INSM",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "source_name": "Insmed Incorporated",
-      "source_symbol": "INSM"
     },
     {
       "symbol": "INTC",
@@ -489,6 +482,13 @@
       "source_symbol": "MNST"
     },
     {
+      "symbol": "NBIS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Nebius Group",
+      "source_symbol": "NBIS"
+    },
+    {
       "symbol": "NFLX",
       "exchange_mic": "XNAS",
       "currency": "USD",
@@ -587,6 +587,13 @@
       "source_symbol": "REGN"
     },
     {
+      "symbol": "RKLB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Rocket Lab",
+      "source_symbol": "RKLB"
+    },
+    {
       "symbol": "ROP",
       "exchange_mic": "XNAS",
       "currency": "USD",
@@ -650,6 +657,13 @@
       "source_symbol": "TTWO"
     },
     {
+      "symbol": "TER",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Teradyne",
+      "source_symbol": "TER"
+    },
+    {
       "symbol": "TSLA",
       "exchange_mic": "XNAS",
       "currency": "USD",
@@ -669,13 +683,6 @@
       "currency": "USD",
       "source_name": "Thomson Reuters",
       "source_symbol": "TRI"
-    },
-    {
-      "symbol": "VRSK",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "source_name": "Verisk Analytics",
-      "source_symbol": "VRSK"
     },
     {
       "symbol": "VRTX",
@@ -718,13 +725,6 @@
       "currency": "USD",
       "source_name": "Xcel Energy",
       "source_symbol": "XEL"
-    },
-    {
-      "symbol": "ZS",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "source_name": "Zscaler",
-      "source_symbol": "ZS"
     }
   ],
   "source_documents": [

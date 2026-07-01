@@ -936,6 +936,24 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "000990.KS",
+    "exchange_mic": "XKRX",
+    "country_code": "KR",
+    "currency": "KRW",
+    "timezone": "Asia/Seoul",
+    "provider_symbol_map": {
+      "yahoo_finance": "000990.KS"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "000999.SZ",
     "exchange_mic": "XSHE",
     "country_code": "CN",
@@ -5778,6 +5796,24 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "267270.KS",
+    "exchange_mic": "XKRX",
+    "country_code": "KR",
+    "currency": "KRW",
+    "timezone": "Asia/Seoul",
+    "provider_symbol_map": {
+      "yahoo_finance": "267270.KS"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "268280.KS",
     "exchange_mic": "XKRX",
     "country_code": "KR",
@@ -6966,6 +7002,24 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "456040.KS",
+    "exchange_mic": "XKRX",
+    "country_code": "KR",
+    "currency": "KRW",
+    "timezone": "Asia/Seoul",
+    "provider_symbol_map": {
+      "yahoo_finance": "456040.KS"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "457190.KS",
     "exchange_mic": "XKRX",
     "country_code": "KR",
@@ -6981,6 +7035,24 @@
     "source": "wikipedia_yfinance",
     "source_asof": "2026-06-18",
     "last_reviewed_at": "2026-06-18",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "483650.KS",
+    "exchange_mic": "XKRX",
+    "country_code": "KR",
+    "currency": "KRW",
+    "timezone": "Asia/Seoul",
+    "provider_symbol_map": {
+      "yahoo_finance": "483650.KS"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
     "instrument_type": "equity"
   },
   {
@@ -10629,6 +10701,24 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "ABDN.L",
+    "exchange_mic": "XLON",
+    "country_code": "GB",
+    "currency": "GBP",
+    "timezone": "Europe/London",
+    "provider_symbol_map": {
+      "yahoo_finance": "ABDN.L"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "ABEV",
     "exchange_mic": "XOTC",
     "country_code": "US",
@@ -11278,6 +11368,24 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "ALAB",
+    "exchange_mic": "XNAS",
+    "country_code": "US",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "provider_symbol_map": {
+      "yahoo_finance": "ALAB"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
     "instrument_type": "equity"
   },
   {
@@ -13890,6 +13998,24 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "CCC.L",
+    "exchange_mic": "XLON",
+    "country_code": "GB",
+    "currency": "GBP",
+    "timezone": "Europe/London",
+    "provider_symbol_map": {
+      "yahoo_finance": "CCC.L"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "CCEP",
     "exchange_mic": "XNAS",
     "country_code": "US",
@@ -14875,6 +15001,24 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "CRWV",
+    "exchange_mic": "XNAS",
+    "country_code": "US",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "provider_symbol_map": {
+      "yahoo_finance": "CRWV"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
     "instrument_type": "equity"
   },
   {
@@ -16039,6 +16183,24 @@
     "source": "wikipedia_yfinance",
     "source_asof": "2026-06-13",
     "last_reviewed_at": "2026-06-13",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "ECHO",
+    "exchange_mic": "XNAS",
+    "country_code": "US",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "provider_symbol_map": {
+      "yahoo_finance": "ECHO"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
     "instrument_type": "equity"
   },
   {
@@ -17290,6 +17452,24 @@
     "source": "wikipedia_yfinance",
     "source_asof": "2026-06-13",
     "last_reviewed_at": "2026-06-13",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "FLEX",
+    "exchange_mic": "XNAS",
+    "country_code": "US",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "provider_symbol_map": {
+      "yahoo_finance": "FLEX"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
     "instrument_type": "equity"
   },
   {
@@ -18572,6 +18752,24 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "HONA",
+    "exchange_mic": "XNAS",
+    "country_code": "US",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "provider_symbol_map": {
+      "yahoo_finance": "HONA"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "HOOD",
     "exchange_mic": "XNAS",
     "country_code": "US",
@@ -19454,6 +19652,24 @@
     "source": "wikipedia_yfinance",
     "source_asof": "2026-06-13",
     "last_reviewed_at": "2026-06-13",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "INVP.L",
+    "exchange_mic": "XLON",
+    "country_code": "GB",
+    "currency": "GBP",
+    "timezone": "Europe/London",
+    "provider_symbol_map": {
+      "yahoo_finance": "INVP.L"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
     "instrument_type": "equity"
   },
   {
@@ -21938,6 +22154,24 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "NBIS",
+    "exchange_mic": "XNAS",
+    "country_code": "US",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "provider_symbol_map": {
+      "yahoo_finance": "NBIS"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "wikipedia_yfinance",
+    "source_asof": "2026-06-30",
+    "last_reviewed_at": "2026-06-30",
     "instrument_type": "equity"
   },
   {

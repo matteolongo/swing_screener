@@ -5,8 +5,8 @@
   "benchmark": "^GSPC",
   "source": "wikipedia",
   "source_adapter": "wikipedia_index_review",
-  "source_asof": "2026-06-13",
-  "last_reviewed_at": "2026-06-13",
+  "source_asof": "2026-06-30",
+  "last_reviewed_at": "2026-06-30",
   "stale_after_days": 100,
   "rules": {
     "exchange_mics": [
@@ -601,13 +601,6 @@
       "source_symbol": "CPT"
     },
     {
-      "symbol": "CPB",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "source_name": "Campbell's Company (The)",
-      "source_symbol": "CPB"
-    },
-    {
       "symbol": "COF",
       "exchange_mic": "XNYS",
       "currency": "USD",
@@ -872,13 +865,6 @@
       "currency": "USD",
       "source_name": "Comfort Systems USA",
       "source_symbol": "FIX"
-    },
-    {
-      "symbol": "CAG",
-      "exchange_mic": "XNYS",
-      "currency": "USD",
-      "source_name": "Conagra Brands",
-      "source_symbol": "CAG"
     },
     {
       "symbol": "COP",
@@ -1175,11 +1161,11 @@
       "source_symbol": "EBAY"
     },
     {
-      "symbol": "SATS",
+      "symbol": "ECHO",
       "exchange_mic": "XNAS",
       "currency": "USD",
       "source_name": "EchoStar",
-      "source_symbol": "SATS"
+      "source_symbol": "ECHO"
     },
     {
       "symbol": "ECL",
@@ -1441,6 +1427,13 @@
       "source_symbol": "FISV"
     },
     {
+      "symbol": "FLEX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Flex Ltd.",
+      "source_symbol": "FLEX"
+    },
+    {
       "symbol": "F",
       "exchange_mic": "XNYS",
       "currency": "USD",
@@ -1672,10 +1665,17 @@
       "source_symbol": "HD"
     },
     {
+      "symbol": "HONA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Honeywell Aerospace",
+      "source_symbol": "HONA"
+    },
+    {
       "symbol": "HON",
       "exchange_mic": "XNYS",
       "currency": "USD",
-      "source_name": "Honeywell",
+      "source_name": "Honeywell Technologies",
       "source_symbol": "HON"
     },
     {
@@ -2132,6 +2132,13 @@
       "currency": "USD",
       "source_name": "Martin Marietta Materials",
       "source_symbol": "MLM"
+    },
+    {
+      "symbol": "MRVL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Marvell Technology",
+      "source_symbol": "MRVL"
     },
     {
       "symbol": "MAS",
@@ -2608,13 +2615,6 @@
       "currency": "USD",
       "source_name": "PNC Financial Services",
       "source_symbol": "PNC"
-    },
-    {
-      "symbol": "POOL",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "source_name": "Pool Corporation",
-      "source_symbol": "POOL"
     },
     {
       "symbol": "PPG",

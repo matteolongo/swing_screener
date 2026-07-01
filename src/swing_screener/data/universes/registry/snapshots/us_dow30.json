@@ -5,8 +5,8 @@
   "benchmark": "^DJI",
   "source": "wikipedia",
   "source_adapter": "wikipedia_index_review",
-  "source_asof": "2026-06-13",
-  "last_reviewed_at": "2026-06-13",
+  "source_asof": "2026-06-30",
+  "last_reviewed_at": "2026-06-30",
   "stale_after_days": 100,
   "rules": {
     "exchange_mics": [
@@ -24,6 +24,13 @@
       "currency": "USD",
       "source_name": "3M",
       "source_symbol": "MMM"
+    },
+    {
+      "symbol": "GOOGL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Alphabet",
+      "source_symbol": "GOOGL"
     },
     {
       "symbol": "AXP",
@@ -206,13 +213,6 @@
       "currency": "USD",
       "source_name": "UnitedHealth Group",
       "source_symbol": "UNH"
-    },
-    {
-      "symbol": "VZ",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "source_name": "Verizon",
-      "source_symbol": "VZ"
     },
     {
       "symbol": "V",
