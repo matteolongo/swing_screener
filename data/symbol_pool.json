@@ -1873,6 +1873,7 @@
       "industry": "Internet Content & Information",
       "index_memberships": [
         "broad_market_stocks",
+        "us_dow30",
         "us_nasdaq100",
         "us_sp500"
       ],
@@ -3234,7 +3235,6 @@
       "industry": "Telecom Services",
       "index_memberships": [
         "broad_market_stocks",
-        "us_dow30",
         "us_sp500"
       ],
       "liquidity_tier": null,
@@ -12430,7 +12430,8 @@
       "sector": "Industrials",
       "industry": "Aerospace & Defense",
       "index_memberships": [
-        "defense_stocks"
+        "defense_stocks",
+        "us_nasdaq100"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -15471,8 +15472,7 @@
       "sector": "Healthcare",
       "industry": "Biotechnology",
       "index_memberships": [
-        "healthcare_stocks",
-        "us_nasdaq100"
+        "healthcare_stocks"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -18862,6 +18862,28 @@
       "last_fetch_ok_at": null
     },
     {
+      "symbol": "483650.KS",
+      "exchange_mic": "XKRX",
+      "currency": "KRW",
+      "region": "asia_pacific",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "korea_kospi200"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
       "symbol": "001680.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
@@ -18946,6 +18968,28 @@
       ],
       "primary_provider": "yfinance",
       "taxonomy_refreshed_at": "2026-06-30",
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
+      "symbol": "000990.KS",
+      "exchange_mic": "XKRX",
+      "currency": "KRW",
+      "region": "asia_pacific",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "korea_kospi200"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
       "fetch_failure_count": 0,
       "last_fetch_ok_at": null
     },
@@ -19302,28 +19346,6 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "114090.KS",
-      "exchange_mic": "XKRX",
-      "currency": "KRW",
-      "region": "asia_pacific",
-      "market_cap_tier": "large",
-      "sector": "Consumer Cyclical",
-      "industry": "Resorts & Casinos",
-      "index_memberships": [
-        "korea_kospi200"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": "equity",
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": "2026-06-30",
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
       "symbol": "006280.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
@@ -19331,28 +19353,6 @@
       "market_cap_tier": "large",
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - Specialty & Generic",
-      "index_memberships": [
-        "korea_kospi200"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": "equity",
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": "2026-06-30",
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
-      "symbol": "005250.KS",
-      "exchange_mic": "XKRX",
-      "currency": "KRW",
-      "region": "asia_pacific",
-      "market_cap_tier": "large",
-      "sector": "Healthcare",
-      "industry": "Biotechnology",
       "index_memberships": [
         "korea_kospi200"
       ],
@@ -19386,28 +19386,6 @@
       ],
       "primary_provider": "yfinance",
       "taxonomy_refreshed_at": "2026-06-30",
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
-      "symbol": "006360.KS",
-      "exchange_mic": "XKRX",
-      "currency": "KRW",
-      "region": "asia_pacific",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "korea_kospi200"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
       "fetch_failure_count": 0,
       "last_fetch_ok_at": null
     },
@@ -19831,6 +19809,28 @@
     },
     {
       "symbol": "272210.KS",
+      "exchange_mic": "XKRX",
+      "currency": "KRW",
+      "region": "asia_pacific",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "korea_kospi200"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
+      "symbol": "267270.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
       "region": "asia_pacific",
@@ -21722,6 +21722,28 @@
       "last_fetch_ok_at": null
     },
     {
+      "symbol": "456040.KS",
+      "exchange_mic": "XKRX",
+      "currency": "KRW",
+      "region": "asia_pacific",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "korea_kospi200"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
       "symbol": "010060.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
@@ -22361,28 +22383,6 @@
     },
     {
       "symbol": "003030.KS",
-      "exchange_mic": "XKRX",
-      "currency": "KRW",
-      "region": "asia_pacific",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "korea_kospi200"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
-      "symbol": "004490.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
       "region": "asia_pacific",
@@ -23570,6 +23570,28 @@
       "last_fetch_ok_at": null
     },
     {
+      "symbol": "ABDN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "region": "europe",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "uk_ftse100"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
       "symbol": "ADM.L",
       "exchange_mic": "XLON",
       "currency": "GBP",
@@ -23878,28 +23900,6 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "BKG.L",
-      "exchange_mic": "XLON",
-      "currency": "GBP",
-      "region": "europe",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "uk_ftse100"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
       "symbol": "BP.L",
       "exchange_mic": "XLON",
       "currency": "GBP",
@@ -24101,6 +24101,28 @@
       "symbol": "CPG.L",
       "exchange_mic": "XLON",
       "currency": "USD",
+      "region": "europe",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "uk_ftse100"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
+      "symbol": "CCC.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
       "region": "europe",
       "market_cap_tier": null,
       "sector": null,
@@ -24692,6 +24714,28 @@
       "last_fetch_ok_at": null
     },
     {
+      "symbol": "INVP.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "region": "europe",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "uk_ftse100"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
       "symbol": "JD.L",
       "exchange_mic": "XLON",
       "currency": "GBP",
@@ -24956,28 +25000,6 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "MNDI.L",
-      "exchange_mic": "XLON",
-      "currency": "GBP",
-      "region": "europe",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "uk_ftse100"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
       "symbol": "NG.L",
       "exchange_mic": "XLON",
       "currency": "GBP",
@@ -25199,28 +25221,6 @@
     },
     {
       "symbol": "RTO.L",
-      "exchange_mic": "XLON",
-      "currency": "GBP",
-      "region": "europe",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "uk_ftse100"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
-      "symbol": "RMV.L",
       "exchange_mic": "XLON",
       "currency": "GBP",
       "region": "europe",
@@ -25908,6 +25908,28 @@
       "last_fetch_ok_at": null
     },
     {
+      "symbol": "ALAB",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "region": "us",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "us_nasdaq100"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
       "symbol": "ADSK",
       "exchange_mic": "XNAS",
       "currency": "USD",
@@ -26000,29 +26022,6 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "CHTR",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "region": "us",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "us_nasdaq100",
-        "us_sp500"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
       "symbol": "CTAS",
       "exchange_mic": "XNAS",
       "currency": "USD",
@@ -26055,29 +26054,6 @@
       "industry": null,
       "index_memberships": [
         "us_nasdaq100"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
-      "symbol": "CTSH",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "region": "us",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "us_nasdaq100",
-        "us_sp500"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -26124,6 +26100,28 @@
       "index_memberships": [
         "us_nasdaq100",
         "us_sp500"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
+      "symbol": "CRWV",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "region": "us",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "us_nasdaq100"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -26512,7 +26510,8 @@
       "sector": null,
       "industry": null,
       "index_memberships": [
-        "us_nasdaq100"
+        "us_nasdaq100",
+        "us_sp500"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -26627,6 +26626,28 @@
       "index_memberships": [
         "us_nasdaq100",
         "us_sp500"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
+      "symbol": "NBIS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "region": "us",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "us_nasdaq100"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -26938,7 +26959,7 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "TRI",
+      "symbol": "TER",
       "exchange_mic": "XNAS",
       "currency": "USD",
       "region": "us",
@@ -26946,7 +26967,8 @@
       "sector": null,
       "industry": null,
       "index_memberships": [
-        "us_nasdaq100"
+        "us_nasdaq100",
+        "us_sp500"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -26960,7 +26982,7 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "VRSK",
+      "symbol": "TRI",
       "exchange_mic": "XNAS",
       "currency": "USD",
       "region": "us",
@@ -26968,8 +26990,7 @@
       "sector": null,
       "industry": null,
       "index_memberships": [
-        "us_nasdaq100",
-        "us_sp500"
+        "us_nasdaq100"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -27062,28 +27083,6 @@
       "index_memberships": [
         "us_nasdaq100",
         "us_sp500"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
-      "symbol": "ZS",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "region": "us",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "us_nasdaq100"
       ],
       "liquidity_tier": null,
       "instrument_type": "equity",
@@ -28197,28 +28196,6 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "CPB",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "region": "us",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "us_sp500"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
       "symbol": "COF",
       "exchange_mic": "XNYS",
       "currency": "USD",
@@ -28483,6 +28460,28 @@
       "last_fetch_ok_at": null
     },
     {
+      "symbol": "CHTR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "region": "us",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "us_sp500"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
       "symbol": "CMG",
       "exchange_mic": "XNYS",
       "currency": "USD",
@@ -28703,6 +28702,28 @@
       "last_fetch_ok_at": null
     },
     {
+      "symbol": "CTSH",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "region": "us",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "us_sp500"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
       "symbol": "COHR",
       "exchange_mic": "XNYS",
       "currency": "USD",
@@ -28770,28 +28791,6 @@
     },
     {
       "symbol": "FIX",
-      "exchange_mic": "XNYS",
-      "currency": "USD",
-      "region": "us",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "us_sp500"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
-      "symbol": "CAG",
       "exchange_mic": "XNYS",
       "currency": "USD",
       "region": "us",
@@ -29473,7 +29472,7 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "SATS",
+      "symbol": "ECHO",
       "exchange_mic": "XNAS",
       "currency": "USD",
       "region": "us",
@@ -30177,6 +30176,28 @@
       "last_fetch_ok_at": null
     },
     {
+      "symbol": "FLEX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "region": "us",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "us_sp500"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
       "symbol": "F",
       "exchange_mic": "XNYS",
       "currency": "USD",
@@ -30707,6 +30728,28 @@
     {
       "symbol": "HLT",
       "exchange_mic": "XNYS",
+      "currency": "USD",
+      "region": "us",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "us_sp500"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
+      "symbol": "HONA",
+      "exchange_mic": "XNAS",
       "currency": "USD",
       "region": "us",
       "market_cap_tier": null,
@@ -32465,28 +32508,6 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "POOL",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "region": "us",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "us_sp500"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
       "symbol": "PPG",
       "exchange_mic": "XNYS",
       "currency": "USD",
@@ -33455,28 +33476,6 @@
       "last_fetch_ok_at": null
     },
     {
-      "symbol": "TER",
-      "exchange_mic": "XNAS",
-      "currency": "USD",
-      "region": "us",
-      "market_cap_tier": null,
-      "sector": null,
-      "industry": null,
-      "index_memberships": [
-        "us_sp500"
-      ],
-      "liquidity_tier": null,
-      "instrument_type": "equity",
-      "instrument_type_detail": null,
-      "available_providers": [
-        "yfinance"
-      ],
-      "primary_provider": "yfinance",
-      "taxonomy_refreshed_at": null,
-      "fetch_failure_count": 0,
-      "last_fetch_ok_at": null
-    },
-    {
       "symbol": "TPL",
       "exchange_mic": "XNYS",
       "currency": "USD",
@@ -33896,6 +33895,28 @@
     },
     {
       "symbol": "VRSN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "region": "us",
+      "market_cap_tier": null,
+      "sector": null,
+      "industry": null,
+      "index_memberships": [
+        "us_sp500"
+      ],
+      "liquidity_tier": null,
+      "instrument_type": "equity",
+      "instrument_type_detail": null,
+      "available_providers": [
+        "yfinance"
+      ],
+      "primary_provider": "yfinance",
+      "taxonomy_refreshed_at": null,
+      "fetch_failure_count": 0,
+      "last_fetch_ok_at": null
+    },
+    {
+      "symbol": "VRSK",
       "exchange_mic": "XNAS",
       "currency": "USD",
       "region": "us",

@@ -5,8 +5,8 @@
   "benchmark": "^FTSE",
   "source": "wikipedia",
   "source_adapter": "wikipedia_index_review",
-  "source_asof": "2026-06-13",
-  "last_reviewed_at": "2026-06-13",
+  "source_asof": "2026-06-30",
+  "last_reviewed_at": "2026-06-30",
   "stale_after_days": 100,
   "rules": {
     "exchange_mics": [
@@ -25,6 +25,13 @@
       "currency": "GBP",
       "source_name": "3i",
       "source_symbol": "III"
+    },
+    {
+      "symbol": "ABDN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Aberdeen Group",
+      "source_symbol": "ABDN"
     },
     {
       "symbol": "ADM.L",
@@ -125,13 +132,6 @@
       "source_symbol": "BEZ"
     },
     {
-      "symbol": "BKG.L",
-      "exchange_mic": "XLON",
-      "currency": "GBP",
-      "source_name": "Berkeley Group Holdings",
-      "source_symbol": "BKG"
-    },
-    {
       "symbol": "BP.L",
       "exchange_mic": "XLON",
       "currency": "GBP",
@@ -200,6 +200,13 @@
       "currency": "USD",
       "source_name": "Compass Group",
       "source_symbol": "CPG"
+    },
+    {
+      "symbol": "CCC.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Computacenter",
+      "source_symbol": "CCC"
     },
     {
       "symbol": "CTEC.L",
@@ -384,6 +391,13 @@
       "source_symbol": "ITRK"
     },
     {
+      "symbol": "INVP.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Investec",
+      "source_symbol": "INVP"
+    },
+    {
       "symbol": "JD.L",
       "exchange_mic": "XLON",
       "currency": "GBP",
@@ -468,13 +482,6 @@
       "source_symbol": "MTLN"
     },
     {
-      "symbol": "MNDI.L",
-      "exchange_mic": "XLON",
-      "currency": "GBP",
-      "source_name": "Mondi",
-      "source_symbol": "MNDI"
-    },
-    {
       "symbol": "NG.L",
       "exchange_mic": "XLON",
       "currency": "GBP",
@@ -550,13 +557,6 @@
       "currency": "GBP",
       "source_name": "Rentokil Initial",
       "source_symbol": "RTO"
-    },
-    {
-      "symbol": "RMV.L",
-      "exchange_mic": "XLON",
-      "currency": "GBP",
-      "source_name": "Rightmove",
-      "source_symbol": "RMV"
     },
     {
       "symbol": "RIO.L",

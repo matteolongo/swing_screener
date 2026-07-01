@@ -5,8 +5,8 @@
   "benchmark": "^KS11",
   "source": "wikipedia",
   "source_adapter": "wikipedia_index_review",
-  "source_asof": "2026-06-18",
-  "last_reviewed_at": "2026-06-18",
+  "source_asof": "2026-06-30",
+  "last_reviewed_at": "2026-06-30",
   "stale_after_days": 100,
   "rules": {
     "exchange_mics": [
@@ -130,6 +130,13 @@
       "source_symbol": "112610"
     },
     {
+      "symbol": "483650.KS",
+      "exchange_mic": "XKRX",
+      "currency": "KRW",
+      "source_name": "d'Alba Global",
+      "source_symbol": "483650"
+    },
+    {
       "symbol": "001680.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
@@ -156,6 +163,13 @@
       "currency": "KRW",
       "source_name": "Daewoong Pharmaceutical",
       "source_symbol": "069620"
+    },
+    {
+      "symbol": "000990.KS",
+      "exchange_mic": "XKRX",
+      "currency": "KRW",
+      "source_name": "DB HiTek",
+      "source_symbol": "000990"
     },
     {
       "symbol": "005830.KS",
@@ -270,13 +284,6 @@
       "source_symbol": "093370"
     },
     {
-      "symbol": "114090.KS",
-      "exchange_mic": "XKRX",
-      "currency": "KRW",
-      "source_name": "Grand Korea Leisure",
-      "source_symbol": "114090"
-    },
-    {
       "symbol": "006280.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
@@ -284,25 +291,11 @@
       "source_symbol": "006280"
     },
     {
-      "symbol": "005250.KS",
-      "exchange_mic": "XKRX",
-      "currency": "KRW",
-      "source_name": "Green Cross Holdings",
-      "source_symbol": "005250"
-    },
-    {
       "symbol": "078930.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
       "source_name": "GS",
       "source_symbol": "078930"
-    },
-    {
-      "symbol": "006360.KS",
-      "exchange_mic": "XKRX",
-      "currency": "KRW",
-      "source_name": "GS E&C",
-      "source_symbol": "006360"
     },
     {
       "symbol": "007070.KS",
@@ -443,6 +436,13 @@
       "currency": "KRW",
       "source_name": "Hanwha Systems",
       "source_symbol": "272210"
+    },
+    {
+      "symbol": "267270.KS",
+      "exchange_mic": "XKRX",
+      "currency": "KRW",
+      "source_name": "HD Construction Equipment",
+      "source_symbol": "267270"
     },
     {
       "symbol": "267250.KS",
@@ -1015,7 +1015,7 @@
       "symbol": "036570.KS",
       "exchange_mic": "XKRX",
       "currency": "KRW",
-      "source_name": "NCSoft",
+      "source_name": "NC",
       "source_symbol": "036570"
     },
     {
@@ -1038,6 +1038,13 @@
       "currency": "KRW",
       "source_name": "Nongshim",
       "source_symbol": "004370"
+    },
+    {
+      "symbol": "456040.KS",
+      "exchange_mic": "XKRX",
+      "currency": "KRW",
+      "source_name": "OCI",
+      "source_symbol": "456040"
     },
     {
       "symbol": "010060.KS",
@@ -1248,13 +1255,6 @@
       "currency": "KRW",
       "source_name": "Seah Steel Holdings",
       "source_symbol": "003030"
-    },
-    {
-      "symbol": "004490.KS",
-      "exchange_mic": "XKRX",
-      "currency": "KRW",
-      "source_name": "Sebang Global Battery",
-      "source_symbol": "004490"
     },
     {
       "symbol": "055550.KS",
