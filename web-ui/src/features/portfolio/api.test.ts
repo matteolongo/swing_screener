@@ -3,7 +3,6 @@ import { fillOrder } from '@/features/portfolio/api';
 
 describe('portfolio api', () => {
   beforeEach(() => {
-    vi.stubEnv('VITE_PERSISTENCE_MODE', 'api');
     vi.unstubAllGlobals();
   });
 

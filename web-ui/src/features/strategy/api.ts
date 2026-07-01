@@ -1,16 +1,6 @@
 import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
 import {
-  createStrategyLocal,
-  deleteStrategyLocal,
-  getActiveStrategyLocal,
-  isLocalPersistenceMode,
-  listStrategiesLocal,
-  setActiveStrategyLocal,
-  updateStrategyLocal,
-  validateStrategyLocally,
-} from '@/features/persistence';
-import {
   Strategy,
   StrategyAPI,
   ActiveStrategyRequestAPI,
@@ -55,9 +45,6 @@ interface StrategyValidationResultApi {
 }
 
 export async function fetchStrategies(): Promise<Strategy[]> {
-  if (isLocalPersistenceMode()) {
-    return listStrategiesLocal();
-  }
   const data = await fetchJson<StrategyAPI[]>(API_ENDPOINTS.strategy, {
     errorMessage: 'Failed to load strategies',
   });
@@ -65,9 +52,6 @@ export async function fetchStrategies(): Promise<Strategy[]> {
 }
 
 export async function fetchActiveStrategy(): Promise<Strategy> {
-  if (isLocalPersistenceMode()) {
-    return getActiveStrategyLocal();
-  }
   const data = await fetchJson<StrategyAPI>(API_ENDPOINTS.strategyActive, {
     errorMessage: 'Failed to load active strategy',
   });
@@ -75,9 +59,6 @@ export async function fetchActiveStrategy(): Promise<Strategy> {
 }
 
 export async function setActiveStrategy(strategyId: string): Promise<Strategy> {
-  if (isLocalPersistenceMode()) {
-    return setActiveStrategyLocal(strategyId);
-  }
   const payload: ActiveStrategyRequestAPI = { strategy_id: strategyId };
   const data = await fetchJson<StrategyAPI>(API_ENDPOINTS.strategyActive, {
     method: 'POST',
@@ -89,9 +70,6 @@ export async function setActiveStrategy(strategyId: string): Promise<Strategy> {
 }
 
 export async function updateStrategy(strategy: Strategy): Promise<Strategy> {
-  if (isLocalPersistenceMode()) {
-    return updateStrategyLocal(strategy);
-  }
   const data = await fetchJson<StrategyAPI>(API_ENDPOINTS.strategyById(strategy.id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -102,10 +80,6 @@ export async function updateStrategy(strategy: Strategy): Promise<Strategy> {
 }
 
 export async function deleteStrategy(strategyId: string): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    deleteStrategyLocal(strategyId);
-    return;
-  }
   await fetchJson<void>(API_ENDPOINTS.strategyById(strategyId), {
     method: 'DELETE',
     errorMessage: 'Failed to delete strategy',
@@ -116,9 +90,6 @@ export async function createStrategy(
   strategy: Strategy,
   payload: { id: string; name: string; description?: string }
 ): Promise<Strategy> {
-  if (isLocalPersistenceMode()) {
-    return createStrategyLocal(strategy, payload);
-  }
   const data = await fetchJson<StrategyAPI>(API_ENDPOINTS.strategy, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -131,9 +102,6 @@ export async function createStrategy(
 export async function validateStrategy(
   strategyPayload: StrategyUpdateRequestAPI,
 ): Promise<StrategyValidationResult> {
-  if (isLocalPersistenceMode()) {
-    return validateStrategyLocally(strategyPayload);
-  }
   const data = await fetchJson<StrategyValidationResultApi>(API_ENDPOINTS.strategyValidate, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

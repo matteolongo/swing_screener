@@ -5,20 +5,6 @@ import type { PositionUpdateApiResponse } from '@/types/position';
 import type { OpenPositionIntelligenceSummaryAPI, OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
 import { transformOpenPositionIntelligence } from '@/features/intelligence/types';
 import {
-  cancelOrderLocal,
-  closePositionLocal,
-  createOrderLocal,
-  fillOrderLocal,
-  getActiveStrategyLocal,
-  getPositionByIdLocal,
-  isLocalPersistenceMode,
-  listOrdersLocal,
-  listPositionsLocal,
-  portfolioSummaryLocal,
-  positionMetricsLocal,
-  updatePositionStopLocal,
-} from '@/features/persistence';
-import {
   CreateOrderRequest,
   FillOrderRequest,
   Order,
@@ -201,9 +187,6 @@ export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
 export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
-  if (isLocalPersistenceMode()) {
-    return listOrdersLocal(status);
-  }
   const params = status ? `?status=${status}` : '';
   const data = await fetchJson<{ orders?: OrderApiResponse[] }>(`${API_ENDPOINTS.localOrders}${params}`, {
     errorMessage: 'Failed to fetch orders',
@@ -212,10 +195,6 @@ export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
 }
 
 export async function createOrder(request: CreateOrderRequest): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    createOrderLocal(request);
-    return;
-  }
   await fetchJson<void>(API_ENDPOINTS.orders, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -225,10 +204,6 @@ export async function createOrder(request: CreateOrderRequest): Promise<void> {
 }
 
 export async function fillOrder(orderId: string, request: FillOrderRequest): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    fillOrderLocal(orderId, request);
-    return;
-  }
   const payload: Record<string, number | string> = {
     filled_price: request.filledPrice,
     filled_date: request.filledDate,
@@ -259,10 +234,6 @@ export async function submitOrder(orderId: string): Promise<void> {
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    cancelOrderLocal(orderId);
-    return;
-  }
   await fetchJson<void>(API_ENDPOINTS.order(orderId), {
     method: 'DELETE',
     errorMessage: 'Failed to cancel order',
@@ -270,16 +241,6 @@ export async function cancelOrder(orderId: string): Promise<void> {
 }
 
 export async function fetchDegiroStatus(): Promise<DegiroStatus> {
-  if (isLocalPersistenceMode()) {
-    return {
-      installed: false,
-      credentialsConfigured: false,
-      available: false,
-      mode: 'missing_library',
-      detail: 'Local persistence mode keeps broker tracking manual. DeGiro sync is unavailable.',
-    };
-  }
-
   const payload = await fetchJson<DegiroStatusApiResponse>(API_ENDPOINTS.degiroStatus, {
     errorMessage: 'Failed to fetch DeGiro status',
   });
@@ -293,10 +254,6 @@ export async function fetchDegiroStatus(): Promise<DegiroStatus> {
 }
 
 export async function fetchDegiroOrderHistory(): Promise<DegiroOrder[]> {
-  if (isLocalPersistenceMode()) {
-    return [];
-  }
-
   const data = await fetchJson<{ orders?: DegiroOrderApiResponse[] }>(API_ENDPOINTS.degiroOrderHistory, {
     errorMessage: 'Failed to fetch DeGiro order history',
   });
@@ -307,10 +264,6 @@ export async function fillOrderFromDegiro(
   orderId: string,
   request: FillFromDegiroRequest,
 ): Promise<FillFromDegiroResponse> {
-  if (isLocalPersistenceMode()) {
-    throw new Error('Fill from DeGiro is not supported in local persistence mode');
-  }
-
   const payload = await fetchJson<FillFromDegiroResponseApi>(API_ENDPOINTS.orderFillFromDegiro(orderId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -321,9 +274,6 @@ export async function fillOrderFromDegiro(
 }
 
 export async function fetchPositions(status: PositionFilterStatus): Promise<PositionWithMetrics[]> {
-  if (isLocalPersistenceMode()) {
-    return listPositionsLocal(status);
-  }
   const params = status !== 'all' ? `?status=${status}` : '';
   const data = await fetchJson<{ positions: PositionWithMetricsApiResponse[] }>(
     API_ENDPOINTS.positions + params,
@@ -333,9 +283,6 @@ export async function fetchPositions(status: PositionFilterStatus): Promise<Posi
 }
 
 export async function fetchPositionMetrics(positionId: string): Promise<PositionMetrics> {
-  if (isLocalPersistenceMode()) {
-    return positionMetricsLocal(positionId);
-  }
   const data = await fetchJson<PositionMetricsApiResponse>(API_ENDPOINTS.positionMetrics(positionId), {
     errorMessage: 'Failed to fetch position metrics',
   });
@@ -343,9 +290,6 @@ export async function fetchPositionMetrics(positionId: string): Promise<Position
 }
 
 export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
-  if (isLocalPersistenceMode()) {
-    return portfolioSummaryLocal();
-  }
   const data = await fetchJson<PortfolioSummaryApiResponse>(API_ENDPOINTS.portfolioSummary, {
     errorMessage: 'Failed to fetch portfolio summary',
   });
@@ -354,7 +298,7 @@ export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
 
 export async function fetchEarningsProximity(ticker: string): Promise<EarningsProximity> {
   const normalizedTicker = ticker.trim().toUpperCase();
-  if (!normalizedTicker || isLocalPersistenceMode()) {
+  if (!normalizedTicker) {
     return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
   }
 
@@ -376,10 +320,6 @@ export async function updatePositionStop(
   positionId: string,
   request: UpdateStopRequest,
 ): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    updatePositionStopLocal(positionId, request);
-    return;
-  }
   await fetchJson<void>(API_ENDPOINTS.positionStop(positionId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -392,48 +332,6 @@ export async function updatePositionStop(
 }
 
 export async function fetchPositionStopSuggestion(positionId: string): Promise<PositionUpdate> {
-  if (isLocalPersistenceMode()) {
-    const localPosition = getPositionByIdLocal(positionId);
-    if (!localPosition) {
-      throw new Error(`Position not found: ${positionId}`);
-    }
-    const strategy = getActiveStrategyLocal();
-    const data = await fetchJson<PositionUpdateApiResponse>(API_ENDPOINTS.positionStopSuggestionCompute, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        position: {
-          ticker: localPosition.ticker,
-          status: localPosition.status,
-          entry_date: localPosition.entryDate,
-          entry_price: localPosition.entryPrice,
-          stop_price: localPosition.stopPrice,
-          shares: localPosition.shares,
-          position_id: localPosition.positionId ?? null,
-          source_order_id: localPosition.sourceOrderId ?? null,
-          initial_risk: localPosition.initialRisk ?? null,
-          max_favorable_price: localPosition.maxFavorablePrice ?? null,
-          exit_date: localPosition.exitDate ?? null,
-          exit_price: localPosition.exitPrice ?? null,
-          current_price: localPosition.currentPrice ?? null,
-          notes: localPosition.notes ?? '',
-          exit_order_ids: localPosition.exitOrderIds ?? null,
-        },
-        manage: {
-          breakeven_at_r: strategy.manage.breakevenAtR,
-          trail_after_r: strategy.manage.trailAfterR,
-          trail_sma: strategy.manage.trailSma,
-          sma_buffer_pct: strategy.manage.smaBufferPct,
-          max_holding_days: strategy.manage.maxHoldingDays,
-          time_stop_days: strategy.manage.timeStopDays,
-          time_stop_min_r: strategy.manage.timeStopMinR,
-        },
-      }),
-      errorMessage: 'Failed to fetch stop suggestion',
-    });
-    return transformPositionUpdate(data);
-  }
-
   const data = await fetchJson<PositionUpdateApiResponse>(API_ENDPOINTS.positionStopSuggestion(positionId), {
     errorMessage: 'Failed to fetch stop suggestion',
   });
@@ -456,9 +354,6 @@ export async function updatePositionTrailMethod(
   positionId: string,
   request: UpdateTrailMethodRequest,
 ): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    throw new Error('Trail method update is not supported in local persistence mode');
-  }
   await fetchJson<void>(API_ENDPOINTS.positionTrailMethod(positionId), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -506,10 +401,6 @@ export async function closePosition(
   positionId: string,
   request: ClosePositionRequest,
 ): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    closePositionLocal(positionId, request);
-    return;
-  }
   await fetchJson<void>(API_ENDPOINTS.positionClose(positionId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
