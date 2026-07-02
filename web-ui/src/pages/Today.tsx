@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import ActionInbox from '@/components/domain/today/ActionInbox';
+import PositionsMiniCard from '@/components/domain/today/PositionsMiniCard';
+import CalendarPeekCard from '@/components/domain/today/CalendarPeekCard';
 import WatchlistPipelinePanel from '@/components/domain/watchlist/WatchlistPipelinePanel';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { cn } from '@/utils/cn';
@@ -50,7 +52,15 @@ export default function Today() {
         {/* Tab content */}
         <div className="flex-1 overflow-hidden">
           {leftTab === 'today' && (
-            <ActionInbox onTickerSelect={handleTickerSelect} />
+            <div className="flex h-full flex-col overflow-y-auto">
+              <div className="flex-1 overflow-hidden">
+                <ActionInbox onTickerSelect={handleTickerSelect} />
+              </div>
+              <div className="grid shrink-0 gap-3 p-3 md:grid-cols-2">
+                <PositionsMiniCard onTickerSelect={handleTickerSelect} />
+                <CalendarPeekCard />
+              </div>
+            </div>
           )}
           {leftTab === 'screener' && (
             <ScreenerInboxPanel />

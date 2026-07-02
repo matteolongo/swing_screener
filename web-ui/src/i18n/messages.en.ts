@@ -2381,6 +2381,16 @@ export const messagesEn = {
       action: 'Write review',
       dismiss: 'Dismiss',
     },
+    positionsCard: {
+      title: 'Positions',
+      empty: 'No open positions.',
+      trim: 'Trim',
+    },
+    calendarPeek: {
+      title: 'Calendar',
+      empty: 'No upcoming events.',
+      viewAll: 'View full calendar →',
+    },
   },
   chart: {
     volume: 'Volume',
