@@ -7,7 +7,6 @@ describe('portfolio api', () => {
   });
 
   afterEach(() => {
-    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 

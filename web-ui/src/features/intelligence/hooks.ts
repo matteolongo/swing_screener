@@ -4,10 +4,9 @@ import {
   getIntelligenceHistory,
   getIntelligenceLatest,
   postIntelligenceAnalysis,
-  postIntelligenceSweep,
 } from '@/features/intelligence/api';
 import { transformIntelligence } from '@/features/intelligence/types';
-import type { HistoryEntry, SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
+import type { HistoryEntry, SymbolIntelligence } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -52,11 +51,5 @@ export function useIntelligenceHistoryQuery(ticker: string, enabled: boolean) {
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useIntelligenceSweepMutation() {
-  return useMutation<SweepResponseAPI, Error, SweepSymbolPayload[]>({
-    mutationFn: postIntelligenceSweep,
   });
 }

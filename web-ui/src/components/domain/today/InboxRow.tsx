@@ -120,19 +120,7 @@ export default function InboxRow({
     <div className="flex flex-col">
       <div
         data-testid="inbox-row"
-        role={rowAnalyzes ? 'button' : undefined}
-        tabIndex={rowAnalyzes ? 0 : undefined}
         onClick={rowAnalyzes ? handleRowClick : undefined}
-        onKeyDown={
-          rowAnalyzes
-            ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleRowClick();
-                }
-              }
-            : undefined
-        }
         className={cn(
           'flex h-9 items-center gap-2 px-2 text-[13px]',
           isFocused && 'ring-1 ring-primary rounded',

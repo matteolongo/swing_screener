@@ -1,21 +1,10 @@
 import { Link } from 'react-router-dom';
 import CollapsibleCard from '@/components/common/CollapsibleCard';
 import { useCalendarEventsQuery } from '@/features/calendar/hooks';
-import type { CalendarEvent, EventSourceTag } from '@/features/calendar/types';
+import { formatDate, SOURCE_STYLES } from '@/features/calendar/calendarShared';
+import type { CalendarEvent } from '@/features/calendar/types';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
-
-// Mirrors Calendar page's SOURCE_STYLES dot colors (not exported there).
-const SOURCE_DOT: Record<EventSourceTag, string> = {
-  position: 'bg-primary',
-  screener: 'bg-success',
-  economic: 'bg-warning',
-};
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-}
 
 function groupByDate(events: CalendarEvent[]): [string, CalendarEvent[]][] {
   const map = new Map<string, CalendarEvent[]>();
@@ -47,7 +36,7 @@ export default function CalendarPeekCard() {
               </div>
               {events.map((event, i) => (
                 <div key={`${date}-${i}`} className="flex items-center gap-2 py-0.5 text-[13px]">
-                  <span className={cn('h-2 w-2 shrink-0 rounded-full', SOURCE_DOT[event.sourceTag])} />
+                  <span className={cn('h-2 w-2 shrink-0 rounded-full', SOURCE_STYLES[event.sourceTag].dot)} />
                   <span className="flex-1 truncate text-foreground">{event.title}</span>
                   {event.ticker && <span className="shrink-0 font-mono text-xs text-muted">{event.ticker}</span>}
                 </div>
