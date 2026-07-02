@@ -47,31 +47,11 @@ renders a signed R-multiple in tabular mono with the right sign token.
 
 **Typography:** body uses system sans (`-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif`); numerics and code use `JetBrains Mono`.
 
-## Migration map (Tailwind literal -> token)
+## Migration map
 
-Applied when collapsing the legacy paired (`light dark:`) utilities. Drop the `dark:`
-half; the app is dark-only.
-
-| Legacy family | role | token |
-|---|---|---|
-| `gray`/`slate`/`zinc` `bg-white`/`-50`/`-100` | surface | `bg-surface` (preserve `/opacity`) |
-| `gray`/`slate` `text-900`/`-800` | primary text | `text-foreground` |
-| `gray`/`slate` `text-700`/`-600`/`-500`/`-400` | secondary text | `text-muted` |
-| `gray`/`slate` `border-*`, `divide-*` | hairline | `border-border` / `divide-border` |
-| gray hovers (`hover:bg-gray-50/100`) | hover | `hover:bg-foreground/5` |
-| `blue`/`sky`/`indigo` `-50`/`-100` bg | accent tint | `bg-primary/10` |
-| `blue`/`sky`/`indigo` `text-600..900` | accent text | `text-primary` |
-| `blue`/`sky`/`indigo` `border-*` | accent border | `border-primary/40` |
-| `blue` `-500`/`-600` solid + `text-white` | solid accent | `bg-primary text-primary-foreground` |
-| `blue`/`sky` focus (`ring`/`focus:ring`/`focus:border`) | focus | `ring-primary` / `focus:ring-primary` / `focus:border-primary/40` |
-| `green`/`emerald` `-50`/`-100` bg | positive tint | `bg-success/10` |
-| `green`/`emerald` `text-600..800` | positive text | `text-success` |
-| `green`/`emerald` `-500`/`-600` solid | positive solid | `bg-success text-success-foreground` |
-| `red`/`rose` `-50`/`-100` bg | negative tint | `bg-danger/10` |
-| `red`/`rose` `text-*` | negative text | `text-danger` |
-| `amber`/`yellow` `-50`/`-100` bg | caution tint | `bg-warning/10` |
-| `amber`/`yellow` `text-*` | caution text | `text-warning` |
-| `amber`/`yellow` `border-*` | caution border | `border-warning/40` |
+The light→dark, Tailwind-literal-to-token migration (collapsing paired `light dark:`
+utilities into the semantic tokens above) is complete; there are no remaining literal
+color classes to convert.
 
 Charts (`CandleChart` SVG series fill/stroke) keep their own scale and are exempt; so is
 the brand-mark gradient.
