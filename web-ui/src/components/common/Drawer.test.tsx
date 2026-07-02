@@ -62,6 +62,32 @@ describe('Drawer', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('keeps body scroll locked while any drawer is open, ref-counting nested opens', () => {
+    const { rerender } = render(
+      <>
+        <Drawer open onClose={() => {}}>bottom content</Drawer>
+        <Drawer open onClose={() => {}}>top content</Drawer>
+      </>
+    );
+    expect(document.body.classList.contains('overflow-hidden')).toBe(true);
+
+    rerender(
+      <>
+        <Drawer open onClose={() => {}}>bottom content</Drawer>
+        <Drawer open={false} onClose={() => {}}>top content</Drawer>
+      </>
+    );
+    expect(document.body.classList.contains('overflow-hidden')).toBe(true);
+
+    rerender(
+      <>
+        <Drawer open={false} onClose={() => {}}>bottom content</Drawer>
+        <Drawer open={false} onClose={() => {}}>top content</Drawer>
+      </>
+    );
+    expect(document.body.classList.contains('overflow-hidden')).toBe(false);
+  });
+
   it('closes on Escape when this drawer is the topmost dialog', () => {
     const onCloseBottom = vi.fn();
     const onCloseTop = vi.fn();

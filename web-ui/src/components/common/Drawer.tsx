@@ -12,6 +12,8 @@ interface DrawerProps {
   widthClassName?: string;
 }
 
+let scrollLocks = 0;
+
 export default function Drawer({ open, onClose, title, children, widthClassName = 'w-[560px]' }: DrawerProps) {
   const asideRef = useRef<HTMLElement>(null);
 
@@ -22,9 +24,15 @@ export default function Drawer({ open, onClose, title, children, widthClassName 
 
   useEffect(() => {
     if (!open) return;
-    document.body.classList.add('overflow-hidden');
+    scrollLocks += 1;
+    if (scrollLocks === 1) {
+      document.body.classList.add('overflow-hidden');
+    }
     return () => {
-      document.body.classList.remove('overflow-hidden');
+      scrollLocks -= 1;
+      if (scrollLocks === 0) {
+        document.body.classList.remove('overflow-hidden');
+      }
     };
   }, [open]);
 
