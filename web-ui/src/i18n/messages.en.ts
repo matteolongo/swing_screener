@@ -1025,6 +1025,12 @@ export const messagesEn = {
     showNavigation: 'Show navigation',
     hideNavigation: 'Hide navigation',
   },
+  statusBar: {
+    strategy: 'Strategy',
+    equity: 'Equity',
+    realizedPnl: 'P&L',
+    riskPerTrade: 'Risk/trade',
+  },
   strategyCoach: {
     title: 'Strategy Coach',
     activeLabel: 'Active:',

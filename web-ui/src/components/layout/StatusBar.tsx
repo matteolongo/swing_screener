@@ -1,20 +1,18 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
 import Badge from '@/components/common/Badge';
-import Select from '@/components/common/Select';
-import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
 import ReviewQueueDrawer from '@/components/domain/pool/ReviewQueueDrawer';
 import { usePortfolioSummary } from '@/features/portfolio/hooks';
 import { useReviewQueue } from '@/features/pool/hooks';
-import {
-  useActiveStrategyQuery,
-  useSetActiveStrategyMutation,
-  useStrategiesQuery,
-} from '@/features/strategy/hooks';
+import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import { useScreenerStore } from '@/stores/screenerStore';
+import { freshnessBadge } from '@/lib/badgeMap';
+import { formatCurrency, getSignColorClass } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 
-interface HeaderProps {
+interface StatusBarProps {
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
 }
@@ -35,20 +33,29 @@ function BrandMark() {
   );
 }
 
-export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: HeaderProps) {
+export default function StatusBar({ isSidebarCollapsed = false, onToggleSidebar }: StatusBarProps) {
   const now = new Date();
   const { locale, t } = useI18n();
   const [reviewOpen, setReviewOpen] = useState(false);
   const reviewQueueQuery = useReviewQueue();
   const reviewCount = reviewQueueQuery.data?.length ?? 0;
 
-  const strategiesQuery = useStrategiesQuery();
   const activeStrategyQuery = useActiveStrategyQuery();
   const portfolioSummaryQuery = usePortfolioSummary();
-  const setActiveMutation = useSetActiveStrategyMutation();
-  const strategies = strategiesQuery.data ?? [];
-  const activeId = activeStrategyQuery.data?.id ?? '';
-  const isLoading = strategiesQuery.isLoading || activeStrategyQuery.isLoading;
+  const lastResult = useScreenerStore((state) => state.lastResult);
+
+  const strategy = activeStrategyQuery.data;
+  const summary = portfolioSummaryQuery.data;
+
+  const accountSize = summary?.effectiveAccountSize;
+  const realizedPnl = summary?.realizedPnl;
+  const riskAccountSize = accountSize ?? strategy?.risk?.accountSize ?? null;
+  const riskPct = strategy?.risk?.riskPct ?? null;
+  const capitalAtRisk = riskAccountSize != null && riskPct != null ? riskAccountSize * riskPct : null;
+
+  const equityLabel = accountSize != null ? formatCurrency(accountSize) : '—';
+  const pnlLabel = realizedPnl != null ? `${realizedPnl >= 0 ? '+' : ''}${formatCurrency(realizedPnl)}` : '—';
+  const riskLabel = capitalAtRisk != null ? formatCurrency(capitalAtRisk) : '—';
 
   const dateStr = now.toLocaleDateString(locale, {
     weekday: 'short',
@@ -61,8 +68,10 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
     hour12: false,
   });
 
+  const freshnessSpec = lastResult ? freshnessBadge(lastResult.dataFreshness) : null;
+
   return (
-    <header className="h-12 px-4 border-b border-border bg-surface flex items-center justify-between gap-4 shrink-0">
+    <header className="h-11 px-3 border-b border-border bg-surface flex items-center gap-3 shrink-0">
       {/* Left: toggle + collapsed brand */}
       <div className="flex items-center gap-2 shrink-0">
         {onToggleSidebar && (
@@ -91,34 +100,36 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
         )}
       </div>
 
-      {/* Center: strategy selector */}
-      <div className="flex-1 max-w-xs">
-        <Select
-          value={activeId}
-          onChange={(e) => {
-            if (e.target.value && e.target.value !== activeId) {
-              setActiveMutation.mutate(e.target.value);
-            }
-          }}
-          aria-label={t('sidebar.activeStrategy')}
-          className={cn(
-            'h-7 px-2 text-[13px] rounded',
-            'focus:ring-1 focus:border-primary',
-            'disabled:opacity-50'
-          )}
-          disabled={isLoading || setActiveMutation.isPending}
+      {/* Center: read-only status segments */}
+      <div className="flex items-center gap-3">
+        <Link
+          to="/system/strategy"
+          className="flex h-6 items-center gap-1.5 rounded-md border border-border px-2 text-[12px] text-muted hover:text-foreground"
         >
-          {isLoading && <option value="">{t('sidebar.loadingStrategies')}</option>}
-          {!isLoading && !strategies.length && <option value="">{t('sidebar.noStrategies')}</option>}
-          {!isLoading && !activeId && <option value="">{t('sidebar.selectStrategy')}</option>}
-          {!isLoading && strategies.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </Select>
+          <span>{t('statusBar.strategy')}</span>
+          <span className="text-foreground">{strategy?.name ?? '—'}</span>
+        </Link>
+        <span className="border-l border-border pl-3 text-[12px] text-muted">
+          {t('statusBar.equity')} <span className="font-mono tabular-nums text-foreground">{equityLabel}</span>
+        </span>
+        <span className="border-l border-border pl-3 text-[12px] text-muted">
+          {t('statusBar.realizedPnl')}{' '}
+          <span className={cn('font-mono tabular-nums', getSignColorClass(realizedPnl ?? 0))}>{pnlLabel}</span>
+        </span>
+        <span className="border-l border-border pl-3 text-[12px] text-muted">
+          {t('statusBar.riskPerTrade')} <span className="font-mono tabular-nums text-foreground">{riskLabel}</span>
+        </span>
+        {freshnessSpec && lastResult && (
+          <span className="border-l border-border pl-3">
+            <Badge variant={freshnessSpec.variant}>
+              {t(freshnessSpec.labelKey)} · {lastResult.asofDate}
+            </Badge>
+          </span>
+        )}
       </div>
 
-      {/* Right: review queue + risk summary + clock */}
-      <div className="flex items-center gap-3 shrink-0">
+      {/* Right: review queue + clock */}
+      <div className="ml-auto flex items-center gap-3 shrink-0">
         {reviewCount > 0 && (
           <button
             type="button"
@@ -130,17 +141,6 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
           </button>
         )}
         <ReviewQueueDrawer open={reviewOpen} onClose={() => setReviewOpen(false)} />
-        <div className="hidden xl:block">
-          <StrategyCapitalRiskSummary
-            strategy={activeStrategyQuery.data}
-            equitySnapshot={portfolioSummaryQuery.data ? {
-              effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
-              realizedPnl: portfolioSummaryQuery.data.realizedPnl,
-            } : undefined}
-            variant="compact"
-            className="max-w-[42rem]"
-          />
-        </div>
         <div className="hidden md:flex items-center gap-1.5 text-[12px] text-muted">
           <span>{dateStr}</span>
           <span className="font-mono">{timeStr}</span>

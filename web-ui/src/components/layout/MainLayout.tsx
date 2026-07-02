@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import Header from './Header';
+import StatusBar from './StatusBar';
 import Sidebar from './Sidebar';
 import { cn } from '@/utils/cn';
 
@@ -18,7 +18,7 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-dvh flex flex-col bg-background">
-      <Header
+      <StatusBar
         isSidebarCollapsed={isSidebarCollapsed}
         onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
       />
