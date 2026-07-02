@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { t } from '@/i18n/t';
@@ -13,10 +13,28 @@ interface DrawerProps {
 }
 
 export default function Drawer({ open, onClose, title, children, widthClassName = 'w-[560px]' }: DrawerProps) {
+  const asideRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    asideRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      if (dialogs.length > 1) return;
+      onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -28,8 +46,10 @@ export default function Drawer({ open, onClose, title, children, widthClassName 
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-background/60" onClick={onClose} aria-hidden="true" />
       <aside
+        ref={asideRef}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         className={cn(
           'relative flex h-full max-w-[90vw] flex-col border-l border-border bg-surface shadow-xl',
           widthClassName
