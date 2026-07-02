@@ -1,5 +1,5 @@
 import { CandidateViewModel } from '@/features/screener/viewModel';
-import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
+import { getGlossaryEntry } from '@/content/educationGlossary';
 import WeeklyTrendBadge from './WeeklyTrendBadge';
 import { formatPercent, formatScreenerScore } from '@/utils/formatters';
 import { t } from '@/i18n/t';
@@ -27,23 +27,33 @@ export default function ScreenerCandidateDetailsRow({ candidate }: ScreenerCandi
           </p>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
             <div className="rounded-md border border-border bg-foreground/5 p-2">
-              <MetricHelpLabel metricKey="SCORE" className="text-muted" />
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
+                {getGlossaryEntry('SCORE').label}
+              </p>
               <div className="font-mono mt-1 text-base">{formatScreenerScore(candidate.score)}</div>
             </div>
             <div className="rounded-md border border-border bg-foreground/5 p-2">
-              <MetricHelpLabel metricKey="ATR" className="text-muted" />
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
+                {getGlossaryEntry('ATR').label}
+              </p>
               <div className="font-mono mt-1 text-base">{candidate.atr != null ? candidate.atr.toFixed(2) : '—'}</div>
             </div>
             <div className="rounded-md border border-border bg-foreground/5 p-2">
-              <MetricHelpLabel metricKey="MOM_6M" className="text-muted" />
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
+                {getGlossaryEntry('MOM_6M').label}
+              </p>
               <div className="font-mono mt-1 text-base">{candidate.momentum6m != null ? formatPercent(candidate.momentum6m * 100) : '—'}</div>
             </div>
             <div className="rounded-md border border-border bg-foreground/5 p-2">
-              <MetricHelpLabel metricKey="MOM_12M" className="text-muted" />
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
+                {getGlossaryEntry('MOM_12M').label}
+              </p>
               <div className="font-mono mt-1 text-base">{candidate.momentum12m != null ? formatPercent(candidate.momentum12m * 100) : '—'}</div>
             </div>
             <div className="rounded-md border border-border bg-foreground/5 p-2">
-              <MetricHelpLabel metricKey="RS" className="text-muted" />
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
+                {getGlossaryEntry('RS').label}
+              </p>
               <div className="font-mono mt-1 text-base">{candidate.relStrength != null ? formatPercent(candidate.relStrength * 100) : '—'}</div>
             </div>
             {candidate.volumeRatio != null && (

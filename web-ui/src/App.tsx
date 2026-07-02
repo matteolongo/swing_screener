@@ -1,15 +1,13 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import MainLayout from './components/layout/MainLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import { registerTradingStoreSync } from '@/features/persistence';
 import { migrateRemovedUniverseIds } from '@/features/screener/universeStorage';
 
 migrateRemovedUniverseIds(localStorage);
 
 const Strategy = lazy(() => import('./pages/Strategy'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 // New primary destination pages
 const Today = lazy(() => import('./pages/Today'));
@@ -27,16 +25,9 @@ const queryClient = new QueryClient({
   },
 });
 
-function TradingStoreSyncBridge() {
-  const activeQueryClient = useQueryClient();
-  useEffect(() => registerTradingStoreSync(activeQueryClient), [activeQueryClient]);
-  return null;
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TradingStoreSyncBridge />
       <BrowserRouter>
         <ErrorBoundary>
           <Suspense fallback={<div className="p-6 text-sm text-muted">Loading page...</div>}>
@@ -53,25 +44,6 @@ function App() {
                 {/* Strategy / settings — still accessible */}
                 <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />
                 <Route path="settings" element={<Navigate to="/strategy" replace />} />
-
-                {/* Onboarding */}
-                <Route path="onboarding" element={<Onboarding />} />
-
-                {/* Legacy routes → redirects to new destinations */}
-                <Route path="workspace" element={<Navigate to="/today" replace />} />
-                <Route path="daily-review" element={<Navigate to="/today" replace />} />
-                <Route path="portfolio" element={<Navigate to="/book" replace />} />
-                <Route path="journal" element={<Navigate to="/book" replace />} />
-                <Route path="analytics" element={<Navigate to="/book" replace />} />
-                <Route path="research" element={<Navigate to="/today" replace />} />
-                <Route path="intelligence" element={<Navigate to="/today" replace />} />
-                <Route path="fundamentals" element={<Navigate to="/today" replace />} />
-
-                {/* Other legacy redirects */}
-                <Route path="dashboard" element={<Navigate to="/today" replace />} />
-                <Route path="screener" element={<Navigate to="/today" replace />} />
-                <Route path="orders" element={<Navigate to="/book" replace />} />
-                <Route path="positions" element={<Navigate to="/book" replace />} />
 
                 <Route path="*" element={<Navigate to="/today" replace />} />
               </Route>

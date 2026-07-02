@@ -16,7 +16,6 @@ Daily trading workflow through the Swing Screener web interface.
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal). **Pool tab**: refresh-all-universes, rebuild symbol pool, and enrich taxonomy — each with a field-level diff table (`PoolTab` / `PoolDiffTable` / `UniverseRefreshSummary`) |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
-| Onboarding | `/onboarding` | Setup guide for new users |
 | Data Sources | `/datasources` | Data source diagnostics: inventory of all sources with configured/probeable status, per-source Test button (fires a live canary probe), Test All (concurrent probe of all probeable sources), and a fallback event feed. One intelligence source is probeable: `sec_edgar_catalysts`. |
 
 ## Feature Directory Map
@@ -33,7 +32,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/watchlist` | Today | Watchlist CRUD (Watchlist tab) |
 | `features/dailyReview` | Today | Daily review compute and structured result |
 | `features/analytics` | Analytics | Regime breakdown, performance stats |
-| `features/fundamentals` | Today (symbol analysis) | Fundamental snapshots used by the symbol analysis panels. The standalone Research/Fundamentals comparison page was removed; the `compare`/`warmup` hooks are now unused and pending cleanup. |
+| `features/fundamentals` | Today (symbol analysis) | Fundamental snapshots used by the symbol analysis panels. The standalone Research/Fundamentals comparison page and its `compare`/`warmup` hooks were removed. |
 | `features/calendar` | Calendar | Calendar events |
 | `features/weeklyReview` | Book | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |
@@ -41,7 +40,6 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/backtest` | Today (canvas Backtest tab) | Event-study run (202+poll), trade ledger + metrics, snake_case→camelCase transform. Run inline per-symbol from the analysis canvas Backtest tab (`components/domain/workspace/SymbolBacktestTab`, locked to the selected symbol); results render via `components/domain/backtest/BacktestResults`. No standalone page |
 | `features/datasources` | Data Sources | Source inventory, per-source and bulk probe, fallback event feed |
 | `features/config` | (cross-cutting) | App config read/write |
-| `features/persistence` | (cross-cutting) | API vs localStorage mode toggle |
 
 Charts (`components/domain/market/`): `CandleChart` is a responsive hand-rolled SVG candlestick chart (bodies + wicks + volume bars + pattern markers with i18n tooltips + a rebased benchmark comparison line). `CachedSymbolCandleChart` wraps it, sourcing OHLCV bars, detected patterns, and the benchmark series from the cached screener result by ticker, and adds a time-range selector (`1W`/`1M`/`3M`/`6M`/`1Y`/`MAX`, default `MAX`) plus a fullscreen overlay. It is used in the full symbol views (`SymbolViewModal`, `SymbolAnalysisContent`); range slicing reuses `features/screener/priceHistory.ts`. The older close-only `CachedSymbolPriceChart` was removed.
 

@@ -31,7 +31,6 @@ services:
       - web_node_modules:/app/web-ui/node_modules
     environment:
       - VITE_API_URL=http://localhost:8000
-      - VITE_PERSISTENCE_MODE=api
       - CHOKIDAR_USEPOLLING=true
     depends_on:
       - api
