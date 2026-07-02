@@ -38,9 +38,9 @@ renders a signed R-multiple in tabular mono with the right sign token.
 | `--primary` | `233 76% 71%` | `#8290EE` |
 | `--primary-foreground` | `220 14% 7%` | `#0F1114` |
 | `--success` | `155 45% 51%` | `#48BD8B` |
-| `--success-foreground` | `220 14% 8%` | `#11151C` |
+| `--success-foreground` | `220 14% 8%` | `#121317` |
 | `--warning` | `42 70% 56%` | `#DDB040` |
-| `--warning-foreground` | `42 80% 12%` | `#1F1203` |
+| `--warning-foreground` | `42 80% 12%` | `#372806` |
 | `--danger` | `9 78% 61%` | `#EA6950` |
 | `--danger-foreground` | `0 0% 100%` | `#FFFFFF` |
 | `--radius` | — | `0.5rem` |

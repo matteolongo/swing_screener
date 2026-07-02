@@ -28,5 +28,6 @@ describe('System section', () => {
     expect(
       screen.getByRole('link', { name: messagesEn.system.tabs.strategy })
     ).toBeInTheDocument();
+    expect(screen.getByText('Pool page')).toBeInTheDocument();
   });
 });

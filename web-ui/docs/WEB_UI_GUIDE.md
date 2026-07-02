@@ -40,7 +40,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/calendar` | Calendar | Calendar events |
 | `features/weeklyReview` | Book | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |
-| `features/universes` | Universes | Universe list, detail, refresh, benchmark |
+| `features/universes` | System → Pool (`/system/pool`) | Universe list, detail, refresh, benchmark |
 | `features/backtest` | Today (canvas Backtest tab) | Event-study run (202+poll), trade ledger + metrics, snake_case→camelCase transform. Run inline per-symbol from the analysis canvas Backtest tab (`components/domain/workspace/SymbolBacktestTab`, locked to the selected symbol); results render via `components/domain/backtest/BacktestResults`. No standalone page |
 | `features/datasources` | Data Sources | Source inventory, per-source and bulk probe, fallback event feed |
 | `features/config` | (cross-cutting) | App config read/write |
@@ -60,15 +60,15 @@ Reusable building blocks live in `components/common/`. Prefer these over hand-ro
 | `Field` | Label + optional hint/error wrapper. Generates an id via `useId` and associates the label with a nested `Input`/`Select`/`Textarea`, so controls get a real accessible name instead of a loose `aria-label`. |
 | `Input` / `Select` / `Textarea` | Form controls carrying the canonical `CONTROL_CLASS` (exported from `Input`). `forwardRef`, spread all native props, auto-wire `id` from the surrounding `Field`. Pass only deviations (width, alignment) via `className`. |
 | `CollapsibleSection` | Progressive disclosure. Native `<details>` + chevron, token-styled; `title`, optional `meta`, `defaultOpen`. Used by the Strategy advanced panel and the System/Pool discovery filters. |
-| `Tabs` | Tab container with keyboard navigation. Segments a view into tabbed sections; used by the Today sidebar (Today / Last Run / Watchlist) and the symbol analysis canvas (Overview / Fundamentals / Order / Backtest). |
-| `StatusDot` | Indicator dot for status states (success, warning, error, default). Compact visual for health/state signals in tables and pills. |
+| `Tabs` | Underline-style tab strip driven by `tabs`/`active`/`onChange` props (no built-in keyboard navigation). New in Phase 1; no current consumers — the Today sidebar and symbol analysis canvas tab bars are still hand-rolled markup. First consumers land in Phase 2+. |
+| `StatusDot` | Indicator dot for status states (`ok` / `warn` / `down` / `idle` tones). Compact visual for health/state signals in tables and pills. |
 | `CollapsibleCard` | Compact disclosure card combining header + content; alternative to `CollapsibleSection` for card-based layouts. |
 | `PageHeader` | Page top chrome: title, description, optional action buttons. Standardizes layout for System pages. |
-| `Drawer` | Slide-out panel (typically from the right). Used for review-queue details, form workflows, and modal alternatives. |
+| `Drawer` | Slide-out panel (typically from the right). No current consumers — `ReviewQueueDrawer` uses `ModalShell`, not `Drawer`. Base for the Phase 2 symbol drawer. |
 | `StatsTable` | Presentational 5-column stats table (label + Trades/WinRate/AvgR/Expectancy). Backs `EdgeBreakdownTable` and `RegimeBreakdownTable`; takes translated headers + rows. |
 | `RChip` | R-multiple readout: `formatR` + sign color (`getSignColorClass`) in tabular mono. |
 | `Card` / `Button` / `Badge` / `ModalShell` / `TableShell` / `DataTable` | Layout and table chrome. |
-| `lib/badgeMap` | Enum-to-badge specs mapper. Maps status/severity enums to badge color/icon/label for consistent visual communication. |
+| `lib/badgeMap` | Enum-to-badge specs mapper. Maps status/severity enums to `{ variant, labelKey }` for consistent visual communication (no icon field). |
 
 Not every control fits a primitive: checkboxes, radios, range sliders, search boxes with custom layouts, and inline table-edit inputs stay hand-rolled.
 
