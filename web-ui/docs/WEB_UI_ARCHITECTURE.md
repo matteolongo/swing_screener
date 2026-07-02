@@ -27,7 +27,7 @@
 
 - Server state: React Query (auto-caching and invalidation via query keys).
 - Client/UI state: Zustand stores in `src/stores/`.
-- No local persistence by default (`VITE_PERSISTENCE_MODE=api`).
+- UI state persists via the backend API only.
 
 ## Testing
 

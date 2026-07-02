@@ -12,7 +12,6 @@ React 18 + TypeScript frontend for Swing Screener.
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Data Sources | `/datasources` | Data source diagnostics: per-source health, live probe, fallback event feed |
-| Onboarding | `/onboarding` | Setup guide |
 
 ## Development
 
