@@ -16,8 +16,8 @@ export default function Analytics() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1200px] px-4 py-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-6 mb-6">
+      <div className="mx-auto max-w-[1200px] px-4 py-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-6 mb-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-20 animate-pulse rounded-lg border border-border bg-foreground/5" />
           ))}
@@ -28,7 +28,7 @@ export default function Analytics() {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-[1200px] px-4 py-6">
+      <div className="mx-auto max-w-[1200px] px-4 py-4">
         <p className="text-sm text-danger">{t('common.errors.generic')}</p>
       </div>
     );
@@ -37,7 +37,7 @@ export default function Analytics() {
   const hasData = stats.rValues.length > 0;
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-6 space-y-6">
+    <div className="mx-auto max-w-[1200px] px-4 py-4 space-y-4">
       <p className="text-sm text-muted">{t('analyticsPage.subtitle')}</p>
 
       {!hasData ? (
@@ -100,7 +100,7 @@ export default function Analytics() {
           </div>
 
           {/* Charts row */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             {/* Equity Curve — 2/3 width */}
             <div className="col-span-3 lg:col-span-2 rounded-lg border border-border bg-surface p-4">
               <div className="flex items-baseline justify-between mb-3">

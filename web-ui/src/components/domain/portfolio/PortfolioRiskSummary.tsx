@@ -6,10 +6,9 @@ import { formatCurrency, formatNumber, getSignColorClass } from '@/utils/formatt
 interface PortfolioRiskSummaryProps {
   openPositions: Position[];
   accountSize?: number;
-  realizedPnl?: number;
 }
 
-export default function PortfolioRiskSummary({ openPositions, accountSize, realizedPnl }: PortfolioRiskSummaryProps) {
+export default function PortfolioRiskSummary({ openPositions, accountSize }: PortfolioRiskSummaryProps) {
   const totalOpenRisk = openPositions.reduce((sum, p) => sum + (p.initialRisk ?? 0), 0);
 
   const portfolioHeat =
@@ -52,27 +51,6 @@ export default function PortfolioRiskSummary({ openPositions, accountSize, reali
         </span>
         <span className="font-bold text-foreground">{openPositionCount}</span>
       </span>
-
-      {/* Effective equity */}
-      <span className={cn(chipBase, 'border-border text-muted')}>
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {t('portfolioRisk.effectiveEquity')}
-        </span>
-        <span className="font-bold text-foreground">
-          {accountSize != null ? formatCurrency(accountSize, 'EUR') : '—'}
-        </span>
-      </span>
-
-      {realizedPnl != null ? (
-        <span className={cn(chipBase, 'border-border text-muted')}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {t('portfolioRisk.realizedPnl')}
-          </span>
-          <span className={cn('font-bold', getSignColorClass(realizedPnl))}>
-            {realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl, 'EUR')}
-          </span>
-        </span>
-      ) : null}
 
       {/* Total risk */}
       <span className={cn(chipBase, 'border-border text-muted')}>

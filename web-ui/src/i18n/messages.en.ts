@@ -2185,8 +2185,6 @@ export const messagesEn = {
   },
   portfolioRisk: {
     openPositions: 'Open Positions',
-    effectiveEquity: 'Equity',
-    realizedPnl: 'Realized P&L',
     totalRisk: 'Total Risk',
     portfolioHeat: 'Portfolio Heat',
     avgRNow: 'Avg R Now',

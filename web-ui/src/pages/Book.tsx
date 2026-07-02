@@ -107,7 +107,7 @@ function JournalRow({ position }: JournalRowProps) {
       {expanded && (
         <tr>
           <td colSpan={9} className="px-4 pb-4 pt-0 bg-foreground/5">
-            <div className="grid gap-4 sm:grid-cols-3 text-sm">
+            <div className="grid gap-3 sm:grid-cols-3 text-sm">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
                   {t('journalPage.labels.thesis')}
@@ -174,11 +174,11 @@ function JournalTab() {
   const avgMaxR = maxRValues.length > 0 ? maxRValues.reduce((a, b) => a + b, 0) / maxRValues.length : null;
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-6">
-      <p className="text-sm text-muted mb-6">{t('journalPage.subtitle')}</p>
+    <div className="mx-auto max-w-[1200px] px-4 py-4">
+      <p className="text-sm text-muted mb-4">{t('journalPage.subtitle')}</p>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 mb-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 mb-4">
         {[
           { label: t('journalPage.stats.totalTrades'), value: String(totalTrades) },
           { label: t('journalPage.stats.wins'), value: String(wins), positive: true },
@@ -292,11 +292,10 @@ function PositionsTab() {
   const portfolioSummaryQuery = usePortfolioSummary();
   const openPositions = openPositionsQuery.data ?? [];
   const accountSize = portfolioSummaryQuery.data?.effectiveAccountSize ?? activeStrategyQuery.data?.risk?.accountSize;
-  const realizedPnl = portfolioSummaryQuery.data?.realizedPnl;
 
   return (
-    <div className="space-y-4">
-      <PortfolioRiskSummary openPositions={openPositions} accountSize={accountSize} realizedPnl={realizedPnl} />
+    <div className="space-y-3">
+      <PortfolioRiskSummary openPositions={openPositions} accountSize={accountSize} />
       <ConcentrationBar groups={portfolioSummaryQuery.data?.concentration ?? []} />
       <PortfolioPanel />
     </div>
@@ -315,7 +314,7 @@ function PastReviews({ reviews }: { reviews: WeeklyReview[] }) {
   }
 
   return (
-    <div className="mt-4 space-y-2">
+    <div className="mt-3 space-y-2">
       <h3 className="text-sm font-semibold text-muted">{t('bookPage.weeklyReview.pastReviewsTitle')}</h3>
       {pastReviews.map((review) => (
         <div key={review.week_id} className="rounded-lg border border-border overflow-hidden">
@@ -365,7 +364,7 @@ function WeeklyReviewTab() {
   const reviewsQuery = useWeeklyReviews();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <WeeklyReviewForm weekId={getCurrentWeekId()} />
       {reviewsQuery.data ? (
         <PastReviews reviews={reviewsQuery.data} />
@@ -406,7 +405,7 @@ export default function Book() {
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-4">
       <PageHeader title={t('bookPage.title')} subtitle={t('bookPage.subtitle')} />
-      <Tabs tabs={bookTabs} active={activeTab} onChange={handleTabChange} className="mb-4" />
+      <Tabs tabs={bookTabs} active={activeTab} onChange={handleTabChange} className="mb-3" />
 
       {/* Tab content */}
       <div>
