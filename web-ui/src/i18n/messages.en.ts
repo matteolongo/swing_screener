@@ -708,7 +708,7 @@ export const messagesEn = {
       title: '{{ticker}} Details',
       description: 'Review all setup context and place a buy order from this symbol view.',
       tabsAria: 'Symbol detail tabs',
-      openTitle: 'Load {{ticker}} in analysis canvas',
+      openTitle: 'Open {{ticker}} analysis',
       placeBuyAction: 'Place Buy Order',
     },
     panels: {

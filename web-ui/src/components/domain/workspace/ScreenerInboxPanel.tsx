@@ -179,9 +179,6 @@ export default function ScreenerInboxPanel() {
 
   const screenerMutation = useRunScreenerMutation((data) => {
     setLastResult(data);
-    if (data.candidates.length > 0) {
-      setSelectedTicker(data.candidates[0].ticker, 'screener');
-    }
     setIsFormCollapsed(true);
     setForceRefresh(false);
   });

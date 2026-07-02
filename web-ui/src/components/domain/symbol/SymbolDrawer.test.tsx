@@ -721,14 +721,17 @@ describe('SymbolDrawer — content behavior', () => {
         ],
       },
     });
+    // Reactivity flows through query invalidation (not through a mutation's own
+    // `.data`), so drive the "refreshed fundamentals arrived" case via the
+    // fundamentals query returning the new snapshot, as it would after refetch.
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
       isError: false,
-      data: undefined,
+      data: buildSnapshot(),
     } as never);
     vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
       mutate: vi.fn(),
-      data: buildSnapshot(),
+      data: undefined,
       isPending: false,
       isError: false,
       error: null,

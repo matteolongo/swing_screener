@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { screen, act } from '@testing-library/react';
+import { screen, act, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 import ScreenerInboxPanel, { currencyFilterToRequest, ScreenerRunningPanel } from './ScreenerInboxPanel';
 
@@ -63,5 +64,18 @@ describe('ScreenerInboxPanel', () => {
 
     expect(await screen.findByRole('button', { name: 'Advanced filters' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: t('screener.controls.actionFilter') })).not.toBeInTheDocument();
+  });
+
+  it('does not auto-select a candidate into the global drawer after a screener run completes', async () => {
+    useWorkspaceStore.setState({ selectedTicker: null, selectedTickerSource: null });
+
+    renderWithProviders(<ScreenerInboxPanel />);
+
+    const runButton = await screen.findByRole('button', { name: t('screener.controls.run') });
+    fireEvent.click(runButton);
+
+    await screen.findByText('AAPL');
+
+    expect(useWorkspaceStore.getState().selectedTicker).toBeNull();
   });
 });

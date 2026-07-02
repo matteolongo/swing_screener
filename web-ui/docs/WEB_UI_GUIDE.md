@@ -13,11 +13,11 @@ Sidebar has four primary areas: Today · Calendar · Book · System.
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| Today | `/today` | Single full-width column with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist. Click a symbol row to open the symbol analysis drawer (880px, permalink "open ↗", Overview / Fundamentals / Order / Backtest tabs; Backtest runs a per-symbol event study inline). For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview |
-| Symbol | `/symbol/:ticker` | Full-page symbol analysis (local tab state, same content/tabs as drawer). Permalink target; accessible as "open ↗" from Today list or via direct navigation. |
+| Today | `/today` | Single full-width column with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist. Click a symbol row to open the global symbol analysis drawer (880px, permalink "open ↗" in the drawer header, Overview / Fundamentals / Order / Backtest tabs; Backtest runs a per-symbol event study inline). For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview |
+| Symbol | `/symbol/:ticker` | Full-page symbol analysis (local tab state, same content/tabs as drawer). Permalink target; accessible via the drawer header's "open ↗" link or direct navigation. |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
-| Pool | `/system/pool` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal). **Pool tab**: refresh-all-universes, rebuild symbol pool, and enrich taxonomy — each with a field-level diff table (`PoolTab` / `PoolDiffTable` / `UniverseRefreshSummary`) |
+| Pool | `/system/pool` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens the global symbol drawer). **Pool tab**: refresh-all-universes, rebuild symbol pool, and enrich taxonomy — each with a field-level diff table (`PoolTab` / `PoolDiffTable` / `UniverseRefreshSummary`) |
 | Strategy | `/system/strategy` | Strategy CRUD, activation, and validation. Read-only strategy chip moved from header to StatusBar; switching strategies happens here. |
 | Data Sources | `/system/datasources` | Data source diagnostics: inventory of all sources with configured/probeable status, per-source Test button (fires a live canary probe), Test All (concurrent probe of all probeable sources), and a fallback event feed. One intelligence source is probeable: `sec_edgar_catalysts`. |
 
@@ -42,11 +42,11 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/weeklyReview` | Book | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |
 | `features/universes` | System → Pool (`/system/pool`) | Universe list, detail, refresh, benchmark |
-| `features/backtest` | Today (canvas Backtest tab) | Event-study run (202+poll), trade ledger + metrics, snake_case→camelCase transform. Run inline per-symbol from the analysis canvas Backtest tab (`components/domain/workspace/SymbolBacktestTab`, locked to the selected symbol); results render via `components/domain/backtest/BacktestResults`. No standalone page |
+| `features/backtest` | Today (drawer Backtest tab) | Event-study run (202+poll), trade ledger + metrics, snake_case→camelCase transform. Run inline per-symbol from the symbol drawer's Backtest tab (`components/domain/workspace/SymbolBacktestTab`, locked to the selected symbol); results render via `components/domain/backtest/BacktestResults`. No standalone page |
 | `features/datasources` | Data Sources | Source inventory, per-source and bulk probe, fallback event feed |
 | `features/config` | (cross-cutting) | App config read/write |
 
-Charts (`components/domain/market/`): `CandleChart` is a responsive hand-rolled SVG candlestick chart (bodies + wicks + volume bars + pattern markers with i18n tooltips + a rebased benchmark comparison line). `CachedSymbolCandleChart` wraps it, sourcing OHLCV bars, detected patterns, and the benchmark series from the cached screener result by ticker, and adds a time-range selector (`1W`/`1M`/`3M`/`6M`/`1Y`/`MAX`, default `MAX`) plus a fullscreen overlay. It is used in the full symbol views (`SymbolViewModal`, `SymbolAnalysisContent`); range slicing reuses `features/screener/priceHistory.ts`. The older close-only `CachedSymbolPriceChart` was removed.
+Charts (`components/domain/market/`): `CandleChart` is a responsive hand-rolled SVG candlestick chart (bodies + wicks + volume bars + pattern markers with i18n tooltips + a rebased benchmark comparison line). `CachedSymbolCandleChart` wraps it, sourcing OHLCV bars, detected patterns, and the benchmark series from the cached screener result by ticker, and adds a time-range selector (`1W`/`1M`/`3M`/`6M`/`1Y`/`MAX`, default `MAX`) plus a fullscreen overlay. It is used in the full symbol views (`SymbolAnalysisContent`, rendered by both the global `SymbolDrawer` and the `/symbol/:ticker` page); range slicing reuses `features/screener/priceHistory.ts`. The older close-only `CachedSymbolPriceChart` was removed.
 
 **StatusBar** (replaces Header): read-only strategy chip now lives here with equity/P&L/risk segments and freshness badge. Strategy switching moved to the `/system/strategy` page.
 

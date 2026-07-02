@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 
-import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { syncCandidateWithFundamentals } from '@/features/screener/decisionSummary';
-import { useFundamentalSnapshotQuery, useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
+import { useFundamentalSnapshotQuery } from '@/features/fundamentals/hooks';
 import type { ScreenerCandidate } from '@/features/screener/types';
 import { useScreenerStore } from '@/stores/screenerStore';
 
@@ -12,12 +11,11 @@ import { useScreenerStore } from '@/stores/screenerStore';
 // the latest fundamentals snapshot for the symbol currently on screen.
 export function useSymbolFundamentalsSync(
   ticker: string | null,
-  candidate: SymbolAnalysisCandidate | null,
+  candidate: ScreenerCandidate | null,
 ) {
   const patchCandidate = useScreenerStore((s) => s.patchCandidate);
   const fundamentalsQuery = useFundamentalSnapshotQuery(ticker ?? undefined);
-  const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
-  const latestFundamentalsSnapshot = refreshFundamentalsMutation.data ?? fundamentalsQuery.data;
+  const latestFundamentalsSnapshot = fundamentalsQuery.data;
 
   useEffect(() => {
     if (!ticker || !candidate || !latestFundamentalsSnapshot) {
@@ -28,12 +26,7 @@ export function useSymbolFundamentalsSync(
       return;
     }
 
-    // Callers always source `candidate` from the screener store (a ScreenerCandidate);
-    // the wider SymbolAnalysisCandidate param type only reflects what this hook needs
-    // to read, matching the prop type SymbolAnalysisContent accepts downstream.
-    const screenerCandidate = candidate as ScreenerCandidate;
-
-    if (syncCandidateWithFundamentals(screenerCandidate, latestFundamentalsSnapshot) === screenerCandidate) {
+    if (syncCandidateWithFundamentals(candidate, latestFundamentalsSnapshot) === candidate) {
       return;
     }
 
