@@ -114,7 +114,14 @@ export default function StatusBar({ isSidebarCollapsed = false, onToggleSidebar 
         </span>
         <span className="border-l border-border pl-3 text-[12px] text-muted">
           {t('statusBar.realizedPnl')}{' '}
-          <span className={cn('font-mono tabular-nums', getSignColorClass(realizedPnl ?? 0))}>{pnlLabel}</span>
+          <span
+            className={cn(
+              'font-mono tabular-nums',
+              realizedPnl != null ? getSignColorClass(realizedPnl) : 'text-foreground'
+            )}
+          >
+            {pnlLabel}
+          </span>
         </span>
         <span className="border-l border-border pl-3 text-[12px] text-muted">
           {t('statusBar.riskPerTrade')} <span className="font-mono tabular-nums text-foreground">{riskLabel}</span>
