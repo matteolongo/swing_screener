@@ -2361,6 +2361,12 @@ export const messagesEn = {
         goToReview: 'Go to review',
       },
       why: 'Why',
+      header: 'Inbox',
+      asOf: 'As of {{date}} · {{time}}',
+      refresh: 'Refresh inbox',
+      zeroTitle: "You're all caught up",
+      zeroSubtitle: 'No actions need your attention today.',
+      cancelOrderConfirm: 'Cancel this order?',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',
