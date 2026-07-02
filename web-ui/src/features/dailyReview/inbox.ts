@@ -20,13 +20,17 @@ export type InboxItemKind =
   | 'staleOrder'
   | 'addOn'
   | 'newCandidate'
+  | 'moreCandidates'
   | 'watch'
   | 'weeklyReview';
+
+/** Max `newCandidate` rows rendered in the inbox before overflowing into a single `moreCandidates` row. */
+export const NEW_CANDIDATE_INBOX_CAP = 8;
 
 export interface InboxItem {
   id: string; // `${kind}:${ticker|orderId|'weekly'}`
   kind: InboxItemKind;
-  ticker: string | null; // null only for weeklyReview
+  ticker: string | null; // null only for weeklyReview/moreCandidates
   rNow?: number;
   reason: string; // one-liner
   detail?: string; // expandable "why" extra text
@@ -41,6 +45,7 @@ export interface InboxItem {
   daysPending?: number;
   distanceToTriggerPct?: number;
   positionSignal?: 'HOLD' | 'TRIM' | 'EXIT';
+  count?: number; // overflow count carried by moreCandidates
 }
 
 export interface BuildInboxInput {
@@ -163,7 +168,8 @@ export function buildInboxItems(input: BuildInboxInput): InboxItem[] {
     });
   }
 
-  for (const candidate of review?.newCandidates ?? []) {
+  const newCandidates = review?.newCandidates ?? [];
+  for (const candidate of newCandidates.slice(0, NEW_CANDIDATE_INBOX_CAP)) {
     items.push({
       id: `newCandidate:${candidate.ticker}`,
       kind: 'newCandidate',
@@ -171,6 +177,15 @@ export function buildInboxItems(input: BuildInboxInput): InboxItem[] {
       reason: candidateReason(candidate),
       candidate,
       detail: candidatePlanDetail(candidate),
+    });
+  }
+  if (newCandidates.length > NEW_CANDIDATE_INBOX_CAP) {
+    items.push({
+      id: 'moreCandidates',
+      kind: 'moreCandidates',
+      ticker: null,
+      reason: '',
+      count: newCandidates.length - NEW_CANDIDATE_INBOX_CAP,
     });
   }
 

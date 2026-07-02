@@ -495,6 +495,33 @@ describe('ActionInbox — apply-stop pending state', () => {
   });
 });
 
+// ─── newCandidate cap (NEW) ─────────────────────────────────────────────────
+
+describe('ActionInbox — newCandidate cap', () => {
+  it('caps newCandidate rows and renders a single moreCandidates row for the overflow', () => {
+    mockDailyReview.data = makeEmptyReview({
+      newCandidates: Array.from({ length: 98 }, (_, i) => makeCandidate({ ticker: `TICK${i}` })),
+    });
+
+    const { container } = renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
+
+    const rows = getRows(container);
+    const newCandidateRows = rows.filter((row) => row.textContent?.includes(t('todayPage.inbox.kinds.newCandidate')));
+    expect(newCandidateRows).toHaveLength(8);
+    expect(screen.getByText(t('todayPage.inbox.moreCandidatesLabel', { count: 90 }))).toBeInTheDocument();
+  });
+
+  it('renders no moreCandidates row when newCandidates is within the cap', () => {
+    mockDailyReview.data = makeEmptyReview({
+      newCandidates: Array.from({ length: 3 }, (_, i) => makeCandidate({ ticker: `TICK${i}` })),
+    });
+
+    renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
+
+    expect(screen.queryByText(t('todayPage.inbox.actions.goToScreener'))).not.toBeInTheDocument();
+  });
+});
+
 // ─── Error strip with cached items (NEW) ────────────────────────────────────
 
 describe('ActionInbox — refetch error with cached review', () => {

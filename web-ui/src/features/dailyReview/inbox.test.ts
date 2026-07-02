@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInboxItems, type BuildInboxInput } from '@/features/dailyReview/inbox';
+import { buildInboxItems, NEW_CANDIDATE_INBOX_CAP, type BuildInboxInput } from '@/features/dailyReview/inbox';
 import type {
   DailyReview,
   DailyReviewCandidate,
@@ -488,6 +488,54 @@ describe('buildInboxItems', () => {
       kind: 'watch',
       ticker: 'ASML',
       distanceToTriggerPct: -1.3,
+    });
+  });
+
+  describe('newCandidate cap', () => {
+    function makeManyCandidates(count: number): DailyReviewCandidate[] {
+      return Array.from({ length: count }, (_, i) => makeCandidate({ ticker: `TICK${i}` }));
+    }
+
+    it('emits at most NEW_CANDIDATE_INBOX_CAP newCandidate rows, preserving the top-ranked ones', () => {
+      const candidates = makeManyCandidates(98);
+      const review = makeEmptyReview({ newCandidates: candidates });
+      const result = buildInboxItems(baseInput({ review }));
+      const newCandidateItems = result.filter((i) => i.kind === 'newCandidate');
+      expect(newCandidateItems).toHaveLength(NEW_CANDIDATE_INBOX_CAP);
+      expect(newCandidateItems.map((i) => i.ticker)).toEqual(
+        candidates.slice(0, NEW_CANDIDATE_INBOX_CAP).map((c) => c.ticker),
+      );
+    });
+
+    it('appends exactly one moreCandidates item with the correct overflow count for 98 candidates', () => {
+      const review = makeEmptyReview({ newCandidates: makeManyCandidates(98) });
+      const result = buildInboxItems(baseInput({ review }));
+      const moreItems = result.filter((i) => i.kind === 'moreCandidates');
+      expect(moreItems).toHaveLength(1);
+      expect(moreItems[0]).toMatchObject({ id: 'moreCandidates', ticker: null, count: 98 - NEW_CANDIDATE_INBOX_CAP });
+    });
+
+    it('places moreCandidates immediately after the capped newCandidate rows and before watch/weeklyReview', () => {
+      const review = makeEmptyReview({
+        newCandidates: makeManyCandidates(98),
+        watchlistNearTrigger: [makeWatchItem({ ticker: 'ASML' })],
+      });
+      const result = buildInboxItems(baseInput({ review, weeklyReviewDue: true }));
+      const kinds = result.map((i) => i.kind);
+      const lastNewCandidateIdx = kinds.lastIndexOf('newCandidate');
+      const moreCandidatesIdx = kinds.indexOf('moreCandidates');
+      const watchIdx = kinds.indexOf('watch');
+      const weeklyReviewIdx = kinds.indexOf('weeklyReview');
+      expect(moreCandidatesIdx).toBe(lastNewCandidateIdx + 1);
+      expect(moreCandidatesIdx).toBeLessThan(watchIdx);
+      expect(watchIdx).toBeLessThan(weeklyReviewIdx);
+    });
+
+    it('does not emit a moreCandidates item when newCandidates.length <= NEW_CANDIDATE_INBOX_CAP', () => {
+      const review = makeEmptyReview({ newCandidates: makeManyCandidates(NEW_CANDIDATE_INBOX_CAP) });
+      const result = buildInboxItems(baseInput({ review }));
+      expect(result.filter((i) => i.kind === 'moreCandidates')).toHaveLength(0);
+      expect(result.filter((i) => i.kind === 'newCandidate')).toHaveLength(NEW_CANDIDATE_INBOX_CAP);
     });
   });
 });

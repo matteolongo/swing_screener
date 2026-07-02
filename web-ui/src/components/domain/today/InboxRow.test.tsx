@@ -356,4 +356,69 @@ describe('InboxRow', () => {
     const row = container.querySelector('[data-testid="inbox-row"]');
     expect(row).not.toHaveClass('opacity-50');
   });
+
+  describe('moreCandidates kind', () => {
+    function makeMoreCandidatesItem(overrides: Partial<InboxItem> = {}): InboxItem {
+      return makeItem({
+        id: 'moreCandidates',
+        kind: 'moreCandidates',
+        ticker: null,
+        reason: '',
+        count: 90,
+        ...overrides,
+      });
+    }
+
+    it('renders the moreCandidates kind badge label from i18n', () => {
+      renderWithProviders(
+        <InboxRow item={makeMoreCandidatesItem()} onSelectTicker={vi.fn()} onAction={vi.fn()} />,
+      );
+      expect(screen.getByText(messagesEn.todayPage.inbox.kinds.moreCandidates)).toBeInTheDocument();
+    });
+
+    it('renders the interpolated "view N more candidates" label from i18n', () => {
+      renderWithProviders(
+        <InboxRow item={makeMoreCandidatesItem({ count: 90 })} onSelectTicker={vi.fn()} onAction={vi.fn()} />,
+      );
+      expect(
+        screen.getByText(messagesEn.todayPage.inbox.moreCandidatesLabel.replace('{{count}}', '90')),
+      ).toBeInTheDocument();
+    });
+
+    it('dot tone is idle (neutral) for moreCandidates', () => {
+      renderWithProviders(
+        <InboxRow item={makeMoreCandidatesItem()} onSelectTicker={vi.fn()} onAction={vi.fn()} />,
+      );
+      expect(screen.getByRole('status')).toHaveClass('bg-muted/50');
+    });
+
+    it('renders a goToScreener action that calls onAction("goToScreener", item)', async () => {
+      const onAction = vi.fn();
+      const item = makeMoreCandidatesItem();
+      const { user } = renderWithProviders(
+        <InboxRow item={item} onSelectTicker={vi.fn()} onAction={onAction} />,
+      );
+      await user.click(screen.getByText(messagesEn.todayPage.inbox.actions.goToScreener));
+      expect(onAction).toHaveBeenCalledWith('goToScreener', item);
+    });
+
+    it('renders no ticker button since ticker is null', () => {
+      renderWithProviders(
+        <InboxRow item={makeMoreCandidatesItem()} onSelectTicker={vi.fn()} onAction={vi.fn()} />,
+      );
+      expect(screen.queryByText('null')).not.toBeInTheDocument();
+    });
+
+    it('renders no expand/why affordance even when onToggleExpand is provided', () => {
+      renderWithProviders(
+        <InboxRow
+          item={makeMoreCandidatesItem()}
+          onSelectTicker={vi.fn()}
+          onAction={vi.fn()}
+          onToggleExpand={vi.fn()}
+        />,
+      );
+      expect(screen.queryByLabelText(messagesEn.todayPage.inbox.why)).not.toBeInTheDocument();
+    });
+  });
 });

@@ -2340,6 +2340,7 @@ export const messagesEn = {
         staleOrder: 'Stale order',
         addOn: 'Add-on',
         newCandidate: 'New candidate',
+        moreCandidates: 'More',
         watch: 'Watch',
         weeklyReview: 'Weekly review',
       },
@@ -2351,6 +2352,7 @@ export const messagesEn = {
         planOrder: 'Plan order',
         analyze: 'Analyze',
         goToReview: 'Go to review',
+        goToScreener: 'Open Screener',
       },
       why: 'Why',
       header: 'Inbox',
@@ -2359,6 +2361,7 @@ export const messagesEn = {
       zeroTitle: 'Nothing to do.',
       zeroSubtitle: 'No signals — do nothing.',
       cancelOrderConfirm: 'Cancel this order?',
+      moreCandidatesLabel: 'View {{count}} more candidates',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',

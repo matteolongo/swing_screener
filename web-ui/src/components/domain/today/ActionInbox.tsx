@@ -112,6 +112,9 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
         case 'goToReview':
           navigate('/book');
           break;
+        case 'goToScreener':
+          navigate('/screener?tab=candidates');
+          break;
       }
     },
     [cancelOrderMutation, handleAcceptStop, markDone, navigate, onTickerSelect, setCloseTarget, setUpdateStopTarget],

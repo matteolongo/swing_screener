@@ -16,7 +16,8 @@ export type InboxAction =
   | 'cancelOrder'
   | 'planOrder'
   | 'analyze'
-  | 'goToReview';
+  | 'goToReview'
+  | 'goToScreener';
 
 export interface InboxRowProps {
   item: InboxItem;
@@ -37,6 +38,7 @@ const KIND_TONE: Record<InboxItemKind, StatusTone> = {
   staleOrder: 'warn',
   addOn: 'idle',
   newCandidate: 'idle',
+  moreCandidates: 'idle',
   watch: 'idle',
   weeklyReview: 'idle',
 };
@@ -48,6 +50,7 @@ const KIND_BADGE_VARIANT: Record<InboxItemKind, BadgeVariant> = {
   staleOrder: 'warning',
   addOn: 'default',
   newCandidate: 'default',
+  moreCandidates: 'default',
   watch: 'default',
   weeklyReview: 'default',
 };
@@ -59,6 +62,7 @@ const KIND_LABEL_KEY: Record<InboxItemKind, MessageKey> = {
   staleOrder: 'todayPage.inbox.kinds.staleOrder',
   addOn: 'todayPage.inbox.kinds.addOn',
   newCandidate: 'todayPage.inbox.kinds.newCandidate',
+  moreCandidates: 'todayPage.inbox.kinds.moreCandidates',
   watch: 'todayPage.inbox.kinds.watch',
   weeklyReview: 'todayPage.inbox.kinds.weeklyReview',
 };
@@ -87,6 +91,8 @@ function actionsForKind(kind: InboxItemKind): ActionSpec[] {
       return [{ action: 'analyze', labelKey: 'todayPage.inbox.actions.analyze', primary: true }];
     case 'weeklyReview':
       return [{ action: 'goToReview', labelKey: 'todayPage.inbox.actions.goToReview', primary: true }];
+    case 'moreCandidates':
+      return [{ action: 'goToScreener', labelKey: 'todayPage.inbox.actions.goToScreener', primary: true }];
     case 'exitSignal':
     default:
       return [];
@@ -138,6 +144,11 @@ export default function InboxRow({
         <Badge variant={KIND_BADGE_VARIANT[item.kind]} className="shrink-0">
           {t(KIND_LABEL_KEY[item.kind])}
         </Badge>
+        {item.kind === 'moreCandidates' && item.count != null && (
+          <Badge variant="default" className="shrink-0">
+            {item.count}
+          </Badge>
+        )}
         {item.ticker && (
           <span
             role="button"
@@ -176,7 +187,11 @@ export default function InboxRow({
         {item.kind === 'updateStop' && item.exhaustionLabel && (
           <ExhaustionBadge score={item.exhaustionScore ?? null} label={item.exhaustionLabel} />
         )}
-        <span className="truncate flex-1 text-muted">{item.reason}</span>
+        <span className="truncate flex-1 text-muted">
+          {item.kind === 'moreCandidates'
+            ? t('todayPage.inbox.moreCandidatesLabel', { count: item.count ?? 0 })
+            : item.reason}
+        </span>
         {actions.map(({ action, labelKey, primary }) => {
           const isDisabled = disabledActions?.includes(action) ?? false;
           return (
@@ -209,7 +224,7 @@ export default function InboxRow({
             </span>
           );
         })}
-        {onToggleExpand && (
+        {onToggleExpand && item.kind !== 'moreCandidates' && (
           <span
             role="button"
             tabIndex={0}
