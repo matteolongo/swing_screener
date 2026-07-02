@@ -181,6 +181,23 @@ describe('SymbolDrawer', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('renders a permalink to the full symbol page that clears the selection on click', async () => {
+    useWorkspaceStore.getState().setSelectedTicker('AAPL');
+
+    const { user } = renderWithProviders(<SymbolDrawer />);
+
+    const dialog = screen.getByRole('dialog');
+    const header = dialog.querySelector('header') as HTMLElement;
+    const link = within(header).getByRole('link', { name: t('symbolDrawer.openFull') });
+    expect(link).toHaveAttribute('href', '/symbol/AAPL');
+
+    await act(async () => {
+      await user.click(link);
+    });
+
+    expect(useWorkspaceStore.getState().selectedTicker).toBeNull();
+  });
+
   it('clears the selected ticker and closes on close button click', async () => {
     useWorkspaceStore.getState().setSelectedTicker('AAPL');
 

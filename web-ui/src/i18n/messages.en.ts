@@ -2382,6 +2382,9 @@ export const messagesEn = {
     subtitle: 'Pool, data sources, and strategy configuration.',
     tabs: { pool: 'Pool & Universes', datasources: 'Data Sources', strategy: 'Strategy' },
   },
+  symbolDrawer: {
+    openFull: 'Open full page',
+  },
   badges: {
     freshness: { finalClose: 'Final close', intraday: 'Intraday' },
     decision: {

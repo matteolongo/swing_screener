@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ExternalLink } from 'lucide-react';
 import Drawer from '@/components/common/Drawer';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
@@ -7,6 +9,7 @@ import { useFundamentalSnapshotQuery } from '@/features/fundamentals/hooks';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useOpenPositions } from '@/features/portfolio/hooks';
+import { t } from '@/i18n/t';
 
 export default function SymbolDrawer() {
   const ticker = useWorkspaceStore((s) => s.selectedTicker);
@@ -54,6 +57,14 @@ export default function SymbolDrawer() {
       title={ticker ? (
         <span className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           {ticker}
+          <Link
+            to={`/symbol/${ticker}`}
+            onClick={clearSelectedTicker}
+            aria-label={t('symbolDrawer.openFull')}
+            className="flex h-6 w-6 items-center justify-center rounded text-muted hover:bg-foreground/5 hover:text-foreground"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
         </span>
       ) : null}
     >
