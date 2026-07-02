@@ -586,6 +586,7 @@ export const messagesEn = {
       universes: 'Universes',
       settings: 'Settings',
       datasources: 'Data Sources',
+      system: 'System',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
@@ -2375,6 +2376,11 @@ export const messagesEn = {
       extended: 'extended',
       none: '',
     },
+  },
+  system: {
+    title: 'System',
+    subtitle: 'Pool, data sources, and strategy configuration.',
+    tabs: { pool: 'Pool & Universes', datasources: 'Data Sources', strategy: 'Strategy' },
   },
   badges: {
     freshness: { finalClose: 'Final close', intraday: 'Intraday' },

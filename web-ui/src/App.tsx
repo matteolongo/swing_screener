@@ -15,6 +15,7 @@ const Book = lazy(() => import('./pages/Book'));
 const Universes = lazy(() => import('./pages/Universes'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const DataSources = lazy(() => import('./pages/DataSources'));
+const System = lazy(() => import('./pages/System'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,12 +39,18 @@ function App() {
                 <Route path="today" element={<ErrorBoundary><Today /></ErrorBoundary>} />
                 <Route path="calendar" element={<ErrorBoundary><Calendar /></ErrorBoundary>} />
                 <Route path="book" element={<ErrorBoundary><Book /></ErrorBoundary>} />
-                <Route path="universes" element={<ErrorBoundary><Universes /></ErrorBoundary>} />
-                <Route path="datasources" element={<ErrorBoundary><DataSources /></ErrorBoundary>} />
+                <Route path="system" element={<ErrorBoundary><System /></ErrorBoundary>}>
+                  <Route index element={<Navigate to="/system/pool" replace />} />
+                  <Route path="pool" element={<ErrorBoundary><Universes /></ErrorBoundary>} />
+                  <Route path="datasources" element={<ErrorBoundary><DataSources /></ErrorBoundary>} />
+                  <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />
+                </Route>
 
-                {/* Strategy / settings — still accessible */}
-                <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />
-                <Route path="settings" element={<Navigate to="/strategy" replace />} />
+                {/* moved-page redirects */}
+                <Route path="universes" element={<Navigate to="/system/pool" replace />} />
+                <Route path="datasources" element={<Navigate to="/system/datasources" replace />} />
+                <Route path="strategy" element={<Navigate to="/system/strategy" replace />} />
+                <Route path="settings" element={<Navigate to="/system/strategy" replace />} />
 
                 <Route path="*" element={<Navigate to="/today" replace />} />
               </Route>

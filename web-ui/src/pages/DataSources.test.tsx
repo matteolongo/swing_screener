@@ -23,7 +23,7 @@ describe('DataSources page', () => {
       http.get('*/api/datasources/events', () => HttpResponse.json({ events: [] })),
     );
 
-    renderWithProviders(<DataSources />, { route: '/datasources' });
+    renderWithProviders(<DataSources />, { route: '/system/datasources' });
 
     expect(await screen.findByText('Yahoo Finance')).toBeInTheDocument();
     expect(await screen.findByText('Company IR RSS')).toBeInTheDocument();
