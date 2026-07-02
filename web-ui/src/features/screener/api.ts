@@ -2,6 +2,7 @@ import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
 import { toTaxonomyFilterPayload } from '@/features/pool/types';
 import {
+  ScreenerJobStatus,
   ScreenerRequest,
   ScreenerRunLaunchResponseAPI,
   ScreenerRunStatusResponseAPI,
@@ -34,7 +35,10 @@ export function toScreenerRequestPayload(request: ScreenerRequest): Record<strin
   };
 }
 
-export async function runScreener(request: ScreenerRequest): Promise<ScreenerResponse> {
+export async function runScreener(
+  request: ScreenerRequest,
+  onStatus?: (status: ScreenerJobStatus) => void,
+): Promise<ScreenerResponse> {
   const apiRequest = toScreenerRequestPayload(request);
 
   const res = await fetch(apiUrl(API_ENDPOINTS.screenerRun), {
@@ -45,7 +49,7 @@ export async function runScreener(request: ScreenerRequest): Promise<ScreenerRes
 
   if (res.status === 202) {
     const launchPayload: ScreenerRunLaunchResponseAPI = await res.json();
-    return pollScreenerRunResult(launchPayload.job_id);
+    return pollScreenerRunResult(launchPayload.job_id, onStatus);
   }
 
   if (!res.ok) {
@@ -62,7 +66,10 @@ const POLL_BUDGET_MS = 30 * 60 * 1000;
 const POLL_INITIAL_DELAY_MS = 1000;
 const POLL_MAX_DELAY_MS = 5000;
 
-async function pollScreenerRunResult(jobId: string): Promise<ScreenerResponse> {
+async function pollScreenerRunResult(
+  jobId: string,
+  onStatus?: (status: ScreenerJobStatus) => void,
+): Promise<ScreenerResponse> {
   const startedAt = Date.now();
   let delayMs = POLL_INITIAL_DELAY_MS;
 
@@ -71,6 +78,7 @@ async function pollScreenerRunResult(jobId: string): Promise<ScreenerResponse> {
       API_ENDPOINTS.screenerRunStatus(jobId),
       { errorMessage: 'Failed to fetch screener run status' }
     );
+    onStatus?.(statusPayload.status);
     if (statusPayload.status === 'completed' && statusPayload.result) {
       return transformScreenerResponse(statusPayload.result);
     }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
@@ -8,6 +8,7 @@ import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
 import { filterCandidates, filterOutAddOns, prioritizeCandidates, type DecisionActionFilter } from '@/features/screener/prioritization';
+import type { ScreenerJobStatus } from '@/features/screener/types';
 import type { TaxonomyFilterValues } from '@/features/pool/types';
 import OpenPositionIntelligencePanel from '@/components/domain/positions/OpenPositionIntelligencePanel';
 import { useScreenerStore } from '@/stores/screenerStore';
@@ -60,57 +61,13 @@ const exchangeFilterToRequest = (value: ExchangeFilter): string[] | undefined =>
   }
 };
 
-const RUNNING_STEPS = [
-  'screener.running.steps.preparingUniverse',
-  'screener.running.steps.downloadingPrices',
-  'screener.running.steps.scoringSetups',
-  'screener.running.steps.applyingRisk',
-  'screener.running.steps.buildingPlans',
-] as const;
-
-export function ScreenerRunningPanel() {
-  const [currentStep, setCurrentStep] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentStep((prev) => Math.min(prev + 1, RUNNING_STEPS.length - 1));
-    }, 1500);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 space-y-2">
-      {RUNNING_STEPS.map((stepKey, index) => {
-        const isCompleted = index < currentStep;
-        const isCurrent = index === currentStep;
-        return (
-          <div key={stepKey} className="flex items-center gap-2 text-sm">
-            {isCompleted ? (
-              <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-            ) : isCurrent ? (
-              <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
-            ) : (
-              <div className="w-4 h-4 rounded-full border border-border flex-shrink-0" />
-            )}
-            <span
-              className={
-                isCompleted
-                  ? 'text-muted line-through'
-                  : isCurrent
-                    ? 'text-primary font-medium'
-                    : 'text-muted'
-              }
-            >
-              {t(stepKey)}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
+function screenerRunningLabel(phase: ScreenerJobStatus | null): string {
+  if (phase === 'queued') return t('screener.running.queued');
+  if (phase === 'running') return t('screener.running.running');
+  return t('screener.running.label');
 }
 
-export default function ScreenerInboxPanel() {
+export default function ScreenerPanel() {
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
@@ -176,12 +133,20 @@ export default function ScreenerInboxPanel() {
   );
   const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', true);
   const [forceRefresh, setForceRefresh] = useState(false);
+  const [jobPhase, setJobPhase] = useState<ScreenerJobStatus | null>(null);
 
-  const screenerMutation = useRunScreenerMutation((data) => {
-    setLastResult(data);
-    setIsFormCollapsed(true);
-    setForceRefresh(false);
-  });
+  const screenerMutation = useRunScreenerMutation(
+    (data) => {
+      setLastResult(data);
+      setIsFormCollapsed(true);
+      setForceRefresh(false);
+      setJobPhase(null);
+    },
+    () => {
+      setJobPhase(null);
+    },
+    setJobPhase,
+  );
 
   const handleRunScreener = useCallback(() => {
     screenerMutation.mutate({
@@ -297,7 +262,12 @@ export default function ScreenerInboxPanel() {
         setForceRefresh={setForceRefresh}
       />
 
-      {screenerMutation.isPending && <ScreenerRunningPanel />}
+      {screenerMutation.isPending ? (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
+          <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+          <span>{screenerRunningLabel(jobPhase)}</span>
+        </div>
+      ) : null}
 
       {screenerMutation.isError ? (
         <div className="p-3 bg-danger/10 border border-danger/40 rounded-lg">

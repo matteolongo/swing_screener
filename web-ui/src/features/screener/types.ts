@@ -380,16 +380,18 @@ export interface ScreenerResponseAPI {
   same_symbol_add_on_count?: number;
 }
 
+export type ScreenerJobStatus = 'queued' | 'running' | 'completed' | 'error';
+
 export interface ScreenerRunLaunchResponseAPI {
   job_id: string;
-  status: 'queued' | 'running' | 'completed' | 'error';
+  status: ScreenerJobStatus;
   created_at: string;
   updated_at: string;
 }
 
 export interface ScreenerRunStatusResponseAPI {
   job_id: string;
-  status: 'queued' | 'running' | 'completed' | 'error';
+  status: ScreenerJobStatus;
   result?: ScreenerResponseAPI;
   error?: string;
   created_at: string;

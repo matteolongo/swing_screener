@@ -77,4 +77,22 @@ describe('runScreener async polling', () => {
     await vi.advanceTimersByTimeAsync(1000);
     await expectation;
   });
+
+  it('reports each polled status via onStatus', async () => {
+    let call = 0;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).endsWith('/run')) return launchResponse;
+      call += 1;
+      return call === 1 ? statusResponse('queued') : statusResponse('completed', emptyResult);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const onStatus = vi.fn();
+    const resultPromise = runScreener({ universe: 'broad_market_stocks', top: 5 }, onStatus);
+    await vi.advanceTimersByTimeAsync(2000);
+    await resultPromise;
+
+    expect(onStatus).toHaveBeenCalledWith('queued');
+    expect(onStatus).toHaveBeenCalledWith('completed');
+  });
 });

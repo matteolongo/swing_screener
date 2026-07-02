@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { runScreener } from './api';
-import { ScreenerRequest, ScreenerResponse, PriceHistoryPoint, CandlePattern, transformCandlePattern } from './types';
+import { ScreenerJobStatus, ScreenerRequest, ScreenerResponse, PriceHistoryPoint, CandlePattern, transformCandlePattern } from './types';
 import { queryKeys } from '@/lib/queryKeys';
 import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
@@ -8,9 +8,10 @@ import { fetchJson } from '@/lib/fetchJson';
 export function useRunScreenerMutation(
   onSuccess?: (data: ScreenerResponse) => void,
   onError?: (error: unknown) => void,
+  onStatus?: (status: ScreenerJobStatus) => void,
 ) {
   return useMutation({
-    mutationFn: (request: ScreenerRequest) => runScreener(request),
+    mutationFn: (request: ScreenerRequest) => runScreener(request, onStatus),
     onSuccess,
     onError,
   });

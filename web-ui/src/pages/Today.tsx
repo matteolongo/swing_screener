@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
+import ScreenerPanel from '@/components/domain/screener/ScreenerPanel';
 import ActionInbox from '@/components/domain/today/ActionInbox';
 import PositionsMiniCard from '@/components/domain/today/PositionsMiniCard';
 import CalendarPeekCard from '@/components/domain/today/CalendarPeekCard';
@@ -63,7 +63,7 @@ export default function Today() {
             </div>
           )}
           {leftTab === 'screener' && (
-            <ScreenerInboxPanel />
+            <ScreenerPanel />
           )}
           {leftTab === 'watchlist' && (
             <div className="h-full overflow-auto px-3 pt-3">

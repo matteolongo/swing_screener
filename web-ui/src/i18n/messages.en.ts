@@ -1344,13 +1344,9 @@ export const messagesEn = {
       },
     },
     running: {
-      steps: {
-        preparingUniverse: 'Preparing universe',
-        downloadingPrices: 'Downloading prices',
-        scoringSetups: 'Scoring setups',
-        applyingRisk: 'Applying risk rules',
-        buildingPlans: 'Building trade plans',
-      },
+      label: 'Running screen…',
+      queued: 'Queued…',
+      running: 'Running…',
     },
     currencyFilter: {
       all: 'All',
