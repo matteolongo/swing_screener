@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import StatusBar from './StatusBar';
 import Sidebar from './Sidebar';
+import SymbolDrawer from '@/components/domain/symbol/SymbolDrawer';
 
 export default function MainLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -18,6 +19,7 @@ export default function MainLayout() {
           <Outlet />
         </main>
       </div>
+      <SymbolDrawer />
     </div>
   );
 }

@@ -5,10 +5,6 @@ import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import PartialCloseModalForm from '@/components/domain/positions/PartialCloseModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
-import ModalShell from '@/components/common/ModalShell';
-import ActionPanel from '@/components/domain/workspace/ActionPanel';
-import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
-import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import {
   useCancelOrderMutation,
@@ -20,30 +16,10 @@ import {
   useUpdateStopMutation,
 } from '@/features/portfolio/hooks';
 import { type Order } from '@/features/portfolio/types';
-import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { StopPreviewPanel, type PortfolioRow } from './PortfolioTableParts';
 import { buildPortfolioColumns } from './portfolioColumns';
-
-function PortfolioSymbolModal({ ticker, position, onBack }: { ticker: string; position: PositionWithMetrics | null; onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
-  const candidate = useScreenerStore((state) =>
-    state.lastResult?.candidates.find((c) => c.ticker.toUpperCase() === ticker.toUpperCase())
-  );
-  return (
-    <ModalShell title={t('workspacePage.symbolDetails.title', { ticker })} onClose={onBack} className="max-w-5xl" closeOnBackdrop={false}>
-      <SymbolAnalysisContent
-        ticker={ticker}
-        candidate={candidate}
-        position={position}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        orderPanel={<ActionPanel ticker={ticker} />}
-      />
-    </ModalShell>
-  );
-}
 
 export default function PortfolioTable() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
@@ -65,8 +41,6 @@ export default function PortfolioTable() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showPartialCloseModal, setShowPartialCloseModal] = useState(false);
   const [showFillOrderModal, setShowFillOrderModal] = useState(false);
-
-  const [analyzeTarget, setAnalyzeTarget] = useState<{ ticker: string; position: PositionWithMetrics | null } | null>(null);
 
   const [previewPositionId, setPreviewPositionId] = useState<string | null>(null);
   const [previewTicker, setPreviewTicker] = useState<string>('');
@@ -230,7 +204,7 @@ export default function PortfolioTable() {
           setSelectedPosition(position);
           setShowUpdateStopModal(true);
         },
-        onAnalyze: (row) => setAnalyzeTarget({ ticker: row.ticker, position: row.position }),
+        onAnalyze: (row) => setSelectedTicker(row.ticker, 'portfolio'),
         onAddOnEntry: (ticker) => {
           setSelectedTicker(ticker, 'portfolio');
           setAnalysisTab('order');
@@ -306,14 +280,6 @@ export default function PortfolioTable() {
             onClose={() => { setPreviewPositionId(null); setHypotheticalPriceInput(''); }}
           />
         </div>
-      )}
-
-      {analyzeTarget && (
-        <PortfolioSymbolModal
-          ticker={analyzeTarget.ticker}
-          position={analyzeTarget.position}
-          onBack={() => setAnalyzeTarget(null)}
-        />
       )}
 
       {showUpdateStopModal && selectedPosition ? (

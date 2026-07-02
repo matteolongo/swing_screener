@@ -1,10 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 
 import Universes from './Universes'
 import { renderWithProviders } from '@/test/utils'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 describe('Universes page', () => {
+  beforeEach(() => {
+    useWorkspaceStore.setState({ selectedTicker: null, selectedTickerSource: null, analysisTab: 'overview' })
+  })
+
   it('runs live symbol discovery and shows taxonomy plus candidates', async () => {
     const { user } = renderWithProviders(<Universes />)
 
@@ -28,7 +33,7 @@ describe('Universes page', () => {
     })
   })
 
-  it('opens the symbol detail modal when a screener result row is clicked', async () => {
+  it('selects the ticker into the workspace store when a screener result row is clicked', async () => {
     const { user } = renderWithProviders(<Universes />)
 
     await user.click(screen.getByRole('button', { name: 'Discovery' }))
@@ -39,6 +44,9 @@ describe('Universes page', () => {
 
     await user.click(screen.getByText('AAPL'))
 
-    expect(await screen.findByText('AAPL Details')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(useWorkspaceStore.getState().selectedTicker).toBe('AAPL')
+    })
+    expect(useWorkspaceStore.getState().selectedTickerSource).toBe('screener')
   })
 })

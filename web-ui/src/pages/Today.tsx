@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
+import { useCallback, useState } from 'react';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import TodayActionList from '@/components/domain/today/TodayActionList';
 import WatchlistPipelinePanel from '@/components/domain/watchlist/WatchlistPipelinePanel';
@@ -84,22 +83,11 @@ const LEFT_TAB_LABEL_KEYS: Record<LeftTab, 'todayPage.tabs.today' | 'todayPage.t
   screener: 'todayPage.tabs.screener',
   watchlist: 'todayPage.tabs.watchlist',
 };
-type TabletTab = 'left' | 'analysis';
 
 export default function Today() {
   const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
-  const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
 
   const [leftTab, setLeftTab] = useState<LeftTab>('today');
-  const [activeTablet, setActiveTablet] = useState<TabletTab>('left');
-  const prevTickerRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (selectedTicker && selectedTicker !== prevTickerRef.current) {
-      prevTickerRef.current = selectedTicker;
-      setActiveTablet('analysis');
-    }
-  }, [selectedTicker]);
 
   const handleTickerSelect = useCallback((ticker: string) => {
     setSelectedTicker(ticker, 'screener');
@@ -107,82 +95,45 @@ export default function Today() {
 
   return (
     <div className="mx-auto max-w-[1600px]">
-      {/* Tablet tab switcher — only visible below xl breakpoint */}
-      <div className="xl:hidden flex border-b border-border mb-3">
-        {(['left', 'analysis'] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTablet(tab)}
-            className={cn(
-              'flex-1 py-2 text-sm font-medium capitalize transition-colors',
-              activeTablet === tab
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted hover:text-foreground'
-            )}
-          >
-            {tab === 'left' ? t('todayPage.tabs.today') : t('workspacePage.panels.analysis.title')}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-4 xl:h-[calc(100vh-120px)] min-h-[500px]">
-        {/* Left panel */}
-        <div
-          className={cn(
-            'min-w-0 flex flex-col xl:overflow-hidden xl:w-7/12',
-            activeTablet === 'left' ? 'w-full' : 'hidden xl:flex'
-          )}
-        >
-          {/* Left panel tab bar */}
-          <div className="flex border-b border-border shrink-0">
-            {(['today', 'screener', 'watchlist'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setLeftTab(tab)}
-                className={cn(
-                  'px-4 py-2.5 text-sm font-medium transition-colors capitalize',
-                  leftTab === tab
-                    ? 'border-b-2 border-primary text-primary'
-                    : 'text-muted hover:text-foreground'
-                )}
-              >
-                {t(LEFT_TAB_LABEL_KEYS[tab])}
-              </button>
-            ))}
-          </div>
-
-          {/* Left panel content */}
-          <div className="flex-1 overflow-hidden">
-            {leftTab === 'today' && (
-              <>
-                <div className="px-3 pt-3">
-                  <WeeklyReviewNudge />
-                  <PendingOrdersBadge />
-                </div>
-                <TodayActionList onTickerSelect={handleTickerSelect} />
-              </>
-            )}
-            {leftTab === 'screener' && (
-              <ScreenerInboxPanel />
-            )}
-            {leftTab === 'watchlist' && (
-              <div className="h-full overflow-auto px-3 pt-3">
-                <WatchlistPipelinePanel onTickerSelect={handleTickerSelect} />
-              </div>
-            )}
-          </div>
+      <div className="flex flex-col xl:h-[calc(100vh-120px)] min-h-[500px]">
+        {/* Tab bar */}
+        <div className="flex border-b border-border shrink-0">
+          {(['today', 'screener', 'watchlist'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setLeftTab(tab)}
+              className={cn(
+                'px-4 py-2.5 text-sm font-medium transition-colors capitalize',
+                leftTab === tab
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted hover:text-foreground'
+              )}
+            >
+              {t(LEFT_TAB_LABEL_KEYS[tab])}
+            </button>
+          ))}
         </div>
 
-        {/* Right panel */}
-        <div
-          className={cn(
-            'min-w-0 flex flex-col xl:overflow-hidden xl:w-5/12',
-            activeTablet === 'analysis' ? 'w-full' : 'hidden xl:flex'
+        {/* Tab content */}
+        <div className="flex-1 overflow-hidden">
+          {leftTab === 'today' && (
+            <>
+              <div className="px-3 pt-3">
+                <WeeklyReviewNudge />
+                <PendingOrdersBadge />
+              </div>
+              <TodayActionList onTickerSelect={handleTickerSelect} />
+            </>
           )}
-        >
-          <AnalysisCanvasPanel />
+          {leftTab === 'screener' && (
+            <ScreenerInboxPanel />
+          )}
+          {leftTab === 'watchlist' && (
+            <div className="h-full overflow-auto px-3 pt-3">
+              <WatchlistPipelinePanel onTickerSelect={handleTickerSelect} />
+            </div>
+          )}
         </div>
       </div>
     </div>

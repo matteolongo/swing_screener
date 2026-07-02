@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import ModalShell from '@/components/common/ModalShell';
-import ActionPanel from '@/components/domain/workspace/ActionPanel';
-import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
-import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import UniverseListSidebar from '@/components/domain/universes/UniverseListSidebar';
 import UniverseConfigTab from '@/components/domain/universes/UniverseConfigTab';
 import UniverseConstituentsTab from '@/components/domain/universes/UniverseConstituentsTab';
@@ -21,35 +17,11 @@ import {
 import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
-import { useOpenPositions } from '@/features/portfolio/hooks';
-import { useScreenerStore } from '@/stores/screenerStore';
-import { t } from '@/i18n/t';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { cn } from '@/utils/cn';
 
-function UniverseSymbolModal({ ticker, onBack }: { ticker: string; onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
-  const candidate = useScreenerStore((state) =>
-    state.lastResult?.candidates.find((c) => c.ticker.toUpperCase() === ticker.toUpperCase())
-  );
-  const openPositionsQuery = useOpenPositions();
-  const openPosition =
-    openPositionsQuery.data?.find((p) => p.ticker.toUpperCase() === ticker.toUpperCase()) ?? null;
-
-  return (
-    <ModalShell title={t('workspacePage.symbolDetails.title', { ticker })} onClose={onBack} className="max-w-5xl" closeOnBackdrop={false}>
-      <SymbolAnalysisContent
-        ticker={ticker}
-        candidate={candidate}
-        position={openPosition}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        orderPanel={<ActionPanel ticker={ticker} />}
-      />
-    </ModalShell>
-  );
-}
-
 export default function Universes() {
+  const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
   const catalogQuery = useUniverseCatalog();
   const universes = catalogQuery.data?.universes ?? [];
   const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(null);
@@ -63,7 +35,6 @@ export default function Universes() {
   const [discoveryMinVolume, setDiscoveryMinVolume] = useState(1_000_000);
   const [discoveryMinMarketCap, setDiscoveryMinMarketCap] = useState(0);
   const [screenerTop, setScreenerTop] = useState(20);
-  const [detailTicker, setDetailTicker] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedUniverseId && universes.length > 0) {
@@ -243,17 +214,13 @@ export default function Universes() {
           {activeDetailTab === 'screener' && (
             <UniverseScreenerTab
               discoveryScreenerMutation={discoveryScreenerMutation}
-              onSelectTicker={setDetailTicker}
+              onSelectTicker={(ticker) => setSelectedTicker(ticker, 'screener')}
             />
           )}
 
           {activeDetailTab === 'pool' && <PoolTab />}
         </div>
       </div>
-
-      {detailTicker ? (
-        <UniverseSymbolModal ticker={detailTicker} onBack={() => setDetailTicker(null)} />
-      ) : null}
     </div>
   );
 }
