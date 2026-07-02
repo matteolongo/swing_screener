@@ -45,22 +45,6 @@ function App() {
                 <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />
                 <Route path="settings" element={<Navigate to="/strategy" replace />} />
 
-                {/* Legacy routes → redirects to new destinations */}
-                <Route path="workspace" element={<Navigate to="/today" replace />} />
-                <Route path="daily-review" element={<Navigate to="/today" replace />} />
-                <Route path="portfolio" element={<Navigate to="/book" replace />} />
-                <Route path="journal" element={<Navigate to="/book" replace />} />
-                <Route path="analytics" element={<Navigate to="/book" replace />} />
-                <Route path="research" element={<Navigate to="/today" replace />} />
-                <Route path="intelligence" element={<Navigate to="/today" replace />} />
-                <Route path="fundamentals" element={<Navigate to="/today" replace />} />
-
-                {/* Other legacy redirects */}
-                <Route path="dashboard" element={<Navigate to="/today" replace />} />
-                <Route path="screener" element={<Navigate to="/today" replace />} />
-                <Route path="orders" element={<Navigate to="/book" replace />} />
-                <Route path="positions" element={<Navigate to="/book" replace />} />
-
                 <Route path="*" element={<Navigate to="/today" replace />} />
               </Route>
             </Routes>
