@@ -22,9 +22,9 @@ export default function Drawer({ open, onClose, title, children, widthClassName 
 
   useEffect(() => {
     if (!open) return;
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('overflow-hidden');
     return () => {
-      document.body.style.overflow = '';
+      document.body.classList.remove('overflow-hidden');
     };
   }, [open]);
 
@@ -33,7 +33,7 @@ export default function Drawer({ open, onClose, title, children, widthClassName 
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
-      if (dialogs.length > 1) return;
+      if (dialogs[dialogs.length - 1] !== asideRef.current) return;
       onClose();
     };
     window.addEventListener('keydown', onKey);
