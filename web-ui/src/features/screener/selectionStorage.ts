@@ -1,7 +1,7 @@
 import type { TaxonomyFilterValues } from '@/features/pool/types';
 import type { DailyReviewSelection } from '@/features/dailyReview/api';
 
-// localStorage keys written by ScreenerInboxPanel via useLocalStorage (which
+// localStorage keys written by ScreenerPanel via useLocalStorage (which
 // JSON-encodes values). Other surfaces (e.g. the Today daily review) read these
 // to mirror the screener's current taxonomy selection.
 export const SCREENER_TAXONOMY_FILTER_KEY = 'screener.taxonomyFilter';

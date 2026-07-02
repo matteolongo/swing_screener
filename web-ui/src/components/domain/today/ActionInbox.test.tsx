@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { I18nProvider } from '@/i18n/I18nProvider';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import ActionInbox from './ActionInbox';
@@ -519,6 +523,35 @@ describe('ActionInbox — newCandidate cap', () => {
     renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
 
     expect(screen.queryByText(t('todayPage.inbox.actions.goToScreener'))).not.toBeInTheDocument();
+  });
+
+  it('navigates to the Screener candidates tab when the moreCandidates action is clicked', async () => {
+    mockDailyReview.data = makeEmptyReview({
+      newCandidates: Array.from({ length: 98 }, (_, i) => makeCandidate({ ticker: `TICK${i}` })),
+    });
+
+    function LocationDisplay() {
+      const location = useLocation();
+      return <div data-testid="location-display">{location.pathname}{location.search}</div>;
+    }
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const user = userEvent.setup();
+    render(
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/today']}>
+            <ActionInbox onTickerSelect={vi.fn()} />
+            <LocationDisplay />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </I18nProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: t('todayPage.inbox.actions.goToScreener') }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/screener?tab=candidates');
+    });
   });
 });
 
