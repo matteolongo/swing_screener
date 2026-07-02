@@ -131,3 +131,6 @@ out/
 # Editor / CI scaffolding kept local
 .github/copilot-instructions.md
 .github/BRANCH_PROTECTION.md
+
+# Playwright MCP browser-automation scratch output
+.playwright-mcp/
