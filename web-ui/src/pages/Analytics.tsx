@@ -17,9 +17,6 @@ export default function Analytics() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1200px] px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">{t('analyticsPage.title')}</h1>
-        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-6 mb-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-20 animate-pulse rounded-lg border border-border bg-foreground/5" />
@@ -41,11 +38,7 @@ export default function Analytics() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('analyticsPage.title')}</h1>
-        <p className="text-sm text-muted mt-1">{t('analyticsPage.subtitle')}</p>
-      </div>
+      <p className="text-sm text-muted">{t('analyticsPage.subtitle')}</p>
 
       {!hasData ? (
         <p className="text-sm text-muted">{t('analyticsPage.empty')}</p>

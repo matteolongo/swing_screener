@@ -1,9 +1,12 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import ConcentrationBar from '@/components/domain/portfolio/ConcentrationBar';
 import PortfolioRiskSummary from '@/components/domain/portfolio/PortfolioRiskSummary';
 import PortfolioPanel from '@/components/domain/workspace/PortfolioPanel';
 import RChip from '@/components/common/RChip';
+import PageHeader from '@/components/common/PageHeader';
+import Tabs, { type TabItem } from '@/components/common/Tabs';
 import { usePortfolioSummary, usePositions } from '@/features/portfolio/hooks';
 import type { Position } from '@/features/portfolio/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
@@ -172,10 +175,7 @@ function JournalTab() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">{t('journalPage.title')}</h1>
-        <p className="text-sm text-muted mt-1">{t('journalPage.subtitle')}</p>
-      </div>
+      <p className="text-sm text-muted mb-6">{t('journalPage.subtitle')}</p>
 
       {/* Stats bar */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 mb-6">
@@ -376,60 +376,37 @@ function WeeklyReviewTab() {
 
 // ─── Book page ────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'book.activeTab';
 type BookTab = 'positions' | 'orders' | 'journal' | 'performance' | 'review';
 
+const isBookTab = (value: string | null): value is BookTab =>
+  value === 'positions' || value === 'orders' || value === 'journal' || value === 'performance' || value === 'review';
+
 export default function Book() {
-  const [activeTab, setActiveTab] = useState<BookTab>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'positions' || stored === 'orders' || stored === 'journal' || stored === 'performance' || stored === 'review') {
-      return stored;
-    }
-    return 'positions';
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, activeTab);
-  }, [activeTab]);
+  const rawTab = searchParams.get('tab');
+  const activeTab: BookTab = isBookTab(rawTab) ? rawTab : 'positions';
 
-  const tabs: { key: BookTab; label: string }[] = [
-    { key: 'positions', label: t('bookPage.tabs.positions') },
-    { key: 'orders', label: t('bookPage.tabs.orders') },
-    { key: 'journal', label: t('bookPage.tabs.journal') },
-    { key: 'performance', label: t('bookPage.tabs.performance') },
-    { key: 'review', label: t('bookPage.tabs.review') },
-  ];
+  const handleTabChange = useCallback((tab: BookTab) => {
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.set('tab', tab);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const bookTabs: TabItem<BookTab>[] = useMemo(() => [
+    { id: 'positions', label: t('bookPage.tabs.positions') },
+    { id: 'orders', label: t('bookPage.tabs.orders') },
+    { id: 'journal', label: t('bookPage.tabs.journal') },
+    { id: 'performance', label: t('bookPage.tabs.performance') },
+    { id: 'review', label: t('bookPage.tabs.review') },
+  ], []);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-4">
-      {/* Page header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-foreground">
-          {t('bookPage.title')}
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          {t('bookPage.subtitle')}
-        </p>
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex gap-2 mb-6">
-        {tabs.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={cn(
-              'px-4 py-2 rounded-full text-sm font-medium transition-colors',
-              activeTab === key
-                ? 'bg-primary/10 text-primary font-semibold'
-                : 'text-muted hover:text-muted'
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <PageHeader title={t('bookPage.title')} subtitle={t('bookPage.subtitle')} />
+      <Tabs tabs={bookTabs} active={activeTab} onChange={handleTabChange} className="mb-4" />
 
       {/* Tab content */}
       <div>

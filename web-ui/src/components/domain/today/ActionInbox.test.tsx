@@ -555,6 +555,43 @@ describe('ActionInbox — newCandidate cap', () => {
   });
 });
 
+// ─── Weekly review deep-link (NEW) ──────────────────────────────────────────
+
+describe('ActionInbox — weekly review deep-link', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('navigates to the Book weekly review tab when the goToReview action is clicked', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-06-26T12:00:00')); // Friday, no review recorded
+    mockWeeklyReviews = { data: [] };
+
+    function LocationDisplay() {
+      const location = useLocation();
+      return <div data-testid="location-display">{location.pathname}{location.search}</div>;
+    }
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const user = userEvent.setup();
+    render(
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/today']}>
+            <ActionInbox onTickerSelect={vi.fn()} />
+            <LocationDisplay />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </I18nProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: t('todayPage.inbox.actions.goToReview') }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/book?tab=review');
+    });
+  });
+});
+
 // ─── Error strip with cached items (NEW) ────────────────────────────────────
 
 describe('ActionInbox — refetch error with cached review', () => {

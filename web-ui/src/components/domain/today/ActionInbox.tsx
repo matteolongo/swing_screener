@@ -110,7 +110,7 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
           if (item.ticker) onTickerSelect(item.ticker);
           break;
         case 'goToReview':
-          navigate('/book');
+          navigate('/book?tab=review');
           break;
         case 'goToScreener':
           navigate('/screener?tab=candidates');
