@@ -2063,7 +2063,6 @@ export const messagesEn = {
     },
   },
   journalPage: {
-    title: 'Trade Journal',
     subtitle: 'Review closed trades, R-multiples, and what you learned.',
     empty: 'No closed trades yet.',
     stats: {
@@ -2092,7 +2091,6 @@ export const messagesEn = {
     },
   },
   analyticsPage: {
-    title: 'Performance Analytics',
     subtitle: 'Track your trading performance over closed positions.',
     empty: 'No closed trades yet. Close some positions to see analytics.',
     stats: {
