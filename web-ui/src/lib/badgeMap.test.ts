@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import {
   freshnessBadge,
   decisionActionBadge,
@@ -21,6 +22,10 @@ describe('badgeMap', () => {
     expect(decisionActionBadge('BUY_ON_PULLBACK').variant).toBe('primary');
     expect(decisionActionBadge('AVOID').variant).toBe('default');
     expect(decisionActionBadge('MANAGE_ONLY').variant).toBe('default');
+  });
+
+  it('conviction: high is primary', () => {
+    expect(convictionBadge('high').variant).toBe('primary');
   });
 
   it('attention states map to warning, terminal-bad to error', () => {
