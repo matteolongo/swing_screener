@@ -2,8 +2,6 @@ import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
 import type {
   SymbolIntelligenceAPI,
-  SweepSymbolPayload,
-  SweepResponseAPI,
   AnalysisHistoryResponseAPI,
   HistoryEntry,
 } from '@/features/intelligence/types';
@@ -142,13 +140,4 @@ export async function getIntelligenceHistory(ticker: string): Promise<HistoryEnt
     errorMessage: `Failed to load analysis history for ${ticker}`,
   });
   return (res.entries ?? []).map(transformHistoryEntry);
-}
-
-export async function postIntelligenceSweep(symbols: SweepSymbolPayload[]): Promise<SweepResponseAPI> {
-  return fetchJson<SweepResponseAPI>(API_ENDPOINTS.intelligenceSweep, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ symbols }),
-    errorMessage: 'Intelligence sweep failed',
-  });
 }

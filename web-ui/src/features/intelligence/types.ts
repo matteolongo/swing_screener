@@ -316,12 +316,3 @@ export function transformHistoryEntry(api: HistoryEntryAPI): HistoryEntry {
   };
 }
 
-export interface SweepSymbolPayload {
-  ticker: string;
-  request: IntelligenceRequestPayload;
-}
-
-export interface SweepResponseAPI {
-  analyzed: string[];
-  failed: Array<{ ticker: string; error: string }>;
-}

@@ -72,7 +72,6 @@ export const API_ENDPOINTS = {
   intelligenceAnalyze: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}`,
   intelligenceLatest: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/latest`,
   intelligenceHistory: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/history`,
-  intelligenceSweep: '/api/intelligence/sweep',
 
   // Catalysts
   catalystsManual: '/api/catalysts/manual',
