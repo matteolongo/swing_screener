@@ -13,7 +13,7 @@ Sidebar has four primary areas: Today · Calendar · Book · System.
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| Today | `/today` | Single full-width column with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist. Click a symbol row to open the global symbol analysis drawer (880px, permalink "open ↗" in the drawer header, Overview / Fundamentals / Order / Backtest tabs; Backtest runs a per-symbol event study inline). For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview |
+| Today | `/today` | Single full-width column with three tabs. **Today tab (Action Inbox)**: daily-review buckets flattened into one prioritized queue — close → update-stop → exit-signal → stale-order → add-on → new → watch → weekly-review. Each row carries severity dots, badgeMap-driven type badges, R-multiple readouts (`RChip`), and inline action buttons (close / apply-stop / update-stop / cancel-order / plan-order / analyze). Each row has an expandable "why" section. Keyboard nav: `j`/`k` to move between rows. Cold load shows a 4-row skeleton; zero state reads "Nothing to do. No signals — do nothing." and stamps the as-of time with a refresh button. Below the queue: `PositionsMiniCard` (compact card collapsing held positions — RChip, days held, time-stop/exhaustion/earnings badges, Trim badge, P&L%) and `CalendarPeekCard` (7-day peek at position events and catalysts; links to Calendar). **Last Run tab** and **Watchlist tab** unchanged. Click any symbol row to open the global symbol analysis drawer (880px, permalink "open ↗" in the drawer header, Overview / Fundamentals / Order / Backtest tabs; Backtest runs a per-symbol event study inline). For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview. Removed: `WeeklyReviewNudge` and `PendingOrdersBadge` banners (weekly nudge is now the bottom inbox row; pending-order staleness is surfaced as inbox rows). |
 | Symbol | `/symbol/:ticker` | Full-page symbol analysis (local tab state, same content/tabs as drawer). Permalink target; accessible via the drawer header's "open ↗" link or direct navigation. |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
@@ -89,3 +89,12 @@ Full timing guidance: `docs/product/DAILY_USAGE_GUIDE.md`.
 - Mock API calls with MSW handlers in `web-ui/src/test/mocks/handlers.ts`.
 - Assert user-facing copy via i18n keys (`web-ui/src/i18n/`), not hardcoded strings.
 - Coverage thresholds enforced: 80%+ lines, 75%+ branches.
+
+## Phase 7: i18n Sweep (Stale Keys for Removal)
+
+The following i18n key groups are no longer used after the Today Action Inbox rewrite and related banner removals. They are listed here for audit purposes **only** — do not prune until Phase 7 formal deprecation sweep:
+
+- `todayPage.actionList.*` — old daily review action list
+- `todayPage.pendingBadge.*` — old pending orders badge
+- `todayPage.weeklyNudge.*` — old weekly review nudge banner
+- `dailyReview.sections.*` — parts no longer rendered in the inbox (deprecation sweep will clarify which keys remain)
