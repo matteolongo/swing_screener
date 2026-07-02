@@ -60,6 +60,7 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"VALE": [16.30, 16.65]})
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
@@ -106,6 +107,7 @@ def test_position_metrics_subtracts_recorded_fees(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"BAMNB.AS": [9.98, 10.0]})
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
@@ -153,6 +155,7 @@ def test_position_metrics_subtracts_recorded_fees_usd(
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
 
     def mock_fetch_ohlcv(tickers, **kwargs):
         if "EURUSD=X" in tickers:
@@ -216,6 +219,7 @@ def test_positions_endpoint_returns_precomputed_metrics(
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"VALE": [16.30, 16.65]})
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
@@ -298,6 +302,7 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
     _set_account_size(monkeypatch, account_size=1000.0)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes(
         {
             "VALE": [16.30, 16.65],

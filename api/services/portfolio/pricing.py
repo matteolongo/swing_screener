@@ -78,6 +78,24 @@ class PositionPricingService:
         prices, _ = _last_close_map(ohlcv)
         return prices
 
+    def _fetch_live_quote(self, ticker: str) -> Optional[float]:
+        """Best-effort real-time quote; None if the provider can't produce one.
+
+        Unlike `_fetch_last_prices`, this bypasses the daily-bar cache (whose
+        TTL is tuned for the post-close screener, not intraday position
+        tracking) so open positions reflect the actual current price rather
+        than a stale pre-market-fetched close.
+        """
+        try:
+            price = self._provider.fetch_latest_price(ticker)
+            price = float(price)
+        except Exception as exc:
+            logger.info("Live quote unavailable for %s, falling back to last close: %s", ticker, exc)
+            return None
+        if price != price:  # NaN
+            return None
+        return price
+
     @staticmethod
     def _fallback_price(position: dict) -> float:
         exit_price = position.get("exit_price")
@@ -88,30 +106,38 @@ class PositionPricingService:
             return float(current_price)
         return float(position.get("entry_price", 0.0))
 
-    def _attach_live_prices(self, positions: list[dict]) -> dict[str, float]:
-        """Attach latest price to open positions and return fetched price map."""
+    def _attach_live_prices(self, positions: list[dict]) -> tuple[dict[str, float], set[str]]:
+        """Attach latest price to open positions.
+
+        Returns (price map, tickers priced from a genuine real-time quote —
+        the rest, if any, fell back to the last daily-bar close).
+        """
         last_prices: dict[str, float] = {}
+        live_tickers: set[str] = set()
         open_positions = [p for p in positions if p.get("status") == "open"]
         if open_positions:
-            try:
-                tickers = list({str(p.get("ticker", "")).upper() for p in open_positions if p.get("ticker")})
-                last_prices = self._fetch_last_prices(tickers)
-                for pos in positions:
-                    if pos.get("status") == "open":
-                        ticker = str(pos.get("ticker", "")).upper()
-                        pos["current_price"] = last_prices.get(ticker)
-            except (KeyError, ValueError, TypeError) as exc:
-                logger.warning("Failed to fetch current prices (data error): %s", exc)
-                for pos in positions:
-                    if pos.get("status") == "open":
-                        pos["current_price"] = None
-            except Exception:
-                logger.exception("Unexpected error fetching current prices")
-                for pos in positions:
-                    if pos.get("status") == "open":
-                        pos["current_price"] = None
+            tickers = list({str(p.get("ticker", "")).upper() for p in open_positions if p.get("ticker")})
+            for ticker in tickers:
+                quote = self._fetch_live_quote(ticker)
+                if quote is not None:
+                    last_prices[ticker] = quote
+                    live_tickers.add(ticker)
 
-        return last_prices
+            remaining = [t for t in tickers if t not in last_prices]
+            if remaining:
+                try:
+                    last_prices.update(self._fetch_last_prices(remaining))
+                except (KeyError, ValueError, TypeError) as exc:
+                    logger.warning("Failed to fetch current prices (data error): %s", exc)
+                except Exception:
+                    logger.exception("Unexpected error fetching current prices")
+
+            for pos in positions:
+                if pos.get("status") == "open":
+                    ticker = str(pos.get("ticker", "")).upper()
+                    pos["current_price"] = last_prices.get(ticker)
+
+        return last_prices, live_tickers
 
     def _eurusd_rate(self) -> float:
         """Fetch EURUSD rate with simple caching."""

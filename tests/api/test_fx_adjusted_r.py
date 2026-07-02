@@ -115,6 +115,7 @@ class TestFxAdjustedREndpoint:
         portfolio_service._eurusd_cache.clear()
 
         mock_provider = MagicMock(spec=MarketDataProvider)
+        mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
 
         def mock_fetch(tickers, **kwargs):
             closes = {}
@@ -142,6 +143,7 @@ class TestFxAdjustedREndpoint:
         portfolio_service._eurusd_cache.clear()
 
         mock_provider = MagicMock(spec=MarketDataProvider)
+        mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
         mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"ASML.AS": [750.0, 750.0]})
         mock_provider.get_provider_name.return_value = "mock"
         monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
@@ -158,6 +160,7 @@ class TestFxAdjustedREndpoint:
         portfolio_service._eurusd_cache.clear()
 
         mock_provider = MagicMock(spec=MarketDataProvider)
+        mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
         mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"AAPL": [120.0, 120.0]})
         mock_provider.get_provider_name.return_value = "mock"
         monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
@@ -173,6 +176,7 @@ class TestFxAdjustedREndpoint:
         portfolio_service._eurusd_cache.clear()
 
         mock_provider = MagicMock(spec=MarketDataProvider)
+        mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
 
         def mock_fetch(tickers, **kwargs):
             closes = {}
