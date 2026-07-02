@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
@@ -30,6 +30,14 @@ describe('ManagePositionPanel', () => {
     const candidate = { decisionSummary: { action: 'BUY_ON_PULLBACK' } } as any;
     renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
     expect(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).toBeInTheDocument();
+  });
+
+  it('calls onPrepareOrder when Add button is clicked', async () => {
+    const onPrepareOrder = vi.fn();
+    const candidate = { decisionSummary: { action: 'BUY_ON_PULLBACK' } } as any;
+    renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} onPrepareOrder={onPrepareOrder} />);
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') }));
+    expect(onPrepareOrder).toHaveBeenCalledOnce();
   });
 
   it('opens the update-stop modal on click', async () => {
