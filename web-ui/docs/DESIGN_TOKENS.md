@@ -1,4 +1,4 @@
-# Design tokens (instrument dark theme)
+# Design tokens (clean-console dark theme)
 
 The web UI is **dark-only** and **token-driven**. Every color comes from a semantic
 design token defined in `src/index.css` (`:root`) and bridged to Tailwind in
@@ -25,6 +25,27 @@ state. `primary` is reserved for interactivity. Neutrals carry everything else.
 
 Helpers: `getSignColorClass(value)` returns `text-success`/`text-danger`; `<RChip value=>`
 renders a signed R-multiple in tabular mono with the right sign token.
+
+## Values
+
+| Token | HSL | Hex |
+|---|---|---|
+| `--background` | `220 14% 7%` | `#0F1114` |
+| `--foreground` | `220 15% 92%` | `#E7E9EE` |
+| `--muted` | `220 10% 63%` | `#959CA8` |
+| `--border` | `220 10% 17%` | `#272A30` |
+| `--surface` | `220 12% 10%` | `#16181D` |
+| `--primary` | `233 76% 71%` | `#8290EE` |
+| `--primary-foreground` | `220 14% 7%` | `#0F1114` |
+| `--success` | `155 45% 51%` | `#48BD8B` |
+| `--success-foreground` | `220 14% 8%` | `#121317` |
+| `--warning` | `42 70% 56%` | `#DDB040` |
+| `--warning-foreground` | `42 80% 12%` | `#372806` |
+| `--danger` | `9 78% 61%` | `#EA6950` |
+| `--danger-foreground` | `0 0% 100%` | `#FFFFFF` |
+| `--radius` | — | `0.5rem` |
+
+**Typography:** body uses system sans (`-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif`); numerics and code use `JetBrains Mono`.
 
 ## Migration map (Tailwind literal -> token)
 

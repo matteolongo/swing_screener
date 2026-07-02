@@ -1,12 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import {
-  CalendarCheck,
-  CalendarDays,
-  BookMarked,
-  Database,
-  Settings2,
-  Activity,
-} from 'lucide-react';
+import { CalendarCheck, CalendarDays, BookMarked, Settings2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import type { MessageKey } from '@/i18n/types';
@@ -21,15 +14,8 @@ const primaryNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.today', href: '/today', icon: CalendarCheck },
   { labelKey: 'sidebar.nav.calendar', href: '/calendar', icon: CalendarDays },
   { labelKey: 'sidebar.nav.book', href: '/book', icon: BookMarked },
-  { labelKey: 'sidebar.nav.universes', href: '/universes', icon: Database },
-  { labelKey: 'sidebar.nav.datasources', href: '/datasources', icon: Activity },
+  { labelKey: 'sidebar.nav.system', href: '/system', icon: Settings2 },
 ];
-
-const settingsNav: NavigationItem = {
-  labelKey: 'sidebar.nav.settings',
-  href: '/strategy',
-  icon: Settings2,
-};
 
 interface SidebarProps {
   className?: string;
@@ -100,21 +86,6 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
 
       {/* Footer */}
       <div className="border-t border-border px-2 pt-2 pb-3 shrink-0">
-        <NavLink
-          to={settingsNav.href}
-          onClick={() => onNavigate?.()}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors',
-              isActive
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted hover:bg-foreground/5 hover:text-foreground'
-            )
-          }
-        >
-          <settingsNav.icon className="w-4 h-4 shrink-0" />
-          {t(settingsNav.labelKey)}
-        </NavLink>
         <p className="text-[11px] text-muted/60 px-3 mt-1.5">
           {t('sidebar.versionLabel')}
         </p>

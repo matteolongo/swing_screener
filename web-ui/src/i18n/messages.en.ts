@@ -37,6 +37,7 @@ export const messagesEn = {
     },
     yes: 'Yes',
     no: 'No',
+    close: 'Close',
   },
   watchlist: {
     actions: {
@@ -585,6 +586,7 @@ export const messagesEn = {
       universes: 'Universes',
       settings: 'Settings',
       datasources: 'Data Sources',
+      system: 'System',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
@@ -1023,6 +1025,12 @@ export const messagesEn = {
     focusView: 'Focus view',
     showNavigation: 'Show navigation',
     hideNavigation: 'Hide navigation',
+  },
+  statusBar: {
+    strategy: 'Strategy',
+    equity: 'Equity',
+    realizedPnl: 'P&L',
+    riskPerTrade: 'Risk/trade',
   },
   strategyCoach: {
     title: 'Strategy Coach',
@@ -2368,6 +2376,29 @@ export const messagesEn = {
       extended: 'extended',
       none: '',
     },
+  },
+  system: {
+    title: 'System',
+    subtitle: 'Pool, data sources, and strategy configuration.',
+    tabs: { pool: 'Pool & Universes', datasources: 'Data Sources', strategy: 'Strategy' },
+  },
+  badges: {
+    freshness: { finalClose: 'Final close', intraday: 'Intraday' },
+    decision: {
+      buyNow: 'Buy now',
+      buyOnPullback: 'Buy on pullback',
+      waitForBreakout: 'Wait for breakout',
+      watch: 'Watch',
+      tacticalOnly: 'Tactical only',
+      avoid: 'Avoid',
+      manageOnly: 'Manage only',
+    },
+    conviction: { high: 'High', medium: 'Medium', low: 'Low' },
+    exhaustion: { fine: 'Fine', watch: 'Watch', exit: 'Exit' },
+    positionSignal: { hold: 'Hold', trim: 'Trim', exit: 'Exit' },
+    orderReview: { stale: 'Stale', stillValid: 'Still valid', noData: 'No data' },
+    thesisDelta: { new: 'New', confirmed: 'Confirmed', weakening: 'Weakening', invalidated: 'Invalidated' },
+    job: { queued: 'Queued', running: 'Running', completed: 'Completed', error: 'Failed' },
   },
 } as const;
 

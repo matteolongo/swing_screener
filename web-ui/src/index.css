@@ -1,27 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Instrument palette — dark only. HSL channels for the hsl(var(--x)) Tailwind bridge.
-     Color carries signal: success/danger/warning are reserved for R / P&L / risk state;
-     primary (indigo) is the single interactive accent. See /tmp/swing-mockups/DESIGN_TOKENS.md. */
-  --background: 218 27% 6%;      /* #0B0E13 ink-900 — app background */
-  --foreground: 217 29% 93%;     /* #E9EDF3 — primary text */
-  --muted: 215 16% 65%;          /* #97A3B4 — secondary text */
-  --border: 214 21% 17%;         /* #232B36 — hairline */
-  --surface: 219 24% 9%;         /* #11151C ink-800 — panel / card */
-  --primary: 232 90% 73%;        /* #7C8CF8 — interactive accent (indigo) */
-  --primary-foreground: 218 27% 6%;
-  --success: 155 50% 52%;        /* #46C28E — R / P&L positive */
-  --success-foreground: 218 27% 8%;
-  --warning: 42 74% 57%;         /* #E3B341 — caution / time-stop */
+  /* Clean-console palette — dark only. Neutral graphite, indigo single accent.
+     success/danger reserved for R / P&L sign; warning = attention.
+     HSL channels for the hsl(var(--x)) Tailwind bridge. */
+  --background: 220 14% 7%;      /* #0F1114 — app background */
+  --foreground: 220 15% 92%;     /* #E7E9EE — primary text */
+  --muted: 220 10% 63%;          /* #959CA8 — secondary text */
+  --border: 220 10% 17%;         /* #272A30 — hairline */
+  --surface: 220 12% 10%;        /* #16181D — panel / card */
+  --primary: 233 76% 71%;        /* #8290EE — interactive accent (indigo) */
+  --primary-foreground: 220 14% 7%;
+  --success: 155 45% 51%;        /* #48BD8B — R / P&L positive */
+  --success-foreground: 220 14% 8%;
+  --warning: 42 70% 56%;         /* #DDB040 — attention / stale / intraday */
   --warning-foreground: 42 80% 12%;
-  --danger: 9 84% 62%;           /* #F0654E — R / P&L negative */
+  --danger: 9 78% 61%;           /* #EA6950 — R / P&L negative */
   --danger-foreground: 0 0% 100%;
-  --radius: 0.375rem;
+  --radius: 0.5rem;
 }
 
 * {
@@ -29,7 +29,7 @@
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: hsl(var(--background));

@@ -13,8 +13,9 @@ describe('Sidebar', () => {
     renderWithProviders(<Sidebar />);
 
     expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getByText('Calendar')).toBeInTheDocument();
     expect(screen.getByText('Book')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getByText('System')).toBeInTheDocument();
   });
 
   it('should not show old navigation items removed in revamp', () => {
