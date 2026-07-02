@@ -2370,6 +2370,24 @@ export const messagesEn = {
       none: '',
     },
   },
+  badges: {
+    freshness: { finalClose: 'Final close', intraday: 'Intraday' },
+    decision: {
+      buyNow: 'Buy now',
+      buyOnPullback: 'Buy on pullback',
+      waitForBreakout: 'Wait for breakout',
+      watch: 'Watch',
+      tacticalOnly: 'Tactical only',
+      avoid: 'Avoid',
+      manageOnly: 'Manage only',
+    },
+    conviction: { high: 'High', medium: 'Medium', low: 'Low' },
+    exhaustion: { fine: 'Fine', watch: 'Watch', exit: 'Exit' },
+    positionSignal: { hold: 'Hold', trim: 'Trim', exit: 'Exit' },
+    orderReview: { stale: 'Stale', stillValid: 'Still valid', noData: 'No data' },
+    thesisDelta: { new: 'New', confirmed: 'Confirmed', weakening: 'Weakening', invalidated: 'Invalidated' },
+    job: { queued: 'Queued', running: 'Running', completed: 'Completed', error: 'Failed' },
+  },
 } as const;
 
 export type MessagesEn = typeof messagesEn;
