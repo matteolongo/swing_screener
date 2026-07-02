@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { CalendarCheck, CalendarDays, BookMarked, Settings2 } from 'lucide-react';
+import { CalendarCheck, CalendarDays, BookMarked, Settings2, ScanSearch } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import type { MessageKey } from '@/i18n/types';
@@ -12,6 +12,7 @@ type NavigationItem = {
 
 const primaryNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.today', href: '/today', icon: CalendarCheck },
+  { labelKey: 'sidebar.nav.screener', href: '/screener', icon: ScanSearch },
   { labelKey: 'sidebar.nav.calendar', href: '/calendar', icon: CalendarDays },
   { labelKey: 'sidebar.nav.book', href: '/book', icon: BookMarked },
   { labelKey: 'sidebar.nav.system', href: '/system', icon: Settings2 },

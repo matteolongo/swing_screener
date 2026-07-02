@@ -582,6 +582,7 @@ export const messagesEn = {
       analytics: 'Analytics',
       calendar: 'Calendar',
       today: 'Today',
+      screener: 'Screener',
       book: 'Book',
       universes: 'Universes',
       settings: 'Settings',
@@ -2271,11 +2272,6 @@ export const messagesEn = {
     errorFetch: 'Failed to load DeGiro orders.',
   },
   todayPage: {
-    tabs: {
-      today: 'Today',
-      screener: 'Last Run',
-      watchlist: 'Watchlist',
-    },
     openPositions: {
       sectionTitle: 'Open positions',
       analyzing: 'Analyzing…',
@@ -2386,6 +2382,13 @@ export const messagesEn = {
       title: 'Calendar',
       empty: 'No upcoming events.',
       viewAll: 'View full calendar →',
+    },
+  },
+  screenerPage: {
+    title: 'Screener',
+    tabs: {
+      candidates: 'Candidates',
+      watchlist: 'Watchlist',
     },
   },
   chart: {

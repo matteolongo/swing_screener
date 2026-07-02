@@ -11,6 +11,7 @@ const Strategy = lazy(() => import('./pages/Strategy'));
 
 // New primary destination pages
 const Today = lazy(() => import('./pages/Today'));
+const Screener = lazy(() => import('./pages/Screener'));
 const Book = lazy(() => import('./pages/Book'));
 const Universes = lazy(() => import('./pages/Universes'));
 const Calendar = lazy(() => import('./pages/Calendar'));
@@ -38,6 +39,7 @@ function App() {
                 {/* New primary destinations */}
                 <Route index element={<Navigate to="/today" replace />} />
                 <Route path="today" element={<ErrorBoundary><Today /></ErrorBoundary>} />
+                <Route path="screener" element={<ErrorBoundary><Screener /></ErrorBoundary>} />
                 <Route path="calendar" element={<ErrorBoundary><Calendar /></ErrorBoundary>} />
                 <Route path="book" element={<ErrorBoundary><Book /></ErrorBoundary>} />
                 <Route path="symbol/:ticker" element={<ErrorBoundary><Symbol /></ErrorBoundary>} />

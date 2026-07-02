@@ -13,6 +13,7 @@ describe('Sidebar', () => {
     renderWithProviders(<Sidebar />);
 
     expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getByText('Screener')).toBeInTheDocument();
     expect(screen.getByText('Calendar')).toBeInTheDocument();
     expect(screen.getByText('Book')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
