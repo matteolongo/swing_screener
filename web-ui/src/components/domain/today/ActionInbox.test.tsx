@@ -7,6 +7,7 @@ import { I18nProvider } from '@/i18n/I18nProvider';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import ActionInbox from './ActionInbox';
+import { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
 import type {
   DailyReview,
   DailyReviewPositionClose,
@@ -200,7 +201,9 @@ beforeEach(() => {
     isFetching: false,
     dataUpdatedAt: Date.parse('2026-06-26T10:00:00Z'),
   };
-  mockWeeklyReviews = { data: [] };
+  // Default: current week already reviewed, so the Friday weekly-review nudge
+  // never injects a row into date-agnostic tests (weekly-nudge tests override this).
+  mockWeeklyReviews = { data: [{ week_id: getCurrentWeekId() }] };
   cancelOrderMutate = vi.fn();
   cancelOrderMutate.mockImplementation((_orderId: string, opts?: { onSuccess?: () => void }) => {
     opts?.onSuccess?.();
