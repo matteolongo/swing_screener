@@ -2340,6 +2340,28 @@ export const messagesEn = {
       earningsBadge: '⚠ {{days}}d',
       candidateConfidence: '{{pct}}%',
     },
+    inbox: {
+      kinds: {
+        close: 'Close',
+        updateStop: 'Update stop',
+        exitSignal: 'Exit signal',
+        staleOrder: 'Stale order',
+        addOn: 'Add-on',
+        newCandidate: 'New candidate',
+        watch: 'Watch',
+        weeklyReview: 'Weekly review',
+      },
+      actions: {
+        close: 'Close',
+        applyStop: 'Apply stop',
+        updateStop: 'Update stop',
+        cancelOrder: 'Cancel order',
+        planOrder: 'Plan order',
+        analyze: 'Analyze',
+        goToReview: 'Go to review',
+      },
+      why: 'Why',
+    },
     keyboard: {
       hint: 'j/k navigate · Enter select',
     },
