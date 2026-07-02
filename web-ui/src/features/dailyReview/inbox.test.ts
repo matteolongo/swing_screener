@@ -263,10 +263,16 @@ describe('buildInboxItems', () => {
     expect(result[1].reason).toBe('no_data');
   });
 
-  it('updateStop items carry stopCurrent, stopSuggested, and a narrowed exhaustionLabel', () => {
+  it('updateStop items carry stopCurrent, stopSuggested, a narrowed exhaustionLabel, and exhaustionScore', () => {
     const review = makeEmptyReview({
       positionsUpdateStop: [
-        makeUpdate({ ticker: 'MSFT', stopCurrent: 380, stopSuggested: 395, exhaustionLabel: 'exit' }),
+        makeUpdate({
+          ticker: 'MSFT',
+          stopCurrent: 380,
+          stopSuggested: 395,
+          exhaustionLabel: 'exit',
+          exhaustionScore: 8.2,
+        }),
       ],
     });
     const result = buildInboxItems(baseInput({ review }));
@@ -275,7 +281,63 @@ describe('buildInboxItems', () => {
       stopCurrent: 380,
       stopSuggested: 395,
       exhaustionLabel: 'exit',
+      exhaustionScore: 8.2,
     });
+  });
+
+  it('updateStop detail is a plain data line of stopCurrent -> stopSuggested plus the reason', () => {
+    const review = makeEmptyReview({
+      positionsUpdateStop: [
+        makeUpdate({ ticker: 'MSFT', stopCurrent: 380, stopSuggested: 395.5, reason: 'Trail stop up.' }),
+      ],
+    });
+    const result = buildInboxItems(baseInput({ review }));
+    expect(result[0].detail).toBe('380.00 → 395.50 · Trail stop up.');
+  });
+
+  it('staleOrder detail is a plain days-pending data line', () => {
+    const review = makeEmptyReview({
+      pendingOrdersReview: [makePendingOrder({ orderId: 'ord-1', daysPending: 5 })],
+    });
+    const result = buildInboxItems(baseInput({ review }));
+    expect(result[0].detail).toBe('5 days pending.');
+  });
+
+  it('staleOrder detail singularizes 1 day', () => {
+    const review = makeEmptyReview({
+      pendingOrdersReview: [makePendingOrder({ orderId: 'ord-1', daysPending: 1 })],
+    });
+    const result = buildInboxItems(baseInput({ review }));
+    expect(result[0].detail).toBe('1 day pending.');
+  });
+
+  it('newCandidate/addOn detail is a plain plan line from entry/stop/shares/rReward', () => {
+    const review = makeEmptyReview({
+      newCandidates: [makeCandidate({ ticker: 'GOOG', entry: 151.2, stop: 145, shares: 10, rReward: 2.1 })],
+      positionsAddOnCandidates: [makeCandidate({ ticker: 'AMD', entry: 100, stop: 95, shares: 5, rReward: 1.5 })],
+    });
+    const result = buildInboxItems(baseInput({ review }));
+    const byTicker = new Map(result.map((i) => [i.ticker, i]));
+    expect(byTicker.get('AMD')?.detail).toBe('Entry 100.00 · Stop 95.00 · 5 sh · 1.50R');
+    expect(byTicker.get('GOOG')?.detail).toBe('Entry 151.20 · Stop 145.00 · 10 sh · 2.10R');
+  });
+
+  it('watch detail carries trigger/watch price data from the WatchItem fields', () => {
+    const review = makeEmptyReview({
+      watchlistNearTrigger: [
+        makeWatchItem({ ticker: 'ASML', signalTriggerPrice: 700, watchPrice: 680 }),
+      ],
+    });
+    const result = buildInboxItems(baseInput({ review }));
+    expect(result[0].detail).toBe('Trigger 700.00 · Watch 680.00');
+  });
+
+  it('watch detail is undefined when neither trigger nor watch price is present', () => {
+    const review = makeEmptyReview({
+      watchlistNearTrigger: [makeWatchItem({ ticker: 'ASML', signalTriggerPrice: undefined, watchPrice: undefined })],
+    });
+    const result = buildInboxItems(baseInput({ review }));
+    expect(result[0].detail).toBeUndefined();
   });
 
   it('drops an unrecognized exhaustionLabel value rather than passing it through', () => {

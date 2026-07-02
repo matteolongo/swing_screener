@@ -6,10 +6,12 @@
 import type {
   DailyReview,
   DailyReviewCandidate,
+  DailyReviewPositionUpdate,
   PendingOrderReview,
 } from './types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import type { OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
+import type { WatchItem } from '@/features/watchlist/types';
 
 export type InboxItemKind =
   | 'close'
@@ -32,6 +34,7 @@ export interface InboxItem {
   stopSuggested?: number;
   stopCurrent?: number;
   exhaustionLabel?: 'fine' | 'watch' | 'exit';
+  exhaustionScore?: number | null;
   candidate?: DailyReviewCandidate;
   orderId?: string;
   orderCategory?: 'stale' | 'no_data';
@@ -66,6 +69,31 @@ function staleOrderReason(order: PendingOrderReview): string {
   return order.note || order.category;
 }
 
+/** Plain data formatting for expand-for-why detail lines. No i18n here by design. */
+function fmtPrice(value: number): string {
+  return value.toFixed(2);
+}
+
+function updateStopDetail(update: DailyReviewPositionUpdate): string {
+  return `${fmtPrice(update.stopCurrent)} → ${fmtPrice(update.stopSuggested)} · ${update.reason}`;
+}
+
+function staleOrderDetail(order: PendingOrderReview): string {
+  const days = order.daysPending;
+  return `${days} day${days === 1 ? '' : 's'} pending.`;
+}
+
+function candidatePlanDetail(candidate: DailyReviewCandidate): string {
+  return `Entry ${fmtPrice(candidate.entry)} · Stop ${fmtPrice(candidate.stop)} · ${candidate.shares} sh · ${candidate.rReward.toFixed(2)}R`;
+}
+
+function watchDetail(watch: WatchItem): string | undefined {
+  const parts: string[] = [];
+  if (watch.signalTriggerPrice != null) parts.push(`Trigger ${fmtPrice(watch.signalTriggerPrice)}`);
+  if (watch.watchPrice != null) parts.push(`Watch ${fmtPrice(watch.watchPrice)}`);
+  return parts.length > 0 ? parts.join(' · ') : undefined;
+}
+
 export function buildInboxItems(input: BuildInboxInput): InboxItem[] {
   const { review, positionById, intelligenceByTicker, weeklyReviewDue } = input;
   const items: InboxItem[] = [];
@@ -93,6 +121,8 @@ export function buildInboxItems(input: BuildInboxInput): InboxItem[] {
       stopSuggested: update.stopSuggested,
       stopCurrent: update.stopCurrent,
       exhaustionLabel: narrowExhaustionLabel(update.exhaustionLabel),
+      exhaustionScore: update.exhaustionScore,
+      detail: updateStopDetail(update),
     });
   }
 
@@ -118,6 +148,7 @@ export function buildInboxItems(input: BuildInboxInput): InboxItem[] {
       orderId: order.orderId,
       orderCategory: order.category,
       daysPending: order.daysPending,
+      detail: staleOrderDetail(order),
     });
   }
 
@@ -128,6 +159,7 @@ export function buildInboxItems(input: BuildInboxInput): InboxItem[] {
       ticker: addOn.ticker,
       reason: candidateReason(addOn),
       candidate: addOn,
+      detail: candidatePlanDetail(addOn),
     });
   }
 
@@ -138,6 +170,7 @@ export function buildInboxItems(input: BuildInboxInput): InboxItem[] {
       ticker: candidate.ticker,
       reason: candidateReason(candidate),
       candidate,
+      detail: candidatePlanDetail(candidate),
     });
   }
 
@@ -148,6 +181,7 @@ export function buildInboxItems(input: BuildInboxInput): InboxItem[] {
       ticker: watch.ticker,
       reason: watch.signal || '',
       distanceToTriggerPct: watch.distanceToTriggerPct,
+      detail: watchDetail(watch),
     });
   }
 

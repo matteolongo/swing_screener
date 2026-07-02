@@ -94,7 +94,8 @@ Full timing guidance: `docs/product/DAILY_USAGE_GUIDE.md`.
 
 The following i18n key groups are no longer used after the Today Action Inbox rewrite and related banner removals. They are listed here for audit purposes **only** — do not prune until Phase 7 formal deprecation sweep:
 
-- `todayPage.actionList.*` — old daily review action list
+- `todayPage.actionList.*` — old daily review action list, except `timeStopWarning`/`timeStopBadge`/`earningsBadge` (still used by `rowBadges.tsx`)
 - `todayPage.pendingBadge.*` — old pending orders badge
 - `todayPage.weeklyNudge.*` — old weekly review nudge banner
+- `dailyReviewBanner.*` — old daily review summary banner (fully orphaned, no call sites)
 - `dailyReview.sections.*` — parts no longer rendered in the inbox (deprecation sweep will clarify which keys remain)

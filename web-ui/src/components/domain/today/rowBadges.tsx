@@ -3,7 +3,7 @@ import { t } from '@/i18n/t';
 import { formatNumber } from '@/utils/formatters';
 import { useEarningsProximity } from '@/features/portfolio/hooks';
 import { exhaustionBadge, positionSignalBadge } from '@/lib/badgeMap';
-import type { OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
+import type { PositionSignalAction } from '@/features/intelligence/types';
 
 export interface TimeStopBadgeProps {
   daysOpen: number;
@@ -51,34 +51,12 @@ export function ExhaustionBadge({ score, label }: { score: number | null; label:
   );
 }
 
-export function AiSignalBadge({ summary }: { summary: OpenPositionIntelligenceSummary | undefined }) {
-  const posSignal = summary?.intelligence?.positionSignal;
-  if (!posSignal) return null;
-  const spec = positionSignalBadge(posSignal.action);
+export function AiSignalBadge({ action }: { action: PositionSignalAction | undefined }) {
+  if (!action) return null;
+  const spec = positionSignalBadge(action);
   return (
     <Badge variant={spec.variant} className="shrink-0">
       {t(spec.labelKey)}
     </Badge>
   );
-}
-
-export function VolumeDot({ ratio }: { ratio: number | undefined }) {
-  if (ratio == null) return null;
-  if (ratio >= 1.5) {
-    return (
-      <span
-        className="inline-block w-2 h-2 rounded-full bg-success shrink-0"
-        title={`Volume ${ratio.toFixed(1)}× avg (strong)`}
-      />
-    );
-  }
-  if (ratio < 0.8) {
-    return (
-      <span
-        className="inline-block w-2 h-2 rounded-full bg-foreground/10 shrink-0"
-        title={`Volume ${ratio.toFixed(1)}× avg (weak)`}
-      />
-    );
-  }
-  return null;
 }

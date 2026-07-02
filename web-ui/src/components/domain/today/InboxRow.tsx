@@ -5,6 +5,7 @@ import { formatNumber } from '@/utils/formatters';
 import StatusDot, { type StatusTone } from '@/components/common/StatusDot';
 import Badge, { type BadgeVariant } from '@/components/common/Badge';
 import RChip from '@/components/common/RChip';
+import { AiSignalBadge, ExhaustionBadge } from '@/components/domain/today/rowBadges';
 import type { InboxItem, InboxItemKind } from '@/features/dailyReview/inbox';
 import type { MessageKey } from '@/i18n/types';
 
@@ -21,6 +22,8 @@ export interface InboxRowProps {
   item: InboxItem;
   isFocused?: boolean;
   done?: boolean;
+  /** Actions to render disabled for this row (e.g. applyStop while its mutation is in flight). */
+  disabledActions?: InboxAction[];
   onSelectTicker: (ticker: string) => void;
   onAction: (action: InboxAction, item: InboxItem) => void;
   expanded?: boolean;
@@ -94,6 +97,7 @@ export default function InboxRow({
   item,
   isFocused,
   done,
+  disabledActions,
   onSelectTicker,
   onAction,
   expanded,
@@ -161,30 +165,50 @@ export default function InboxRow({
             })}
           </span>
         )}
-        <span className="truncate flex-1 text-muted">{item.reason}</span>
-        {actions.map(({ action, labelKey, primary }) => (
-          <span
-            key={action}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => {
-              e.stopPropagation();
-              onAction(action, item);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.stopPropagation();
-                onAction(action, item);
-              }
-            }}
-            className={cn(
-              'shrink-0 cursor-pointer rounded px-1.5 py-0.5 text-xs font-medium',
-              primary ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-foreground/5 text-muted hover:bg-foreground/10',
-            )}
-          >
-            {t(labelKey)}
+        {item.kind === 'updateStop' && item.stopCurrent != null && item.stopSuggested != null && (
+          <span className="font-mono tabular-nums text-muted shrink-0">
+            {formatNumber(item.stopCurrent, 2)} → {formatNumber(item.stopSuggested, 2)}
           </span>
-        ))}
+        )}
+        {(item.kind === 'close' || item.kind === 'exitSignal') && (
+          <AiSignalBadge action={item.positionSignal} />
+        )}
+        {item.kind === 'updateStop' && item.exhaustionLabel && (
+          <ExhaustionBadge score={item.exhaustionScore ?? null} label={item.exhaustionLabel} />
+        )}
+        <span className="truncate flex-1 text-muted">{item.reason}</span>
+        {actions.map(({ action, labelKey, primary }) => {
+          const isDisabled = disabledActions?.includes(action) ?? false;
+          return (
+            <span
+              key={action}
+              role="button"
+              aria-disabled={isDisabled || undefined}
+              tabIndex={isDisabled ? -1 : 0}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isDisabled) return;
+                onAction(action, item);
+              }}
+              onKeyDown={(e) => {
+                if (isDisabled) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  onAction(action, item);
+                }
+              }}
+              className={cn(
+                'shrink-0 rounded px-1.5 py-0.5 text-xs font-medium',
+                isDisabled
+                  ? 'opacity-50 cursor-not-allowed pointer-events-none'
+                  : 'cursor-pointer',
+                primary ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-foreground/5 text-muted hover:bg-foreground/10',
+              )}
+            >
+              {t(labelKey)}
+            </span>
+          );
+        })}
         {onToggleExpand && (
           <span
             role="button"

@@ -251,6 +251,95 @@ describe('InboxRow', () => {
     expect(onToggleExpand).toHaveBeenCalled();
   });
 
+  it('renders the suggested stop inline (mono stopCurrent -> stopSuggested) on updateStop rows without expanding', () => {
+    renderWithProviders(
+      <InboxRow
+        item={makeItem({ id: 'updateStop:MSFT', kind: 'updateStop', ticker: 'MSFT', stopCurrent: 380, stopSuggested: 395 })}
+        onSelectTicker={vi.fn()}
+        onAction={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('380.00 → 395.00')).toBeInTheDocument();
+  });
+
+  it('does not render the inline suggested stop when stopCurrent/stopSuggested are absent', () => {
+    renderWithProviders(
+      <InboxRow
+        item={makeItem({ id: 'updateStop:MSFT', kind: 'updateStop', ticker: 'MSFT' })}
+        onSelectTicker={vi.fn()}
+        onAction={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/→/)).not.toBeInTheDocument();
+  });
+
+  it('renders an AiSignalBadge on close rows carrying a positionSignal', () => {
+    renderWithProviders(
+      <InboxRow
+        item={makeItem({ positionSignal: 'EXIT' })}
+        onSelectTicker={vi.fn()}
+        onAction={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(messagesEn.badges.positionSignal.exit)).toBeInTheDocument();
+  });
+
+  it('renders no AiSignalBadge on close rows without a positionSignal', () => {
+    renderWithProviders(
+      <InboxRow item={makeItem()} onSelectTicker={vi.fn()} onAction={vi.fn()} />,
+    );
+    expect(screen.queryByText(messagesEn.badges.positionSignal.exit)).not.toBeInTheDocument();
+  });
+
+  it('renders an ExhaustionBadge on updateStop rows carrying an exhaustionLabel', () => {
+    renderWithProviders(
+      <InboxRow
+        item={makeItem({
+          id: 'updateStop:MSFT',
+          kind: 'updateStop',
+          ticker: 'MSFT',
+          exhaustionLabel: 'watch',
+          exhaustionScore: 6.5,
+        })}
+        onSelectTicker={vi.fn()}
+        onAction={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(messagesEn.badges.exhaustion.watch, { exact: false })).toBeInTheDocument();
+  });
+
+  it('disables the applyStop action when it is in disabledActions', async () => {
+    const onAction = vi.fn();
+    const item = makeItem({
+      id: 'updateStop:MSFT',
+      kind: 'updateStop',
+      ticker: 'MSFT',
+      stopSuggested: 395,
+    });
+    const { user } = renderWithProviders(
+      <InboxRow
+        item={item}
+        onSelectTicker={vi.fn()}
+        onAction={onAction}
+        disabledActions={['applyStop']}
+      />,
+    );
+    const applyStopButton = screen.getByRole('button', { name: messagesEn.todayPage.inbox.actions.applyStop });
+    expect(applyStopButton).toHaveAttribute('aria-disabled', 'true');
+    await user.click(applyStopButton);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('leaves updateStop enabled when applyStop is not in disabledActions', async () => {
+    const onAction = vi.fn();
+    const item = makeItem({ id: 'updateStop:MSFT', kind: 'updateStop', ticker: 'MSFT', stopSuggested: 395 });
+    const { user } = renderWithProviders(
+      <InboxRow item={item} onSelectTicker={vi.fn()} onAction={onAction} disabledActions={['applyStop']} />,
+    );
+    await user.click(screen.getByRole('button', { name: messagesEn.todayPage.inbox.actions.updateStop }));
+    expect(onAction).toHaveBeenCalledWith('updateStop', item);
+  });
+
   it('renders the row dimmed and struck when done is true', () => {
     const { container } = renderWithProviders(
       <InboxRow item={makeItem()} onSelectTicker={vi.fn()} onAction={vi.fn()} done />,

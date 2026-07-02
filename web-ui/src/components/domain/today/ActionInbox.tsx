@@ -60,7 +60,10 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
 
   const {
     doneIds,
+    markDone,
     acceptedStops,
+    acceptingItemId,
+    acceptStopMutation,
     updateStopMutation,
     closePositionMutation,
     updateStopTarget,
@@ -82,7 +85,7 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
     (action: InboxAction, item: InboxItem) => {
       switch (action) {
         case 'close':
-          if (item.position) setCloseTarget(item.position);
+          if (item.position) setCloseTarget({ position: item.position, itemId: item.id });
           break;
         case 'applyStop':
           if (item.position && item.stopSuggested != null) {
@@ -90,11 +93,11 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
           }
           break;
         case 'updateStop':
-          if (item.position) setUpdateStopTarget(item.position);
+          if (item.position) setUpdateStopTarget({ position: item.position, itemId: item.id });
           break;
         case 'cancelOrder':
           if (item.orderId && window.confirm(t('todayPage.inbox.cancelOrderConfirm'))) {
-            cancelOrderMutation.mutate(item.orderId);
+            cancelOrderMutation.mutate(item.orderId, { onSuccess: () => markDone(item.id) });
           }
           break;
         case 'planOrder':
@@ -111,7 +114,7 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
           break;
       }
     },
-    [cancelOrderMutation, handleAcceptStop, navigate, onTickerSelect, setCloseTarget, setUpdateStopTarget],
+    [cancelOrderMutation, handleAcceptStop, markDone, navigate, onTickerSelect, setCloseTarget, setUpdateStopTarget],
   );
 
   const asOfLabel = review
@@ -194,6 +197,9 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
               item={item}
               isFocused={focusedIndex === idx}
               done={doneIds.has(item.id) || acceptedStops.has(item.id)}
+              disabledActions={
+                acceptStopMutation.isPending && acceptingItemId === item.id ? ['applyStop'] : undefined
+              }
               onSelectTicker={handleItemClick}
               onAction={handleAction}
               expanded={expandedId === item.id}
@@ -211,7 +217,7 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
 
       {updateStopTarget && (
         <UpdateStopModalForm
-          position={updateStopTarget}
+          position={updateStopTarget.position}
           isLoading={updateStopMutation.isPending}
           error={updateStopMutation.error instanceof Error ? updateStopMutation.error.message : undefined}
           onClose={() => setUpdateStopTarget(null)}
@@ -220,7 +226,7 @@ export default function ActionInbox({ onTickerSelect }: ActionInboxProps) {
       )}
       {closeTarget && (
         <ClosePositionModalForm
-          position={closeTarget}
+          position={closeTarget.position}
           isLoading={closePositionMutation.isPending}
           error={closePositionMutation.error instanceof Error ? closePositionMutation.error.message : undefined}
           onClose={() => setCloseTarget(null)}

@@ -6,55 +6,72 @@ import {
 import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
 import type { InboxItem } from '@/features/dailyReview/inbox';
 
+/** A modal target paired with the inbox item id that opened it, so success handlers
+ * can mark the right row done — `doneIds`/rows are keyed by `item.id` (e.g. `close:AMAT`),
+ * never by `position.positionId`. */
+export interface InboxModalTarget {
+  position: Position;
+  itemId: string;
+}
+
 export function useTodayActions(items: InboxItem[], onTickerSelect: (ticker: string) => void) {
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
   const [acceptedStops, setAcceptedStops] = useState<Set<string>>(new Set());
-  const [updateStopTarget, setUpdateStopTarget] = useState<Position | null>(null);
-  const [closeTarget, setCloseTarget] = useState<Position | null>(null);
+  const [updateStopTarget, setUpdateStopTarget] = useState<InboxModalTarget | null>(null);
+  const [closeTarget, setCloseTarget] = useState<InboxModalTarget | null>(null);
+  const [acceptingItemId, setAcceptingItemId] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
   const acceptStopMutation = useUpdateStopMutation();
   const updateStopMutation = useUpdateStopMutation();
   const closePositionMutation = useClosePositionMutation();
 
+  const markDone = useCallback((itemId: string) => {
+    setDoneIds((prev) => new Set([...prev, itemId]));
+  }, []);
+
   const handleAcceptStop = useCallback(
     (itemId: string, positionId: string, stopSuggested: number, reason: string) => {
+      setAcceptingItemId(itemId);
       acceptStopMutation.mutate(
         { positionId, request: { newStop: stopSuggested, reason } },
-        { onSuccess: () => setAcceptedStops((prev) => new Set([...prev, itemId])) },
+        {
+          onSuccess: () => setAcceptedStops((prev) => new Set([...prev, itemId])),
+          onSettled: () => setAcceptingItemId((cur) => (cur === itemId ? null : cur)),
+        },
       );
     },
     [acceptStopMutation],
   );
 
   const handleUpdateStop = useCallback(
-    (position: Position, req: UpdateStopRequest) => {
+    (target: InboxModalTarget, req: UpdateStopRequest) => {
       updateStopMutation.mutate(
-        { positionId: position.positionId!, request: req },
+        { positionId: target.position.positionId!, request: req },
         {
           onSuccess: () => {
             setUpdateStopTarget(null);
-            setDoneIds((prev) => new Set([...prev, position.positionId!]));
+            markDone(target.itemId);
           },
         },
       );
     },
-    [updateStopMutation],
+    [updateStopMutation, markDone],
   );
 
   const handleClosePosition = useCallback(
-    (position: Position, req: ClosePositionRequest) => {
+    (target: InboxModalTarget, req: ClosePositionRequest) => {
       closePositionMutation.mutate(
-        { positionId: position.positionId!, request: req },
+        { positionId: target.position.positionId!, request: req },
         {
           onSuccess: () => {
             setCloseTarget(null);
-            setDoneIds((prev) => new Set([...prev, position.positionId!]));
+            markDone(target.itemId);
           },
         },
       );
     },
-    [closePositionMutation],
+    [closePositionMutation, markDone],
   );
 
   const handleItemClick = useCallback(
@@ -95,7 +112,9 @@ export function useTodayActions(items: InboxItem[], onTickerSelect: (ticker: str
 
   return {
     doneIds,
+    markDone,
     acceptedStops,
+    acceptingItemId,
     acceptStopMutation,
     updateStopMutation,
     closePositionMutation,

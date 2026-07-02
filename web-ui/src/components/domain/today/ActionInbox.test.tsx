@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import ActionInbox from './ActionInbox';
@@ -11,6 +11,7 @@ import type {
   PendingOrderReview,
 } from '@/features/dailyReview/types';
 import type { WatchItem } from '@/features/watchlist/types';
+import type { PositionWithMetrics } from '@/features/portfolio/api';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -112,6 +113,42 @@ function makeWatchItem(overrides: Partial<WatchItem> = {}): WatchItem {
   };
 }
 
+function makePosition(overrides: Partial<PositionWithMetrics> = {}): PositionWithMetrics {
+  return {
+    ticker: 'AAPL',
+    status: 'open',
+    entryDate: '2026-06-01',
+    entryPrice: 100,
+    stopPrice: 95,
+    shares: 10,
+    pnl: -100,
+    pnlPercent: -10,
+    rNow: -1,
+    entryValue: 1000,
+    currentValue: 900,
+    perShareRisk: 5,
+    totalRisk: 50,
+    feesEur: 1,
+    daysOpen: 3,
+    timeStopWarning: false,
+    priceSource: 'live',
+    rUsesInitialRisk: true,
+    ...overrides,
+  };
+}
+
+function createMutationMock() {
+  return {
+    // Simulate immediate success so onSuccess-driven done-marking can be asserted.
+    mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: () => void; onSettled?: () => void }) => {
+      opts?.onSuccess?.();
+      opts?.onSettled?.();
+    }),
+    isPending: false,
+    error: null as Error | null,
+  };
+}
+
 // ─── Mocks ────────────────────────────────────────────────────────────────
 
 let mockDailyReview: {
@@ -124,6 +161,11 @@ let mockDailyReview: {
 };
 let mockWeeklyReviews: { data: Array<{ week_id: string }> | undefined };
 let cancelOrderMutate: ReturnType<typeof vi.fn>;
+let mockOpenPositions: PositionWithMetrics[];
+// Shared by both useUpdateStopMutation consumers in useTodayActions (accept + modal);
+// tests trigger only one flow at a time, so a single spy stays unambiguous.
+let updateStopMutationMock: ReturnType<typeof createMutationMock>;
+let closePositionMutationMock: ReturnType<typeof createMutationMock>;
 
 vi.mock('@/features/dailyReview/api', () => ({
   useDailyReview: () => mockDailyReview,
@@ -137,9 +179,11 @@ vi.mock('@/features/portfolio/hooks', async (orig) => {
   const actual = await orig<typeof import('@/features/portfolio/hooks')>();
   return {
     ...actual,
-    usePositions: () => ({ data: [] }),
+    usePositions: () => ({ data: mockOpenPositions }),
     useOpenPositionsIntelligence: () => ({ data: [] }),
     useCancelOrderMutation: () => ({ mutate: cancelOrderMutate, isPending: false }),
+    useUpdateStopMutation: () => updateStopMutationMock,
+    useClosePositionMutation: () => closePositionMutationMock,
   };
 });
 
@@ -154,6 +198,12 @@ beforeEach(() => {
   };
   mockWeeklyReviews = { data: [] };
   cancelOrderMutate = vi.fn();
+  cancelOrderMutate.mockImplementation((_orderId: string, opts?: { onSuccess?: () => void }) => {
+    opts?.onSuccess?.();
+  });
+  mockOpenPositions = [];
+  updateStopMutationMock = createMutationMock();
+  closePositionMutationMock = createMutationMock();
 });
 
 function getRows(container: HTMLElement) {
@@ -328,17 +378,21 @@ describe('ActionInbox — cold load', () => {
 // ─── Cancel-order flow (NEW) ────────────────────────────────────────────────
 
 describe('ActionInbox — cancel order flow', () => {
-  it('confirms then calls the cancel-order mutation with the order id', async () => {
+  it('confirms, calls the cancel-order mutation with the order id, and marks the row done on success', async () => {
     mockDailyReview.data = makeEmptyReview({
       pendingOrdersReview: [makePendingOrder({ orderId: 'ORD-TSLA-001', ticker: 'TSLA', category: 'stale' })],
     });
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    const { user } = renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
+    const { user, container } = renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
     await user.click(screen.getByText(t('todayPage.inbox.actions.cancelOrder')));
 
     expect(confirmSpy).toHaveBeenCalledWith(t('todayPage.inbox.cancelOrderConfirm'));
-    expect(cancelOrderMutate).toHaveBeenCalledWith('ORD-TSLA-001');
+    expect(cancelOrderMutate).toHaveBeenCalledWith('ORD-TSLA-001', expect.anything());
+
+    const staleRow = getRows(container).find((row) => row.textContent?.includes('TSLA'));
+    expect(staleRow).toHaveClass('opacity-50');
+    expect(staleRow).toHaveClass('line-through');
 
     confirmSpy.mockRestore();
   });
@@ -356,5 +410,107 @@ describe('ActionInbox — cancel order flow', () => {
     expect(cancelOrderMutate).not.toHaveBeenCalled();
 
     confirmSpy.mockRestore();
+  });
+});
+
+// ─── Done-state keying: modal flows mark the item id done (NEW) ─────────────
+
+describe('ActionInbox — modal flows mark rows done by item id', () => {
+  it('close via modal marks the close row done on success', async () => {
+    mockDailyReview.data = makeEmptyReview({
+      positionsClose: [makeClose({ ticker: 'AMAT', positionId: 'pos-amat' })],
+    });
+    mockOpenPositions = [makePosition({ ticker: 'AMAT', positionId: 'pos-amat' })];
+
+    const { user, container } = renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: t('todayPage.inbox.actions.close') }));
+    // Modal is open; submit it with the prefilled exit price.
+    await user.click(screen.getByRole('button', { name: t('closePositionModal.confirmClose') }));
+
+    expect(closePositionMutationMock.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ positionId: 'pos-amat' }),
+      expect.anything(),
+    );
+    const row = getRows(container).find((r) => r.textContent?.includes('AMAT'));
+    expect(row).toHaveClass('opacity-50');
+    expect(row).toHaveClass('line-through');
+  });
+
+  it('update-stop via modal marks the updateStop row done on success', async () => {
+    mockDailyReview.data = makeEmptyReview({
+      positionsUpdateStop: [makeUpdate({ ticker: 'AMAT', positionId: 'pos-amat' })],
+    });
+    // Low current stop so the MSW stop-suggestion (stop_old + 0.2) counts as a move-up
+    // and enables the modal submit button once the suggestion loads.
+    mockOpenPositions = [makePosition({ ticker: 'AMAT', positionId: 'pos-amat', entryPrice: 12, stopPrice: 10 })];
+
+    const { user, container } = renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: t('todayPage.inbox.actions.updateStop') }));
+    // Wait for the stop suggestion to load, apply it (a valid move-up), then submit.
+    await user.click(
+      await screen.findByRole('button', { name: t('positions.updateStopModal.useSuggested') }),
+    );
+    const submitButton = screen.getByRole('button', { name: t('common.actions.updateStop') });
+    expect(submitButton).not.toBeDisabled();
+    // happy-dom does not dispatch submit from a button click; submit the form directly
+    // (same pattern as the other modal-form tests).
+    fireEvent.submit(submitButton.closest('form') as HTMLFormElement);
+    await waitFor(() => expect(updateStopMutationMock.mutate).toHaveBeenCalled());
+
+    expect(updateStopMutationMock.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ positionId: 'pos-amat' }),
+      expect.anything(),
+    );
+    const row = getRows(container).find((r) => r.textContent?.includes('AMAT'));
+    expect(row).toHaveClass('opacity-50');
+    expect(row).toHaveClass('line-through');
+  });
+});
+
+// ─── Apply-stop pending state (NEW) ─────────────────────────────────────────
+
+describe('ActionInbox — apply-stop pending state', () => {
+  it('disables the applyStop action on the clicked row while the mutation is in flight', async () => {
+    mockDailyReview.data = makeEmptyReview({
+      positionsUpdateStop: [makeUpdate({ ticker: 'AMAT', positionId: 'pos-amat' })],
+    });
+    mockOpenPositions = [makePosition({ ticker: 'AMAT', positionId: 'pos-amat' })];
+    // In-flight mutation: mutate never settles and isPending stays true.
+    updateStopMutationMock.mutate.mockImplementation(() => {});
+    updateStopMutationMock.isPending = true;
+
+    const { user } = renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
+
+    const applyButton = screen.getByRole('button', { name: t('todayPage.inbox.actions.applyStop') });
+    expect(applyButton).not.toHaveAttribute('aria-disabled');
+
+    await user.click(applyButton);
+
+    expect(updateStopMutationMock.mutate).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole('button', { name: t('todayPage.inbox.actions.applyStop') }),
+    ).toHaveAttribute('aria-disabled', 'true');
+  });
+});
+
+// ─── Error strip with cached items (NEW) ────────────────────────────────────
+
+describe('ActionInbox — refetch error with cached review', () => {
+  it('renders the error strip and the cached rows at the same time', () => {
+    mockDailyReview.data = makeEmptyReview({
+      positionsClose: [makeClose({ ticker: 'AMAT', positionId: 'pos-amat' })],
+    });
+    mockDailyReview.error = new Error('network down');
+
+    const { container } = renderWithProviders(<ActionInbox onTickerSelect={vi.fn()} />);
+
+    expect(
+      screen.getByText(t('dailyReview.header.error', { message: 'network down' })),
+    ).toBeInTheDocument();
+    const rows = getRows(container);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain('AMAT');
   });
 });

@@ -2364,8 +2364,8 @@ export const messagesEn = {
       header: 'Inbox',
       asOf: 'As of {{date}} · {{time}}',
       refresh: 'Refresh inbox',
-      zeroTitle: "You're all caught up",
-      zeroSubtitle: 'No actions need your attention today.',
+      zeroTitle: 'Nothing to do.',
+      zeroSubtitle: 'No signals — do nothing.',
       cancelOrderConfirm: 'Cancel this order?',
     },
     keyboard: {
