@@ -37,6 +37,7 @@ export const messagesEn = {
     },
     yes: 'Yes',
     no: 'No',
+    close: 'Close',
   },
   watchlist: {
     actions: {
