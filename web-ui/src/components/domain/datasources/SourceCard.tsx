@@ -1,5 +1,6 @@
 import { t } from '@/i18n/t';
-import { cn } from '@/utils/cn';
+import { probeTone } from '@/lib/badgeMap';
+import StatusDot from '@/components/common/StatusDot';
 import type { MessageKey } from '@/i18n/types';
 import type { DataSource } from '@/features/datasources/types';
 
@@ -16,13 +17,6 @@ const STATUS_KEY: Record<string, MessageKey> = {
   not_configured: 'datasources.status.not_configured',
 };
 
-const STATUS_CLASS: Record<string, string> = {
-  ok: 'text-success',
-  degraded: 'text-warning',
-  down: 'text-danger',
-  not_configured: 'text-muted',
-};
-
 export default function SourceCard({ source, onTest, testing }: Props) {
   const probe = source.lastProbe;
   return (
@@ -36,7 +30,8 @@ export default function SourceCard({ source, onTest, testing }: Props) {
         <span className="text-xs text-muted">{t('datasources.notConfigured')}</span>
       )}
       {probe && (
-        <span className={cn('text-xs', STATUS_CLASS[probe.status] ?? 'text-muted')}>
+        <span className="flex items-center gap-1.5 text-xs text-foreground">
+          <StatusDot tone={probeTone(probe.status)} />
           {t(STATUS_KEY[probe.status] ?? 'datasources.status.not_configured')}
           {probe.latencyMs != null ? ` · ${Math.round(probe.latencyMs)}ms` : ''}
           {probe.detail ? ` · ${probe.detail}` : ''}
