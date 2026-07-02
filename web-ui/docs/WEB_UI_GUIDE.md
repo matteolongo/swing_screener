@@ -13,7 +13,8 @@ Sidebar has four primary areas: Today · Calendar · Book · System.
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| Today | `/today` | Left panel with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right (Overview / Fundamentals / Order / Backtest tabs; the Backtest tab runs a per-symbol event study inline). For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview |
+| Today | `/today` | Single full-width column with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist. Click a symbol row to open the symbol analysis drawer (880px, permalink "open ↗", Overview / Fundamentals / Order / Backtest tabs; Backtest runs a per-symbol event study inline). For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview |
+| Symbol | `/symbol/:ticker` | Full-page symbol analysis (local tab state, same content/tabs as drawer). Permalink target; accessible as "open ↗" from Today list or via direct navigation. |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
 | Pool | `/system/pool` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal). **Pool tab**: refresh-all-universes, rebuild symbol pool, and enrich taxonomy — each with a field-level diff table (`PoolTab` / `PoolDiffTable` / `UniverseRefreshSummary`) |
@@ -36,7 +37,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/watchlist` | Today | Watchlist CRUD (Watchlist tab) |
 | `features/dailyReview` | Today | Daily review compute and structured result |
 | `features/analytics` | Analytics | Regime breakdown, performance stats |
-| `features/fundamentals` | Today (symbol analysis) | Fundamental snapshots used by the symbol analysis panels. The standalone Research/Fundamentals comparison page and its `compare`/`warmup` hooks were removed. |
+| `features/fundamentals` | Today (symbol analysis), Symbol page | Fundamental snapshots used by the symbol analysis panels. The `useSymbolFundamentalsSync` hook syncs fundamentals across the drawer and full-page views. The standalone Research/Fundamentals comparison page and its `compare`/`warmup` hooks were removed. |
 | `features/calendar` | Calendar | Calendar events |
 | `features/weeklyReview` | Book | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |
@@ -60,11 +61,11 @@ Reusable building blocks live in `components/common/`. Prefer these over hand-ro
 | `Field` | Label + optional hint/error wrapper. Generates an id via `useId` and associates the label with a nested `Input`/`Select`/`Textarea`, so controls get a real accessible name instead of a loose `aria-label`. |
 | `Input` / `Select` / `Textarea` | Form controls carrying the canonical `CONTROL_CLASS` (exported from `Input`). `forwardRef`, spread all native props, auto-wire `id` from the surrounding `Field`. Pass only deviations (width, alignment) via `className`. |
 | `CollapsibleSection` | Progressive disclosure. Native `<details>` + chevron, token-styled; `title`, optional `meta`, `defaultOpen`. Used by the Strategy advanced panel and the System/Pool discovery filters. |
-| `Tabs` | Underline-style tab strip driven by `tabs`/`active`/`onChange` props (no built-in keyboard navigation). New in Phase 1; no current consumers — the Today sidebar and symbol analysis canvas tab bars are still hand-rolled markup. First consumers land in Phase 2+. |
+| `Tabs` | Underline-style tab strip driven by `tabs`/`active`/`onChange` props (no built-in keyboard navigation). First introduced Phase 1. Phase 2 consumers: `SymbolDrawer` (Overview / Fundamentals / Order / Backtest tabs) and `/symbol/:ticker` page. |
 | `StatusDot` | Indicator dot for status states (`ok` / `warn` / `down` / `idle` tones). Compact visual for health/state signals in tables and pills. |
 | `CollapsibleCard` | Compact disclosure card combining header + content; alternative to `CollapsibleSection` for card-based layouts. |
 | `PageHeader` | Page top chrome: title, description, optional action buttons. Standardizes layout for System pages. |
-| `Drawer` | Slide-out panel (typically from the right). No current consumers — `ReviewQueueDrawer` uses `ModalShell`, not `Drawer`. Base for the Phase 2 symbol drawer. |
+| `Drawer` | Slide-out panel (typically from the right). Phase 2 consumer: `SymbolDrawer` (880px, mounted globally in `MainLayout`, driven by `workspaceStore.selectedTicker`; hardened focus/scroll-lock/topmost-Escape). |
 | `StatsTable` | Presentational 5-column stats table (label + Trades/WinRate/AvgR/Expectancy). Backs `EdgeBreakdownTable` and `RegimeBreakdownTable`; takes translated headers + rows. |
 | `RChip` | R-multiple readout: `formatR` + sign color (`getSignColorClass`) in tabular mono. |
 | `Card` / `Button` / `Badge` / `ModalShell` / `TableShell` / `DataTable` | Layout and table chrome. |
