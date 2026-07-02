@@ -5,8 +5,6 @@ export const queryKeys = {
   configDefaults: () => ['config-defaults'] as const,
   strategies: () => ['strategies'] as const,
   strategyActive: () => ['strategy-active'] as const,
-  strategyValidation: (payloadHash?: string | null) =>
-    payloadHash == null ? (['strategy-validation'] as const) : (['strategy-validation', payloadHash] as const),
   universes: () => ['universes'] as const,
   universeDetail: (id?: string | null) => ['universe-detail', id ?? null] as const,
   taxonomyPresets: () => ['taxonomy-presets'] as const,

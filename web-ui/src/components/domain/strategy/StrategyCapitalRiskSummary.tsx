@@ -100,11 +100,6 @@ export default function StrategyCapitalRiskSummary({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted">
-          This strategy sizes positions from the active risk settings below. The education sections
-          underneath still explain why each parameter matters.
-        </p>
-
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-surface/80 p-3">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">

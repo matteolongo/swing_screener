@@ -1,44 +1,5 @@
-import type { ReactNode } from 'react';
-import HelpTooltip from '@/components/common/HelpTooltip';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
-import { t } from '@/i18n/t';
-
-export type HelpInfo = {
-  short: string;
-  title: string;
-  content: ReactNode;
-};
-
-export const buildHelp = (
-  title: string,
-  short: string,
-  what: string,
-  why: string,
-  how: string,
-  execution?: string,
-): HelpInfo => ({
-  title,
-  short,
-  content: (
-    <div className="space-y-2">
-      <p>
-        <strong>{t('strategyPage.help.whatItIs')}</strong> {what}
-      </p>
-      <p>
-        <strong>{t('strategyPage.help.whyItMatters')}</strong> {why}
-      </p>
-      <p>
-        <strong>{t('strategyPage.help.howToInterpret')}</strong> {how}
-      </p>
-      {execution ? (
-        <p>
-          <strong>{t('strategyPage.help.executionInDegiro')}</strong> {execution}
-        </p>
-      ) : null}
-    </div>
-  ),
-});
 
 type NumberInputProps = {
   label: string;
@@ -48,7 +9,6 @@ type NumberInputProps = {
   min?: number;
   max?: number;
   suffix?: string;
-  help?: HelpInfo;
 };
 
 export function NumberInput({
@@ -59,13 +19,11 @@ export function NumberInput({
   min,
   max,
   suffix,
-  help,
 }: NumberInputProps) {
   return (
     <label className="text-sm font-medium">
       <div className="mb-2 flex items-center gap-2">
         <span>{label}</span>
-        {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
         {suffix && <span className="text-xs text-muted">{suffix}</span>}
       </div>
       <Input
@@ -85,15 +43,13 @@ type TextInputProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  help?: HelpInfo;
 };
 
-export function TextInput({ label, value, onChange, placeholder, help }: TextInputProps) {
+export function TextInput({ label, value, onChange, placeholder }: TextInputProps) {
   return (
     <label className="text-sm font-medium">
       <div className="mb-2 flex items-center gap-2">
         <span>{label}</span>
-        {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
       </div>
       <Input
         type="text"
@@ -110,15 +66,13 @@ type SelectInputProps = {
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
-  help?: HelpInfo;
 };
 
-export function SelectInput({ label, value, onChange, options, help }: SelectInputProps) {
+export function SelectInput({ label, value, onChange, options }: SelectInputProps) {
   return (
     <label className="text-sm font-medium">
       <div className="mb-2 flex items-center gap-2">
         <span>{label}</span>
-        {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
       </div>
       <Select value={value} onChange={(e) => onChange(e.target.value)}>
         {options.map((opt) => (
@@ -135,10 +89,9 @@ type CheckboxInputProps = {
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;
-  help?: HelpInfo;
 };
 
-export function CheckboxInput({ label, checked, onChange, help }: CheckboxInputProps) {
+export function CheckboxInput({ label, checked, onChange }: CheckboxInputProps) {
   return (
     <div className="flex items-center gap-2 text-sm font-medium">
       <label className="flex items-center gap-2">
@@ -150,7 +103,6 @@ export function CheckboxInput({ label, checked, onChange, help }: CheckboxInputP
         />
         <span>{label}</span>
       </label>
-      {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
     </div>
   );
 }

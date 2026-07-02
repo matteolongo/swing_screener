@@ -6,9 +6,8 @@ import {
   fetchStrategies,
   setActiveStrategy,
   updateStrategy,
-  validateStrategy,
 } from '@/features/strategy/api';
-import type { Strategy, StrategyUpdateRequestAPI } from '@/features/strategy/types';
+import type { Strategy } from '@/features/strategy/types';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateStrategyQueries } from '@/lib/queryInvalidation';
 
@@ -74,15 +73,6 @@ export function useDeleteStrategyMutation(onSuccess?: () => void) {
       await invalidateStrategyQueries(queryClient);
       onSuccess?.();
     },
-  });
-}
-
-export function useStrategyValidationQuery(strategyPayload?: StrategyUpdateRequestAPI | null) {
-  return useQuery({
-    queryKey: queryKeys.strategyValidation(strategyPayload ? JSON.stringify(strategyPayload) : null),
-    queryFn: () => validateStrategy(strategyPayload as StrategyUpdateRequestAPI),
-    enabled: Boolean(strategyPayload),
-    staleTime: 30_000,
   });
 }
 

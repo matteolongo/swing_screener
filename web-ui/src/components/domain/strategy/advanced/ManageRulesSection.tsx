@@ -3,7 +3,7 @@ import { t } from '@/i18n/t';
 import { NumberInput, TextInput } from '@/components/domain/strategy/StrategyFieldControls';
 import type { AdvancedSectionProps } from './types';
 
-export default function ManageRulesSection({ draft, setDraft, help }: AdvancedSectionProps) {
+export default function ManageRulesSection({ draft, setDraft }: AdvancedSectionProps) {
   return (
     <CollapsibleSection title={t('strategyPage.advanced.sections.manageRules')}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -42,7 +42,6 @@ export default function ManageRulesSection({ draft, setDraft, help }: AdvancedSe
           }
           step={1}
           min={1}
-          help={help.trailSma}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.smaBuffer')}
@@ -56,7 +55,6 @@ export default function ManageRulesSection({ draft, setDraft, help }: AdvancedSe
           step={0.1}
           min={0}
           suffix="%"
-          help={help.smaBuffer}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.maxHoldingDays')}

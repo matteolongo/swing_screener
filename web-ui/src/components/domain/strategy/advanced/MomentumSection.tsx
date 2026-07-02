@@ -3,7 +3,7 @@ import { t } from '@/i18n/t';
 import { NumberInput, TextInput } from '@/components/domain/strategy/StrategyFieldControls';
 import type { AdvancedSectionProps } from './types';
 
-export default function MomentumSection({ draft, setDraft, help }: AdvancedSectionProps) {
+export default function MomentumSection({ draft, setDraft }: AdvancedSectionProps) {
   return (
     <CollapsibleSection title={t('strategyPage.advanced.sections.momentum')}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -21,7 +21,6 @@ export default function MomentumSection({ draft, setDraft, help }: AdvancedSecti
           }
           step={1}
           min={1}
-          help={help.momentum6m}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.lookback12m')}
@@ -37,7 +36,6 @@ export default function MomentumSection({ draft, setDraft, help }: AdvancedSecti
           }
           step={1}
           min={1}
-          help={help.momentum12m}
         />
         <TextInput
           label={t('strategyPage.advanced.fields.benchmark')}
@@ -51,7 +49,6 @@ export default function MomentumSection({ draft, setDraft, help }: AdvancedSecti
               },
             })
           }
-          help={help.benchmark}
         />
       </div>
     </CollapsibleSection>

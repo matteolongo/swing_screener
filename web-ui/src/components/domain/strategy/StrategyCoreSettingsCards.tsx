@@ -1,7 +1,6 @@
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { t } from '@/i18n/t';
 import {
-  HelpInfo,
   NumberInput,
   SelectInput,
   TextInput,
@@ -29,13 +28,11 @@ function textValueToCurrencies(value: string): string[] {
 interface StrategyCoreSettingsCardsProps {
   draft: Strategy;
   setDraft: (value: Strategy) => void;
-  help: Record<string, HelpInfo>;
 }
 
 export default function StrategyCoreSettingsCards({
   draft,
   setDraft,
-  help,
 }: StrategyCoreSettingsCardsProps) {
   const strategyModules = [
     { value: 'momentum', label: t('strategyPage.core.options.moduleMomentumDefault') },
@@ -65,7 +62,6 @@ export default function StrategyCoreSettingsCards({
               value={draft.module ?? 'momentum'}
               onChange={(value) => setDraft({ ...draft, module: value })}
               options={strategyModules}
-              help={help.module}
             />
           </div>
           <div className="mt-3 text-xs text-muted">
@@ -129,7 +125,6 @@ export default function StrategyCoreSettingsCards({
               }
               step={0.1}
               min={0}
-              help={help.atrMultiplier}
             />
           </div>
         </CardContent>
@@ -152,7 +147,6 @@ export default function StrategyCoreSettingsCards({
               }
               step={1}
               min={1}
-              help={help.breakoutLookback}
             />
             <NumberInput
               label={t('strategyPage.core.fields.pullbackMa')}
@@ -165,7 +159,6 @@ export default function StrategyCoreSettingsCards({
               }
               step={1}
               min={1}
-              help={help.pullbackMa}
             />
             <NumberInput
               label={t('strategyPage.core.fields.minHistory')}
@@ -178,7 +171,6 @@ export default function StrategyCoreSettingsCards({
               }
               step={1}
               min={1}
-              help={help.minHistory}
             />
           </div>
         </CardContent>
@@ -236,7 +228,6 @@ export default function StrategyCoreSettingsCards({
                 })
               }
               placeholder="USD, EUR, GBP"
-              help={help.currencies}
             />
           </div>
         </CardContent>

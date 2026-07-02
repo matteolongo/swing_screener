@@ -3,7 +3,7 @@ import { t } from '@/i18n/t';
 import { NumberInput } from '@/components/domain/strategy/StrategyFieldControls';
 import type { AdvancedSectionProps } from './types';
 
-export default function TrendSection({ draft, setDraft, help }: AdvancedSectionProps) {
+export default function TrendSection({ draft, setDraft }: AdvancedSectionProps) {
   return (
     <CollapsibleSection defaultOpen title={t('strategyPage.advanced.sections.trend')}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -21,7 +21,6 @@ export default function TrendSection({ draft, setDraft, help }: AdvancedSectionP
           }
           step={1}
           min={1}
-          help={help.smaFast}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.smaMid')}
@@ -37,7 +36,6 @@ export default function TrendSection({ draft, setDraft, help }: AdvancedSectionP
           }
           step={1}
           min={1}
-          help={help.smaMid}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.smaLong')}
@@ -53,7 +51,6 @@ export default function TrendSection({ draft, setDraft, help }: AdvancedSectionP
           }
           step={1}
           min={1}
-          help={help.smaLong}
         />
       </div>
     </CollapsibleSection>

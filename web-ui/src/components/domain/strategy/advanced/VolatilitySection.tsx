@@ -3,7 +3,7 @@ import { t } from '@/i18n/t';
 import { CheckboxInput, NumberInput } from '@/components/domain/strategy/StrategyFieldControls';
 import type { AdvancedSectionProps } from './types';
 
-export default function VolatilitySection({ draft, setDraft, help }: AdvancedSectionProps) {
+export default function VolatilitySection({ draft, setDraft }: AdvancedSectionProps) {
   return (
     <CollapsibleSection title={t('strategyPage.advanced.sections.volatility')}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -21,7 +21,6 @@ export default function VolatilitySection({ draft, setDraft, help }: AdvancedSec
           }
           step={1}
           min={1}
-          help={help.atrWindow}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.maxAtrPct')}
@@ -38,7 +37,6 @@ export default function VolatilitySection({ draft, setDraft, help }: AdvancedSec
           step={0.5}
           min={0}
           suffix="%"
-          help={help.maxAtrPct}
         />
       </div>
       <div className="mt-3 flex flex-wrap gap-4">
@@ -54,7 +52,6 @@ export default function VolatilitySection({ draft, setDraft, help }: AdvancedSec
               },
             })
           }
-          help={help.requireTrendOk}
         />
         <CheckboxInput
           label={t('strategyPage.advanced.fields.requireRsPositive')}
@@ -68,7 +65,6 @@ export default function VolatilitySection({ draft, setDraft, help }: AdvancedSec
               },
             })
           }
-          help={help.requireRsPositive}
         />
       </div>
     </CollapsibleSection>

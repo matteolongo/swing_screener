@@ -1,68 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
-import { useStrategyValidationQuery } from '@/features/strategy/hooks';
-import { toStrategyUpdateRequest } from '@/features/strategy/types';
 import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
-import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
-import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
 import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
 import { useI18n } from '@/i18n/I18nProvider';
-import {
-  buildHelp,
-  TextInput,
-} from '@/components/domain/strategy/StrategyFieldControls';
+import { TextInput } from '@/components/domain/strategy/StrategyFieldControls';
 import Field from '@/components/common/Field';
 import Select from '@/components/common/Select';
-import { getStrategyInfo } from '@/content/strategy_docs/loader';
 
 export default function StrategyPage() {
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
   const [showStrategyManagement, setShowStrategyManagement] = useState(false);
-
-  const help = useMemo(
-    () => {
-      const h = (key: string, hasExecution = false) => {
-        const tk = (field: string) =>
-          t(`strategyPage.help.items.${key}.${field}` as Parameters<typeof t>[0]);
-        return buildHelp(tk('title'), tk('short'), tk('what'), tk('why'), tk('how'), hasExecution ? tk('execution') : undefined);
-      };
-      return {
-        module: h('module'),
-        breakoutLookback: h('breakoutLookback', true),
-        pullbackMa: h('pullbackMa', true),
-        minHistory: h('minHistory'),
-        smaFast: h('smaFast'),
-        smaMid: h('smaMid'),
-        smaLong: h('smaLong'),
-        atrWindow: h('atrWindow'),
-        atrMultiplier: h('atrMultiplier'),
-        minRr: h('minRr'),
-        maxFeeRiskPct: h('maxFeeRiskPct'),
-        maxAtrPct: h('maxAtrPct'),
-        requireTrendOk: h('requireTrendOk'),
-        requireRsPositive: h('requireRsPositive'),
-        currencies: h('currencies'),
-        momentum6m: h('momentum6m'),
-        momentum12m: h('momentum12m'),
-        benchmark: h('benchmark'),
-        weightMom6m: h('weightMom6m'),
-        weightMom12m: h('weightMom12m'),
-        weightRs: h('weightRs'),
-        trailSma: h('trailSma'),
-        smaBuffer: h('smaBuffer'),
-        regimeEnabled: h('regimeEnabled'),
-        regimeTrendSma: h('regimeTrendSma'),
-        regimeTrendMultiplier: h('regimeTrendMultiplier'),
-        regimeVolAtrWindow: h('regimeVolAtrWindow'),
-        regimeVolAtrPctThreshold: h('regimeVolAtrPctThreshold'),
-        regimeVolMultiplier: h('regimeVolMultiplier'),
-      };
-    },
-    [locale, t]
-  );
 
   const {
     canCreate,
@@ -95,13 +45,6 @@ export default function StrategyPage() {
     strategiesQuery,
     updateMutation,
   } = useStrategyEditor();
-
-  const validationPayload = useMemo(
-    () => (draft ? toStrategyUpdateRequest(draft) : null),
-    [draft],
-  );
-  const strategyValidationQuery = useStrategyValidationQuery(validationPayload);
-  const validationResult = strategyValidationQuery.data;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -241,23 +184,9 @@ export default function StrategyPage() {
 
       {draft && (
         <>
-          {/* Strategy Philosophy Card - Shows the "Why" before the "What" */}
-          {(() => {
-            const strategyInfo = getStrategyInfo(draft.module ?? 'momentum');
-            return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
-          })()}
-
-          {/* Safety Score - Provides feedback on configuration quality */}
-          <StrategySafetyScore
-            validation={validationResult}
-            isLoading={strategyValidationQuery.isLoading || strategyValidationQuery.isFetching}
-            isError={strategyValidationQuery.isError}
-          />
-
           <StrategyCoreSettingsCards
             draft={draft}
             setDraft={setDraft}
-            help={help}
           />
 
           <StrategyAdvancedSettingsCard
@@ -267,7 +196,6 @@ export default function StrategyPage() {
             setShowAdvanced={setShowAdvanced}
             lowRrWarning={lowRrWarning}
             highFeeWarning={highFeeWarning}
-            help={help}
           />
         </>
       )}

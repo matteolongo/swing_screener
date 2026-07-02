@@ -11,7 +11,6 @@ interface RiskDetailsSectionProps extends AdvancedSectionProps {
 export default function RiskDetailsSection({
   draft,
   setDraft,
-  help,
   lowRrWarning,
   highFeeWarning,
 }: RiskDetailsSectionProps) {
@@ -41,7 +40,6 @@ export default function RiskDetailsSection({
           }
           step={0.1}
           min={0.5}
-          help={help.minRr}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.takeProfitR')}
@@ -68,7 +66,6 @@ export default function RiskDetailsSection({
           min={0}
           max={100}
           suffix="%"
-          help={help.maxFeeRiskPct}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.commission')}
@@ -109,7 +106,6 @@ export default function RiskDetailsSection({
                 risk: { ...draft.risk, regimeEnabled: value },
               })
             }
-            help={help.regimeEnabled}
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <NumberInput
@@ -123,7 +119,6 @@ export default function RiskDetailsSection({
               }
               step={1}
               min={50}
-              help={help.regimeTrendSma}
             />
             <NumberInput
               label={t('strategyPage.advanced.fields.trendMultiplier')}
@@ -137,7 +132,6 @@ export default function RiskDetailsSection({
               step={0.05}
               min={0}
               max={1}
-              help={help.regimeTrendMultiplier}
             />
             <NumberInput
               label={t('strategyPage.advanced.fields.volatilityAtrWindow')}
@@ -150,7 +144,6 @@ export default function RiskDetailsSection({
               }
               step={1}
               min={2}
-              help={help.regimeVolAtrWindow}
             />
             <NumberInput
               label={t('strategyPage.advanced.fields.volatilityAtrPctThreshold')}
@@ -163,7 +156,6 @@ export default function RiskDetailsSection({
               }
               step={0.1}
               min={0}
-              help={help.regimeVolAtrPctThreshold}
             />
             <NumberInput
               label={t('strategyPage.advanced.fields.volatilityMultiplier')}
@@ -177,7 +169,6 @@ export default function RiskDetailsSection({
               step={0.05}
               min={0}
               max={1}
-              help={help.regimeVolMultiplier}
             />
           </div>
         </div>

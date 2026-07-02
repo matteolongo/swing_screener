@@ -3,7 +3,7 @@ import { t } from '@/i18n/t';
 import { NumberInput } from '@/components/domain/strategy/StrategyFieldControls';
 import type { AdvancedSectionProps } from './types';
 
-export default function RankingWeightsSection({ draft, setDraft, help }: AdvancedSectionProps) {
+export default function RankingWeightsSection({ draft, setDraft }: AdvancedSectionProps) {
   return (
     <CollapsibleSection title={t('strategyPage.advanced.sections.rankingWeights')}>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -18,7 +18,6 @@ export default function RankingWeightsSection({ draft, setDraft, help }: Advance
           }
           step={0.05}
           min={0}
-          help={help.weightMom6m}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.weight12m')}
@@ -31,7 +30,6 @@ export default function RankingWeightsSection({ draft, setDraft, help }: Advance
           }
           step={0.05}
           min={0}
-          help={help.weightMom12m}
         />
         <NumberInput
           label={t('strategyPage.advanced.fields.weightRs')}
@@ -44,7 +42,6 @@ export default function RankingWeightsSection({ draft, setDraft, help }: Advance
           }
           step={0.05}
           min={0}
-          help={help.weightRs}
         />
       </div>
     </CollapsibleSection>

@@ -2,7 +2,6 @@ import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Ca
 import Button from '@/components/common/Button';
 import type { Dispatch, SetStateAction } from 'react';
 import { t } from '@/i18n/t';
-import { HelpInfo } from '@/components/domain/strategy/StrategyFieldControls';
 import { Strategy } from '@/features/strategy/types';
 import TrendSection from '@/components/domain/strategy/advanced/TrendSection';
 import VolatilitySection from '@/components/domain/strategy/advanced/VolatilitySection';
@@ -18,7 +17,6 @@ interface StrategyAdvancedSettingsCardProps {
   setShowAdvanced: Dispatch<SetStateAction<boolean>>;
   lowRrWarning: boolean;
   highFeeWarning: boolean;
-  help: Record<string, HelpInfo>;
 }
 
 export default function StrategyAdvancedSettingsCard({
@@ -28,7 +26,6 @@ export default function StrategyAdvancedSettingsCard({
   setShowAdvanced,
   lowRrWarning,
   highFeeWarning,
-  help,
 }: StrategyAdvancedSettingsCardProps) {
   return (
     <Card variant="bordered">
@@ -45,18 +42,17 @@ export default function StrategyAdvancedSettingsCard({
       {showAdvanced && (
         <CardContent>
           <div className="space-y-3">
-            <TrendSection draft={draft} setDraft={setDraft} help={help} />
-            <VolatilitySection draft={draft} setDraft={setDraft} help={help} />
-            <MomentumSection draft={draft} setDraft={setDraft} help={help} />
-            <RankingWeightsSection draft={draft} setDraft={setDraft} help={help} />
+            <TrendSection draft={draft} setDraft={setDraft} />
+            <VolatilitySection draft={draft} setDraft={setDraft} />
+            <MomentumSection draft={draft} setDraft={setDraft} />
+            <RankingWeightsSection draft={draft} setDraft={setDraft} />
             <RiskDetailsSection
               draft={draft}
               setDraft={setDraft}
-              help={help}
               lowRrWarning={lowRrWarning}
               highFeeWarning={highFeeWarning}
             />
-            <ManageRulesSection draft={draft} setDraft={setDraft} help={help} />
+            <ManageRulesSection draft={draft} setDraft={setDraft} />
           </div>
         </CardContent>
       )}
