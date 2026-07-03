@@ -144,6 +144,17 @@ describe('transformIntelligence with new fields', () => {
       conviction: 'medium',
       summary_line: 'Hold.',
       watch_for: ['gap risk'],
+      predictions: [
+        {
+          direction: 'bullish',
+          reason: 'SMA20 holds',
+          reference: 'technical',
+          outcome: {
+            status: 'confirmed',
+            evidence: 'SMA20 held after the follow-up run.',
+          },
+        },
+      ],
       pre_open_outlook: null,
     };
     const result = transformHistoryEntry(api);
@@ -153,6 +164,17 @@ describe('transformIntelligence with new fields', () => {
       conviction: 'medium',
       summaryLine: 'Hold.',
       watchFor: ['gap risk'],
+      predictions: [
+        {
+          direction: 'bullish',
+          reason: 'SMA20 holds',
+          reference: 'technical',
+          outcome: {
+            status: 'confirmed',
+            evidence: 'SMA20 held after the follow-up run.',
+          },
+        },
+      ],
       preOpenOutlook: null,
     });
   });

@@ -46,6 +46,17 @@ export interface PredictionBullet {
   reference: string;
 }
 
+export type PredictionOutcomeStatus = 'confirmed' | 'contradicted' | 'unresolved';
+
+export interface PredictionOutcome {
+  status: PredictionOutcomeStatus;
+  evidence: string;
+}
+
+export interface HistoryPrediction extends PredictionBullet {
+  outcome?: PredictionOutcome | null;
+}
+
 export interface NewsItem {
   headline: string;
   url: string | null;
@@ -385,6 +396,7 @@ export interface HistoryEntryAPI {
   conviction: DecisionConviction;
   summary_line: string;
   watch_for: string[];
+  predictions?: HistoryPrediction[];
   pre_open_outlook?: PreOpenOutlookAPI | null;
 }
 
@@ -394,6 +406,7 @@ export interface HistoryEntry {
   conviction: DecisionConviction;
   summaryLine: string;
   watchFor: string[];
+  predictions: HistoryPrediction[];
   preOpenOutlook: PreOpenOutlook | null;
 }
 
@@ -408,6 +421,7 @@ export function transformHistoryEntry(api: HistoryEntryAPI): HistoryEntry {
     conviction: api.conviction,
     summaryLine: api.summary_line,
     watchFor: api.watch_for ?? [],
+    predictions: api.predictions ?? [],
     preOpenOutlook: transformPreOpenOutlook(api.pre_open_outlook),
   };
 }

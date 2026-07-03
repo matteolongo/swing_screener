@@ -138,6 +138,11 @@ the prompt as a `--- Prior analyses (most recent first) ---` digest. The model
 returns a `thesis_delta` (`status`: new/confirmed/weakening/invalidated,
 `summary`, `what_played_out`) comparing today's read to the prior ones. The full
 history is exposed via `GET /api/intelligence/{ticker}/history` for the UI timeline.
+When a follow-up analysis is appended, prior history predictions are annotated
+with an optional deterministic `outcome` (`confirmed`, `contradicted`, or
+`unresolved`) by matching `thesis_delta.what_played_out` against each prior
+prediction's reason/reference. This is an audit aid only; it is not a return
+prediction or model-scoring loop.
 
 ## Two-call analyzer
 
@@ -175,8 +180,6 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 ## Observability
 
 `data/intelligence/intelligence_metrics.json` — append-only log (capped at 500 entries) written by `metrics.py` after each analysis. Each entry: `{ts, ticker, tokens}`. A sudden `tokens: null` run pinpoints a call that did not complete; a gap in SEC coverage is visible by diffing evidence counts in the logged evidence cache.
-
-Phase 3 (calibration scorer) will extend each history entry's `predictions` list (`{direction, reason, reference}`) to score outcomes against prior calls; the persistence seam is already in place.
 
 ## Action Types
 
