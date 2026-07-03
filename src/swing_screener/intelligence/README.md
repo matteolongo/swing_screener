@@ -100,6 +100,20 @@ Important constraints:
 `classified_catalysts` are already-happened, source-cited catalysts from the LLM
 format pass. Forward-looking events stay in `upcoming_events`.
 
+### Calibration helper
+
+Use the offline exporter to review cached ledger labels before tuning weights:
+
+```bash
+.venv/bin/python scripts/export_evidence_ledger_calibration.py --format markdown --limit 20
+.venv/bin/python scripts/export_evidence_ledger_calibration.py --format csv --output /tmp/evidence-ledger-calibration.csv
+```
+
+The exporter reads `data/intelligence/sweep_*.json`, skips entries without an
+`evidence_ledger`, and adds blank `human_read` / `notes` columns for manual
+review. After reviewing clear bullish, bearish, mixed, and sparse-data examples,
+tune only `config.evidence_weights` in `config/intelligence.yaml`.
+
 ## Pre-open gap outlook
 
 When analysis runs for a **US symbol** (`currency == "USD"`) during the US
