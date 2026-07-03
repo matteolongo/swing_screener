@@ -37,10 +37,24 @@ __all__ = [
     "SecEdgarCatalystCollector",
     "TavilyNewsCollector",
     "collect_evidence",
+    "attempted_source_ids",
 ]
 
 _CACHE_ROOT = Path("data/intelligence/evidence")
 _COLLECTORS = registry.get_registered()
+
+
+def attempted_source_ids(cfg: EvidenceConfig, *, refresh_sources: bool = False) -> list[str]:
+    collectors = registry.get_registered()
+    attempted: list[str] = []
+    for source_id in cfg.enabled_sources:
+        collector = collectors.get(source_id)
+        if collector is None:
+            continue
+        if getattr(collector, "REFRESH_ONLY", False) and not refresh_sources:
+            continue
+        attempted.append(source_id)
+    return sorted(attempted)
 
 def _cache_file(cache_root: Path, asof_date: date, ticker: str) -> Path:
     return cache_root / asof_date.isoformat() / f"{ticker.upper()}.json"
@@ -84,11 +98,9 @@ def collect_evidence(
 
     raw: list[SourceEvidence] = []
     collectors = registry.get_registered()
-    for source_id in cfg.enabled_sources:
+    for source_id in attempted_source_ids(cfg, refresh_sources=refresh_sources):
         collector = collectors.get(source_id)
         if collector is None:
-            continue
-        if getattr(collector, "REFRESH_ONLY", False) and not refresh_sources:
             continue
         try:
             raw.extend(collector.collect(ticker, asof_date=asof_date, cfg=cfg))

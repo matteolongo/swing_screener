@@ -13,6 +13,7 @@ import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
 import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
+import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -302,6 +303,7 @@ export default function SymbolAnalysisContent({
               </div>
             ) : hasNarrative && displayedIntelligence ? (
               <>
+                <PositionReviewPanel ticker={ticker} position={position} />
                 <NarrativeAnalysisCard
                   intelligence={displayedIntelligence}
                   candidate={candidate}
@@ -315,38 +317,41 @@ export default function SymbolAnalysisContent({
                 />
               </>
             ) : (
-              <div className="rounded-lg border border-border bg-surface p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      {t('workspacePage.panels.analysis.intelligence.emptyState')}
-                    </p>
+              <>
+                <PositionReviewPanel ticker={ticker} position={position} />
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
+                      </p>
+                      <p className="mt-1 text-sm text-muted">
+                        {t('workspacePage.panels.analysis.intelligence.emptyState')}
+                      </p>
+                    </div>
+                    {(candidate || position) && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={intelligenceMutation.isPending}
+                        onClick={() => handleAnalyzeWithAi(false)}
+                      >
+                        {intelligenceMutation.isPending
+                          ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
+                          : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
+                      </Button>
+                    )}
                   </div>
-                  {(candidate || position) && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={intelligenceMutation.isPending}
-                      onClick={() => handleAnalyzeWithAi(false)}
-                    >
-                      {intelligenceMutation.isPending
-                        ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                        : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
-                    </Button>
+                  {intelligenceMutation.isError && (
+                    <p className="mt-2 text-sm text-danger">
+                      {intelligenceMutation.error instanceof Error
+                        ? intelligenceMutation.error.message
+                        : t('workspacePage.panels.analysis.intelligence.analyzeError')}
+                    </p>
                   )}
                 </div>
-                {intelligenceMutation.isError && (
-                  <p className="mt-2 text-sm text-danger">
-                    {intelligenceMutation.error instanceof Error
-                      ? intelligenceMutation.error.message
-                      : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-                  </p>
-                )}
-              </div>
+              </>
             )}
             {hasNarrative && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
