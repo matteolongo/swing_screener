@@ -6,11 +6,33 @@ export type { DecisionAction, DecisionConviction };
 export type CatalystUrgency = 'high' | 'medium' | 'low' | 'none';
 export type IntelligenceEventDirection = 'bullish' | 'bearish' | 'neutral';
 export type IntelligenceEventType = 'earnings' | 'macro' | 'dividend' | 'product_launch' | 'regulatory' | 'other';
+export type CatalystType =
+  | 'analyst_upgrade'
+  | 'analyst_downgrade'
+  | 'insider_buying'
+  | 'insider_selling'
+  | 'earnings_beat'
+  | 'earnings_miss'
+  | 'guidance_up'
+  | 'guidance_down'
+  | 'buyback'
+  | 'dividend_change'
+  | 'product_launch'
+  | 'fda_approval'
+  | 'acquisition'
+  | 'ceo_change'
+  | 'litigation'
+  | 'offering'
+  | 'sector_news'
+  | 'macro'
+  | 'other';
 export type PositionSignalAction = 'HOLD' | 'TRIM' | 'EXIT';
 export type ExpectedHoldingPeriod = 'days' | '1-2_weeks' | '2-6_weeks' | 'unknown';
 export type ThesisStatus = 'intact' | 'weakening' | 'broken' | 'unclear';
 export type ProfitManagement = 'hold_full' | 'consider_trim' | 'trail_stop' | 'protect_breakeven' | 'exit';
 export type OpportunityCost = 'low' | 'medium' | 'high';
+export type BalanceLabel = 'strongly_bullish' | 'bullish' | 'mixed' | 'bearish' | 'strongly_bearish';
+export type SignalCategory = 'technical' | 'fundamental' | 'catalyst' | 'news' | 'positioning';
 
 export interface KeyNumber {
   label: string;
@@ -36,6 +58,50 @@ export interface IntelligenceEvent {
   date: string | null;
   direction: IntelligenceEventDirection;
   summary: string;
+}
+
+export interface ClassifiedCatalystAPI {
+  type: CatalystType;
+  direction: IntelligenceEventDirection;
+  summary: string;
+  source_url: string | null;
+  date: string | null;
+}
+
+export interface ClassifiedCatalyst {
+  type: CatalystType;
+  direction: IntelligenceEventDirection;
+  summary: string;
+  sourceUrl: string | null;
+  date: string | null;
+}
+
+export interface WeightedSignal {
+  key: string;
+  label: string;
+  category: SignalCategory;
+  direction: IntelligenceEventDirection;
+  weight: number;
+  contribution: number;
+  source: string;
+  event_date?: string | null;
+  eventDate?: string | null;
+}
+
+export interface EvidenceLedgerAPI {
+  contributions: WeightedSignal[];
+  bull_weight: number;
+  bear_weight: number;
+  net: number;
+  balance_label: BalanceLabel;
+}
+
+export interface EvidenceLedger {
+  contributions: WeightedSignal[];
+  bullWeight: number;
+  bearWeight: number;
+  net: number;
+  balanceLabel: BalanceLabel;
 }
 
 export interface PositionSignal {
@@ -145,6 +211,8 @@ export interface SymbolIntelligenceAPI {
   past_trades_context?: string | null;
   pre_open_outlook?: PreOpenOutlookAPI | null;
   thesis_delta?: ThesisDeltaAPI | null;
+  evidence_ledger?: EvidenceLedgerAPI | null;
+  classified_catalysts?: ClassifiedCatalystAPI[];
 }
 
 export interface SymbolIntelligence {
@@ -169,6 +237,8 @@ export interface SymbolIntelligence {
   pastTradesContext?: string | null;
   preOpenOutlook?: PreOpenOutlook | null;
   thesisDelta?: ThesisDelta | null;
+  evidenceLedger: EvidenceLedger | null;
+  classifiedCatalysts: ClassifiedCatalyst[];
 }
 
 function transformPreOpenOutlook(api: PreOpenOutlookAPI | null | undefined): PreOpenOutlook | null {
@@ -209,6 +279,30 @@ function transformPositionOutlook(api: PositionOutlookAPI | null | undefined): P
   };
 }
 
+export function transformEvidenceLedger(api: EvidenceLedgerAPI | null | undefined): EvidenceLedger | null {
+  if (!api) return null;
+  return {
+    contributions: (api.contributions ?? []).map((signal) => ({
+      ...signal,
+      eventDate: signal.event_date ?? signal.eventDate ?? null,
+    })),
+    bullWeight: api.bull_weight,
+    bearWeight: api.bear_weight,
+    net: api.net,
+    balanceLabel: api.balance_label,
+  };
+}
+
+function transformClassifiedCatalyst(api: ClassifiedCatalystAPI): ClassifiedCatalyst {
+  return {
+    type: api.type,
+    direction: api.direction,
+    summary: api.summary,
+    sourceUrl: api.source_url ?? null,
+    date: api.date ?? null,
+  };
+}
+
 export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelligence {
   return {
     symbol: api.symbol,
@@ -232,6 +326,8 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     pastTradesContext: api.past_trades_context ?? null,
     preOpenOutlook: transformPreOpenOutlook(api.pre_open_outlook),
     thesisDelta: transformThesisDelta(api.thesis_delta),
+    evidenceLedger: transformEvidenceLedger(api.evidence_ledger),
+    classifiedCatalysts: (api.classified_catalysts ?? []).map(transformClassifiedCatalyst),
   };
 }
 

@@ -19,6 +19,8 @@ const baseIntelligence: SymbolIntelligence = {
   upcomingEvents: [],
   positionSignal: null,
   sources: [],
+  evidenceLedger: null,
+  classifiedCatalysts: [],
 };
 
 const baseCandidate: SymbolAnalysisCandidate = {
@@ -58,6 +60,44 @@ describe('NarrativeAnalysisCard', () => {
     render(<NarrativeAnalysisCard intelligence={baseIntelligence} candidate={baseCandidate} />);
     // Trade plan is shown in the workspace header, not inside this card
     expect(screen.queryByText('2.60x')).toBeNull();
+  });
+
+  it('renders the evidence balance chip when a ledger is present', () => {
+    const intelligenceWithLedger: SymbolIntelligence = {
+      ...baseIntelligence,
+      evidenceLedger: {
+        contributions: [
+          {
+            key: 'insider_activity',
+            label: 'Monster Beverage Reports 2026 First Quarter Financial Results',
+            category: 'positioning',
+            direction: 'bullish',
+            weight: 10,
+            contribution: 10,
+            source: 'https://example.com/news',
+            eventDate: '2026-05-08',
+          },
+        ],
+        bullWeight: 10,
+        bearWeight: 0,
+        net: 10,
+        balanceLabel: 'bullish',
+      },
+    };
+
+    render(<NarrativeAnalysisCard intelligence={intelligenceWithLedger} />);
+
+    expect(screen.getByText(t('workspacePage.panels.analysis.intelligence.ledger.title'))).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.panels.analysis.intelligence.ledger.bullish'))).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.panels.analysis.intelligence.ledger.expand'))).toBeInTheDocument();
+    expect(screen.getByText('Monster Beverage Reports 2026 First Quarter Financial Results')).toBeInTheDocument();
+    expect(screen.getByText('2026-05-08')).toBeInTheDocument();
+  });
+
+  it('renders an evidence balance empty label when no ledger is present', () => {
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+
+    expect(screen.getByText(t('workspacePage.panels.analysis.intelligence.ledger.empty'))).toBeInTheDocument();
   });
 
   it('signals detail section is collapsed by default', () => {
@@ -435,6 +475,14 @@ describe('NarrativeAnalysisCard — status-aware skeleton', () => {
       { headline: 'Q4 beat on net sales', url: 'https://x/q4', date: '2026-02-01', sentiment: 'bullish' },
       { headline: 'Buyback authorized', url: null, date: null, sentiment: 'bullish' },
     ],
+    upcomingEvents: [
+      {
+        type: 'earnings',
+        date: '2026-08-06',
+        direction: 'neutral',
+        summary: 'Earnings report may introduce volatility.',
+      },
+    ],
   };
 
   it('renders the position signal and outlook panels in position mode', () => {
@@ -448,6 +496,7 @@ describe('NarrativeAnalysisCard — status-aware skeleton', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Hold until the 50-day SMA breaks.')).toBeInTheDocument();
     expect(screen.getByText('Close below 50-day SMA.')).toBeInTheDocument();
+    expect(screen.getByText('2026-08-06')).toBeInTheDocument();
   });
 
   it('does not render the Why now panel in position mode', () => {
@@ -462,6 +511,7 @@ describe('NarrativeAnalysisCard — status-aware skeleton', () => {
     ).toBeInTheDocument();
     const link = screen.getByText('Q4 beat on net sales');
     expect(link).toHaveAttribute('href', 'https://x/q4');
+    expect(screen.getByText('2026-02-01')).toBeInTheDocument();
     expect(screen.getByText('Buyback authorized')).toBeInTheDocument();
   });
 

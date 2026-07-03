@@ -40,6 +40,7 @@ _CANDIDATE_PARSED = {
             "sentiment": "bullish",
         }
     ],
+    "classified_catalysts": [],
     "past_trades_context": None,
     "pre_open_outlook": None,
     "thesis_delta": None,
@@ -225,9 +226,78 @@ _EXPECTED_STABLE_BY_CASE = {
                 "sentiment": "bullish",
             }
         ],
+        "classified_catalysts": [],
         "past_trades_context": None,
         "pre_open_outlook": None,
         "thesis_delta": None,
+        "evidence_ledger": {
+            "contributions": [
+                {
+                    "key": "insider_activity",
+                    "label": "Insider activity (90d)",
+                    "category": "positioning",
+                    "direction": "bullish",
+                    "weight": 10.0,
+                    "contribution": 10.0,
+                    "source": "Finnhub insider 90d",
+                    "event_date": None,
+                },
+                {
+                    "key": "analyst_actions",
+                    "label": "Analyst upgrades/downgrades (30d)",
+                    "category": "catalyst",
+                    "direction": "bullish",
+                    "weight": 9.0,
+                    "contribution": 9.0,
+                    "source": "Finnhub analyst 30d",
+                    "event_date": None,
+                },
+                {
+                    "key": "sma_trend",
+                    "label": "SMA trend",
+                    "category": "technical",
+                    "direction": "bullish",
+                    "weight": 6.0,
+                    "contribution": 6.0,
+                    "source": "OHLCV SMAs",
+                    "event_date": None,
+                },
+                {
+                    "key": "momentum",
+                    "label": "Momentum 6m",
+                    "category": "technical",
+                    "direction": "bullish",
+                    "weight": 6.0,
+                    "contribution": 6.0,
+                    "source": "OHLCV momentum",
+                    "event_date": None,
+                },
+                {
+                    "key": "relative_strength",
+                    "label": "Relative strength",
+                    "category": "technical",
+                    "direction": "bullish",
+                    "weight": 7.0,
+                    "contribution": 7.0,
+                    "source": "Benchmark RS",
+                    "event_date": None,
+                },
+                {
+                    "key": "news",
+                    "label": "Upgrade",
+                    "category": "news",
+                    "direction": "bullish",
+                    "weight": 4.0,
+                    "contribution": 4.0,
+                    "source": "https://example.com/a",
+                    "event_date": "2026-07-01",
+                },
+            ],
+            "bull_weight": 42.0,
+            "bear_weight": 0.0,
+            "net": 42.0,
+            "balance_label": "strongly_bullish",
+        },
     },
     "position": {
         "symbol": "AAPL",
@@ -302,9 +372,48 @@ _EXPECTED_STABLE_BY_CASE = {
                 "sentiment": "bullish",
             }
         ],
+        "classified_catalysts": [],
         "past_trades_context": None,
         "pre_open_outlook": None,
         "thesis_delta": None,
+        "evidence_ledger": {
+            "contributions": [
+                {
+                    "key": "sma_trend",
+                    "label": "SMA trend",
+                    "category": "technical",
+                    "direction": "bullish",
+                    "weight": 6.0,
+                    "contribution": 6.0,
+                    "source": "OHLCV SMAs",
+                    "event_date": None,
+                },
+                {
+                    "key": "momentum",
+                    "label": "Momentum 6m",
+                    "category": "technical",
+                    "direction": "bullish",
+                    "weight": 6.0,
+                    "contribution": 6.0,
+                    "source": "OHLCV momentum",
+                    "event_date": None,
+                },
+                {
+                    "key": "news",
+                    "label": "Upgrade",
+                    "category": "news",
+                    "direction": "bullish",
+                    "weight": 4.0,
+                    "contribution": 4.0,
+                    "source": "https://example.com/a",
+                    "event_date": "2026-07-01",
+                },
+            ],
+            "bull_weight": 16.0,
+            "bear_weight": 0.0,
+            "net": 16.0,
+            "balance_label": "bullish",
+        },
     },
 }
 
@@ -312,6 +421,7 @@ _EXPECTED_STABLE_BY_CASE = {
 @pytest.fixture(autouse=True)
 def _isolate(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
     yield
 
 

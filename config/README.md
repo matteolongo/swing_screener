@@ -92,6 +92,22 @@ Key LLM settings (under `config.llm`):
 | `http.connect_timeout_seconds` | `5.0` | TCP connect timeout |
 | `http.read_timeout_seconds` | `20.0` | Read/response timeout |
 
+`config.evidence_weights` controls the advisory evidence ledger emitted by the
+intelligence analyzer. These values are tunable YAML, not source code. Unknown
+keys default to weight `0.0`, so adding a new catalyst type without a configured
+weight is safe but contributes nothing until configured.
+
+| Group | Purpose |
+|-------|---------|
+| `signals` | Deterministic request-derived signals such as insider activity, analyst actions, SMA trend, momentum, relative strength, valuation, and news |
+| `catalyst_types` | Already-happened classified catalysts emitted by the LLM format pass (`classified_catalysts`) |
+| `upcoming_event_types` | Forward-looking `upcoming_events` weights |
+| `balance_thresholds` | Net bull-minus-bear thresholds for `strongly_bullish`, `bullish`, `bearish`, and `strongly_bearish`; values between bearish and bullish are `mixed` |
+
+The ledger is advisory only: it does not change the LLM `action` or `conviction`,
+and it intentionally emits a qualitative label rather than a false-precision
+0–100 score.
+
 `config.analysis_history` controls per-symbol analysis memory:
 
 | Key | Default | Purpose |

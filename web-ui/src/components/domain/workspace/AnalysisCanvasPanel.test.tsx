@@ -204,6 +204,8 @@ describe('AnalysisCanvasPanel', () => {
       ],
       positionSignal: null,
       sources: ['yahoo_finance'],
+      evidenceLedger: null,
+      classifiedCatalysts: [],
     };
     vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
       data: mockIntelligence,
@@ -384,6 +386,8 @@ describe('AnalysisCanvasPanel', () => {
       upcomingEvents: [],
       positionSignal: null,
       sources: ['yahoo_finance'],
+      evidenceLedger: null,
+      classifiedCatalysts: [],
     };
     const mutate = vi.fn((_variables: unknown, options?: { onSuccess?: (result: SymbolIntelligence) => void }) => {
       options?.onSuccess?.(mockIntelligence);

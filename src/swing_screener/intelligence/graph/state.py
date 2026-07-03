@@ -8,6 +8,7 @@ from swing_screener.intelligence.models import (
     SymbolIntelligence,
     SymbolIntelligenceRequest,
 )
+from swing_screener.intelligence.weighting.models import EvidenceLedger
 
 
 class AnalyzerState(TypedDict, total=False):
@@ -24,6 +25,7 @@ class AnalyzerState(TypedDict, total=False):
     search_text: str
     draft: Any
     tokens: int | None
+    evidence_ledger: EvidenceLedger | None
     result: SymbolIntelligence
     _search_usage: Any
     _parse_usage: Any

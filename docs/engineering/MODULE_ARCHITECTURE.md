@@ -33,7 +33,7 @@ This document is the canonical module layout after the 2026 architecture consoli
 6. `portfolio` owns position state/metrics.
 7. `data` owns provider access and market-data ingestion.
 8. `fundamentals` owns fundamental data providers, scoring, and snapshot storage.
-9. `intelligence` owns the LLM analysis pipeline, cache, and symbol analyzer.
+9. `intelligence` owns the LLM analysis pipeline, LangGraph analyzer graph, advisory evidence weighting, cache, and symbol analyzer.
 10. `recommendation` owns the unified decision summary (what-to-do / why) — distinct from
     `risk/recommendations`, which owns the risk-side recommendation engine and trade thesis.
 11. `settings` owns settings load/migrate/path resolution.
@@ -112,10 +112,37 @@ The single cross-domain enumeration (`id → provider class`) lives in
 `api/services/datasources_service.py` (`_PROBEABLE`). There is no central
 registry in core; to add or remove a probeable source, update `_PROBEABLE` only.
 
-`intelligence/evidence/` adds one probeable collector registered in `_PROBEABLE`:
+`intelligence/evidence/registry.py` owns the deterministic collector dispatch seam:
+collectors implement the `CatalystCollector` protocol, decorate their class with
+`@register`, and are selected at runtime through `config.evidence.enabled_sources`.
+This registry is separate from Data Sources diagnostics.
+
+`intelligence/evidence/` adds probeable collectors registered in `_PROBEABLE`:
 - `sec_edgar_catalysts` → `SecEdgarCatalystCollector`
 
 This appears on the Data Sources page with a live Test button. `INTELLIGENCE_SOURCES` is now empty: the inert placeholders (`yahoo_finance`, `earnings_calendar`, `financial_news_rss`), the venue-wide `exchange_announcements` collector, and the `company_ir_rss` IR RSS collector were all dropped. SEC EDGAR is now the sole deterministic evidence source.
+
+## Intelligence Graph And Weighting
+
+`src/swing_screener/intelligence/graph/` contains the explicit LangGraph
+pipeline used by `SymbolAnalyzer.analyze()`. The graph is currently linear and
+keeps the former analyzer steps as named nodes:
+
+1. resolve context
+2. assemble inputs
+3. build prompt
+4. web search
+5. structured format
+6. postprocess
+7. weigh evidence
+8. assemble result
+9. persist
+
+`src/swing_screener/intelligence/weighting/` owns the advisory evidence ledger.
+It is deterministic and config-driven (`config.evidence_weights`), emits
+`EvidenceLedger`/`WeightedSignal`, and does not alter the LLM action or
+conviction. UI and API consumers should treat it as explainability, not as a
+predictive score.
 
 ## Universe Registry Data Sources
 

@@ -19,6 +19,7 @@ _ORDER = [
     ("search", nodes.search),
     ("format", nodes.format_node),
     ("postprocess", nodes.postprocess),
+    ("weigh_evidence", nodes.weigh_evidence),
     ("assemble_result", nodes.assemble_result),
     ("persist", nodes.persist),
 ]

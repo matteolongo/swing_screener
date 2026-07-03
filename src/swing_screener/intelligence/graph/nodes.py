@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from swing_screener.intelligence.graph.state import AnalyzerState
 from swing_screener.intelligence.models import SymbolIntelligence
 from swing_screener.intelligence import symbol_analyzer as mod
+from swing_screener.intelligence.weighting.config import load_evidence_weights_config
+from swing_screener.intelligence.weighting.ledger import weigh
 
 if TYPE_CHECKING:
     from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
@@ -218,6 +220,13 @@ def postprocess(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerSta
     return state
 
 
+def weigh_evidence(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
+    state["evidence_ledger"] = weigh(
+        state["draft"], state["req"], load_evidence_weights_config()
+    )
+    return state
+
+
 def assemble_result(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
     draft = state["draft"]
     result = SymbolIntelligence(
@@ -238,11 +247,17 @@ def assemble_result(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
         risk_factors=draft.risk_factors,
         prediction_bullets=draft.prediction_bullets,
         news=draft.news,
+        classified_catalysts=draft.classified_catalysts,
         past_trades_context=draft.past_trades_context,
         pre_open_outlook=draft.pre_open_outlook if state["pre_open"] else None,
         thesis_delta=draft.thesis_delta if state["prior_digest"] else None,
     )
-    state["result"] = result.model_copy(update={"inputs_used": state["inputs_used"]})
+    state["result"] = result.model_copy(
+        update={
+            "inputs_used": state["inputs_used"],
+            "evidence_ledger": state.get("evidence_ledger"),
+        }
+    )
     return state
 
 

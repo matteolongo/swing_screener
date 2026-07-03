@@ -20,6 +20,7 @@ from swing_screener.intelligence.market_hours import (
 )
 from swing_screener.data.currency import detect_currency
 from swing_screener.intelligence.models import (
+    ClassifiedCatalyst,
     CatalystUrgency,
     IntelligenceEvent,
     KeyNumber,
@@ -96,6 +97,12 @@ your write-up into a structured record, so cover ALL of the following in the pro
   an ISO date when known, and a bullish | bearish | neutral read. These are RECENT/already-happened
   items (distinct from `upcoming_events`, which are forward-looking). For an open position, bias the
   news to items dated since the entry date.
+- classified_catalysts: for each recent, ALREADY-HAPPENED catalyst you cite, add an entry with type
+  (one of: analyst_upgrade, analyst_downgrade, insider_buying, insider_selling, earnings_beat,
+  earnings_miss, guidance_up, guidance_down, buyback, dividend_change, product_launch, fda_approval,
+  acquisition, ceo_change, litigation, offering, sector_news, macro, other), a direction
+  (bullish | bearish | neutral), a one-sentence summary, and the source_url. Forward-looking items
+  stay in upcoming_events (do not duplicate them here).
 
 POSITION-MODE OUTPUT (only when position context is provided):
 - A position signal: HOLD (thesis intact, no change) | TRIM (take partial profit / reduce risk,
@@ -153,6 +160,7 @@ class _LLMAnalysis(BaseModel):
     risk_factors: list[str] = []
     prediction_bullets: list[PredictionBullet] = []
     news: list[NewsItem] = []
+    classified_catalysts: list[ClassifiedCatalyst] = []
     past_trades_context: str | None = None
     pre_open_outlook: PreOpenOutlook | None = None
     thesis_delta: ThesisDelta | None = None
