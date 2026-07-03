@@ -32,12 +32,12 @@ class PositionReviewService:
         *,
         portfolio_service: PortfolioService,
         read_intelligence_fn: Callable[[str], SymbolIntelligence | None] = read_from_cache,
-        collect_evidence_fn: Callable[[str], list[SourceEvidence]] = collect_evidence,
+        collect_evidence_fn: Callable[[str], list[SourceEvidence]] | None = None,
         now_fn: Callable[[], str] | None = None,
     ) -> None:
         self._portfolio_service = portfolio_service
         self._read_intelligence = read_intelligence_fn
-        self._collect_evidence = collect_evidence_fn
+        self._collect_evidence = collect_evidence_fn or (lambda ticker: collect_evidence(ticker, refresh_sources=True))
         self._now = now_fn or (lambda: dt.datetime.now(dt.UTC).isoformat())
 
     def review_position(

@@ -11,6 +11,7 @@ from swing_screener.intelligence.evidence.collectors import (  # noqa: F401
     degiro_news,
     polygon_news,
     sec_edgar,
+    tavily_news,
 )
 from swing_screener.intelligence.evidence.collectors.degiro_news import (
     DegiroNewsCollector,
@@ -20,6 +21,9 @@ from swing_screener.intelligence.evidence.collectors.polygon_news import (
 )
 from swing_screener.intelligence.evidence.collectors.sec_edgar import (
     SecEdgarCatalystCollector,
+)
+from swing_screener.intelligence.evidence.collectors.tavily_news import (
+    TavilyNewsCollector,
 )
 from swing_screener.intelligence.evidence.config import EvidenceConfig, load_evidence_config
 from swing_screener.intelligence.evidence.curation import curate
@@ -31,6 +35,7 @@ __all__ = [
     "DegiroNewsCollector",
     "PolygonNewsCollector",
     "SecEdgarCatalystCollector",
+    "TavilyNewsCollector",
     "collect_evidence",
 ]
 
@@ -65,6 +70,7 @@ def collect_evidence(
     asof_date: date | None = None,
     cfg: EvidenceConfig | None = None,
     cache_root: Path | None = None,
+    refresh_sources: bool = False,
 ) -> list[SourceEvidence]:
     asof_date = asof_date or date.today()
     cfg = cfg or load_evidence_config()
@@ -72,7 +78,7 @@ def collect_evidence(
     ticker = ticker.strip().upper()
 
     cache_file = _cache_file(cache_root, asof_date, ticker)
-    cached = _read_cache(cache_file)
+    cached = None if refresh_sources else _read_cache(cache_file)
     if cached is not None:
         return cached
 
@@ -81,6 +87,8 @@ def collect_evidence(
     for source_id in cfg.enabled_sources:
         collector = collectors.get(source_id)
         if collector is None:
+            continue
+        if getattr(collector, "REFRESH_ONLY", False) and not refresh_sources:
             continue
         try:
             raw.extend(collector.collect(ticker, asof_date=asof_date, cfg=cfg))

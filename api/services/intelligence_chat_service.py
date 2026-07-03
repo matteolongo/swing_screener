@@ -148,7 +148,7 @@ class IntelligenceChatService:
     ) -> None:
         self._today = today or (lambda: datetime.now(timezone.utc).date())
         self._answer_fn = answer_fn or _default_answer_fn
-        self._collect_evidence = collect_evidence_fn or (lambda ticker: collect_evidence(ticker))
+        self._collect_evidence = collect_evidence_fn or (lambda ticker: collect_evidence(ticker, refresh_sources=True))
 
     def get_chat(self, ticker: str, chat_date: date | None = None) -> IntelligenceChatResponse:
         ticker = ticker.upper()
