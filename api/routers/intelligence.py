@@ -7,8 +7,10 @@ import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from api.models.intelligence_chat import IntelligenceChatRequest, IntelligenceChatResponse
 from api.dependencies import get_fundamentals_service, get_portfolio_service, get_positions_repo
 from api.repositories.positions_repo import PositionsRepository
+from api.services.intelligence_chat_service import IntelligenceChatService, MissingIntelligenceError
 from api.services.fundamentals_service import FundamentalsService
 from api.services.intelligence_enrichment import (
     enrich_intelligence_request,
@@ -44,6 +46,7 @@ def _dividend_for(ticker: str) -> tuple[int | None, str | None, float | None]:
         return None, None, None
 
 _analyzer: SymbolAnalyzer | None = None
+_chat_service: IntelligenceChatService | None = None
 
 
 def _get_analyzer() -> SymbolAnalyzer:
@@ -51,6 +54,13 @@ def _get_analyzer() -> SymbolAnalyzer:
     if _analyzer is None:
         _analyzer = SymbolAnalyzer()
     return _analyzer
+
+
+def _get_chat_service() -> IntelligenceChatService:
+    global _chat_service
+    if _chat_service is None:
+        _chat_service = IntelligenceChatService()
+    return _chat_service
 
 
 def _require_api_key() -> None:
@@ -136,6 +146,31 @@ def sweep(
 def get_history(ticker: str) -> AnalysisHistoryResponse:
     """Return the per-symbol analysis history (newest-first, capped). Empty if none."""
     return AnalysisHistoryResponse(entries=read_history(ticker.upper()))
+
+
+@router.get("/{ticker}/chat", response_model=IntelligenceChatResponse)
+def get_symbol_chat(ticker: str) -> IntelligenceChatResponse:
+    """Return today's persisted intelligence follow-up chat for a symbol."""
+    try:
+        return _get_chat_service().get_chat(ticker)
+    except MissingIntelligenceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/{ticker}/chat", response_model=IntelligenceChatResponse)
+def chat_with_symbol(ticker: str, request: IntelligenceChatRequest) -> IntelligenceChatResponse:
+    """Ask an advisory follow-up question about today's cached intelligence analysis."""
+    _require_analyzer_enabled()
+    try:
+        return _get_chat_service().send_message(ticker, request)
+    except MissingIntelligenceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        if "OPENAI_API_KEY" in str(exc):
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/{ticker}/latest", response_model=SymbolIntelligence)

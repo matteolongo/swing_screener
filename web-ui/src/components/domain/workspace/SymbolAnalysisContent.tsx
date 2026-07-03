@@ -10,6 +10,7 @@ import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisio
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
 import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
+import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
@@ -300,11 +301,19 @@ export default function SymbolAnalysisContent({
                 {t('workspacePage.panels.analysis.intelligence.analyzingAction')}
               </div>
             ) : hasNarrative && displayedIntelligence ? (
-              <NarrativeAnalysisCard
-                intelligence={displayedIntelligence}
-                candidate={candidate}
-                isPosition={Boolean(position)}
-              />
+              <>
+                <NarrativeAnalysisCard
+                  intelligence={displayedIntelligence}
+                  candidate={candidate}
+                  isPosition={Boolean(position)}
+                />
+                <IntelligenceChatPanel
+                  ticker={ticker}
+                  intelligence={displayedIntelligence}
+                  candidate={candidate}
+                  position={position}
+                />
+              </>
             ) : (
               <div className="rounded-lg border border-border bg-surface p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">

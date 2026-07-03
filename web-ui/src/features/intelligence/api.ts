@@ -6,8 +6,9 @@ import type {
   SweepResponseAPI,
   AnalysisHistoryResponseAPI,
   HistoryEntry,
+  IntelligenceChatResponseAPI,
 } from '@/features/intelligence/types';
-import { transformHistoryEntry } from '@/features/intelligence/types';
+import { transformHistoryEntry, transformIntelligenceChat } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -142,6 +143,42 @@ export async function getIntelligenceHistory(ticker: string): Promise<HistoryEnt
     errorMessage: `Failed to load analysis history for ${ticker}`,
   });
   return (res.entries ?? []).map(transformHistoryEntry);
+}
+
+export async function getIntelligenceChat(ticker: string) {
+  const res = await fetchJson<IntelligenceChatResponseAPI>(API_ENDPOINTS.intelligenceChat(ticker), {
+    errorMessage: `Failed to load intelligence chat for ${ticker}`,
+  });
+  return transformIntelligenceChat(res);
+}
+
+export interface IntelligenceChatMessagePayload {
+  message: string;
+  refreshSources: boolean;
+  analysisGeneratedAt?: string | null;
+  candidate?: Record<string, unknown> | null;
+  position?: Record<string, unknown> | null;
+}
+
+export async function sendIntelligenceChatMessage(
+  ticker: string,
+  payload: IntelligenceChatMessagePayload,
+) {
+  const body: Record<string, unknown> = {
+    message: payload.message,
+    refresh_sources: payload.refreshSources,
+  };
+  if (payload.analysisGeneratedAt != null) body.analysis_generated_at = payload.analysisGeneratedAt;
+  if (payload.candidate != null) body.candidate = payload.candidate;
+  if (payload.position != null) body.position = payload.position;
+
+  const res = await fetchJson<IntelligenceChatResponseAPI>(API_ENDPOINTS.intelligenceChat(ticker), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    errorMessage: `Failed to send intelligence chat message for ${ticker}`,
+  });
+  return transformIntelligenceChat(res);
 }
 
 export async function postIntelligenceSweep(symbols: SweepSymbolPayload[]): Promise<SweepResponseAPI> {

@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   candidateToPayload,
+  getIntelligenceChat,
   getIntelligenceHistory,
   getIntelligenceLatest,
   postIntelligenceAnalysis,
   postIntelligenceSweep,
+  sendIntelligenceChatMessage,
+  type IntelligenceChatMessagePayload,
 } from '@/features/intelligence/api';
 import { transformIntelligence } from '@/features/intelligence/types';
-import type { HistoryEntry, SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
+import type { HistoryEntry, IntelligenceChatResponse, SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -52,6 +55,26 @@ export function useIntelligenceHistoryQuery(ticker: string, enabled: boolean) {
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useIntelligenceChatQuery(ticker: string, enabled: boolean) {
+  return useQuery<IntelligenceChatResponse, Error>({
+    queryKey: ['intelligence', 'chat', ticker],
+    queryFn: () => getIntelligenceChat(ticker),
+    enabled,
+    retry: false,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useSendIntelligenceChatMutation(ticker: string) {
+  const queryClient = useQueryClient();
+  return useMutation<IntelligenceChatResponse, Error, IntelligenceChatMessagePayload>({
+    mutationFn: (payload) => sendIntelligenceChatMessage(ticker, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intelligence', 'chat', ticker] });
+    },
   });
 }
 

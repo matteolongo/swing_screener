@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { transformIntelligence, transformHistoryEntry } from './types';
-import type { SymbolIntelligenceAPI, HistoryEntryAPI } from './types';
+import { transformIntelligence, transformHistoryEntry, transformIntelligenceChat } from './types';
+import type { SymbolIntelligenceAPI, HistoryEntryAPI, IntelligenceChatResponseAPI } from './types';
 
 describe('transformIntelligence', () => {
   it('converts snake_case API shape to camelCase', () => {
@@ -22,6 +22,42 @@ describe('transformIntelligence', () => {
     expect(result.generatedAt).toBe('2026-05-23T10:00:00Z');
     expect(result.summaryLine).toBe('Cyclical recovery.');
     expect(result.sources).toHaveLength(1);
+  });
+});
+
+describe('transformIntelligenceChat', () => {
+  it('maps chat response and evidence fields to camelCase', () => {
+    const api: IntelligenceChatResponseAPI = {
+      ticker: 'AAPL',
+      chat_date: '2026-07-03',
+      refreshed_at: '2026-07-03T10:00:00Z',
+      messages: [
+        {
+          id: 'm1',
+          role: 'assistant',
+          content: 'Guidance is the main risk.',
+          created_at: '2026-07-03T09:00:00Z',
+          refresh_sources: true,
+          evidence_used: [
+            {
+              label: 'Supplier update',
+              source: 'Example News',
+              url: 'https://example.com',
+              date: '2026-07-03',
+              summary: 'Supplier checks improved.',
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = transformIntelligenceChat(api);
+
+    expect(result.chatDate).toBe('2026-07-03');
+    expect(result.refreshedAt).toBe('2026-07-03T10:00:00Z');
+    expect(result.messages[0].createdAt).toBe('2026-07-03T09:00:00Z');
+    expect(result.messages[0].refreshSources).toBe(true);
+    expect(result.messages[0].evidenceUsed[0].source).toBe('Example News');
   });
 });
 

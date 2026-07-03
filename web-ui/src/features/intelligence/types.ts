@@ -426,6 +426,76 @@ export function transformHistoryEntry(api: HistoryEntryAPI): HistoryEntry {
   };
 }
 
+export interface IntelligenceChatEvidenceAPI {
+  label: string;
+  source?: string | null;
+  url?: string | null;
+  date?: string | null;
+  summary?: string | null;
+}
+
+export interface IntelligenceChatEvidence {
+  label: string;
+  source: string | null;
+  url: string | null;
+  date: string | null;
+  summary: string | null;
+}
+
+export interface IntelligenceChatMessageAPI {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+  refresh_sources?: boolean;
+  evidence_used?: IntelligenceChatEvidenceAPI[];
+}
+
+export interface IntelligenceChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+  refreshSources: boolean;
+  evidenceUsed: IntelligenceChatEvidence[];
+}
+
+export interface IntelligenceChatResponseAPI {
+  ticker: string;
+  chat_date: string;
+  messages: IntelligenceChatMessageAPI[];
+  refreshed_at?: string | null;
+}
+
+export interface IntelligenceChatResponse {
+  ticker: string;
+  chatDate: string;
+  messages: IntelligenceChatMessage[];
+  refreshedAt: string | null;
+}
+
+export function transformIntelligenceChat(api: IntelligenceChatResponseAPI): IntelligenceChatResponse {
+  return {
+    ticker: api.ticker,
+    chatDate: api.chat_date,
+    refreshedAt: api.refreshed_at ?? null,
+    messages: (api.messages ?? []).map((message) => ({
+      id: message.id,
+      role: message.role,
+      content: message.content,
+      createdAt: message.created_at,
+      refreshSources: message.refresh_sources ?? false,
+      evidenceUsed: (message.evidence_used ?? []).map((evidence) => ({
+        label: evidence.label,
+        source: evidence.source ?? null,
+        url: evidence.url ?? null,
+        date: evidence.date ?? null,
+        summary: evidence.summary ?? null,
+      })),
+    })),
+  };
+}
+
 export interface SweepSymbolPayload {
   ticker: string;
   request: IntelligenceRequestPayload;
