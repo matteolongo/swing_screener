@@ -280,6 +280,16 @@ def _fallback_position_fields(
     return position_signal, key_numbers
 
 
+def is_position_request(req: SymbolIntelligenceRequest) -> bool:
+    """True when the request carries open-position context (analysis runs in
+    MANAGE_ONLY mode). Single source of truth for the position/candidate split."""
+    return (
+        req.entry_price is not None
+        and req.r_now is not None
+        and req.days_open is not None
+    )
+
+
 def _build_user_prompt(
     ticker: str,
     req: SymbolIntelligenceRequest,
@@ -292,11 +302,7 @@ def _build_user_prompt(
     def fmt(v: float | None) -> str:
         return f"{v:.2f}" if v is not None else "N/A"
 
-    has_position = (
-        req.entry_price is not None
-        and req.r_now is not None
-        and req.days_open is not None
-    )
+    has_position = is_position_request(req)
 
     lines: list[str] = []
 
@@ -644,6 +650,7 @@ class SymbolAnalyzer:
             timeout=self._timeout,
             max_retries=self._max_retries,
         )
+        self._graph = None
 
     def _is_us_listed(self, ticker: str, req: SymbolIntelligenceRequest) -> bool:
         """US-listed proxy. Prefer the ticker-based `detect_currency` (knows e.g.
@@ -686,7 +693,10 @@ class SymbolAnalyzer:
         *,
         now: datetime | None = None,
     ) -> SymbolIntelligence:
-        from swing_screener.intelligence.graph.build import build_graph
+        if self._graph is None:
+            from swing_screener.intelligence.graph.build import build_graph
+
+            self._graph = build_graph(self)
 
         state = {
             "ticker": ticker,
@@ -695,4 +705,4 @@ class SymbolAnalyzer:
         }
         if now is not None:
             state["now"] = now
-        return build_graph(self).invoke(state)["result"]
+        return self._graph.invoke(state)["result"]
