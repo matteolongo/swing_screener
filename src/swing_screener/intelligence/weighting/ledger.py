@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 from swing_screener.intelligence.weighting.config import EvidenceWeightsConfig
 from swing_screener.intelligence.weighting.models import (
     BalanceLabel,
@@ -20,6 +23,56 @@ def _dir_from_num(value: float | int | None) -> Direction | None:
     if value < 0:
         return "bearish"
     return "neutral"
+
+
+def _sma_trend_dir(req) -> Direction | None:
+    if req.close is None or None in (req.sma_20, req.sma_50, req.sma_200):
+        return None
+    if req.close > req.sma_20 > req.sma_50 > req.sma_200:
+        return "bullish"
+    if req.close < req.sma_20 < req.sma_50 < req.sma_200:
+        return "bearish"
+    return "neutral"
+
+
+@dataclass(frozen=True)
+class _ScalarSignal:
+    """A request-derived signal with a deterministic direction. Adding a new
+    numeric signal (e.g. from a future Finnhub/Alpha Vantage field) is one entry
+    here — no edit to weigh()."""
+
+    key: str
+    label: str
+    category: SignalCategory
+    source: str
+    direction: Callable[[object], Direction | None]
+
+
+# Order defines ledger contribution order. `valuation` is handled separately in
+# weigh() because its label is value-dependent.
+_SCALAR_SIGNALS: tuple[_ScalarSignal, ...] = (
+    _ScalarSignal(
+        "insider_activity", "Insider activity (90d)", "positioning", "Finnhub insider 90d",
+        lambda r: _dir_from_num(r.insider_net_shares_90d),
+    ),
+    _ScalarSignal(
+        "analyst_actions", "Analyst upgrades/downgrades (30d)", "catalyst", "Finnhub analyst 30d",
+        lambda r: _dir_from_num(r.analyst_upgrade_downgrade_net_30d),
+    ),
+    _ScalarSignal("sma_trend", "SMA trend", "technical", "OHLCV SMAs", _sma_trend_dir),
+    _ScalarSignal(
+        "momentum", "Momentum 6m", "technical", "OHLCV momentum",
+        lambda r: _dir_from_num(r.momentum_6m),
+    ),
+    _ScalarSignal(
+        "relative_strength", "Relative strength", "technical", "Benchmark RS",
+        lambda r: _dir_from_num(r.rel_strength),
+    ),
+    _ScalarSignal(
+        "52w_proximity", "Near 52-week high", "technical", "52w high proximity",
+        lambda r: "bullish" if r.near_52w_high else None,
+    ),
+)
 
 
 def _enum_value(value: object) -> str:
@@ -70,54 +123,16 @@ def weigh(draft, req, cfg: EvidenceWeightsConfig) -> EvidenceLedger:
             )
         )
 
-    add(
-        "insider_activity",
-        "Insider activity (90d)",
-        "positioning",
-        _dir_from_num(req.insider_net_shares_90d),
-        cfg.signal_weight("insider_activity"),
-        "Finnhub insider 90d",
-    )
-    add(
-        "analyst_actions",
-        "Analyst upgrades/downgrades (30d)",
-        "catalyst",
-        _dir_from_num(req.analyst_upgrade_downgrade_net_30d),
-        cfg.signal_weight("analyst_actions"),
-        "Finnhub analyst 30d",
-    )
-
-    sma_dir: Direction | None = None
-    if req.close is not None and None not in (req.sma_20, req.sma_50, req.sma_200):
-        above = req.close > req.sma_20 > req.sma_50 > req.sma_200
-        below = req.close < req.sma_20 < req.sma_50 < req.sma_200
-        sma_dir = "bullish" if above else ("bearish" if below else "neutral")
-    add("sma_trend", "SMA trend", "technical", sma_dir, cfg.signal_weight("sma_trend"), "OHLCV SMAs")
-    add(
-        "momentum",
-        "Momentum 6m",
-        "technical",
-        _dir_from_num(req.momentum_6m),
-        cfg.signal_weight("momentum"),
-        "OHLCV momentum",
-    )
-    add(
-        "relative_strength",
-        "Relative strength",
-        "technical",
-        _dir_from_num(req.rel_strength),
-        cfg.signal_weight("relative_strength"),
-        "Benchmark RS",
-    )
-    if req.near_52w_high:
+    for spec in _SCALAR_SIGNALS:
         add(
-            "52w_proximity",
-            "Near 52-week high",
-            "technical",
-            "bullish",
-            cfg.signal_weight("52w_proximity"),
-            "52w high proximity",
+            spec.key,
+            spec.label,
+            spec.category,
+            spec.direction(req),
+            cfg.signal_weight(spec.key),
+            spec.source,
         )
+
     if req.valuation_label in {"cheap", "expensive"}:
         add(
             "valuation",

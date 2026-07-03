@@ -20,9 +20,10 @@ from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.evidence.collect import collect_evidence
 from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.intelligence.history import read_history
+from swing_screener.intelligence.config_access import intelligence_config_section
 from swing_screener.intelligence.models import SymbolIntelligence
-from swing_screener.settings import get_settings_manager
 from swing_screener.settings.paths import data_dir
+from swing_screener.utils.file_lock import write_json_with_lock
 
 
 class MissingIntelligenceError(RuntimeError):
@@ -94,7 +95,7 @@ def _default_answer_fn(
 ) -> str:
     if not os.environ.get("OPENAI_API_KEY"):
         raise RuntimeError("OPENAI_API_KEY is not configured")
-    cfg = get_settings_manager().load_intelligence_document().get("config", {}).get("llm", {})
+    cfg = intelligence_config_section("llm")
     configured_model = cfg.get("model") or cfg.get("web_search_model")
     if not configured_model:
         raise RuntimeError("Intelligence chat model is not configured")
@@ -233,7 +234,6 @@ class IntelligenceChatService:
         refreshed_at: str | None,
     ) -> None:
         path = _chat_file(ticker, chat_date)
-        path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "ticker": ticker.upper(),
             "chat_date": chat_date.isoformat(),
@@ -242,6 +242,4 @@ class IntelligenceChatService:
             "refreshed_at": refreshed_at,
             "messages": [message.model_dump(mode="json") for message in messages],
         }
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload, indent=2))
-        tmp.replace(path)
+        write_json_with_lock(path, payload)

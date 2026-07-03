@@ -7,11 +7,9 @@ from pathlib import Path
 
 from swing_screener.data.source_health import record_fallback
 from swing_screener.intelligence.evidence import registry
-from swing_screener.intelligence.evidence.collectors import (  # noqa: F401
-    degiro_news,
-    polygon_news,
-    sec_edgar,
-)
+
+# Importing the collector classes below registers them via the @register
+# decorator (import side-effect); the registry is the single source of truth.
 from swing_screener.intelligence.evidence.collectors.degiro_news import (
     DegiroNewsCollector,
 )
@@ -35,7 +33,7 @@ __all__ = [
 ]
 
 _CACHE_ROOT = Path("data/intelligence/evidence")
-_COLLECTORS = registry.get_registered()
+
 
 def _cache_file(cache_root: Path, asof_date: date, ticker: str) -> Path:
     return cache_root / asof_date.isoformat() / f"{ticker.upper()}.json"

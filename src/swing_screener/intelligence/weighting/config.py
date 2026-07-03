@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from swing_screener.settings import get_settings_manager
+from swing_screener.intelligence.config_access import intelligence_config_section
 from swing_screener.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -94,11 +94,7 @@ class EvidenceWeightsConfig:
 
 
 def load_evidence_weights_config() -> EvidenceWeightsConfig:
-    try:
-        doc = get_settings_manager().load_intelligence_document()
-        cfg = doc.get("config", {}).get("evidence_weights", {}) or {}
-    except Exception:
-        cfg = {}
+    cfg = intelligence_config_section("evidence_weights")
 
     return EvidenceWeightsConfig(
         signals=_merge_defaults(_DEFAULT_SIGNALS, cfg.get("signals")),

@@ -34,7 +34,9 @@ def test_polygon_news_collector_registered():
         PolygonNewsCollector,
     )
 
-    assert collect_mod._COLLECTORS.get("polygon_news") is PolygonNewsCollector
+    from swing_screener.intelligence.evidence import registry
+
+    assert registry.get_registered().get("polygon_news") is PolygonNewsCollector
 
 
 def test_polygon_news_runs_when_enabled(tmp_path, monkeypatch):
