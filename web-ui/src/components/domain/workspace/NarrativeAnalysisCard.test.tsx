@@ -431,6 +431,17 @@ describe('NarrativeAnalysisCard — analysis timeline', () => {
               conviction: 'high',
               summary_line: 'Initial breakout entry.',
               watch_for: [],
+              predictions: [
+                {
+                  direction: 'bullish',
+                  reason: 'SMA20 support holds',
+                  reference: 'technical',
+                  outcome: {
+                    status: 'confirmed',
+                    evidence: 'SMA20 support held after the follow-up run.',
+                  },
+                },
+              ],
               pre_open_outlook: null,
             },
           ],
@@ -442,6 +453,8 @@ describe('NarrativeAnalysisCard — analysis timeline', () => {
     openTimeline();
     expect(await screen.findByText('Hold into the open.')).toBeInTheDocument();
     expect(screen.getByText('Initial breakout entry.')).toBeInTheDocument();
+    expect(screen.getByText('Confirmed')).toBeInTheDocument();
+    expect(screen.getByText('SMA20 support held after the follow-up run.')).toBeInTheDocument();
     expect(screen.getByText('Jun 25, 2026')).toBeInTheDocument();
   });
 

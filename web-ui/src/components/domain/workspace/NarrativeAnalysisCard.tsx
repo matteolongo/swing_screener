@@ -170,6 +170,18 @@ function thesisStatusVariant(status: ThesisDeltaStatus): 'default' | 'success' |
   }
 }
 
+function predictionOutcomeLabel(status: 'confirmed' | 'contradicted' | 'unresolved'): string {
+  return t(`workspacePage.panels.analysis.intelligence.timeline.outcome.${status}`);
+}
+
+function predictionOutcomeVariant(status: 'confirmed' | 'contradicted' | 'unresolved'): 'success' | 'warning' | 'error' {
+  switch (status) {
+    case 'confirmed': return 'success';
+    case 'contradicted': return 'error';
+    default: return 'warning';
+  }
+}
+
 function positionSignalLabel(action: PositionSignalAction): string {
   const map: Record<PositionSignalAction, string> = {
     HOLD: t('workspacePage.panels.analysis.intelligence.positionSignal.hold'),
@@ -789,13 +801,31 @@ export default function NarrativeAnalysisCard({
               {historyEntries.map((entry, index) => (
                 <li
                   key={`${entry.generatedAt}-${index}`}
-                  className="flex items-start gap-2 text-sm border-l-2 border-border pl-2"
+                  className="border-l-2 border-border pl-2 text-sm"
                 >
-                  <span className="shrink-0 text-[11px] text-muted tabular-nums">
-                    {formatDate(entry.generatedAt)}
-                  </span>
-                  <Badge variant={convictionVariant(entry.conviction)}>{actionLabel(entry.action)}</Badge>
-                  <span className="flex-1 text-foreground">{entry.summaryLine}</span>
+                  <div className="flex items-start gap-2">
+                    <span className="shrink-0 text-[11px] text-muted tabular-nums">
+                      {formatDate(entry.generatedAt)}
+                    </span>
+                    <Badge variant={convictionVariant(entry.conviction)}>{actionLabel(entry.action)}</Badge>
+                    <span className="flex-1 text-foreground">{entry.summaryLine}</span>
+                  </div>
+                  {entry.predictions.some((prediction) => prediction.outcome) && (
+                    <ul className="mt-2 ml-24 space-y-1">
+                      {entry.predictions
+                        .filter((prediction) => prediction.outcome)
+                        .map((prediction, predictionIndex) => (
+                          <li key={`${prediction.reason}-${predictionIndex}`} className="flex items-start gap-2">
+                            <Badge variant={predictionOutcomeVariant(prediction.outcome!.status)}>
+                              {predictionOutcomeLabel(prediction.outcome!.status)}
+                            </Badge>
+                            <span className="flex-1 text-xs text-muted">
+                              {prediction.outcome!.evidence}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>

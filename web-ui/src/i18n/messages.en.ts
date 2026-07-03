@@ -867,6 +867,11 @@ export const messagesEn = {
             empty: 'No prior analyses recorded for this symbol yet.',
             loading: 'Loading analysis history…',
             error: 'Could not load analysis history.',
+            outcome: {
+              confirmed: 'Confirmed',
+              contradicted: 'Contradicted',
+              unresolved: 'Unresolved',
+            },
           },
         },
         decisionWhy: {
