@@ -754,7 +754,7 @@ export const messagesEn = {
           analyzeAction: 'Analyze with AI',
           analyzingAction: 'Analyzing...',
           overviewPromptTitle: 'AI narrative summary',
-          overviewPromptDescription: 'Generate a web-search-grounded summary for this symbol without leaving Overview.',
+          overviewPromptDescription: 'Generate a web-search-grounded summary, then review the full narrative in Intelligence.',
           emptyState: 'Click "Analyze with AI" to generate a web-search-grounded analysis for this symbol.',
           marketCatalyst: 'Market catalyst context',
           keyRisks: 'Key risks',

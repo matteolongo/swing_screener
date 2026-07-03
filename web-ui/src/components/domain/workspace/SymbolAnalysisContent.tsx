@@ -80,11 +80,12 @@ export default function SymbolAnalysisContent({
   });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
-  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview');
+  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
-  const hasNarrative = Boolean(!intelligenceLatest.isLoading && displayedIntelligence?.narrative?.trim());
+  const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
+  const hasNarrative = Boolean(!isIntelligenceLoading && displayedIntelligence?.narrative?.trim());
 
   const handleAnalyzeWithAi = (force = false) => {
     intelligenceMutation.mutate(
@@ -126,6 +127,7 @@ export default function SymbolAnalysisContent({
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
+    { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
     ...(!heldMode || canAddOn
       ? [{ id: 'order' as const, label: t('workspacePage.panels.analysis.tabs.order') }]
       : []),
@@ -193,7 +195,6 @@ export default function SymbolAnalysisContent({
           <>
             <DecisionWhyPanel
               summary={candidate?.decisionSummary}
-              aiSummaryLine={hasNarrative ? displayedIntelligence?.summaryLine ?? null : null}
             />
             <FundamentalsStrip
               trailingPe={fundamentalsQuery.data?.trailingPe ?? null}
@@ -229,26 +230,12 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
-            {(() => {
-              if (hasNarrative && displayedIntelligence) {
-                return (
-                  <NarrativeAnalysisCard
-                    intelligence={displayedIntelligence}
-                    candidate={candidate}
-                    isPosition={Boolean(position)}
-                  />
-                );
-              }
-              if (candidate?.decisionSummary) {
-                return (
-                  <DecisionSummaryCard
-                    summary={candidate.decisionSummary}
-                    currency={candidate.currency}
-                  />
-                );
-              }
-              return null;
-            })()}
+            {candidate?.decisionSummary ? (
+              <DecisionSummaryCard
+                summary={candidate.decisionSummary}
+                currency={candidate.currency}
+              />
+            ) : null}
             <div className="rounded-lg border border-border bg-surface p-3">
               <CachedSymbolCandleChart
                 ticker={ticker}
@@ -299,6 +286,59 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
+          </>
+        )}
+
+        {activeTab === 'order' ? orderPanel : null}
+
+        {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
+
+        {activeTab === 'intelligence' && (
+          <>
+            {isIntelligenceLoading ? (
+              <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
+                {t('workspacePage.panels.analysis.intelligence.analyzingAction')}
+              </div>
+            ) : hasNarrative && displayedIntelligence ? (
+              <NarrativeAnalysisCard
+                intelligence={displayedIntelligence}
+                candidate={candidate}
+                isPosition={Boolean(position)}
+              />
+            ) : (
+              <div className="rounded-lg border border-border bg-surface p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
+                    </p>
+                    <p className="mt-1 text-sm text-muted">
+                      {t('workspacePage.panels.analysis.intelligence.emptyState')}
+                    </p>
+                  </div>
+                  {(candidate || position) && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={intelligenceMutation.isPending}
+                      onClick={() => handleAnalyzeWithAi(false)}
+                    >
+                      {intelligenceMutation.isPending
+                        ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
+                        : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
+                    </Button>
+                  )}
+                </div>
+                {intelligenceMutation.isError && (
+                  <p className="mt-2 text-sm text-danger">
+                    {intelligenceMutation.error instanceof Error
+                      ? intelligenceMutation.error.message
+                      : t('workspacePage.panels.analysis.intelligence.analyzeError')}
+                  </p>
+                )}
+              </div>
+            )}
             {hasNarrative && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
                 <Button
@@ -329,10 +369,6 @@ export default function SymbolAnalysisContent({
             )}
           </>
         )}
-
-        {activeTab === 'order' ? orderPanel : null}
-
-        {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
 
         {activeTab === 'fundamentals' && (
           <>

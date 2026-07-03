@@ -6,7 +6,7 @@ import type {
   SameSymbolCandidateContext,
 } from '@/features/screener/types';
 
-export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'order' | 'backtest';
+export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'intelligence' | 'order' | 'backtest';
 
 export interface SymbolAnalysisCandidate {
   ticker: string;
