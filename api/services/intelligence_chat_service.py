@@ -99,7 +99,11 @@ def _default_answer_fn(
     if not configured_model:
         raise RuntimeError("Intelligence chat model is not configured")
     model = str(configured_model)
-    client = OpenAI()
+    client = OpenAI(
+        api_key=os.environ.get("OPENAI_API_KEY"),
+        timeout=float(cfg.get("request_timeout_seconds", 60.0)),
+        max_retries=int(cfg.get("max_retries", 2)),
+    )
     context = _format_context(
         ticker=ticker,
         intelligence=intelligence,
@@ -215,7 +219,8 @@ class IntelligenceChatService:
             return []
         try:
             raw = json.loads(path.read_text())
-            return [IntelligenceChatMessage.model_validate(item) for item in raw.get("messages", [])]
+            messages = raw.get("messages", []) if isinstance(raw, dict) else []
+            return [IntelligenceChatMessage.model_validate(item) for item in messages]
         except (OSError, ValueError, TypeError):
             return []
 

@@ -210,6 +210,42 @@ def test_append_marks_prior_prediction_unresolved_when_follow_up_has_no_match(tm
     assert prior_prediction.outcome.evidence == "No matching follow-up evidence yet."
 
 
+def test_generic_two_token_overlap_does_not_confirm(tmp_path):
+    """A couple of incidentally-shared generic words must not confirm a prediction
+    against unrelated follow-up evidence."""
+    from swing_screener.intelligence.models import ThesisDelta
+
+    append_history(
+        "AAPL",
+        _result(
+            "first",
+            generated_at="2026-06-24T08:00:00Z",
+            predictions=[
+                PredictionBullet(
+                    direction="bullish",
+                    reason="earnings growth should accelerate next year",
+                    reference="growth",
+                )
+            ],
+        ),
+        max_entries=50,
+        history_root=tmp_path,
+    )
+    follow_up = _result("second", generated_at="2026-06-25T08:00:00Z")
+    follow_up.thesis_delta = ThesisDelta(
+        status="confirmed",
+        summary="Unrelated development.",
+        what_played_out=["Guidance cut despite earnings growth last quarter"],
+    )
+
+    append_history("AAPL", follow_up, max_entries=50, history_root=tmp_path)
+
+    entries = read_history("AAPL", history_root=tmp_path)
+    prior_prediction = entries[1].predictions[0]
+    assert prior_prediction.outcome is not None
+    assert prior_prediction.outcome.status == "unresolved"
+
+
 def test_read_history_accepts_legacy_predictions_without_outcomes(tmp_path):
     (tmp_path / "history").mkdir(parents=True)
     legacy = {

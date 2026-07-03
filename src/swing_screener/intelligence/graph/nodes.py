@@ -13,14 +13,6 @@ if TYPE_CHECKING:
     from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
 
 
-def _has_position(req) -> bool:
-    return (
-        req.entry_price is not None
-        and req.r_now is not None
-        and req.days_open is not None
-    )
-
-
 def resolve_context(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
     req, ticker = state["req"], state["ticker"]
     now = state.get("now") or datetime.now(timezone.utc)
@@ -31,7 +23,7 @@ def resolve_context(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
     state["prior_digest"] = mod.read_history(
         ticker, limit=analyzer._history_digest_size
     )
-    state["has_position"] = _has_position(req)
+    state["has_position"] = mod.is_position_request(req)
     return state
 
 
@@ -48,10 +40,8 @@ def assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
         trade_plan["target"] = req.target
     if req.rr is not None:
         trade_plan["rr"] = req.rr
-    if req.target is not None and req.close is not None:
-        trade_plan["upside_pct"] = round(
-            (req.target - req.close) / req.close * 100, 1
-        )
+    if req.target is not None and req.close is not None and req.close != 0:
+        trade_plan["upside_pct"] = round((req.target - req.close) / req.close * 100, 1)
     if trade_plan:
         inputs_used["trade_plan"] = trade_plan
 

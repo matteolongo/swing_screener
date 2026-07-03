@@ -87,7 +87,12 @@ def _matching_evidence(prediction: HistoryPrediction, played_out: list[str]) -> 
     if not prediction_tokens:
         return None
     for evidence in played_out:
-        if len(prediction_tokens & _tokens(evidence)) >= 2:
+        overlap = len(prediction_tokens & _tokens(evidence))
+        # Require the evidence to cover a substantial share of the prediction's
+        # meaningful tokens, not just two incidentally-shared generic words
+        # (e.g. "earnings", "growth") — those produce false confirmed/contradicted
+        # outcomes.
+        if overlap >= 2 and overlap >= 0.6 * len(prediction_tokens):
             return evidence
     return None
 
