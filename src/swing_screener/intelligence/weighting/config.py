@@ -4,6 +4,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from swing_screener.settings import get_settings_manager
+from swing_screener.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 _DEFAULT_SIGNALS = {
     "insider_activity": 10.0,
@@ -55,7 +58,15 @@ _DEFAULT_THRESHOLDS = {
 def _merge_defaults(defaults: dict[str, float], overrides: Any) -> dict[str, float]:
     merged = dict(defaults)
     if isinstance(overrides, dict):
-        merged.update({str(key): float(value) for key, value in overrides.items()})
+        for key, value in overrides.items():
+            try:
+                merged[str(key)] = float(value)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Ignoring non-numeric evidence weight %r=%r; keeping default",
+                    key,
+                    value,
+                )
     return merged
 
 

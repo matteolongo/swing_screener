@@ -453,7 +453,9 @@ describe('NarrativeAnalysisCard — analysis timeline', () => {
     openTimeline();
     expect(await screen.findByText('Hold into the open.')).toBeInTheDocument();
     expect(screen.getByText('Initial breakout entry.')).toBeInTheDocument();
-    expect(screen.getByText('Confirmed')).toBeInTheDocument();
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.timeline.outcome.confirmed')),
+    ).toBeInTheDocument();
     expect(screen.getByText('SMA20 support held after the follow-up run.')).toBeInTheDocument();
     expect(screen.getByText('Jun 25, 2026')).toBeInTheDocument();
   });

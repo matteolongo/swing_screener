@@ -151,6 +151,7 @@ def _mock_openai(monkeypatch):
 
         client.responses.parse.side_effect = _parse
         self._client = client
+        self._graph = None
 
     monkeypatch.setattr(mod.SymbolAnalyzer, "__init__", fake_init)
 
