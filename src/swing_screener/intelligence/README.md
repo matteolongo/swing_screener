@@ -151,7 +151,7 @@ The symbol analyzer runs two sequential LLM calls to keep web-search from trunca
 1. **Call 1 (search)** — `config.llm.web_search_model` (default `gpt-4o`) performs the multi-hop web search, writes a prose narrative with cited source URLs, and returns free-text.
 2. **Call 2 (format)** — `config.llm.format_model` (default `gpt-4o-mini`) receives the prose and structures it into the validated `SymbolIntelligence` schema via the Responses structured-output API (`responses.parse`). No tool use in call 2.
 
-The split preserves full reasoning in call 1 while using a cheaper model for deterministic schema extraction in call 2. Phase 2 (Tavily evidence injection) will feed additional structured evidence into call 1 at the `--- Catalyst evidence ---` seam.
+The split preserves full reasoning in call 1 while using a cheaper model for deterministic schema extraction in call 2. Structured evidence is injected at the `--- Catalyst evidence ---` seam before the narrative call.
 
 ## Configuration
 

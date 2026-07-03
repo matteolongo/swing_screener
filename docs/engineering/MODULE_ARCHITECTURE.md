@@ -144,6 +144,12 @@ It is deterministic and config-driven (`config.evidence_weights`), emits
 conviction. UI and API consumers should treat it as explainability, not as a
 predictive score.
 
+`src/swing_screener/intelligence/history.py` owns per-symbol analysis memory.
+It stores compact history entries and annotates prior prediction bullets with
+optional deterministic outcomes when later `thesis_delta.what_played_out` text
+matches the prior reason/reference. These outcomes are audit metadata for the
+timeline, not a model-training loop or return predictor.
+
 ## Universe Registry Data Sources
 
 The packaged universe registry (`src/swing_screener/data/universes/registry/`) is
