@@ -24,8 +24,8 @@ from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.history import HistoryEntry, read_history
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
+from swing_screener.intelligence.config_access import intelligence_config_section
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
-from swing_screener.settings import get_settings_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
@@ -71,7 +71,7 @@ def _require_api_key() -> None:
 
 
 def _require_analyzer_enabled() -> None:
-    cfg = get_settings_manager().load_intelligence_document().get("config", {}).get("llm", {})
+    cfg = intelligence_config_section("llm")
     if not bool(cfg.get("analyzer_enabled", True)):
         raise HTTPException(status_code=503, detail="Symbol intelligence analyzer is disabled")
 

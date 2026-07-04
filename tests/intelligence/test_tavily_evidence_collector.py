@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import date
 
-import swing_screener.intelligence.evidence.collect as collect_mod
 from swing_screener.intelligence.evidence.collect import collect_evidence
 from swing_screener.intelligence.evidence.collectors.tavily_news import TavilyNewsCollector
 from swing_screener.intelligence.evidence.config import EvidenceConfig
@@ -49,7 +48,9 @@ def test_returns_empty_without_tavily_key(monkeypatch):
 
 
 def test_tavily_registered_but_refresh_only():
-    assert collect_mod._COLLECTORS.get("tavily_news") is TavilyNewsCollector
+    from swing_screener.intelligence.evidence.registry import get_registered
+
+    assert get_registered().get("tavily_news") is TavilyNewsCollector
     assert TavilyNewsCollector.REFRESH_ONLY is True
 
 
