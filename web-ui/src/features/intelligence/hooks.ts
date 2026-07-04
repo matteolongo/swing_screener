@@ -4,13 +4,16 @@ import {
   getIntelligenceChat,
   getIntelligenceHistory,
   getIntelligenceLatest,
+  postPositionReview,
   postIntelligenceAnalysis,
   postIntelligenceSweep,
   sendIntelligenceChatMessage,
   type IntelligenceChatMessagePayload,
+  type PositionReviewPayload,
 } from '@/features/intelligence/api';
 import { transformIntelligence } from '@/features/intelligence/types';
 import type { HistoryEntry, IntelligenceChatResponse, SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
+import type { PositionReview } from '@/features/intelligence/positionReviewTypes';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -75,6 +78,12 @@ export function useSendIntelligenceChatMutation(ticker: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intelligence', 'chat', ticker] });
     },
+  });
+}
+
+export function usePositionReviewMutation() {
+  return useMutation<PositionReview, Error, PositionReviewPayload>({
+    mutationFn: postPositionReview,
   });
 }
 

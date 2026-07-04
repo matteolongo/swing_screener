@@ -198,8 +198,9 @@ def postprocess(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerSta
         from swing_screener.intelligence.evidence.config import (
             load_evidence_config as _load_ev_cfg,
         )
+        from swing_screener.intelligence.evidence.collect import attempted_source_ids
 
-        attempted = sorted(_load_ev_cfg().enabled_sources)
+        attempted = attempted_source_ids(_load_ev_cfg())
     except Exception:
         attempted = sorted(pub_counts)
 
