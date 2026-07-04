@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
 import { formatDate } from '@/utils/formatters';
-import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection, GapDirection, GapMagnitude, PreOpenConfidence, ThesisDeltaStatus, PositionSignalAction, ThesisStatus, ProfitManagement, OpportunityCost, ExpectedHoldingPeriod } from '@/features/intelligence/types';
+import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection, GapDirection, GapMagnitude, PreOpenConfidence, ThesisDeltaStatus, PositionSignalAction, ThesisStatus, ProfitManagement, OpportunityCost, ExpectedHoldingPeriod, BalanceLabel } from '@/features/intelligence/types';
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useIntelligenceHistoryQuery } from '@/features/intelligence/hooks';
@@ -87,6 +87,22 @@ function sentimentDotClass(sentiment: KeyNumber['sentiment']): string {
   }
 }
 
+function ledgerTone(label: BalanceLabel): 'positive' | 'negative' | 'neutral' {
+  if (label === 'strongly_bullish' || label === 'bullish') return 'positive';
+  if (label === 'strongly_bearish' || label === 'bearish') return 'negative';
+  return 'neutral';
+}
+
+function ledgerLabel(label: BalanceLabel): string {
+  if (label === 'strongly_bullish' || label === 'bullish') {
+    return t('workspacePage.panels.analysis.intelligence.ledger.bullish');
+  }
+  if (label === 'strongly_bearish' || label === 'bearish') {
+    return t('workspacePage.panels.analysis.intelligence.ledger.bearish');
+  }
+  return t('workspacePage.panels.analysis.intelligence.ledger.mixed');
+}
+
 function directionArrow(direction: PredictionBullet['direction']): string {
   switch (direction) {
     case 'bullish': return '↑';
@@ -154,6 +170,18 @@ function thesisStatusVariant(status: ThesisDeltaStatus): 'default' | 'success' |
   }
 }
 
+function predictionOutcomeLabel(status: 'confirmed' | 'contradicted' | 'unresolved'): string {
+  return t(`workspacePage.panels.analysis.intelligence.timeline.outcome.${status}`);
+}
+
+function predictionOutcomeVariant(status: 'confirmed' | 'contradicted' | 'unresolved'): 'success' | 'warning' | 'error' {
+  switch (status) {
+    case 'confirmed': return 'success';
+    case 'contradicted': return 'error';
+    default: return 'warning';
+  }
+}
+
 function positionSignalLabel(action: PositionSignalAction): string {
   const map: Record<PositionSignalAction, string> = {
     HOLD: t('workspacePage.panels.analysis.intelligence.positionSignal.hold'),
@@ -187,6 +215,18 @@ function holdingPeriodLabel(value: ExpectedHoldingPeriod): string {
   return t(`workspacePage.panels.analysis.intelligence.positionOutlook.expectedHoldingPeriodValue.${value}`);
 }
 
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
+function DateBadge({ date }: { date: string | null | undefined }) {
+  return (
+    <span className="shrink-0 rounded border border-border bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-muted tabular-nums">
+      {date || t('workspacePage.panels.analysis.intelligence.dateUnavailable')}
+    </span>
+  );
+}
+
 export default function NarrativeAnalysisCard({
   intelligence,
   candidate,
@@ -211,6 +251,11 @@ export default function NarrativeAnalysisCard({
   const moveExplanation = intelligence.positionMoveExplanation ?? null;
   const preOpen = intelligence.preOpenOutlook ?? null;
   const thesisDelta = intelligence.thesisDelta ?? null;
+  const evidenceLedger = intelligence.evidenceLedger ?? null;
+  const totalLedgerWeight = evidenceLedger ? evidenceLedger.bullWeight + evidenceLedger.bearWeight : 0;
+  const bullShare = evidenceLedger && totalLedgerWeight > 0
+    ? Math.round((evidenceLedger.bullWeight / totalLedgerWeight) * 100)
+    : 50;
   // Only fetch history once the timeline disclosure is opened — it lives in a
   // collapsed <details> the user may never expand.
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -315,6 +360,60 @@ export default function NarrativeAnalysisCard({
                 </div>
               ))}
             </dl>
+          )}
+        </div>
+
+        {/* Evidence ledger — advisory only; it never changes action or conviction */}
+        <div className="rounded-md bg-surface border border-border p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {t('workspacePage.panels.analysis.intelligence.ledger.title')}
+            </div>
+            {evidenceLedger && (
+              <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${toneClass(ledgerTone(evidenceLedger.balanceLabel))}`}>
+                {ledgerLabel(evidenceLedger.balanceLabel)}
+              </span>
+            )}
+          </div>
+          {evidenceLedger ? (
+            <div className="mt-3 space-y-3">
+              <div className="h-2 overflow-hidden rounded-full bg-danger/20" aria-hidden="true">
+                <div className="h-full bg-success" style={{ width: `${bullShare}%` }} />
+              </div>
+              <details>
+                <summary className="cursor-pointer text-xs font-medium text-muted select-none">
+                  {t('workspacePage.panels.analysis.intelligence.ledger.expand')}
+                </summary>
+                <div className="mt-2 divide-y divide-border rounded-md border border-border">
+                  {evidenceLedger.contributions.map((item) => (
+                    <div key={`${item.key}-${item.source}`} className="px-3 py-2 text-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0 flex-1 text-foreground">{item.label}</span>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {item.eventDate && <DateBadge date={item.eventDate} />}
+                          <span className={`font-semibold ${directionClass(item.direction)}`}>
+                            {item.contribution > 0 ? '+' : ''}{item.contribution}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-1 min-w-0 break-words text-muted">
+                        {isHttpUrl(item.source) ? (
+                          <a href={item.source} target="_blank" rel="noreferrer" className="underline">
+                            {item.source}
+                          </a>
+                        ) : (
+                          <span>{item.source}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted">
+              {t('workspacePage.panels.analysis.intelligence.ledger.empty')}
+            </p>
           )}
         </div>
 
@@ -488,9 +587,7 @@ export default function NarrativeAnalysisCard({
                         {directionArrow(ev.direction)}
                       </span>
                       <span className="flex-1 text-foreground">{ev.summary}</span>
-                      {ev.date && (
-                        <span className="shrink-0 text-[11px] text-muted tabular-nums">{ev.date}</span>
-                      )}
+                      <DateBadge date={ev.date} />
                     </li>
                   ))}
                 </ul>
@@ -519,7 +616,9 @@ export default function NarrativeAnalysisCard({
                     ) : (
                       <span className="text-foreground">{n.headline}</span>
                     )}
-                    {n.date && <span className="ml-2 text-[11px] text-muted tabular-nums">{n.date}</span>}
+                    <span className="ml-2 inline-flex align-middle">
+                      <DateBadge date={n.date} />
+                    </span>
                   </div>
                 </li>
               ))}
@@ -530,7 +629,7 @@ export default function NarrativeAnalysisCard({
         </div>
 
         {/* RISKS — fixed (screened); present-gated (position) */}
-        {!positionMode ? (
+        {(!positionMode || riskFactors.length > 0) && (
           <div className="rounded-md bg-surface border border-border p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
               {t('workspacePage.panels.analysis.intelligence.riskFactors')}
@@ -548,21 +647,7 @@ export default function NarrativeAnalysisCard({
               <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.emptyPanel')}</p>
             )}
           </div>
-        ) : riskFactors.length > 0 ? (
-          <div className="rounded-md bg-surface border border-border p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
-              {t('workspacePage.panels.analysis.intelligence.riskFactors')}
-            </div>
-            <ul className="space-y-1">
-              {riskFactors.map((rf, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-muted">
-                  <span className="text-muted shrink-0 mt-0.5">•</span>
-                  <span>{rf}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+        )}
 
         {/* PAST TRADES */}
         {hasPastTrades && (
@@ -702,13 +787,31 @@ export default function NarrativeAnalysisCard({
               {historyEntries.map((entry, index) => (
                 <li
                   key={`${entry.generatedAt}-${index}`}
-                  className="flex items-start gap-2 text-sm border-l-2 border-border pl-2"
+                  className="border-l-2 border-border pl-2 text-sm"
                 >
-                  <span className="shrink-0 text-[11px] text-muted tabular-nums">
-                    {formatDate(entry.generatedAt)}
-                  </span>
-                  <Badge variant={convictionVariant(entry.conviction)}>{actionLabel(entry.action)}</Badge>
-                  <span className="flex-1 text-foreground">{entry.summaryLine}</span>
+                  <div className="flex items-start gap-2">
+                    <span className="shrink-0 text-[11px] text-muted tabular-nums">
+                      {formatDate(entry.generatedAt)}
+                    </span>
+                    <Badge variant={convictionVariant(entry.conviction)}>{actionLabel(entry.action)}</Badge>
+                    <span className="flex-1 text-foreground">{entry.summaryLine}</span>
+                  </div>
+                  {entry.predictions.some((prediction) => prediction.outcome) && (
+                    <ul className="mt-2 ml-24 space-y-1">
+                      {entry.predictions
+                        .filter((prediction) => prediction.outcome)
+                        .map((prediction, predictionIndex) => (
+                          <li key={`${prediction.reason}-${predictionIndex}`} className="flex items-start gap-2">
+                            <Badge variant={predictionOutcomeVariant(prediction.outcome!.status)}>
+                              {predictionOutcomeLabel(prediction.outcome!.status)}
+                            </Badge>
+                            <span className="flex-1 text-xs text-muted">
+                              {prediction.outcome!.evidence}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>

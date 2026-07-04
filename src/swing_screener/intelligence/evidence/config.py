@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from swing_screener.settings import get_settings_manager
+from swing_screener.intelligence.config_access import intelligence_config_section
 
 
 @dataclass(frozen=True)
@@ -17,11 +17,7 @@ class EvidenceConfig:
 
 
 def load_evidence_config() -> EvidenceConfig:
-    try:
-        doc = get_settings_manager().load_intelligence_document()
-        cfg = doc.get("config", {}).get("evidence", {}) or {}
-    except Exception:  # missing/unreadable config -> defaults
-        cfg = {}
+    cfg = intelligence_config_section("evidence")
     http = cfg.get("http", {}) or {}
     return EvidenceConfig(
         enabled_sources=tuple(cfg.get("enabled_sources") or EvidenceConfig.enabled_sources),

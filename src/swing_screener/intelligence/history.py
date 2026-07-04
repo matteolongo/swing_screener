@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -26,6 +28,12 @@ class HistoryPrediction(BaseModel):
     direction: str
     reason: str
     reference: str
+    outcome: "PredictionOutcome | None" = None
+
+
+class PredictionOutcome(BaseModel):
+    status: Literal["confirmed", "contradicted", "unresolved"]
+    evidence: str
 
 
 class HistoryEntry(BaseModel):
@@ -64,6 +72,65 @@ def entry_from_result(result: SymbolIntelligence) -> HistoryEntry:
 
 def _history_path(root: Path, ticker: str) -> Path:
     return root / "history" / f"{ticker.upper()}.json"
+
+
+def _tokens(value: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", value.lower())
+        if len(token) >= 4
+    }
+
+
+def _matching_evidence(prediction: HistoryPrediction, played_out: list[str]) -> str | None:
+    prediction_tokens = _tokens(f"{prediction.reason} {prediction.reference}")
+    if not prediction_tokens:
+        return None
+    for evidence in played_out:
+        overlap = len(prediction_tokens & _tokens(evidence))
+        # Require the evidence to cover a substantial share of the prediction's
+        # meaningful tokens, not just two incidentally-shared generic words
+        # (e.g. "earnings", "growth") — those produce false confirmed/contradicted
+        # outcomes.
+        if overlap >= 2 and overlap >= 0.6 * len(prediction_tokens):
+            return evidence
+    return None
+
+
+def _outcome_for_prediction(
+    prediction: HistoryPrediction,
+    result: SymbolIntelligence,
+) -> PredictionOutcome:
+    thesis_delta = result.thesis_delta
+    played_out = thesis_delta.what_played_out if thesis_delta else []
+    evidence = _matching_evidence(prediction, played_out)
+    if evidence and thesis_delta:
+        if thesis_delta.status == "confirmed":
+            return PredictionOutcome(status="confirmed", evidence=evidence)
+        if thesis_delta.status in {"weakening", "invalidated"}:
+            return PredictionOutcome(status="contradicted", evidence=evidence)
+    return PredictionOutcome(
+        status="unresolved",
+        evidence="No matching follow-up evidence yet.",
+    )
+
+
+def _score_prior_predictions(
+    entries: list[HistoryEntry],
+    result: SymbolIntelligence,
+) -> list[HistoryEntry]:
+    scored: list[HistoryEntry] = []
+    for entry in entries:
+        predictions = [
+            prediction
+            if prediction.outcome is not None and prediction.outcome.status != "unresolved"
+            else prediction.model_copy(
+                update={"outcome": _outcome_for_prediction(prediction, result)}
+            )
+            for prediction in entry.predictions
+        ]
+        scored.append(entry.model_copy(update={"predictions": predictions}))
+    return scored
 
 
 def read_history(
@@ -118,6 +185,7 @@ def append_history(
             for e in read_history(ticker, history_root=history_root)
             if e.generated_at[:10] != new_day
         ]
+        existing = _score_prior_predictions(existing, result)
         updated = [new_entry, *existing][: max(0, max_entries)]
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(

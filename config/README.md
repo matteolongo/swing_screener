@@ -84,13 +84,29 @@ Key LLM settings (under `config.llm`):
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `enabled_sources` | `[sec_edgar_catalysts, polygon_news, degiro_news]` | Collectors to fan-out to. `polygon_news` needs `POLYGON_IO_API_KEY`; `degiro_news` needs `DEGIRO_USERNAME`/`DEGIRO_PASSWORD` — both no-op without credentials |
+| `enabled_sources` | `[sec_edgar_catalysts, polygon_news, degiro_news, tavily_news]` | Collectors to fan-out to. `polygon_news` needs `POLYGON_IO_API_KEY`; `degiro_news` needs `DEGIRO_USERNAME`/`DEGIRO_PASSWORD`; `tavily_news` needs `TAVILY_API_KEY` and is refresh-only. Missing credentials no-op safely |
 | `recency_window_days` | `30` | Discard items older than this many days |
 | `max_items_per_symbol` | `8` | Max curated items returned per ticker |
 | `sec_forms` | `[8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A]` | SEC form prefixes kept (prefix match: `424B` catches `424B5`, `SC 13D` catches `SC 13D/A`) |
 | `http.user_agent` | `swing-screener-intelligence-bot/1.0 (email)` | User-Agent sent by all collectors; must declare a contact email per SEC EDGAR policy |
 | `http.connect_timeout_seconds` | `5.0` | TCP connect timeout |
 | `http.read_timeout_seconds` | `20.0` | Read/response timeout |
+
+`config.evidence_weights` controls the advisory evidence ledger emitted by the
+intelligence analyzer. These values are tunable YAML, not source code. Unknown
+keys default to weight `0.0`, so adding a new catalyst type without a configured
+weight is safe but contributes nothing until configured.
+
+| Group | Purpose |
+|-------|---------|
+| `signals` | Deterministic request-derived signals such as insider activity, analyst actions, SMA trend, momentum, relative strength, valuation, and news |
+| `catalyst_types` | Already-happened classified catalysts emitted by the LLM format pass (`classified_catalysts`) |
+| `upcoming_event_types` | Forward-looking `upcoming_events` weights |
+| `balance_thresholds` | Net bull-minus-bear thresholds for `strongly_bullish`, `bullish`, `bearish`, and `strongly_bearish`; values between bearish and bullish are `mixed` |
+
+The ledger is advisory only: it does not change the LLM `action` or `conviction`,
+and it intentionally emits a qualitative label rather than a false-precision
+0–100 score.
 
 `config.analysis_history` controls per-symbol analysis memory:
 

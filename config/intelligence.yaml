@@ -64,6 +64,7 @@ config:
     - sec_edgar_catalysts   # SEC EDGAR submissions API: recent 8-K/6-K filings (US)
     - polygon_news          # Polygon.io ticker news + sentiment (needs POLYGON_IO_API_KEY; no-op without)
     - degiro_news          # DeGiro company news (EU); needs DEGIRO_USERNAME/PASSWORD, no-op without
+    - tavily_news          # Tavily search, refresh-only (needs TAVILY_API_KEY; no-op without)
     recency_window_days: 30   # Discard items older than this many days
     max_items_per_symbol: 8   # Max curated items per ticker after dedup + sort
     sec_forms:
@@ -77,6 +78,51 @@ config:
       user_agent: swing-screener-intelligence-bot/1.0 (matteolongo0@gmail.com)
       connect_timeout_seconds: 5.0
       read_timeout_seconds: 20.0
+  # Advisory evidence ledger weights. Unknown keys default to 0 in the loader.
+  # These values shape the qualitative balance_label only; they never mutate
+  # the LLM action or conviction.
+  evidence_weights:
+    signals:
+      insider_activity: 10
+      analyst_actions: 9
+      sma_trend: 6
+      momentum: 6
+      relative_strength: 7
+      "52w_proximity": 5
+      valuation: 5
+      news: 4
+    catalyst_types:
+      analyst_upgrade: 9
+      analyst_downgrade: 9
+      insider_buying: 10
+      insider_selling: 10
+      earnings_beat: 9
+      earnings_miss: 9
+      guidance_up: 9
+      guidance_down: 9
+      buyback: 8
+      dividend_change: 5
+      product_launch: 5
+      fda_approval: 8
+      acquisition: 7
+      ceo_change: 4
+      litigation: 6
+      offering: 6
+      sector_news: 7
+      macro: 4
+      other: 1
+    upcoming_event_types:
+      earnings: 6
+      macro: 4
+      dividend: 3
+      product_launch: 5
+      regulatory: 5
+      other: 2
+    balance_thresholds:
+      strongly_bullish: 20
+      bullish: 6
+      bearish: -6
+      strongly_bearish: -20
   analysis_history:
     max_entries: 50   # per-symbol entries kept on disk (data/intelligence/history/{TICKER}.json)
     digest_size: 5    # most-recent runs fed back to the LLM as the thesis-drift digest (<= max_entries)

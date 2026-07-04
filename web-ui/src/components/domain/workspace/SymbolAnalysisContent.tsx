@@ -10,8 +10,10 @@ import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisio
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
 import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
+import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
+import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -80,11 +82,12 @@ export default function SymbolAnalysisContent({
   });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
-  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview');
+  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
-  const hasNarrative = Boolean(!intelligenceLatest.isLoading && displayedIntelligence?.narrative?.trim());
+  const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
+  const hasNarrative = Boolean(!isIntelligenceLoading && displayedIntelligence?.narrative?.trim());
 
   const handleAnalyzeWithAi = (force = false) => {
     intelligenceMutation.mutate(
@@ -92,6 +95,39 @@ export default function SymbolAnalysisContent({
       { onSuccess: (result) => setIntelligenceResult(result) }
     );
   };
+
+  const renderAnalyzePrompt = (description: string, showButton: boolean) => (
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
+          </p>
+          <p className="mt-1 text-sm text-muted">{description}</p>
+        </div>
+        {showButton && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={intelligenceMutation.isPending}
+            onClick={() => handleAnalyzeWithAi(false)}
+          >
+            {intelligenceMutation.isPending
+              ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
+              : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
+          </Button>
+        )}
+      </div>
+      {intelligenceMutation.isError && (
+        <p className="mt-2 text-sm text-danger">
+          {intelligenceMutation.error instanceof Error
+            ? intelligenceMutation.error.message
+            : t('workspacePage.panels.analysis.intelligence.analyzeError')}
+        </p>
+      )}
+    </div>
+  );
 
   useEffect(() => {
     setIntelligenceResult(null);
@@ -126,6 +162,7 @@ export default function SymbolAnalysisContent({
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
+    { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
     ...(!heldMode || canAddOn
       ? [{ id: 'order' as const, label: t('workspacePage.panels.analysis.tabs.order') }]
       : []),
@@ -193,7 +230,6 @@ export default function SymbolAnalysisContent({
           <>
             <DecisionWhyPanel
               summary={candidate?.decisionSummary}
-              aiSummaryLine={hasNarrative ? displayedIntelligence?.summaryLine ?? null : null}
             />
             <FundamentalsStrip
               trailingPe={fundamentalsQuery.data?.trailingPe ?? null}
@@ -229,26 +265,12 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
-            {(() => {
-              if (hasNarrative && displayedIntelligence) {
-                return (
-                  <NarrativeAnalysisCard
-                    intelligence={displayedIntelligence}
-                    candidate={candidate}
-                    isPosition={Boolean(position)}
-                  />
-                );
-              }
-              if (candidate?.decisionSummary) {
-                return (
-                  <DecisionSummaryCard
-                    summary={candidate.decisionSummary}
-                    currency={candidate.currency}
-                  />
-                );
-              }
-              return null;
-            })()}
+            {candidate?.decisionSummary ? (
+              <DecisionSummaryCard
+                summary={candidate.decisionSummary}
+                currency={candidate.currency}
+              />
+            ) : null}
             <div className="rounded-lg border border-border bg-surface p-3">
               <CachedSymbolCandleChart
                 ticker={ticker}
@@ -267,37 +289,48 @@ export default function SymbolAnalysisContent({
               <CatalystContextCard opportunity={catalystQuery.data} />
             )}
             {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
-            {!hasNarrative && (candidate || position) && (
-              <div className="rounded-lg border border-border bg-surface p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      {t('workspacePage.panels.analysis.intelligence.overviewPromptDescription')}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={intelligenceMutation.isPending}
-                    onClick={() => handleAnalyzeWithAi(false)}
-                  >
-                    {intelligenceMutation.isPending
-                      ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                      : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
-                  </Button>
-                </div>
-                {intelligenceMutation.isError && (
-                  <p className="mt-2 text-sm text-danger">
-                    {intelligenceMutation.error instanceof Error
-                      ? intelligenceMutation.error.message
-                      : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-                  </p>
-                )}
+            {!hasNarrative &&
+              (candidate || position) &&
+              renderAnalyzePrompt(
+                t('workspacePage.panels.analysis.intelligence.overviewPromptDescription'),
+                true
+              )}
+          </>
+        )}
+
+        {activeTab === 'order' ? orderPanel : null}
+
+        {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
+
+        {activeTab === 'intelligence' && (
+          <>
+            {isIntelligenceLoading ? (
+              <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
+                {t('workspacePage.panels.analysis.intelligence.analyzingAction')}
               </div>
+            ) : hasNarrative && displayedIntelligence ? (
+              <>
+                <PositionReviewPanel ticker={ticker} position={position} />
+                <NarrativeAnalysisCard
+                  intelligence={displayedIntelligence}
+                  candidate={candidate}
+                  isPosition={Boolean(position)}
+                />
+                <IntelligenceChatPanel
+                  ticker={ticker}
+                  intelligence={displayedIntelligence}
+                  candidate={candidate}
+                  position={position}
+                />
+              </>
+            ) : (
+              <>
+                <PositionReviewPanel ticker={ticker} position={position} />
+                {renderAnalyzePrompt(
+                  t('workspacePage.panels.analysis.intelligence.emptyState'),
+                  Boolean(candidate || position)
+                )}
+              </>
             )}
             {hasNarrative && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
@@ -329,10 +362,6 @@ export default function SymbolAnalysisContent({
             )}
           </>
         )}
-
-        {activeTab === 'order' ? orderPanel : null}
-
-        {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
 
         {activeTab === 'fundamentals' && (
           <>

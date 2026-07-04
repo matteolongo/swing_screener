@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { candidateToPayload, postIntelligenceAnalysis } from './api';
+import { candidateToPayload, postIntelligenceAnalysis, sendIntelligenceChatMessage } from './api';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -257,6 +257,26 @@ describe('postIntelligenceAnalysis', () => {
     await postIntelligenceAnalysis('AAPL', { close: 150, signal: 'BUY' }, true);
 
     expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/AAPL?force=true');
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('sendIntelligenceChatMessage', () => {
+  it('posts refresh_sources when requested', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ticker: 'AAPL', chat_date: '2026-07-03', messages: [] }),
+      text: async () => JSON.stringify({ ticker: 'AAPL', chat_date: '2026-07-03', messages: [] }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendIntelligenceChatMessage('AAPL', { message: 'Refresh sources first', refreshSources: true });
+
+    expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/AAPL/chat');
+    expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
+      message: 'Refresh sources first',
+      refresh_sources: true,
+    });
     vi.unstubAllGlobals();
   });
 });

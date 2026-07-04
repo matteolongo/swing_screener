@@ -1,7 +1,12 @@
 from datetime import date
 
-import swing_screener.intelligence.evidence.collect as collect_mod
 from swing_screener.intelligence.evidence.collect import collect_evidence
+from swing_screener.intelligence.evidence.collectors.polygon_news import (
+    PolygonNewsCollector,
+)
+from swing_screener.intelligence.evidence.collectors.sec_edgar import (
+    SecEdgarCatalystCollector,
+)
 from swing_screener.intelligence.evidence.config import EvidenceConfig
 from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.data import source_health
@@ -22,7 +27,7 @@ def test_collect_caches_and_rereads(tmp_path, monkeypatch):
         calls["n"] += 1
         return [_ev()]
 
-    monkeypatch.setattr(collect_mod.SecEdgarCatalystCollector, "collect", classmethod(lambda cls, *a, **k: fake_collect(*a, **k)))
+    monkeypatch.setattr(SecEdgarCatalystCollector, "collect", classmethod(lambda cls, *a, **k: fake_collect(*a, **k)))
     out1 = collect_evidence("AAPL", asof_date=ASOF, cfg=CFG, cache_root=tmp_path)
     out2 = collect_evidence("AAPL", asof_date=ASOF, cfg=CFG, cache_root=tmp_path)
     assert len(out1) == 1 and len(out2) == 1
@@ -30,11 +35,9 @@ def test_collect_caches_and_rereads(tmp_path, monkeypatch):
 
 
 def test_polygon_news_collector_registered():
-    from swing_screener.intelligence.evidence.collectors.polygon_news import (
-        PolygonNewsCollector,
-    )
+    from swing_screener.intelligence.evidence import registry
 
-    assert collect_mod._COLLECTORS.get("polygon_news") is PolygonNewsCollector
+    assert registry.get_registered().get("polygon_news") is PolygonNewsCollector
 
 
 def test_polygon_news_runs_when_enabled(tmp_path, monkeypatch):
@@ -53,7 +56,7 @@ def test_polygon_news_runs_when_enabled(tmp_path, monkeypatch):
         ]
 
     monkeypatch.setattr(
-        collect_mod.PolygonNewsCollector, "collect", classmethod(fake_collect)
+        PolygonNewsCollector, "collect", classmethod(fake_collect)
     )
     out = collect_evidence("AAPL", asof_date=ASOF, cfg=cfg, cache_root=tmp_path)
     assert len(out) == 1
@@ -66,7 +69,7 @@ def test_failing_collector_records_fallback_and_degrades(tmp_path, monkeypatch):
     def boom(cls, *a, **k):
         raise RuntimeError("feed down")
 
-    monkeypatch.setattr(collect_mod.SecEdgarCatalystCollector, "collect", classmethod(boom))
+    monkeypatch.setattr(SecEdgarCatalystCollector, "collect", classmethod(boom))
     out = collect_evidence("AAPL", asof_date=ASOF, cfg=CFG, cache_root=tmp_path)
     assert out == []
     events = source_health.recent_events()

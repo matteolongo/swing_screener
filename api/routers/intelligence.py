@@ -7,8 +7,12 @@ import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from api.models.intelligence_chat import IntelligenceChatRequest, IntelligenceChatResponse
+from api.models.position_review import PositionReviewRequest, PositionReviewResponse
 from api.dependencies import get_fundamentals_service, get_portfolio_service, get_positions_repo
 from api.repositories.positions_repo import PositionsRepository
+from api.services.intelligence_chat_service import IntelligenceChatService, MissingIntelligenceError
+from api.services.position_review_service import MissingPositionReviewContextError, PositionReviewService
 from api.services.fundamentals_service import FundamentalsService
 from api.services.intelligence_enrichment import (
     enrich_intelligence_request,
@@ -20,8 +24,8 @@ from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.history import HistoryEntry, read_history
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
+from swing_screener.intelligence.config_access import intelligence_config_section
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
-from swing_screener.settings import get_settings_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
@@ -44,6 +48,7 @@ def _dividend_for(ticker: str) -> tuple[int | None, str | None, float | None]:
         return None, None, None
 
 _analyzer: SymbolAnalyzer | None = None
+_chat_service: IntelligenceChatService | None = None
 
 
 def _get_analyzer() -> SymbolAnalyzer:
@@ -53,13 +58,20 @@ def _get_analyzer() -> SymbolAnalyzer:
     return _analyzer
 
 
+def _get_chat_service() -> IntelligenceChatService:
+    global _chat_service
+    if _chat_service is None:
+        _chat_service = IntelligenceChatService()
+    return _chat_service
+
+
 def _require_api_key() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
         raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured")
 
 
 def _require_analyzer_enabled() -> None:
-    cfg = get_settings_manager().load_intelligence_document().get("config", {}).get("llm", {})
+    cfg = intelligence_config_section("llm")
     if not bool(cfg.get("analyzer_enabled", True)):
         raise HTTPException(status_code=503, detail="Symbol intelligence analyzer is disabled")
 
@@ -136,6 +148,61 @@ def sweep(
 def get_history(ticker: str) -> AnalysisHistoryResponse:
     """Return the per-symbol analysis history (newest-first, capped). Empty if none."""
     return AnalysisHistoryResponse(entries=read_history(ticker.upper()))
+
+
+@router.get("/{ticker}/chat", response_model=IntelligenceChatResponse)
+def get_symbol_chat(ticker: str) -> IntelligenceChatResponse:
+    """Return today's persisted intelligence follow-up chat for a symbol."""
+    try:
+        return _get_chat_service().get_chat(ticker)
+    except MissingIntelligenceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/{ticker}/chat", response_model=IntelligenceChatResponse)
+def chat_with_symbol(ticker: str, request: IntelligenceChatRequest) -> IntelligenceChatResponse:
+    """Ask an advisory follow-up question about today's cached intelligence analysis."""
+    _require_analyzer_enabled()
+    try:
+        return _get_chat_service().send_message(ticker, request)
+    except MissingIntelligenceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        if "OPENAI_API_KEY" in str(exc):
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/position-review/{position_id}", response_model=PositionReviewResponse)
+def review_position(
+    position_id: str,
+    request: PositionReviewRequest,
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
+) -> PositionReviewResponse:
+    """Run an advisory manual review for an open position without mutating it."""
+    try:
+        return PositionReviewService(portfolio_service=portfolio_service).review_position(position_id, request)
+    except MissingPositionReviewContextError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/{ticker}/position-review", response_model=PositionReviewResponse)
+def review_symbol(
+    ticker: str,
+    request: PositionReviewRequest,
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
+) -> PositionReviewResponse:
+    """Run an advisory manual review for a symbol using cached/refreshed app context."""
+    try:
+        return PositionReviewService(portfolio_service=portfolio_service).review_symbol(ticker, request)
+    except MissingPositionReviewContextError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/{ticker}/latest", response_model=SymbolIntelligence)

@@ -73,6 +73,9 @@ export const API_ENDPOINTS = {
   intelligenceAnalyze: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}`,
   intelligenceLatest: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/latest`,
   intelligenceHistory: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/history`,
+  intelligenceChat: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/chat`,
+  intelligencePositionReview: (positionId: string) => `/api/intelligence/position-review/${encodeURIComponent(positionId)}`,
+  intelligenceSymbolReview: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/position-review`,
   intelligenceSweep: '/api/intelligence/sweep',
 
   // Catalysts

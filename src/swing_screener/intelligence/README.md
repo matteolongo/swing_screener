@@ -4,7 +4,7 @@ Post-close LLM enrichment for screener candidates and open positions.
 
 ## Purpose
 
-Given a ticker, builds a structured context snapshot (OHLCV features, fundamentals, Finnhub signals) and sends it to an LLM for swing-trading analysis. Output is a `SymbolIntelligence` result with narrative, action recommendation, and catalyst context. Results are cached per ticker (TTL-based, stored in `data/intelligence/`).
+Given a ticker, builds a structured context snapshot (OHLCV features, fundamentals, Finnhub signals) and sends it to an LLM for swing-trading analysis. Output is a `SymbolIntelligence` result with narrative, action recommendation, catalyst context, classified cited catalysts, and an advisory evidence ledger. Results are cached per ticker (TTL-based, stored in `data/intelligence/`).
 
 ## Files
 
@@ -16,6 +16,8 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 | `history.py` | Durable per-symbol analysis history (newest-first, capped). Feeds the thesis-drift digest + UI timeline. |
 | `market_hours.py` | Minimal zoneinfo US market-hours helper. Decides pre-open mode + previous session close. |
 | `metrics.py` | Append-only per-analysis metrics log (`data/intelligence/intelligence_metrics.json`). |
+| `graph/` | LangGraph state graph for `SymbolAnalyzer.analyze()` (`resolve_context` → `assemble_inputs` → `build_prompt` → `search` → `format` → `postprocess` → `weigh_evidence` → `assemble_result` → `persist`). |
+| `weighting/` | Deterministic advisory evidence weighting (`EvidenceLedger`, `WeightedSignal`, `weigh(...)`, YAML-backed config). |
 
 ## API Surface
 
@@ -68,6 +70,50 @@ existing Finnhub signal fields). The web-search instruction is multi-hop — sea
 broadly, follow the material leads, then run a dedicated forward-looking catalyst
 pass — and every news claim must cite its source URL.
 
+`SymbolAnalyzer.analyze()` compiles and invokes the LangGraph state graph in
+`intelligence/graph/`. The graph is intentionally linear today so each former
+pipeline step is explicit and independently testable. The graph output remains a
+single `SymbolIntelligence` object; persistence side effects still happen after
+result assembly.
+
+## Evidence Ledger
+
+The `intelligence/weighting/` package computes a pure, deterministic
+`EvidenceLedger` from the LLM draft plus request inputs. It emits itemized
+`WeightedSignal` rows, aggregate bull/bear weights, a net value, and a qualitative
+`balance_label` (`strongly_bullish`, `bullish`, `mixed`, `bearish`,
+`strongly_bearish`).
+
+Important constraints:
+
+- The ledger is advisory only. It never mutates `action` or `conviction`.
+- It is not a 0–100 score and should not be presented as predictive precision.
+- Unknown signal/catalyst keys default to weight `0`.
+- Weights and thresholds live under `config.evidence_weights` in
+  `config/intelligence.yaml`.
+
+`SymbolIntelligence` exposes:
+
+- `evidence_ledger: EvidenceLedger | None`
+- `classified_catalysts: list[ClassifiedCatalyst]`
+
+`classified_catalysts` are already-happened, source-cited catalysts from the LLM
+format pass. Forward-looking events stay in `upcoming_events`.
+
+### Calibration helper
+
+Use the offline exporter to review cached ledger labels before tuning weights:
+
+```bash
+.venv/bin/python scripts/export_evidence_ledger_calibration.py --format markdown --limit 20
+.venv/bin/python scripts/export_evidence_ledger_calibration.py --format csv --output /tmp/evidence-ledger-calibration.csv
+```
+
+The exporter reads `data/intelligence/sweep_*.json`, skips entries without an
+`evidence_ledger`, and adds blank `human_read` / `notes` columns for manual
+review. After reviewing clear bullish, bearish, mixed, and sparse-data examples,
+tune only `config.evidence_weights` in `config/intelligence.yaml`.
+
 ## Pre-open gap outlook
 
 When analysis runs for a **US symbol** (`currency == "USD"`) during the US
@@ -92,6 +138,11 @@ the prompt as a `--- Prior analyses (most recent first) ---` digest. The model
 returns a `thesis_delta` (`status`: new/confirmed/weakening/invalidated,
 `summary`, `what_played_out`) comparing today's read to the prior ones. The full
 history is exposed via `GET /api/intelligence/{ticker}/history` for the UI timeline.
+When a follow-up analysis is appended, prior history predictions are annotated
+with an optional deterministic `outcome` (`confirmed`, `contradicted`, or
+`unresolved`) by matching `thesis_delta.what_played_out` against each prior
+prediction's reason/reference. This is an audit aid only; it is not a return
+prediction or model-scoring loop.
 
 ## Two-call analyzer
 
@@ -100,7 +151,7 @@ The symbol analyzer runs two sequential LLM calls to keep web-search from trunca
 1. **Call 1 (search)** — `config.llm.web_search_model` (default `gpt-4o`) performs the multi-hop web search, writes a prose narrative with cited source URLs, and returns free-text.
 2. **Call 2 (format)** — `config.llm.format_model` (default `gpt-4o-mini`) receives the prose and structures it into the validated `SymbolIntelligence` schema via the Responses structured-output API (`responses.parse`). No tool use in call 2.
 
-The split preserves full reasoning in call 1 while using a cheaper model for deterministic schema extraction in call 2. Phase 2 (Tavily evidence injection) will feed additional structured evidence into call 1 at the `--- Catalyst evidence ---` seam.
+The split preserves full reasoning in call 1 while using a cheaper model for deterministic schema extraction in call 2. Structured evidence is injected at the `--- Catalyst evidence ---` seam before the narrative call.
 
 ## Configuration
 
@@ -130,8 +181,6 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 
 `data/intelligence/intelligence_metrics.json` — append-only log (capped at 500 entries) written by `metrics.py` after each analysis. Each entry: `{ts, ticker, tokens}`. A sudden `tokens: null` run pinpoints a call that did not complete; a gap in SEC coverage is visible by diffing evidence counts in the logged evidence cache.
 
-Phase 3 (calibration scorer) will extend each history entry's `predictions` list (`{direction, reason, reference}`) to score outcomes against prior calls; the persistence seam is already in place.
-
 ## Action Types
 
 `SymbolIntelligence.action` is one of:
@@ -151,9 +200,11 @@ Phase 3 (calibration scorer) will extend each history entry's `predictions` list
 | `evidence/models.py` | `SourceEvidence` (pydantic) — `title, url, publisher, published_at, quote_or_summary, relevance` |
 | `evidence/config.py` | `EvidenceConfig` + `load_evidence_config()` — reads `config.evidence` from the intelligence document |
 | `evidence/curation.py` | `curate(items, *, window_days, max_items, asof_date)` — recency-window filter + dedup (normalized title+url) + newest-first + cap |
-| `evidence/collect.py` | `collect_evidence(ticker, *, asof_date, cfg, cache_root)` — per-date cache, fan-out across enabled collectors (fail-soft), curate |
+| `evidence/registry.py` | `CatalystCollector` protocol + `@register` decorator + `get_registered()` collector map |
+| `evidence/collect.py` | `collect_evidence(ticker, *, asof_date, cfg, cache_root, refresh_sources)` — per-date cache, fan-out across registered enabled collectors (fail-soft), curate |
 | `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR submissions API (`data.sec.gov/submissions/CIK…json`), material-event filings (8-K, 6-K, SC 13D/G, 424B, DEF 14A) |
 | `evidence/collectors/polygon_news.py` | `PolygonNewsCollector` — Polygon.io ticker news (`/v2/reference/news`) with per-symbol sentiment; key-gated, on-demand (one HTTP call per `collect`) |
+| `evidence/collectors/tavily_news.py` | `TavilyNewsCollector` — optional refresh-only search datasource for move explanations, news, and macro/geopolitical risk |
 
 ### Collectors
 
@@ -161,6 +212,7 @@ Phase 3 (calibration scorer) will extend each history entry's `predictions` list
 
 - **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent material-event filings for US tickers. Forms are matched by prefix (`config.evidence.sec_forms`, default `8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A`, so `424B` catches `424B5` and `SC 13D` catches `SC 13D/A`), and each item carries a per-form relevance label. The HTTP User-Agent declares a contact email (`config.evidence.http.user_agent`) as required by SEC EDGAR fair-use policy. Fail-soft — returns empty on HTTP errors and records a fallback event.
 - **`polygon_news`** (`PolygonNewsCollector`): reads Polygon.io's `/v2/reference/news` for one ticker, filtered to `config.evidence.recency_window_days` and capped at `max_items_per_symbol`. Each article maps to a `SourceEvidence` with the per-symbol `insights.sentiment` rolled into the relevance label (`positive→bullish`, `negative→bearish`). Requires `POLYGON_IO_API_KEY`; without it the collector returns an empty list (no error). Enabled by default via `config.evidence.enabled_sources`; one HTTP call per ticker keeps API-credit usage bounded for on-demand use.
+- **`tavily_news`** (`TavilyNewsCollector`): searches recent symbol news, move explanations, and macro/geopolitical risk. Requires `TAVILY_API_KEY`; without it the collector returns an empty list. It is marked `REFRESH_ONLY`, so `collect_evidence(..., refresh_sources=False)` skips it even when configured. Chat follow-ups and manual position reviews pass `refresh_sources=True` only when the user explicitly requests fresh app sources.
 
 The `company_ir_rss` collector (IR RSS feed auto-discovery) and the `exchange_announcements` collector (EU venue-wide RSS) were removed: IR feeds were unreliable and symbol-IR coverage was incomplete; exchange-wide notices are not symbol-specific and add no signal beyond the web-search pass.
 
@@ -177,6 +229,16 @@ Curated evidence is cached lazily at `data/intelligence/evidence/{date}/{ticker}
 ### Prompt injection
 
 `collect.py` is called during `enrich_intelligence_request` and the curated items are passed into the LLM prompt as a `--- Catalyst evidence ---` block.
+
+To add a deterministic collector:
+
+1. Implement a class with `SOURCE_ID` and classmethod `collect(ticker, *, asof_date, cfg)`.
+2. Decorate it with `@register` from `intelligence.evidence.registry`.
+3. Import the module from `evidence/collect.py` so registration runs.
+4. Add the `SOURCE_ID` to `config.evidence.enabled_sources`.
+
+Data Sources diagnostics remain separate: probeable collectors are still exposed
+through `api/services/datasources_service.py`.
 
 ### Fail-soft behavior
 

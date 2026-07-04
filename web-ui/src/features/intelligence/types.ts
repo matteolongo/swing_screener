@@ -6,11 +6,33 @@ export type { DecisionAction, DecisionConviction };
 export type CatalystUrgency = 'high' | 'medium' | 'low' | 'none';
 export type IntelligenceEventDirection = 'bullish' | 'bearish' | 'neutral';
 export type IntelligenceEventType = 'earnings' | 'macro' | 'dividend' | 'product_launch' | 'regulatory' | 'other';
+export type CatalystType =
+  | 'analyst_upgrade'
+  | 'analyst_downgrade'
+  | 'insider_buying'
+  | 'insider_selling'
+  | 'earnings_beat'
+  | 'earnings_miss'
+  | 'guidance_up'
+  | 'guidance_down'
+  | 'buyback'
+  | 'dividend_change'
+  | 'product_launch'
+  | 'fda_approval'
+  | 'acquisition'
+  | 'ceo_change'
+  | 'litigation'
+  | 'offering'
+  | 'sector_news'
+  | 'macro'
+  | 'other';
 export type PositionSignalAction = 'HOLD' | 'TRIM' | 'EXIT';
 export type ExpectedHoldingPeriod = 'days' | '1-2_weeks' | '2-6_weeks' | 'unknown';
 export type ThesisStatus = 'intact' | 'weakening' | 'broken' | 'unclear';
 export type ProfitManagement = 'hold_full' | 'consider_trim' | 'trail_stop' | 'protect_breakeven' | 'exit';
 export type OpportunityCost = 'low' | 'medium' | 'high';
+export type BalanceLabel = 'strongly_bullish' | 'bullish' | 'mixed' | 'bearish' | 'strongly_bearish';
+export type SignalCategory = 'technical' | 'fundamental' | 'catalyst' | 'news' | 'positioning';
 
 export interface KeyNumber {
   label: string;
@@ -22,6 +44,17 @@ export interface PredictionBullet {
   direction: 'bullish' | 'bearish' | 'neutral';
   reason: string;
   reference: string;
+}
+
+export type PredictionOutcomeStatus = 'confirmed' | 'contradicted' | 'unresolved';
+
+export interface PredictionOutcome {
+  status: PredictionOutcomeStatus;
+  evidence: string;
+}
+
+export interface HistoryPrediction extends PredictionBullet {
+  outcome?: PredictionOutcome | null;
 }
 
 export interface NewsItem {
@@ -36,6 +69,50 @@ export interface IntelligenceEvent {
   date: string | null;
   direction: IntelligenceEventDirection;
   summary: string;
+}
+
+export interface ClassifiedCatalystAPI {
+  type: CatalystType;
+  direction: IntelligenceEventDirection;
+  summary: string;
+  source_url: string | null;
+  date: string | null;
+}
+
+export interface ClassifiedCatalyst {
+  type: CatalystType;
+  direction: IntelligenceEventDirection;
+  summary: string;
+  sourceUrl: string | null;
+  date: string | null;
+}
+
+export interface WeightedSignal {
+  key: string;
+  label: string;
+  category: SignalCategory;
+  direction: IntelligenceEventDirection;
+  weight: number;
+  contribution: number;
+  source: string;
+  event_date?: string | null;
+  eventDate?: string | null;
+}
+
+export interface EvidenceLedgerAPI {
+  contributions: WeightedSignal[];
+  bull_weight: number;
+  bear_weight: number;
+  net: number;
+  balance_label: BalanceLabel;
+}
+
+export interface EvidenceLedger {
+  contributions: WeightedSignal[];
+  bullWeight: number;
+  bearWeight: number;
+  net: number;
+  balanceLabel: BalanceLabel;
 }
 
 export interface PositionSignal {
@@ -145,6 +222,8 @@ export interface SymbolIntelligenceAPI {
   past_trades_context?: string | null;
   pre_open_outlook?: PreOpenOutlookAPI | null;
   thesis_delta?: ThesisDeltaAPI | null;
+  evidence_ledger?: EvidenceLedgerAPI | null;
+  classified_catalysts?: ClassifiedCatalystAPI[];
 }
 
 export interface SymbolIntelligence {
@@ -169,6 +248,8 @@ export interface SymbolIntelligence {
   pastTradesContext?: string | null;
   preOpenOutlook?: PreOpenOutlook | null;
   thesisDelta?: ThesisDelta | null;
+  evidenceLedger: EvidenceLedger | null;
+  classifiedCatalysts: ClassifiedCatalyst[];
 }
 
 function transformPreOpenOutlook(api: PreOpenOutlookAPI | null | undefined): PreOpenOutlook | null {
@@ -209,6 +290,30 @@ function transformPositionOutlook(api: PositionOutlookAPI | null | undefined): P
   };
 }
 
+export function transformEvidenceLedger(api: EvidenceLedgerAPI | null | undefined): EvidenceLedger | null {
+  if (!api) return null;
+  return {
+    contributions: (api.contributions ?? []).map((signal) => ({
+      ...signal,
+      eventDate: signal.event_date ?? signal.eventDate ?? null,
+    })),
+    bullWeight: api.bull_weight,
+    bearWeight: api.bear_weight,
+    net: api.net,
+    balanceLabel: api.balance_label,
+  };
+}
+
+function transformClassifiedCatalyst(api: ClassifiedCatalystAPI): ClassifiedCatalyst {
+  return {
+    type: api.type,
+    direction: api.direction,
+    summary: api.summary,
+    sourceUrl: api.source_url ?? null,
+    date: api.date ?? null,
+  };
+}
+
 export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelligence {
   return {
     symbol: api.symbol,
@@ -232,6 +337,8 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     pastTradesContext: api.past_trades_context ?? null,
     preOpenOutlook: transformPreOpenOutlook(api.pre_open_outlook),
     thesisDelta: transformThesisDelta(api.thesis_delta),
+    evidenceLedger: transformEvidenceLedger(api.evidence_ledger),
+    classifiedCatalysts: (api.classified_catalysts ?? []).map(transformClassifiedCatalyst),
   };
 }
 
@@ -289,6 +396,7 @@ export interface HistoryEntryAPI {
   conviction: DecisionConviction;
   summary_line: string;
   watch_for: string[];
+  predictions?: HistoryPrediction[];
   pre_open_outlook?: PreOpenOutlookAPI | null;
 }
 
@@ -298,6 +406,7 @@ export interface HistoryEntry {
   conviction: DecisionConviction;
   summaryLine: string;
   watchFor: string[];
+  predictions: HistoryPrediction[];
   preOpenOutlook: PreOpenOutlook | null;
 }
 
@@ -312,7 +421,78 @@ export function transformHistoryEntry(api: HistoryEntryAPI): HistoryEntry {
     conviction: api.conviction,
     summaryLine: api.summary_line,
     watchFor: api.watch_for ?? [],
+    predictions: api.predictions ?? [],
     preOpenOutlook: transformPreOpenOutlook(api.pre_open_outlook),
+  };
+}
+
+export interface IntelligenceChatEvidenceAPI {
+  label: string;
+  source?: string | null;
+  url?: string | null;
+  date?: string | null;
+  summary?: string | null;
+}
+
+export interface IntelligenceChatEvidence {
+  label: string;
+  source: string | null;
+  url: string | null;
+  date: string | null;
+  summary: string | null;
+}
+
+export interface IntelligenceChatMessageAPI {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+  refresh_sources?: boolean;
+  evidence_used?: IntelligenceChatEvidenceAPI[];
+}
+
+export interface IntelligenceChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+  refreshSources: boolean;
+  evidenceUsed: IntelligenceChatEvidence[];
+}
+
+export interface IntelligenceChatResponseAPI {
+  ticker: string;
+  chat_date: string;
+  messages: IntelligenceChatMessageAPI[];
+  refreshed_at?: string | null;
+}
+
+export interface IntelligenceChatResponse {
+  ticker: string;
+  chatDate: string;
+  messages: IntelligenceChatMessage[];
+  refreshedAt: string | null;
+}
+
+export function transformIntelligenceChat(api: IntelligenceChatResponseAPI): IntelligenceChatResponse {
+  return {
+    ticker: api.ticker,
+    chatDate: api.chat_date,
+    refreshedAt: api.refreshed_at ?? null,
+    messages: (api.messages ?? []).map((message) => ({
+      id: message.id,
+      role: message.role,
+      content: message.content,
+      createdAt: message.created_at,
+      refreshSources: message.refresh_sources ?? false,
+      evidenceUsed: (message.evidence_used ?? []).map((evidence) => ({
+        label: evidence.label,
+        source: evidence.source ?? null,
+        url: evidence.url ?? null,
+        date: evidence.date ?? null,
+        summary: evidence.summary ?? null,
+      })),
+    })),
   };
 }
 

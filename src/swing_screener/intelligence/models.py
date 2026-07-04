@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from swing_screener.intelligence.evidence.models import SourceEvidence
+from swing_screener.intelligence.weighting.models import EvidenceLedger
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 
 CatalystUrgency = Literal["high", "medium", "low", "none"]
@@ -26,11 +27,41 @@ class IntelligenceEventDirection(str, Enum):
     neutral = "neutral"
 
 
+class CatalystType(str, Enum):
+    analyst_upgrade = "analyst_upgrade"
+    analyst_downgrade = "analyst_downgrade"
+    insider_buying = "insider_buying"
+    insider_selling = "insider_selling"
+    earnings_beat = "earnings_beat"
+    earnings_miss = "earnings_miss"
+    guidance_up = "guidance_up"
+    guidance_down = "guidance_down"
+    buyback = "buyback"
+    dividend_change = "dividend_change"
+    product_launch = "product_launch"
+    fda_approval = "fda_approval"
+    acquisition = "acquisition"
+    ceo_change = "ceo_change"
+    litigation = "litigation"
+    offering = "offering"
+    sector_news = "sector_news"
+    macro = "macro"
+    other = "other"
+
+
 class IntelligenceEvent(BaseModel):
     type: IntelligenceEventType
     date: str | None = None
     direction: IntelligenceEventDirection
     summary: str
+
+
+class ClassifiedCatalyst(BaseModel):
+    type: CatalystType
+    direction: IntelligenceEventDirection
+    summary: str
+    source_url: str | None = None
+    date: str | None = None
 
 
 class PositionSignalAction(str, Enum):
@@ -198,3 +229,5 @@ class SymbolIntelligence(BaseModel):
     past_trades_context: str | None = None
     pre_open_outlook: PreOpenOutlook | None = None
     thesis_delta: ThesisDelta | None = None
+    evidence_ledger: EvidenceLedger | None = None
+    classified_catalysts: list[ClassifiedCatalyst] = Field(default_factory=list)

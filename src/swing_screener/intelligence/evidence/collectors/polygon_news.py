@@ -20,6 +20,7 @@ import httpx
 from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.intelligence.evidence.config import EvidenceConfig
 from swing_screener.intelligence.evidence.models import SourceEvidence
+from swing_screener.intelligence.evidence.registry import register
 
 _BASE_URL = "https://api.polygon.io/v2/reference/news"
 _ENV_KEY = "POLYGON_IO_API_KEY"
@@ -57,6 +58,7 @@ def _sentiment_for(article: dict, ticker: str) -> str | None:
     return None
 
 
+@register
 class PolygonNewsCollector:
     SOURCE_ID = "polygon_news"
 

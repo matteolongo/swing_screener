@@ -6,22 +6,33 @@ from datetime import date
 from pathlib import Path
 
 from swing_screener.data.source_health import record_fallback
-from swing_screener.intelligence.evidence.collectors.degiro_news import DegiroNewsCollector
-from swing_screener.intelligence.evidence.collectors.polygon_news import PolygonNewsCollector
-from swing_screener.intelligence.evidence.collectors.sec_edgar import SecEdgarCatalystCollector
+from swing_screener.intelligence.evidence import registry
+
+# Importing the collectors package auto-imports every collector module, whose
+# @register decorators populate the registry (the single source of truth).
+from swing_screener.intelligence.evidence import collectors as _collectors  # noqa: F401
 from swing_screener.intelligence.evidence.config import EvidenceConfig, load_evidence_config
 from swing_screener.intelligence.evidence.curation import curate
 from swing_screener.intelligence.evidence.models import SourceEvidence
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["attempted_source_ids", "collect_evidence"]
+
 _CACHE_ROOT = Path("data/intelligence/evidence")
 
-_COLLECTORS = {
-    SecEdgarCatalystCollector.SOURCE_ID: SecEdgarCatalystCollector,
-    PolygonNewsCollector.SOURCE_ID: PolygonNewsCollector,
-    DegiroNewsCollector.SOURCE_ID: DegiroNewsCollector,
-}
+
+def attempted_source_ids(cfg: EvidenceConfig, *, refresh_sources: bool = False) -> list[str]:
+    collectors = registry.get_registered()
+    attempted: list[str] = []
+    for source_id in cfg.enabled_sources:
+        collector = collectors.get(source_id)
+        if collector is None:
+            continue
+        if getattr(collector, "REFRESH_ONLY", False) and not refresh_sources:
+            continue
+        attempted.append(source_id)
+    return sorted(attempted)
 
 
 def _cache_file(cache_root: Path, asof_date: date, ticker: str) -> Path:
@@ -52,6 +63,7 @@ def collect_evidence(
     asof_date: date | None = None,
     cfg: EvidenceConfig | None = None,
     cache_root: Path | None = None,
+    refresh_sources: bool = False,
 ) -> list[SourceEvidence]:
     asof_date = asof_date or date.today()
     cfg = cfg or load_evidence_config()
@@ -59,13 +71,14 @@ def collect_evidence(
     ticker = ticker.strip().upper()
 
     cache_file = _cache_file(cache_root, asof_date, ticker)
-    cached = _read_cache(cache_file)
+    cached = None if refresh_sources else _read_cache(cache_file)
     if cached is not None:
         return cached
 
     raw: list[SourceEvidence] = []
-    for source_id in cfg.enabled_sources:
-        collector = _COLLECTORS.get(source_id)
+    collectors = registry.get_registered()
+    for source_id in attempted_source_ids(cfg, refresh_sources=refresh_sources):
+        collector = collectors.get(source_id)
         if collector is None:
             continue
         try:

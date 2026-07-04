@@ -17,6 +17,7 @@ from typing import Any
 from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.intelligence.evidence.config import EvidenceConfig
 from swing_screener.intelligence.evidence.models import SourceEvidence
+from swing_screener.intelligence.evidence.registry import register
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +77,7 @@ def _resolve_isin(ticker: str) -> str | None:
     return None
 
 
+@register
 class DegiroNewsCollector:
     SOURCE_ID = _SOURCE_ID
 

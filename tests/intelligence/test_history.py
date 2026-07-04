@@ -141,3 +141,165 @@ def test_entry_from_result_captures_predictions():
         narrative="n", prediction_bullets=[PredictionBullet(direction="bullish", reason="r", reference="ref")])
     e = entry_from_result(res)
     assert e.predictions and e.predictions[0].direction == "bullish"
+
+
+def test_append_marks_prior_prediction_confirmed_from_thesis_delta(tmp_path):
+    from swing_screener.intelligence.models import ThesisDelta
+
+    append_history(
+        "AAPL",
+        _result(
+            "first",
+            generated_at="2026-06-24T08:00:00Z",
+            predictions=[
+                PredictionBullet(
+                    direction="bullish",
+                    reason="earnings beat supports breakout",
+                    reference="earnings",
+                )
+            ],
+        ),
+        max_entries=50,
+        history_root=tmp_path,
+    )
+    follow_up = _result("second", generated_at="2026-06-25T08:00:00Z")
+    follow_up.thesis_delta = ThesisDelta(
+        status="confirmed",
+        summary="Earnings beat played out.",
+        what_played_out=["Earnings beat supported the breakout"],
+    )
+
+    append_history("AAPL", follow_up, max_entries=50, history_root=tmp_path)
+
+    entries = read_history("AAPL", history_root=tmp_path)
+    prior_prediction = entries[1].predictions[0]
+    assert prior_prediction.outcome is not None
+    assert prior_prediction.outcome.status == "confirmed"
+    assert prior_prediction.outcome.evidence == "Earnings beat supported the breakout"
+
+
+def test_append_marks_prior_prediction_unresolved_when_follow_up_has_no_match(tmp_path):
+    append_history(
+        "AAPL",
+        _result(
+            "first",
+            generated_at="2026-06-24T08:00:00Z",
+            predictions=[
+                PredictionBullet(
+                    direction="bearish",
+                    reason="valuation compression risk",
+                    reference="valuation",
+                )
+            ],
+        ),
+        max_entries=50,
+        history_root=tmp_path,
+    )
+
+    append_history(
+        "AAPL",
+        _result("second", generated_at="2026-06-25T08:00:00Z"),
+        max_entries=50,
+        history_root=tmp_path,
+    )
+
+    entries = read_history("AAPL", history_root=tmp_path)
+    prior_prediction = entries[1].predictions[0]
+    assert prior_prediction.outcome is not None
+    assert prior_prediction.outcome.status == "unresolved"
+    assert prior_prediction.outcome.evidence == "No matching follow-up evidence yet."
+
+
+def test_generic_two_token_overlap_does_not_confirm(tmp_path):
+    """A couple of incidentally-shared generic words must not confirm a prediction
+    against unrelated follow-up evidence."""
+    from swing_screener.intelligence.models import ThesisDelta
+
+    append_history(
+        "AAPL",
+        _result(
+            "first",
+            generated_at="2026-06-24T08:00:00Z",
+            predictions=[
+                PredictionBullet(
+                    direction="bullish",
+                    reason="earnings growth should accelerate next year",
+                    reference="growth",
+                )
+            ],
+        ),
+        max_entries=50,
+        history_root=tmp_path,
+    )
+    follow_up = _result("second", generated_at="2026-06-25T08:00:00Z")
+    follow_up.thesis_delta = ThesisDelta(
+        status="confirmed",
+        summary="Unrelated development.",
+        what_played_out=["Guidance cut despite earnings growth last quarter"],
+    )
+
+    append_history("AAPL", follow_up, max_entries=50, history_root=tmp_path)
+
+    entries = read_history("AAPL", history_root=tmp_path)
+    prior_prediction = entries[1].predictions[0]
+    assert prior_prediction.outcome is not None
+    assert prior_prediction.outcome.status == "unresolved"
+
+
+def test_read_history_accepts_legacy_predictions_without_outcomes(tmp_path):
+    (tmp_path / "history").mkdir(parents=True)
+    legacy = {
+        "generated_at": "2026-06-25T08:00:00Z",
+        "action": "WATCH",
+        "conviction": "low",
+        "summary_line": "legacy",
+        "watch_for": [],
+        "predictions": [
+            {"direction": "bullish", "reason": "holds SMA20", "reference": "technical"}
+        ],
+    }
+    (tmp_path / "history" / "AAPL.json").write_text(json.dumps([legacy]))
+
+    entries = read_history("AAPL", history_root=tmp_path)
+
+    assert entries[0].predictions[0].outcome is None
+
+
+def test_unresolved_prediction_can_be_confirmed_by_later_follow_up(tmp_path):
+    from swing_screener.intelligence.models import ThesisDelta
+
+    append_history(
+        "AAPL",
+        _result(
+            "first",
+            generated_at="2026-06-24T08:00:00Z",
+            predictions=[
+                PredictionBullet(
+                    direction="bullish",
+                    reason="product launch supports demand",
+                    reference="product",
+                )
+            ],
+        ),
+        max_entries=50,
+        history_root=tmp_path,
+    )
+    append_history(
+        "AAPL",
+        _result("second", generated_at="2026-06-25T08:00:00Z"),
+        max_entries=50,
+        history_root=tmp_path,
+    )
+    later = _result("third", generated_at="2026-06-26T08:00:00Z")
+    later.thesis_delta = ThesisDelta(
+        status="confirmed",
+        summary="Launch demand improved.",
+        what_played_out=["Product launch supported demand"],
+    )
+
+    append_history("AAPL", later, max_entries=50, history_root=tmp_path)
+
+    entries = read_history("AAPL", history_root=tmp_path)
+    outcome = entries[2].predictions[0].outcome
+    assert outcome is not None
+    assert outcome.status == "confirmed"

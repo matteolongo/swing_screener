@@ -9,6 +9,7 @@ import httpx
 from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.intelligence.evidence.config import EvidenceConfig, load_evidence_config
 from swing_screener.intelligence.evidence.models import SourceEvidence
+from swing_screener.intelligence.evidence.registry import register
 
 _TICKER_MAP_CACHE: dict[str, tuple[str, str | None]] | None = None
 
@@ -69,6 +70,7 @@ def _load_ticker_map(get_json: Callable[[str], dict]) -> dict[str, tuple[str, st
     return out
 
 
+@register
 class SecEdgarCatalystCollector:
     SOURCE_ID = "sec_edgar_catalysts"
 

@@ -23,6 +23,9 @@ vi.mock('@/features/intelligence/hooks', () => ({
   useIntelligenceAnalysisMutation: vi.fn(),
   useIntelligenceLatestQuery: vi.fn(),
   useIntelligenceHistoryQuery: vi.fn(() => ({ data: [], isLoading: false })),
+  useIntelligenceChatQuery: vi.fn(() => ({ data: { ticker: 'AAPL', chatDate: '2026-07-03', messages: [], refreshedAt: null }, isLoading: false, isError: false })),
+  useSendIntelligenceChatMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false, isError: false, error: null })),
+  usePositionReviewMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false, isError: false, error: null, data: undefined })),
 }));
 
 vi.mock('@/features/intelligence/catalysts/hooks', () => ({
@@ -180,7 +183,7 @@ describe('AnalysisCanvasPanel', () => {
     expect(mutate).toHaveBeenCalledWith('AAPL');
   });
 
-  it('renders NarrativeAnalysisCard in overview when intelligence latest has a narrative', () => {
+  it('renders NarrativeAnalysisCard in the Intelligence tab when latest intelligence has a narrative', async () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -204,6 +207,8 @@ describe('AnalysisCanvasPanel', () => {
       ],
       positionSignal: null,
       sources: ['yahoo_finance'],
+      evidenceLedger: null,
+      classifiedCatalysts: [],
     };
     vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
       data: mockIntelligence,
@@ -217,10 +222,14 @@ describe('AnalysisCanvasPanel', () => {
       mutate: vi.fn(), data: undefined, isPending: false, isError: false, error: null,
     } as never);
 
-    renderWithProviders(<AnalysisCanvasPanel />);
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.queryByRole('tab', { name: 'Intelligence' })).toBeNull();
-    // NarrativeAnalysisCard shows the summaryLine
+    expect(screen.queryByText('AAPL is showing strong momentum with a confirmed breakout.')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(screen.getByRole('tab', { name: 'Intelligence' }));
+    });
+
     expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
     // DecisionSummaryCard heading should NOT appear
     expect(screen.queryByText(/AAPL Decision Summary/)).not.toBeInTheDocument();
@@ -384,6 +393,8 @@ describe('AnalysisCanvasPanel', () => {
       upcomingEvents: [],
       positionSignal: null,
       sources: ['yahoo_finance'],
+      evidenceLedger: null,
+      classifiedCatalysts: [],
     };
     const mutate = vi.fn((_variables: unknown, options?: { onSuccess?: (result: SymbolIntelligence) => void }) => {
       options?.onSuccess?.(mockIntelligence);
@@ -467,6 +478,12 @@ describe('AnalysisCanvasPanel', () => {
       expect.objectContaining({ ticker: 'AAPL' }),
       expect.objectContaining({ onSuccess: expect.any(Function) })
     );
+    expect(screen.queryByText('AAPL is showing strong momentum with a confirmed breakout.')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(screen.getByRole('tab', { name: 'Intelligence' }));
+    });
+
     expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
   });
 
@@ -694,7 +711,7 @@ describe('AnalysisCanvasPanel', () => {
     expect(screen.queryByText('Should I place an order?')).not.toBeInTheDocument();
   });
 
-  it('overview shows the unified decision panel above the AI analysis section', () => {
+  it('keeps the full AI analysis section out of overview', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -764,13 +781,13 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    const decisionTitle = screen.getByText(t('workspacePage.panels.analysis.decisionWhy.title'));
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionWhy.title'))).toBeInTheDocument();
     // NarrativeAnalysisCard renders "{symbol} — AI analysis" in a <span>
-    const aiTitle = screen.getByText((_content, el) =>
+    const aiTitle = screen.queryByText((_content, el) =>
       el?.tagName === 'SPAN' &&
       (el?.textContent?.includes(t('workspacePage.panels.analysis.intelligence.aiAnalysisTitle')) ?? false)
     );
-    expect(decisionTitle.compareDocumentPosition(aiTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(aiTitle).not.toBeInTheDocument();
   });
 
   it('shows the Analyze with AI button for a held position that has no screener candidate', async () => {
