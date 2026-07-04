@@ -5,15 +5,18 @@ import {
   getIntelligenceHistory,
   getIntelligenceLatest,
   postPositionReview,
+  postStrategicReview,
   postIntelligenceAnalysis,
   postIntelligenceSweep,
   sendIntelligenceChatMessage,
   type IntelligenceChatMessagePayload,
   type PositionReviewPayload,
+  type StrategicReviewPayload,
 } from '@/features/intelligence/api';
 import { transformIntelligence } from '@/features/intelligence/types';
 import type { HistoryEntry, IntelligenceChatResponse, SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
 import type { PositionReview } from '@/features/intelligence/positionReviewTypes';
+import type { StrategicReview } from '@/features/intelligence/strategicReviewTypes';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -84,6 +87,12 @@ export function useSendIntelligenceChatMutation(ticker: string) {
 export function usePositionReviewMutation() {
   return useMutation<PositionReview, Error, PositionReviewPayload>({
     mutationFn: postPositionReview,
+  });
+}
+
+export function useStrategicReviewMutation() {
+  return useMutation<StrategicReview, Error, StrategicReviewPayload>({
+    mutationFn: postStrategicReview,
   });
 }
 

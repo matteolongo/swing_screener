@@ -9,10 +9,12 @@ from pydantic import BaseModel
 
 from api.models.intelligence_chat import IntelligenceChatRequest, IntelligenceChatResponse
 from api.models.position_review import PositionReviewRequest, PositionReviewResponse
+from api.models.strategic_review import StrategicReviewRequest
 from api.dependencies import get_fundamentals_service, get_portfolio_service, get_positions_repo
 from api.repositories.positions_repo import PositionsRepository
 from api.services.intelligence_chat_service import IntelligenceChatService, MissingIntelligenceError
 from api.services.position_review_service import MissingPositionReviewContextError, PositionReviewService
+from api.services.strategic_review_service import StrategicReviewService
 from api.services.fundamentals_service import FundamentalsService
 from api.services.intelligence_enrichment import (
     enrich_intelligence_request,
@@ -24,6 +26,7 @@ from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.history import HistoryEntry, read_history
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
+from swing_screener.intelligence.strategic import StrategicIntelligenceReport
 from swing_screener.intelligence.config_access import intelligence_config_section
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
 
@@ -49,6 +52,7 @@ def _dividend_for(ticker: str) -> tuple[int | None, str | None, float | None]:
 
 _analyzer: SymbolAnalyzer | None = None
 _chat_service: IntelligenceChatService | None = None
+_strategic_review_service: StrategicReviewService | None = None
 
 
 def _get_analyzer() -> SymbolAnalyzer:
@@ -63,6 +67,13 @@ def _get_chat_service() -> IntelligenceChatService:
     if _chat_service is None:
         _chat_service = IntelligenceChatService()
     return _chat_service
+
+
+def _get_strategic_review_service() -> StrategicReviewService:
+    global _strategic_review_service
+    if _strategic_review_service is None:
+        _strategic_review_service = StrategicReviewService()
+    return _strategic_review_service
 
 
 def _require_api_key() -> None:
@@ -171,6 +182,16 @@ def chat_with_symbol(ticker: str, request: IntelligenceChatRequest) -> Intellige
         if "OPENAI_API_KEY" in str(exc):
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/strategic-review", response_model=StrategicIntelligenceReport)
+def strategic_review(request: StrategicReviewRequest) -> StrategicIntelligenceReport:
+    """Build a manual app-context-only strategic overlay for a symbol."""
+    _require_analyzer_enabled()
+    try:
+        return _get_strategic_review_service().review(request)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

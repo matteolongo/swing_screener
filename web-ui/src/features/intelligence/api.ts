@@ -13,6 +13,8 @@ import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/type
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import type { PositionReviewAPI } from '@/features/intelligence/positionReviewTypes';
 import { transformPositionReview } from '@/features/intelligence/positionReviewTypes';
+import type { StrategicReviewAPI } from '@/features/intelligence/strategicReviewTypes';
+import { transformStrategicReview } from '@/features/intelligence/strategicReviewTypes';
 
 export interface IntelligenceRequestPayload {
   close: number;
@@ -200,6 +202,30 @@ export async function postPositionReview(payload: PositionReviewPayload) {
     errorMessage: `Failed to review ${payload.ticker}`,
   });
   return transformPositionReview(res);
+}
+
+export interface StrategicReviewPayload {
+  ticker: string;
+  topic?: string | null;
+  refreshSources: boolean;
+  riskMode: 'normal' | 'defensive' | 'aggressive';
+  horizonDays: number;
+}
+
+export async function postStrategicReview(payload: StrategicReviewPayload) {
+  const res = await fetchJson<StrategicReviewAPI>(API_ENDPOINTS.intelligenceStrategicReview, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ticker: payload.ticker,
+      topic: payload.topic ?? null,
+      refresh_sources: payload.refreshSources,
+      risk_mode: payload.riskMode,
+      horizon_days: payload.horizonDays,
+    }),
+    errorMessage: `Failed to build strategic overlay for ${payload.ticker}`,
+  });
+  return transformStrategicReview(res);
 }
 
 export async function postIntelligenceSweep(symbols: SweepSymbolPayload[]): Promise<SweepResponseAPI> {
