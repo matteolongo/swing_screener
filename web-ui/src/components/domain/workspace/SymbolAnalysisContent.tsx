@@ -13,6 +13,7 @@ import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
 import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
+import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -309,6 +310,7 @@ export default function SymbolAnalysisContent({
               </div>
             ) : hasNarrative && displayedIntelligence ? (
               <>
+                <PositionReviewPanel ticker={ticker} position={position} />
                 <NarrativeAnalysisCard
                   intelligence={displayedIntelligence}
                   candidate={candidate}
@@ -322,10 +324,13 @@ export default function SymbolAnalysisContent({
                 />
               </>
             ) : (
-              renderAnalyzePrompt(
-                t('workspacePage.panels.analysis.intelligence.emptyState'),
-                Boolean(candidate || position)
-              )
+              <>
+                <PositionReviewPanel ticker={ticker} position={position} />
+                {renderAnalyzePrompt(
+                  t('workspacePage.panels.analysis.intelligence.emptyState'),
+                  Boolean(candidate || position)
+                )}
+              </>
             )}
             {hasNarrative && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">

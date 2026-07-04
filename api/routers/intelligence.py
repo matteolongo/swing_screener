@@ -8,9 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from api.models.intelligence_chat import IntelligenceChatRequest, IntelligenceChatResponse
+from api.models.position_review import PositionReviewRequest, PositionReviewResponse
 from api.dependencies import get_fundamentals_service, get_portfolio_service, get_positions_repo
 from api.repositories.positions_repo import PositionsRepository
 from api.services.intelligence_chat_service import IntelligenceChatService, MissingIntelligenceError
+from api.services.position_review_service import MissingPositionReviewContextError, PositionReviewService
 from api.services.fundamentals_service import FundamentalsService
 from api.services.intelligence_enrichment import (
     enrich_intelligence_request,
@@ -169,6 +171,36 @@ def chat_with_symbol(ticker: str, request: IntelligenceChatRequest) -> Intellige
         if "OPENAI_API_KEY" in str(exc):
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/position-review/{position_id}", response_model=PositionReviewResponse)
+def review_position(
+    position_id: str,
+    request: PositionReviewRequest,
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
+) -> PositionReviewResponse:
+    """Run an advisory manual review for an open position without mutating it."""
+    try:
+        return PositionReviewService(portfolio_service=portfolio_service).review_position(position_id, request)
+    except MissingPositionReviewContextError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/{ticker}/position-review", response_model=PositionReviewResponse)
+def review_symbol(
+    ticker: str,
+    request: PositionReviewRequest,
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
+) -> PositionReviewResponse:
+    """Run an advisory manual review for a symbol using cached/refreshed app context."""
+    try:
+        return PositionReviewService(portfolio_service=portfolio_service).review_symbol(ticker, request)
+    except MissingPositionReviewContextError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
