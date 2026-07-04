@@ -95,6 +95,39 @@ export default function SymbolAnalysisContent({
     );
   };
 
+  const renderAnalyzePrompt = (description: string, showButton: boolean) => (
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
+          </p>
+          <p className="mt-1 text-sm text-muted">{description}</p>
+        </div>
+        {showButton && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={intelligenceMutation.isPending}
+            onClick={() => handleAnalyzeWithAi(false)}
+          >
+            {intelligenceMutation.isPending
+              ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
+              : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
+          </Button>
+        )}
+      </div>
+      {intelligenceMutation.isError && (
+        <p className="mt-2 text-sm text-danger">
+          {intelligenceMutation.error instanceof Error
+            ? intelligenceMutation.error.message
+            : t('workspacePage.panels.analysis.intelligence.analyzeError')}
+        </p>
+      )}
+    </div>
+  );
+
   useEffect(() => {
     setIntelligenceResult(null);
     intelligenceMutation.reset();
@@ -255,38 +288,12 @@ export default function SymbolAnalysisContent({
               <CatalystContextCard opportunity={catalystQuery.data} />
             )}
             {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
-            {!hasNarrative && (candidate || position) && (
-              <div className="rounded-lg border border-border bg-surface p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      {t('workspacePage.panels.analysis.intelligence.overviewPromptDescription')}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={intelligenceMutation.isPending}
-                    onClick={() => handleAnalyzeWithAi(false)}
-                  >
-                    {intelligenceMutation.isPending
-                      ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                      : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
-                  </Button>
-                </div>
-                {intelligenceMutation.isError && (
-                  <p className="mt-2 text-sm text-danger">
-                    {intelligenceMutation.error instanceof Error
-                      ? intelligenceMutation.error.message
-                      : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-                  </p>
-                )}
-              </div>
-            )}
+            {!hasNarrative &&
+              (candidate || position) &&
+              renderAnalyzePrompt(
+                t('workspacePage.panels.analysis.intelligence.overviewPromptDescription'),
+                true
+              )}
           </>
         )}
 
@@ -315,38 +322,10 @@ export default function SymbolAnalysisContent({
                 />
               </>
             ) : (
-              <div className="rounded-lg border border-border bg-surface p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      {t('workspacePage.panels.analysis.intelligence.emptyState')}
-                    </p>
-                  </div>
-                  {(candidate || position) && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={intelligenceMutation.isPending}
-                      onClick={() => handleAnalyzeWithAi(false)}
-                    >
-                      {intelligenceMutation.isPending
-                        ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                        : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
-                    </Button>
-                  )}
-                </div>
-                {intelligenceMutation.isError && (
-                  <p className="mt-2 text-sm text-danger">
-                    {intelligenceMutation.error instanceof Error
-                      ? intelligenceMutation.error.message
-                      : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-                  </p>
-                )}
-              </div>
+              renderAnalyzePrompt(
+                t('workspacePage.panels.analysis.intelligence.emptyState'),
+                Boolean(candidate || position)
+              )
             )}
             {hasNarrative && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">

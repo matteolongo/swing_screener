@@ -629,7 +629,7 @@ export default function NarrativeAnalysisCard({
         </div>
 
         {/* RISKS — fixed (screened); present-gated (position) */}
-        {!positionMode ? (
+        {(!positionMode || riskFactors.length > 0) && (
           <div className="rounded-md bg-surface border border-border p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
               {t('workspacePage.panels.analysis.intelligence.riskFactors')}
@@ -647,21 +647,7 @@ export default function NarrativeAnalysisCard({
               <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.emptyPanel')}</p>
             )}
           </div>
-        ) : riskFactors.length > 0 ? (
-          <div className="rounded-md bg-surface border border-border p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
-              {t('workspacePage.panels.analysis.intelligence.riskFactors')}
-            </div>
-            <ul className="space-y-1">
-              {riskFactors.map((rf, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-muted">
-                  <span className="text-muted shrink-0 mt-0.5">•</span>
-                  <span>{rf}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+        )}
 
         {/* PAST TRADES */}
         {hasPastTrades && (

@@ -8,29 +8,16 @@ from pathlib import Path
 from swing_screener.data.source_health import record_fallback
 from swing_screener.intelligence.evidence import registry
 
-# Importing the collector classes below registers them via the @register
-# decorator (import side-effect); the registry is the single source of truth.
-from swing_screener.intelligence.evidence.collectors.degiro_news import (
-    DegiroNewsCollector,
-)
-from swing_screener.intelligence.evidence.collectors.polygon_news import (
-    PolygonNewsCollector,
-)
-from swing_screener.intelligence.evidence.collectors.sec_edgar import (
-    SecEdgarCatalystCollector,
-)
+# Importing the collectors package auto-imports every collector module, whose
+# @register decorators populate the registry (the single source of truth).
+from swing_screener.intelligence.evidence import collectors as _collectors  # noqa: F401
 from swing_screener.intelligence.evidence.config import EvidenceConfig, load_evidence_config
 from swing_screener.intelligence.evidence.curation import curate
 from swing_screener.intelligence.evidence.models import SourceEvidence
 
 logger = logging.getLogger(__name__)
 
-__all__ = [
-    "DegiroNewsCollector",
-    "PolygonNewsCollector",
-    "SecEdgarCatalystCollector",
-    "collect_evidence",
-]
+__all__ = ["collect_evidence"]
 
 _CACHE_ROOT = Path("data/intelligence/evidence")
 

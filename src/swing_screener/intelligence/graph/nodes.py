@@ -27,73 +27,58 @@ def resolve_context(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
     return state
 
 
+def _put(d: dict, key: str, value: object) -> None:
+    """Assign only when value is not None (keeps False / 0)."""
+    if value is not None:
+        d[key] = value
+
+
+def _put_truthy(d: dict, key: str, value: object) -> None:
+    """Assign only when value is truthy (drops empty strings / empty dicts)."""
+    if value:
+        d[key] = value
+
+
 def assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
     req = state["req"]
     inputs_used: dict = {}
 
     trade_plan: dict = {}
-    if req.entry is not None:
-        trade_plan["entry"] = req.entry
-    if req.stop is not None:
-        trade_plan["stop"] = req.stop
-    if req.target is not None:
-        trade_plan["target"] = req.target
-    if req.rr is not None:
-        trade_plan["rr"] = req.rr
+    _put(trade_plan, "entry", req.entry)
+    _put(trade_plan, "stop", req.stop)
+    _put(trade_plan, "target", req.target)
+    _put(trade_plan, "rr", req.rr)
     if req.target is not None and req.close is not None and req.close != 0:
         trade_plan["upside_pct"] = round((req.target - req.close) / req.close * 100, 1)
-    if trade_plan:
-        inputs_used["trade_plan"] = trade_plan
+    _put_truthy(inputs_used, "trade_plan", trade_plan)
 
     technical: dict = {}
-    if req.sma_20 is not None:
-        technical["sma_20"] = req.sma_20
-    if req.sma_50 is not None:
-        technical["sma_50"] = req.sma_50
-    if req.sma_200 is not None:
-        technical["sma_200"] = req.sma_200
-    if req.momentum_6m is not None:
-        technical["momentum_6m"] = req.momentum_6m
-    if req.momentum_12m is not None:
-        technical["momentum_12m"] = req.momentum_12m
-    if req.rel_strength is not None:
-        technical["rel_strength"] = req.rel_strength
-    if req.sector_rs is not None:
-        technical["sector_rs"] = req.sector_rs
-    if req.atr is not None:
-        technical["atr"] = req.atr
+    _put(technical, "sma_20", req.sma_20)
+    _put(technical, "sma_50", req.sma_50)
+    _put(technical, "sma_200", req.sma_200)
+    _put(technical, "momentum_6m", req.momentum_6m)
+    _put(technical, "momentum_12m", req.momentum_12m)
+    _put(technical, "rel_strength", req.rel_strength)
+    _put(technical, "sector_rs", req.sector_rs)
+    _put(technical, "atr", req.atr)
     if req.dist_52w_high_pct is not None:
         technical["dist_52w_high_pct"] = round(req.dist_52w_high_pct * 100, 1)
-    if req.near_52w_high is not None:
-        technical["near_52w_high"] = req.near_52w_high
-    if req.sector_rotation_context:
-        technical["sector_rotation_context"] = req.sector_rotation_context
-    if req.signal:
-        technical["signal"] = req.signal
-    if req.price_source:
-        technical["price_source"] = req.price_source
-    if technical:
-        inputs_used["technical"] = technical
+    _put(technical, "near_52w_high", req.near_52w_high)
+    _put_truthy(technical, "sector_rotation_context", req.sector_rotation_context)
+    _put_truthy(technical, "signal", req.signal)
+    _put_truthy(technical, "price_source", req.price_source)
+    _put_truthy(inputs_used, "technical", technical)
 
     decision: dict = {}
-    if req.decision_action:
-        decision["action"] = req.decision_action
-    if req.decision_conviction:
-        decision["conviction"] = req.decision_conviction
-    if req.technical_label:
-        decision["technical_label"] = req.technical_label
-    if req.fundamentals_label:
-        decision["fundamentals_label"] = req.fundamentals_label
-    if req.valuation_label:
-        decision["valuation_label"] = req.valuation_label
-    if req.fair_value_low is not None:
-        decision["fair_value_low"] = req.fair_value_low
-    if req.fair_value_base is not None:
-        decision["fair_value_base"] = req.fair_value_base
-    if req.fair_value_high is not None:
-        decision["fair_value_high"] = req.fair_value_high
-    if decision:
-        inputs_used["decision_context"] = decision
+    _put_truthy(decision, "action", req.decision_action)
+    _put_truthy(decision, "conviction", req.decision_conviction)
+    _put_truthy(decision, "technical_label", req.technical_label)
+    _put_truthy(decision, "fundamentals_label", req.fundamentals_label)
+    _put_truthy(decision, "valuation_label", req.valuation_label)
+    _put(decision, "fair_value_low", req.fair_value_low)
+    _put(decision, "fair_value_base", req.fair_value_base)
+    _put(decision, "fair_value_high", req.fair_value_high)
+    _put_truthy(inputs_used, "decision_context", decision)
 
     if req.catalyst_evidence:
         inputs_used["catalyst_evidence"] = {
@@ -104,20 +89,19 @@ def assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
         }
 
     finnhub_signals: dict = {}
-    if req.insider_net_shares_90d is not None:
-        finnhub_signals["insider_net_shares_90d"] = req.insider_net_shares_90d
-    if req.insider_transaction_count_90d is not None:
-        finnhub_signals["insider_transaction_count_90d"] = (
-            req.insider_transaction_count_90d
-        )
-    if req.forward_eps_estimate is not None:
-        finnhub_signals["forward_eps_estimate"] = req.forward_eps_estimate
-    if req.analyst_upgrade_downgrade_net_30d is not None:
-        finnhub_signals["analyst_upgrade_downgrade_net_30d"] = (
-            req.analyst_upgrade_downgrade_net_30d
-        )
-    if finnhub_signals:
-        inputs_used["finnhub_signals"] = finnhub_signals
+    _put(finnhub_signals, "insider_net_shares_90d", req.insider_net_shares_90d)
+    _put(
+        finnhub_signals,
+        "insider_transaction_count_90d",
+        req.insider_transaction_count_90d,
+    )
+    _put(finnhub_signals, "forward_eps_estimate", req.forward_eps_estimate)
+    _put(
+        finnhub_signals,
+        "analyst_upgrade_downgrade_net_30d",
+        req.analyst_upgrade_downgrade_net_30d,
+    )
+    _put_truthy(inputs_used, "finnhub_signals", finnhub_signals)
 
     if req.recent_patterns:
         inputs_used["candles"] = {"patterns": ", ".join(req.recent_patterns)}
