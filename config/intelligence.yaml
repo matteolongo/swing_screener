@@ -132,5 +132,9 @@ config:
     market_open: "09:30"    # ET regular-session open; pre-open window ends here
     window_start: "00:00"   # ET lower bound of the pre-open window (overnight tape)
     session_close: "16:00"  # ET regular-session close; bounds the overnight news window
+  tracing:
+    enabled: true              # false => no recorder attached, zero overhead, run_id null
+    max_runs_per_ticker: 50    # per-ticker index cap
+    prompt_preview_chars: 500  # truncation length for prompt_preview (no full prompt persisted)
 bootstrapped_from_strategy: true
 updated_at: '2026-05-14T09:37:59'
