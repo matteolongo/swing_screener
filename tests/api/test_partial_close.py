@@ -79,7 +79,7 @@ def _open_position(position_id: str = "POS-001") -> dict:
         "entry_price": 20.0,
         "stop_price": 18.0,
         "shares": 10,
-        "initial_risk": 20.0,  # (20 - 18) * 10
+        "initial_risk": 2.0,  # per-share: entry 20 - initial stop 18
         "partial_closes": [],
     }
 
@@ -119,7 +119,21 @@ def test_partial_close_preserves_initial_risk(tmp_path: Path):
     svc.partial_close_position("POS-001", req)
     data = json.loads(pos_file.read_text())
     pos = data["positions"][0]
-    assert pos["initial_risk"] == 20.0  # unchanged
+    assert pos["initial_risk"] == 2.0  # unchanged
+
+
+def test_partial_close_r_uses_initial_risk_not_trailed_stop(tmp_path: Path):
+    # Stop trailed above entry; r_at_close must use the stored per-share
+    # initial_risk (2.0), not the current stop (which would flip the sign).
+    pos = _open_position()
+    pos["stop_price"] = 21.0  # trailed above entry
+    pos_file = tmp_path / "positions.json"
+    pos_file.write_text(json.dumps({"positions": [pos], "asof": "2026-01-01"}))
+    svc = PortfolioService(positions_repo=PositionsRepository(pos_file))
+    svc.partial_close_position("POS-001", PartialCloseRequest(shares_closed=4, price=24.0))
+    data = json.loads(pos_file.read_text())
+    evt = data["positions"][0]["partial_closes"][0]
+    assert abs(evt["r_at_close"] - 2.0) < 0.001  # (24-20)/2.0, not (24-20)/(20-21)
 
 
 def test_partial_close_rejects_closing_all_shares(tmp_path):

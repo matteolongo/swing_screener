@@ -99,9 +99,12 @@ class HealthChecker:
     def check_data_directory() -> Dict[str, Any]:
         """Check that data directory is accessible."""
         try:
-            data_dir = Path("data")
+            # Resolve the actual data directory from the configured state files
+            # (honors SWING_SCREENER_DATA_DIR / runtime path resolution) rather
+            # than a CWD-relative "data" that flaps when uvicorn runs elsewhere.
+            data_dir = HealthChecker._configured_state_files()["positions"].parent
             if not data_dir.exists():
-                return {"status": "warning", "message": "data/ directory not found"}
+                return {"status": "warning", "message": f"{data_dir} directory not found"}
 
             # Check if we can list files
             list(data_dir.iterdir())

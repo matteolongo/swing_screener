@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from api.utils.file_lock import locked_read_json, locked_write_json
+from api.utils.file_lock import locked_read_json, locked_read_modify_write, locked_write_json
 
 @dataclass
 class ScreenerHistoryRepository:
@@ -20,16 +20,24 @@ class ScreenerHistoryRepository:
 
     def record_run(self, run_date: str, tickers: list[str]) -> None:
         """Record tickers seen on a given date (idempotent, merges with existing)."""
-        history = self._read()
-        existing = set(history.get(run_date, []))
-        existing.update(t.upper() for t in tickers)
-        history[run_date] = sorted(existing)
-        # Keep only last 90 days
-        all_dates = sorted(history.keys())
-        if len(all_dates) > 90:
-            for old_date in all_dates[:-90]:
-                del history[old_date]
-        locked_write_json(self.path, {"history": history})
+        def _modify(payload: dict) -> dict:
+            history = payload.get("history", {})
+            if not isinstance(history, dict):
+                history = {}
+            existing = set(history.get(run_date, []))
+            existing.update(t.upper() for t in tickers)
+            history[run_date] = sorted(existing)
+            # Keep only last 90 days
+            all_dates = sorted(history.keys())
+            if len(all_dates) > 90:
+                for old_date in all_dates[:-90]:
+                    del history[old_date]
+            payload["history"] = history
+            return payload
+
+        if not self.path.exists():
+            locked_write_json(self.path, {"history": {}})
+        locked_read_modify_write(self.path, _modify)
 
     def get_recurrence(self) -> list[dict]:
         """Return per-ticker appearance stats: ticker, days_seen, streak, last_seen."""

@@ -14,6 +14,7 @@ import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceCha
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
 import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
+import StrategicReviewPanel from '@/components/domain/workspace/StrategicReviewPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -311,6 +312,7 @@ export default function SymbolAnalysisContent({
             ) : hasNarrative && displayedIntelligence ? (
               <>
                 <PositionReviewPanel ticker={ticker} position={position} />
+                <StrategicReviewPanel ticker={ticker} />
                 <NarrativeAnalysisCard
                   intelligence={displayedIntelligence}
                   candidate={candidate}

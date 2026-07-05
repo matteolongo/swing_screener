@@ -228,7 +228,8 @@ def fetch_ticker_metadata(
             "currency": currency,
             "exchange": exchange,
         }
-        freshly_fetched.add(t)
+        if name is not None or currency is not None or exchange is not None:
+            freshly_fetched.add(t)
 
     if use_cache and freshly_fetched:
         _now_write = time.time()

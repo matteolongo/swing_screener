@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from api.models.weekly_review import WeeklyReview, WeeklyReviewUpsertRequest
-from api.utils.file_lock import locked_read_json, locked_write_json
+from api.utils.file_lock import locked_read_json, locked_read_modify_write, locked_write_json
 
 
 @dataclass
@@ -23,9 +23,6 @@ class WeeklyReviewsRepository:
         if not isinstance(raw, dict):
             return {}
         return raw
-
-    def _write_reviews(self, reviews: dict[str, dict]) -> None:
-        locked_write_json(self.path, {"reviews": reviews})
 
     def list_reviews(self) -> list[WeeklyReview]:
         reviews = self._read_reviews()
@@ -49,7 +46,6 @@ class WeeklyReviewsRepository:
             return None
 
     def upsert_review(self, week_id: str, request: WeeklyReviewUpsertRequest) -> WeeklyReview:
-        reviews = self._read_reviews()
         updated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
         review = WeeklyReview(
             week_id=week_id,
@@ -59,6 +55,16 @@ class WeeklyReviewsRepository:
             next_week_focus=request.next_week_focus,
             updated_at=updated_at,
         )
-        reviews[week_id] = review.model_dump(mode="json")
-        self._write_reviews(reviews)
+
+        def _modify(payload: dict) -> dict:
+            reviews = payload.get("reviews", {})
+            if not isinstance(reviews, dict):
+                reviews = {}
+            reviews[week_id] = review.model_dump(mode="json")
+            payload["reviews"] = reviews
+            return payload
+
+        if not self.path.exists():
+            locked_write_json(self.path, {"reviews": {}})
+        locked_read_modify_write(self.path, _modify)
         return review

@@ -26,6 +26,7 @@ vi.mock('@/features/intelligence/hooks', () => ({
   useIntelligenceChatQuery: vi.fn(() => ({ data: { ticker: 'AAPL', chatDate: '2026-07-03', messages: [], refreshedAt: null }, isLoading: false, isError: false })),
   useSendIntelligenceChatMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false, isError: false, error: null })),
   usePositionReviewMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false, isError: false, error: null, data: undefined })),
+  useStrategicReviewMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false, isError: false, error: null, data: undefined })),
 }));
 
 vi.mock('@/features/intelligence/catalysts/hooks', () => ({

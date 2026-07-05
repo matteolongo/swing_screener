@@ -117,11 +117,8 @@ def resolve_data_freshness(asof_date: str, now_utc: dt.datetime, currencies: lis
     except ValueError:
         return "final_close"
 
-    if resolved < now_utc.date():
-        return "final_close"
-    if resolved > now_utc.date():
-        return "intraday"
-    return "final_close" if all_markets_closed(now_utc, currencies) else "intraday"
+    effective_date = resolve_default_asof_date(now_utc, currencies)
+    return "final_close" if resolved <= effective_date else "intraday"
 
 
 def resolve_fetch_start_date(asof_date: str, min_history: int) -> str:

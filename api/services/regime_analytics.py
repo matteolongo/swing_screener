@@ -174,12 +174,15 @@ class RegimeAnalyticsService:
             if not r_values:
                 continue
             wins = [r for r in r_values if r > 0]
-            losses = [r for r in r_values if r <= 0]
-            win_rate = (len(wins) / len(r_values)) * 100
+            losses = [r for r in r_values if r < 0]
+            total = len(r_values)
+            win_rate = (len(wins) / total) * 100
             avg_win_r = sum(wins) / len(wins) if wins else 0.0
             avg_loss_r = abs(sum(losses) / len(losses)) if losses else 0.0
-            avg_r = sum(r_values) / len(r_values)
-            expectancy = avg_win_r * (win_rate / 100) - avg_loss_r * (1 - win_rate / 100)
+            avg_r = sum(r_values) / total
+            # Breakeven trades (r == 0) are neither wins nor losses; weight
+            # expectancy by explicit win/loss rates so scratches don't inflate p_loss.
+            expectancy = avg_win_r * (len(wins) / total) - avg_loss_r * (len(losses) / total)
             result_regimes.append({
                 "regime": regime,
                 "count": len(r_values),

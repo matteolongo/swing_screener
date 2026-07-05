@@ -10,6 +10,7 @@ from swing_screener.indicators.volatility import (
     compute_volatility_features,
 )
 from swing_screener.indicators.momentum import MomentumConfig, compute_momentum_features
+from swing_screener.indicators.setup_quality import compute_setup_quality
 from swing_screener.settings import get_settings_manager
 
 
@@ -68,6 +69,17 @@ def build_feature_table(
     weekly_df = compute_weekly_trend_features(ohlcv)
     feats = feats.join(weekly_df[["weekly_trend"]], how="left")
     feats["weekly_trend"] = feats["weekly_trend"].fillna("neutral")
+
+    # Setup-quality features so the w_setup_quality / extension_penalty ranking
+    # weights actually apply (they were inert while these columns were missing).
+    setup_df = compute_setup_quality(ohlcv)
+    setup_cols = [
+        c
+        for c in ("consolidation_tightness", "close_location_in_range", "above_breakout_extension")
+        if c in setup_df.columns
+    ]
+    if setup_cols:
+        feats = feats.join(setup_df[setup_cols], how="left")
 
     return feats.sort_index()
 

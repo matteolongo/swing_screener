@@ -92,6 +92,27 @@ Important constraints:
 - Weights and thresholds live under `config.evidence_weights` in
   `config/intelligence.yaml`.
 
+## Strategic overlay
+
+The `intelligence/strategic/` package is an isolated advisory layer above
+single-symbol analysis. It does not crawl, trade, mutate symbol convictions, or
+change portfolio state. Its first input seam is cached `SymbolIntelligence`:
+`signal_adapter.py` converts existing symbol analysis into app-context signals
+and watched-symbol context, then `StrategicIntelligenceAgent.analyze()` builds a
+portfolio/watchlist overlay report.
+
+The API seam is `POST /api/intelligence/strategic-review`. It is manual-only:
+the caller supplies a ticker/topic/risk mode and may explicitly request
+`refresh_sources=true`. Refreshed evidence is limited to configured app evidence
+collectors and is counted in `external_source_count`; otherwise the report is
+built from cached app context.
+
+Use this layer for questions such as: "Does a broader situation change how I
+should interpret these candidates, watchlist names, or open positions?" The
+output is deliberately constrained to review actions such as
+`WAIT_FOR_CONFIRMATION`, `REVIEW_CONTEXT`, and risk-review prompts. Execution
+actions like `BUY_NOW` are not part of the strategic action schema.
+
 `SymbolIntelligence` exposes:
 
 - `evidence_ledger: EvidenceLedger | None`

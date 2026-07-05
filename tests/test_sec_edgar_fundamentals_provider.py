@@ -2,7 +2,34 @@ from __future__ import annotations
 
 import httpx
 
-from swing_screener.fundamentals.providers.sec_edgar import SecEdgarFundamentalsProvider
+from swing_screener.fundamentals.providers.sec_edgar import (
+    SecEdgarFundamentalsProvider,
+    _infer_frequency,
+)
+
+
+def test_infer_frequency_span_overrides_quarterly_tag():
+    ytd_cumulative = {
+        "fp": "Q2",
+        "frame": "CY2025Q2",
+        "start": "2025-01-01",
+        "end": "2025-06-30",
+    }
+    true_quarter = {
+        "fp": "Q2",
+        "frame": "CY2025Q2",
+        "start": "2025-04-01",
+        "end": "2025-06-30",
+    }
+    annual = {
+        "fp": "FY",
+        "frame": "CY2024",
+        "start": "2024-01-01",
+        "end": "2024-12-31",
+    }
+    assert _infer_frequency(ytd_cumulative) == "unknown"
+    assert _infer_frequency(true_quarter) == "quarterly"
+    assert _infer_frequency(annual) == "annual"
 
 
 def test_sec_edgar_provider_builds_quarterly_record(monkeypatch):

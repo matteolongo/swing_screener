@@ -211,8 +211,10 @@ def _sector_weighted_valuation_score(candidate: Any, snapshot: FundamentalSnapsh
     trailing_pe = _safe_float(_get_value(snapshot, "trailing_pe"))
     price_to_sales = _safe_float(_get_value(snapshot, "price_to_sales"))
     price_to_book = _safe_float(_get_value(snapshot, "price_to_book"))
-    growth_score = _pillar_score(snapshot, "growth") or 0.55
-    cash_flow_score = _pillar_score(snapshot, "cash_flow") or 0.55
+    _growth = _pillar_score(snapshot, "growth")
+    growth_score = 0.55 if _growth is None else _growth
+    _cash_flow = _pillar_score(snapshot, "cash_flow")
+    cash_flow_score = 0.55 if _cash_flow is None else _cash_flow
 
     if profile == "financials":
         book_score = _score_lower(price_to_book, strong=0.9, weak=2.6)

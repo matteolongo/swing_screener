@@ -318,11 +318,25 @@ class PortfolioReadService:
         positions, _ = self._positions_repo.list_positions(status=None)
         realized_pnl = 0.0
         for position in positions:
+            entry_price = float(position.get("entry_price", 0.0))
+
+            # Proceeds already realized via partial closes, on any position
+            # (still open or closed). shares/exit_price below only cover the
+            # remaining shares, so partial tranches must be added separately.
+            for event in position.get("partial_closes") or []:
+                realized_pnl += (
+                    (float(event.get("price", 0.0)) - entry_price)
+                    * int(event.get("shares_closed", 0))
+                )
+                fee_eur = event.get("fee_eur")
+                if fee_eur is not None:
+                    realized_pnl -= abs(float(fee_eur))
+
             if position.get("status") != "closed" or position.get("exit_price") is None:
                 continue
 
             realized_pnl += (
-                (float(position.get("exit_price")) - float(position.get("entry_price", 0.0)))
+                (float(position.get("exit_price")) - entry_price)
                 * int(position.get("shares", 0))
             )
             exit_fee_eur = position.get("exit_fee_eur")

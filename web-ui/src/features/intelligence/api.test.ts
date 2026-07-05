@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { candidateToPayload, postIntelligenceAnalysis, sendIntelligenceChatMessage } from './api';
+import { candidateToPayload, postIntelligenceAnalysis, postStrategicReview, sendIntelligenceChatMessage } from './api';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -276,6 +276,41 @@ describe('sendIntelligenceChatMessage', () => {
     expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
       message: 'Refresh sources first',
       refresh_sources: true,
+    });
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('postStrategicReview', () => {
+  it('posts manual strategic overlay settings', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        generated_at: '2026-07-04T12:00:00Z',
+        input_policy: 'app_context_only',
+        external_source_count: 0,
+        situations: [],
+        memo: 'Strategic overlay built from app context only.',
+      }),
+      text: async () => JSON.stringify({}),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await postStrategicReview({
+      ticker: 'ASML',
+      topic: 'AI capex risk',
+      refreshSources: true,
+      riskMode: 'defensive',
+      horizonDays: 7,
+    });
+
+    expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/strategic-review');
+    expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
+      ticker: 'ASML',
+      topic: 'AI capex risk',
+      refresh_sources: true,
+      risk_mode: 'defensive',
+      horizon_days: 7,
     });
     vi.unstubAllGlobals();
   });

@@ -81,16 +81,19 @@ def _fetch_via_finnhub(ticker: str, api_key: str, asof_date: dt.date) -> int | N
     if not items:
         return _UNAVAILABLE
 
+    soonest: dt.date | None = None
     for item in items:
         raw_date = item.get("date") or ""
         try:
             earnings_date = dt.date.fromisoformat(raw_date)
         except ValueError:
             continue
-        if earnings_date >= asof_date:
-            return (earnings_date - asof_date).days
+        if earnings_date >= asof_date and (soonest is None or earnings_date < soonest):
+            soonest = earnings_date
 
-    return None
+    if soonest is None:
+        return None
+    return (soonest - asof_date).days
 
 
 def _fetch_via_yfinance(ticker: str, asof_date: dt.date) -> int | None:
