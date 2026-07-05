@@ -792,7 +792,7 @@ describe('AnalysisCanvasPanel', () => {
     expect(aiTitle).not.toBeInTheDocument();
   });
 
-  it('shows the Analyze with AI button for a held position that has no screener candidate', async () => {
+  it('hides the Analyze with AI button from overview for a held position with no screener candidate', async () => {
     // VALE is an open position in the default MSW handler, with no screener candidate cached.
     useWorkspaceStore.setState({
       selectedTicker: 'VALE',
@@ -804,9 +804,9 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(
-      await screen.findByRole('button', { name: t('workspacePage.panels.analysis.intelligence.analyzeAction') })
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: t('workspacePage.panels.analysis.intelligence.analyzeAction') })).not.toBeInTheDocument();
+    });
   });
 
   it('auto-computes a live candidate for a held position with no screener candidate', async () => {
