@@ -83,6 +83,6 @@ export function filterCandidates(
 }
 
 export function filterOutAddOns(candidates: ScreenerCandidate[]): ScreenerCandidate[] {
-  const portfolioModes = new Set<string>(['ADD_ON', 'RE_ENTRY', 'SCALE_BACK']);
+  const portfolioModes = new Set<string>(['ADD_ON', 'SCALE_BACK']);
   return candidates.filter((c) => !portfolioModes.has(c.sameSymbol?.mode ?? ''));
 }
