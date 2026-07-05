@@ -78,6 +78,7 @@ data/intelligence/education_*.json
 data/intelligence/sweep_*.json
 data/intelligence/evidence/
 data/intelligence/history/
+data/intelligence/chat/
 data/screener_history.json
 
 # =========================

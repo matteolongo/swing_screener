@@ -894,7 +894,20 @@ export const messagesEn = {
             runAction: 'Run strategic overlay',
             runningAction: 'Building overlay...',
             topicLabel: 'Topic',
-            topicPlaceholder: 'Optional: rates, export controls, sector rotation...',
+            topicPlaceholder: 'Optional extra topic: rates, export controls, sector rotation...',
+            watchListLabel: 'Default checks',
+            watchArea: {
+              macro: 'Macro',
+              geopolitics: 'Geopolitics',
+              earnings: 'Earnings',
+              sectorRotation: 'Sector rotation',
+            },
+            signal: {
+              bullish: 'Bullish',
+              bearish: 'Bearish',
+              mixed: 'Mixed',
+              neutral: 'Neutral',
+            },
             riskModeLabel: 'Risk mode',
             riskMode: {
               normal: 'Normal',
