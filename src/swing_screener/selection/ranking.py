@@ -84,6 +84,11 @@ def compute_hot_score(
         components.append(cfg.w_sector_rs * r_sector)
         active_weight += cfg.w_sector_rs
 
+    if active_weight <= 0:
+        raise ValueError(
+            "No active ranking weights: every configured weight maps to a column "
+            "absent from the feature table."
+        )
     out["score"] = sum(components) / active_weight
 
     # Extension penalty: subtract raw extension value, capped at extension_penalty_cap.

@@ -97,6 +97,13 @@ def _matching_evidence(prediction: HistoryPrediction, played_out: list[str]) -> 
     return None
 
 
+_REALIZED_MOVE: dict[str, str] = {
+    "confirmed": "bullish",
+    "weakening": "bearish",
+    "invalidated": "bearish",
+}
+
+
 def _outcome_for_prediction(
     prediction: HistoryPrediction,
     result: SymbolIntelligence,
@@ -105,9 +112,10 @@ def _outcome_for_prediction(
     played_out = thesis_delta.what_played_out if thesis_delta else []
     evidence = _matching_evidence(prediction, played_out)
     if evidence and thesis_delta:
-        if thesis_delta.status == "confirmed":
-            return PredictionOutcome(status="confirmed", evidence=evidence)
-        if thesis_delta.status in {"weakening", "invalidated"}:
+        realized = _REALIZED_MOVE.get(thesis_delta.status)
+        if realized and prediction.direction in {"bullish", "bearish"}:
+            if prediction.direction == realized:
+                return PredictionOutcome(status="confirmed", evidence=evidence)
             return PredictionOutcome(status="contradicted", evidence=evidence)
     return PredictionOutcome(
         status="unresolved",

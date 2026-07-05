@@ -140,6 +140,46 @@ class OrdersService:
         }
         self._orders_repo.update_order(order_id, updates)
 
+        add_shares = int(order["quantity"])
+        target_position_id = order.get("position_id")
+
+        # ADD_ON fill: merge into the referenced open position (weighted-average
+        # entry, keep the existing stop) instead of creating a duplicate lot.
+        if target_position_id:
+            merged: dict = {}
+
+            def _merge(data: dict) -> dict:
+                for pos in data.get("positions", []):
+                    if pos.get("position_id") == target_position_id:
+                        if pos.get("status") != "open":
+                            raise ConflictError(
+                                f"Position {target_position_id} is not open for add-on."
+                            )
+                        old_shares = int(pos.get("shares", 0))
+                        old_entry = float(pos.get("entry_price", 0.0))
+                        new_shares = old_shares + add_shares
+                        if new_shares > 0:
+                            pos["entry_price"] = round(
+                                (old_entry * old_shares + request.filled_price * add_shares)
+                                / new_shares,
+                                6,
+                            )
+                        pos["shares"] = new_shares
+                        existing_stop = float(pos.get("stop_price", 0.0))
+                        pos["initial_risk"] = round(pos["entry_price"] - existing_stop, 4)
+                        if request.fee_eur is not None:
+                            prior_fee = pos.get("entry_fee_eur") or 0.0
+                            pos["entry_fee_eur"] = float(prior_fee) + float(request.fee_eur)
+                        data["asof"] = get_today_str()
+                        merged["position"] = dict(pos)
+                        return data
+                raise NotFoundError(
+                    f"Position not found for add-on: {target_position_id}"
+                )
+
+            self._positions_repo.update(_merge)
+            return FillOrderResponse(order_id=order_id, position=Position(**merged["position"]))
+
         isin = order.get("isin") or _resolve_isin(ticker)
         position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
         initial_risk = round(request.filled_price - stop_price, 4)
@@ -152,7 +192,7 @@ class OrdersService:
             "entry_price": request.filled_price,
             "stop_price": stop_price,
             "target_price": order.get("target_price"),
-            "shares": order["quantity"],
+            "shares": add_shares,
             "initial_risk": initial_risk,
             "source_order_id": order_id,
             "isin": isin,
@@ -162,11 +202,13 @@ class OrdersService:
             "entry_fx_rate": request.fill_fx_rate,
         }
 
-        data = self._positions_repo.read()
-        positions = data.get("positions", [])
-        positions.append(new_position)
-        data["positions"] = positions
-        data["asof"] = get_today_str()
-        self._positions_repo.write(data)
+        def _append(data: dict) -> dict:
+            positions = data.get("positions", [])
+            positions.append(new_position)
+            data["positions"] = positions
+            data["asof"] = get_today_str()
+            return data
+
+        self._positions_repo.update(_append)
 
         return FillOrderResponse(order_id=order_id, position=Position(**new_position))

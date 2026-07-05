@@ -30,22 +30,22 @@ _SUFFIX_CURRENCY: dict[str, str] = {
 SUPPORTED_CURRENCIES = frozenset({"USD", "EUR", "GBP", "CHF", "SEK", "DKK", "NOK"})
 
 
-@lru_cache(maxsize=1)
-def _load_instrument_master_currencies() -> dict[str, str]:
-    """Return symbol → currency from instrument_master.json, cached."""
-    for candidate in [
-        "data/intelligence/instrument_master.json",
-        os.path.join(
-            os.path.dirname(__file__),
-            "..", "..", "..", "..", "data", "intelligence", "instrument_master.json",
-        ),
-    ]:
-        p = os.path.abspath(candidate)
-        if os.path.exists(p):
-            with open(p, encoding="utf-8") as f:
-                records = json.load(f)
-            return {r["symbol"]: r["currency"] for r in records if r.get("currency")}
+@lru_cache(maxsize=8)
+def _load_instrument_master_currencies_by_path(path: str) -> dict[str, str]:
+    """Return symbol → currency from the given instrument_master.json, cached by path."""
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            records = json.load(f)
+        return {r["symbol"]: r["currency"] for r in records if r.get("currency")}
     return {}
+
+
+def _load_instrument_master_currencies() -> dict[str, str]:
+    """Return symbol → currency from instrument_master.json, honoring the
+    module-level path override used by the rest of the data layer."""
+    from swing_screener.data.universe import _instrument_master_path
+
+    return _load_instrument_master_currencies_by_path(_instrument_master_path())
 
 
 @lru_cache(maxsize=4096)

@@ -135,3 +135,71 @@ def test_fill_order_carries_target_price_to_position(client_with_target_order):
     assert resp.status_code == 201
     pos = resp.json()["position"]
     assert pos["target_price"] == 15.00
+
+
+@pytest.fixture()
+def client_with_addon_order(tmp_path, monkeypatch):
+    orders_path = tmp_path / "orders.json"
+    positions_path = tmp_path / "positions.json"
+    orders_path.write_text(json.dumps({
+        "orders": [{
+            "order_id": "ORD-SBMO-002",
+            "ticker": "SBMO",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_type": "LIMIT",
+            "quantity": 50,
+            "limit_price": 13.00,
+            "stop_price": 11.20,
+            "order_date": "2026-04-25",
+            "filled_date": None,
+            "entry_price": None,
+            "notes": "",
+            "parent_order_id": None,
+            "position_id": "POS-EXIST",
+            "tif": "GTC",
+            "fee_eur": None,
+            "fill_fx_rate": None,
+            "isin": "NL0010273215",
+            "thesis": None,
+        }],
+        "asof": "2026-04-25",
+    }))
+    positions_path.write_text(json.dumps({
+        "positions": [{
+            "position_id": "POS-EXIST",
+            "ticker": "SBMO",
+            "status": "open",
+            "entry_date": "2026-04-20",
+            "entry_price": 12.0,
+            "stop_price": 11.0,
+            "shares": 100,
+            "initial_risk": 1.0,
+            "entry_fee_eur": 2.0,
+        }],
+        "asof": "2026-04-25",
+    }))
+    import api.dependencies as deps
+    monkeypatch.setattr(deps, "_orders_path", orders_path)
+    monkeypatch.setattr(deps, "_positions_path", positions_path)
+    return TestClient(app)
+
+
+def test_fill_addon_merges_into_existing_position(client_with_addon_order):
+    resp = client_with_addon_order.post(
+        "/api/portfolio/orders/ORD-SBMO-002/fill",
+        json={"filled_price": 13.00, "filled_date": "2026-04-26", "fee_eur": 1.5},
+    )
+    assert resp.status_code == 201
+    pos = resp.json()["position"]
+    # Weighted-average entry, existing stop kept, initial_risk = new_entry - stop.
+    assert pos["position_id"] == "POS-EXIST"
+    assert pos["shares"] == 150
+    assert abs(pos["entry_price"] - (12.0 * 100 + 13.0 * 50) / 150) < 1e-6  # 12.333333
+    assert pos["stop_price"] == 11.0
+    assert abs(pos["initial_risk"] - (pos["entry_price"] - 11.0)) < 1e-4
+    assert abs(pos["entry_fee_eur"] - 3.5) < 1e-6  # 2.0 prior + 1.5 add-on
+    # No duplicate position was created.
+    positions = client_with_addon_order.get("/api/portfolio/positions").json()["positions"]
+    sbmo = [p for p in positions if p["ticker"] == "SBMO"]
+    assert len(sbmo) == 1

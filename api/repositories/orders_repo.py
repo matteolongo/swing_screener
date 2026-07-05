@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from api.utils.file_lock import locked_read_json, locked_write_json
+from api.utils.file_lock import locked_read_json, locked_read_modify_write, locked_write_json
 from api.utils.files import get_today_str
 
 
@@ -34,52 +34,67 @@ class OrdersRepository:
         return None
 
     def append_order(self, order: dict) -> None:
-        data = self.read()
-        orders = data.get("orders", [])
-        orders.append(order)
-        data["orders"] = orders
-        data["asof"] = get_today_str()
-        self.write(data)
+        def _modify(data: dict) -> dict:
+            orders = data.get("orders", [])
+            orders.append(order)
+            data["orders"] = orders
+            data["asof"] = get_today_str()
+            return data
+
+        locked_read_modify_write(self.path, _modify)
 
     def update_order(self, order_id: str, updates: dict) -> dict | None:
         """Update fields on an existing order. Returns updated order or None if not found."""
-        data = self.read()
-        orders = data.get("orders", [])
-        for order in orders:
-            if order.get("order_id") == order_id:
-                order.update(updates)
-                data["orders"] = orders
-                data["asof"] = get_today_str()
-                self.write(data)
-                return order
-        return None
+        result: dict[str, dict] = {}
+
+        def _modify(data: dict) -> dict:
+            orders = data.get("orders", [])
+            for order in orders:
+                if order.get("order_id") == order_id:
+                    order.update(updates)
+                    result["order"] = order
+                    data["orders"] = orders
+                    data["asof"] = get_today_str()
+                    break
+            return data
+
+        locked_read_modify_write(self.path, _modify)
+        return result.get("order")
 
     def submit_order(self, order_id: str) -> dict | None:
         """Mark a pending order as submitted to broker. Returns updated order or None if not found."""
-        data = self.read()
-        orders = data.get("orders", [])
-        for order in orders:
-            if order.get("order_id") == order_id:
-                if order.get("status") != "pending":
-                    return order
-                order["status"] = "submitted"
-                data["orders"] = orders
-                data["asof"] = get_today_str()
-                self.write(data)
-                return order
-        return None
+        result: dict[str, dict] = {}
+
+        def _modify(data: dict) -> dict:
+            orders = data.get("orders", [])
+            for order in orders:
+                if order.get("order_id") == order_id:
+                    result["order"] = order
+                    if order.get("status") == "pending":
+                        order["status"] = "submitted"
+                        data["orders"] = orders
+                        data["asof"] = get_today_str()
+                    break
+            return data
+
+        locked_read_modify_write(self.path, _modify)
+        return result.get("order")
 
     def cancel_order(self, order_id: str) -> dict | None:
         """Mark a pending or submitted order as cancelled. Returns updated order or None if not found."""
-        data = self.read()
-        orders = data.get("orders", [])
-        for order in orders:
-            if order.get("order_id") == order_id:
-                if order.get("status") not in ("pending", "submitted"):
-                    return order
-                order["status"] = "cancelled"
-                data["orders"] = orders
-                data["asof"] = get_today_str()
-                self.write(data)
-                return order
-        return None
+        result: dict[str, dict] = {}
+
+        def _modify(data: dict) -> dict:
+            orders = data.get("orders", [])
+            for order in orders:
+                if order.get("order_id") == order_id:
+                    result["order"] = order
+                    if order.get("status") in ("pending", "submitted"):
+                        order["status"] = "cancelled"
+                        data["orders"] = orders
+                        data["asof"] = get_today_str()
+                    break
+            return data
+
+        locked_read_modify_write(self.path, _modify)
+        return result.get("order")

@@ -90,17 +90,18 @@ def _point_days(item: dict[str, Any]) -> int | None:
 def _infer_frequency(item: dict[str, Any]) -> str:
     fp = str(item.get("fp", "")).strip().upper()
     frame = str(item.get("frame", "")).strip().upper()
+
+    span_days = _point_days(item)
+    if span_days is not None:
+        if _QUARTER_MIN_DAYS <= span_days <= _QUARTER_MAX_DAYS:
+            return "quarterly"
+        if _ANNUAL_MIN_DAYS <= span_days <= _ANNUAL_MAX_DAYS:
+            return "annual"
+        return "unknown"
+
     if fp in {"Q1", "Q2", "Q3", "Q4"} or "Q" in frame:
         return "quarterly"
     if fp == "FY":
-        return "annual"
-
-    span_days = _point_days(item)
-    if span_days is None:
-        return "unknown"
-    if _QUARTER_MIN_DAYS <= span_days <= _QUARTER_MAX_DAYS:
-        return "quarterly"
-    if _ANNUAL_MIN_DAYS <= span_days <= _ANNUAL_MAX_DAYS:
         return "annual"
     return "unknown"
 
