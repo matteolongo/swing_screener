@@ -214,7 +214,18 @@ def _upsert_index(trace: RunTrace, root: Path | None = None) -> None:
     ).model_dump()
     entries.insert(0, entry)
     entries.sort(key=lambda e: e.get("started_at") or "", reverse=True)
-    path.write_text(json.dumps(entries[: _max_runs_per_ticker()], indent=2))
+    cap = _max_runs_per_ticker()
+    kept, dropped = entries[:cap], entries[cap:]
+    for dropped_entry in dropped:
+        try:
+            (runs_dir(root) / f"{dropped_entry['run_id']}.json").unlink(missing_ok=True)
+        except OSError:
+            logger.warning(
+                "Failed to delete pruned intelligence run trace %r",
+                dropped_entry.get("run_id"),
+                exc_info=True,
+            )
+    path.write_text(json.dumps(kept, indent=2))
 
 
 def read_run_trace(run_id: str, root: Path | None = None) -> RunTrace | None:

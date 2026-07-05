@@ -86,6 +86,25 @@ def test_index_lists_newest_first_and_caps(monkeypatch):
     assert entries[0].step_count == 1
 
 
+def test_dropped_runs_have_their_trace_files_deleted(monkeypatch):
+    monkeypatch.setattr(tracing, "_max_runs_per_ticker", lambda: 2)
+    ids = []
+    for i in range(4):
+        rec = tracing.TraceRecorder("AAPL", run_id=f"run-{i}")
+        with rec.step("resolve_context"):
+            pass
+        rec.finish()
+        tracing.write_run_trace(rec.trace)
+        ids.append(f"run-{i}")
+        time.sleep(0.001)
+    # Only the 2 newest remain readable; older trace files are pruned from disk.
+    assert tracing.read_run_trace("run-3") is not None
+    assert tracing.read_run_trace("run-2") is not None
+    assert tracing.read_run_trace("run-1") is None
+    assert tracing.read_run_trace("run-0") is None
+    assert [e.run_id for e in tracing.list_runs_for_ticker("AAPL")] == ["run-3", "run-2"]
+
+
 def test_finalize_trace_is_fail_soft_on_bad_root(monkeypatch):
     rec = tracing.TraceRecorder("AAPL", run_id="run-1")
     monkeypatch.setattr(
