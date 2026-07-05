@@ -58,7 +58,7 @@ describe('StrategicReviewPanel', () => {
     } as never);
   });
 
-  it('runs a manual strategic review with refresh sources and defensive risk mode', async () => {
+  it('runs a manual strategic review with default watch areas, no topic, refresh sources, and defensive risk mode', async () => {
     const mutate = vi.fn();
     vi.mocked(intelligenceHooks.useStrategicReviewMutation).mockReturnValue({
       mutate,
@@ -70,6 +70,10 @@ describe('StrategicReviewPanel', () => {
 
     const { user } = renderWithProviders(<StrategicReviewPanel ticker="ASML" />);
 
+    expect(screen.getByLabelText(t(`${I18N_PREFIX}.watchArea.macro`))).toBeChecked();
+    expect(screen.getByLabelText(t(`${I18N_PREFIX}.watchArea.geopolitics`))).toBeChecked();
+    expect(screen.getByLabelText(t(`${I18N_PREFIX}.watchArea.earnings`))).toBeChecked();
+
     await user.click(screen.getByLabelText(t(`${I18N_PREFIX}.refreshSources`)));
     await user.selectOptions(screen.getByLabelText(t(`${I18N_PREFIX}.riskModeLabel`)), 'defensive');
     await user.click(screen.getByRole('button', { name: t(`${I18N_PREFIX}.runAction`) }));
@@ -80,12 +84,12 @@ describe('StrategicReviewPanel', () => {
         refreshSources: true,
         riskMode: 'defensive',
         horizonDays: 10,
-        topic: null,
+        topic: 'macro, geopolitics, earnings',
       });
     });
   });
 
-  it('renders strategic situations, predictions, actions, and memo', () => {
+  it('renders strategic situations, predictions, actions, memo, and directional indicators', () => {
     vi.mocked(intelligenceHooks.useStrategicReviewMutation).mockReturnValue({
       mutate: vi.fn(),
       data: review,
@@ -101,5 +105,7 @@ describe('StrategicReviewPanel', () => {
     expect(screen.getByText('Demand remains constructive, but policy risk can interrupt follow-through.')).toBeInTheDocument();
     expect(screen.getByText('Review exposed symbol')).toBeInTheDocument();
     expect(screen.getByText('Strategic overlay built from app context only for ASML.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Mixed strategic signal')).toBeInTheDocument();
+    expect(screen.getByText(t(`${I18N_PREFIX}.signal.mixed`))).toBeInTheDocument();
   });
 });

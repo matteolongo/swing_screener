@@ -29,8 +29,86 @@ POST /api/intelligence/sweep            — batch run across watchlist + open po
 ```
 
 Router: `api/routers/intelligence.py`
-Service: `api/services/intelligence_service.py`
+Services: `api/services/intelligence_enrichment.py`,
+`api/services/intelligence_chat_service.py`,
+`api/services/position_review_service.py`, and
+`api/services/strategic_review_service.py`
 Core: `symbol_analyzer.py`
+
+## Flow at a glance
+
+The current single-symbol analyzer is a linear LangGraph wrapped by the FastAPI
+intelligence endpoints. Cache checks and server-side enrichment happen before
+the graph; cache/history/metrics writes happen inside the final `persist` node.
+
+```mermaid
+flowchart TD
+  UI[React workspace UI] --> API[FastAPI /api/intelligence]
+  API --> Cache{Same-day cache hit?}
+  Cache -->|yes| Cached[Return cached SymbolIntelligence]
+  Cache -->|no or force=true| Enrich[Server-side enrichment]
+
+  Enrich --> Fundamentals[Fundamentals snapshot]
+  Enrich --> Earnings[Earnings and dividend proximity]
+  Enrich --> Evidence[Configured evidence collectors]
+  Enrich --> Prices[Polygon or portfolio OHLCV technicals]
+  Enrich --> Graph[LangGraph SymbolAnalyzer]
+
+  Graph --> Resolve[resolve_context]
+  Resolve --> Inputs[assemble_inputs]
+  Inputs --> Prompt[build_prompt]
+  Prompt --> Search[search: OpenAI Responses + web_search_preview]
+  Search --> Format[format: structured output parse]
+  Format --> Postprocess[postprocess: tokens and source counts]
+  Postprocess --> Weigh[weigh_evidence]
+  Weigh --> Assemble[assemble_result]
+  Assemble --> Persist[persist cache, history, metrics]
+  Persist --> Result[SymbolIntelligence]
+```
+
+## Data and source map
+
+The LLM sees an assembled prompt, not raw application state. The deterministic
+enrichment layer decides which app fields, market data, evidence items, and
+history entries are present before the OpenAI calls run.
+
+```mermaid
+flowchart LR
+  Candidate[Screener candidate payload] --> Prompt[Analyzer prompt]
+  Position[Open position context] --> Prompt
+  Technicals[OHLCV features: close, SMA, ATR, momentum, 52w distance, candles] --> Prompt
+  Fundamentals[Fundamentals: P/E, growth, margins, ROE, leverage] --> Prompt
+  Finnhub[Finnhub enrichment: insiders, EPS, analyst actions] --> Prompt
+  Evidence[SourceEvidence: SEC EDGAR, Polygon news, DeGiro news, Tavily refresh-only] --> Prompt
+  History[Prior analysis digest] --> Prompt
+  PastTrades[Closed positions on ticker] --> Prompt
+  PreOpen[US pre-open state] --> Prompt
+
+  Prompt --> SearchCall[Call 1: web-search narrative]
+  SearchCall --> FormatCall[Call 2: schema formatter]
+  FormatCall --> Intelligence[SymbolIntelligence]
+  Intelligence --> Ledger[EvidenceLedger]
+  Intelligence --> CacheStore[Per-ticker cache]
+  Intelligence --> HistoryStore[Per-symbol history]
+  Intelligence --> UIResult[Workspace intelligence panels]
+```
+
+## Prompt and model flow
+
+The analyzer deliberately splits research from schema extraction. Call 1 can use
+web search and write prose with citations; call 2 is tool-free and converts that
+prose into the validated pydantic schema.
+
+```mermaid
+flowchart TD
+  SystemPrompt[_SYSTEM_PROMPT: role, search strategy, trading rules, output requirements] --> SearchCall
+  UserPrompt[_build_user_prompt: trade plan, inputs, evidence, history, position mode] --> SearchCall
+  SearchCall[OpenAI Responses call 1<br/>model: config.llm.web_search_model<br/>tool: web_search_preview] --> Writeup[Markdown analyst write-up + Sources list]
+  FormatPrompt[_FORMAT_PROMPT: convert write-up into schema, do not invent fields] --> FormatCall
+  Writeup --> FormatCall[OpenAI Responses parse call 2<br/>model: config.llm.format_model<br/>tool use: none]
+  FormatCall --> Draft[_LLMAnalysis or _LLMPositionAnalysis]
+  Draft --> Result[SymbolIntelligence]
+```
 
 ## Input Context
 
@@ -200,15 +278,44 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 
 ## Observability
 
-`data/intelligence/intelligence_metrics.json` — append-only log (capped at 500 entries) written by `metrics.py` after each analysis. Each entry: `{ts, ticker, tokens}`. A sudden `tokens: null` run pinpoints a call that did not complete; a gap in SEC coverage is visible by diffing evidence counts in the logged evidence cache.
+The module exposes result-level observability today. A successful analysis
+contains the data categories used, cited sources, advisory ledger output, and
+history metadata; metrics add a capped token log for quick operational checks.
+
+```mermaid
+flowchart LR
+  Result[SymbolIntelligence] --> Inputs[inputs_used: trade plan, technicals, fundamentals, source counts]
+  Result --> Sources[sources: URLs cited by the model]
+  Result --> Catalysts[classified_catalysts: typed cited catalysts]
+  Result --> Ledger[evidence_ledger: deterministic bull/bear balance]
+  Result --> Timeline[history/{TICKER}.json: thesis drift timeline]
+  Result --> Chat[chat/{TICKER}/{date}.json: follow-up Q&A]
+  Persist[persist node] --> Metrics[intelligence_metrics.json: ts, ticker, tokens]
+```
+
+`data/intelligence/intelligence_metrics.json` is an append-only log (capped at
+500 entries) written by `metrics.py` after each analysis. Each entry is
+`{ts, ticker, tokens}`. A sudden `tokens: null` run pinpoints a call that did
+not complete; source coverage is visible through `inputs_used.sources` on the
+cached result and the per-date evidence cache.
+
+The next observability increment should be a durable per-run trace. That trace
+would store one row per graph step (`resolve_context`, `assemble_inputs`,
+`build_prompt`, `search`, `format`, `postprocess`, `weigh_evidence`,
+`assemble_result`, `persist`) with status, duration, prompt hash or redacted
+preview, model name, token usage, source counts, and errors. The UI can then
+render a step timeline without exposing full prompts by default.
 
 ## Action Types
 
 `SymbolIntelligence.action` is one of:
 - `BUY_NOW` — entry signal active at current price
 - `BUY_ON_PULLBACK` — waiting for price to pull back to planned entry level
+- `WAIT_FOR_BREAKOUT` — waiting for confirmation above a breakout level
+- `WATCH` — worth monitoring, but not actionable yet
+- `TACTICAL_ONLY` — short-term or event-specific setup only
+- `AVOID` — no acceptable setup under the current evidence
 - `MANAGE_ONLY` — position already held; narrative is position-management focused
-- `SKIP` — no actionable signal
 
 ## Evidence Collectors
 
