@@ -12,7 +12,7 @@ All execution stays manual. The system screens, sizes, and analyzes. You decide 
 
 **Position sizing.** Every size is computed in R-multiples: `1R = entry - stop`. No fixed-dollar or percentage-based sizing, ever. The risk model accounts for portfolio heat, regime scaling, and sector concentration.
 
-**AI analysis.** An LLM-powered intelligence layer analyzes each candidate in two passes: a quick signal read, then a deep evidence sweep pulling in price action context, SEC filings, and held positions. Returns a structured trade plan with specific entry, stop, and target.
+**AI analysis.** An LLM-powered intelligence layer enriches each candidate or held position with price action, fundamentals, evidence, and history, then runs a two-call OpenAI analysis: web-search narrative first, structured schema formatting second. Returns a structured trade plan with specific entry, stop, target, citations, and an advisory evidence ledger.
 
 **Portfolio tracking.** Manages open positions through their full lifecycle: entry, trail, exit. Tracks R-multiples realized, stop adjustments, and exhaustion scores.
 
@@ -70,7 +70,7 @@ Copy `.env.example` to `.env` at the repo root before running the API.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | For AI analysis | Claude API key, used by `POST /api/intelligence/{ticker}` and all intelligence endpoints |
+| `OPENAI_API_KEY` | For AI analysis | OpenAI API key, used by `POST /api/intelligence/{ticker}` and all LLM-backed intelligence endpoints |
 | `SWING_SCREENER_PROVIDER` | No (defaults to `yfinance`) | EOD data provider: `yfinance` or `alpaca` |
 | `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` | If using Alpaca | Alpaca market data keys. `ALPACA_PAPER` defaults to `true` |
 | `FINNHUB_API_KEY` | No (degrades analysis) | Calendar, earnings proximity, analyst and insider enrichment |
@@ -101,7 +101,7 @@ data/                  Runtime state: positions.json, orders.json
 Layer responsibilities: [`docs/engineering/MODULE_ARCHITECTURE.md`](docs/engineering/MODULE_ARCHITECTURE.md).
 API surface: [`api/README.md`](api/README.md).
 Frontend guide: [`web-ui/docs/WEB_UI_GUIDE.md`](web-ui/docs/WEB_UI_GUIDE.md).
-Intelligence pipeline: [`src/swing_screener/intelligence/README.md`](src/swing_screener/intelligence/README.md).
+Intelligence pipeline and observability diagrams: [`src/swing_screener/intelligence/README.md`](src/swing_screener/intelligence/README.md).
 
 ---
 
@@ -134,7 +134,7 @@ Key starting points:
 | Daily trading workflow | [`docs/product/DAILY_USAGE_GUIDE.md`](docs/product/DAILY_USAGE_GUIDE.md) |
 | DeGiro order setup | [`docs/product/DEGIRO_ORDER_SETUP.md`](docs/product/DEGIRO_ORDER_SETUP.md) |
 | Module architecture | [`docs/engineering/MODULE_ARCHITECTURE.md`](docs/engineering/MODULE_ARCHITECTURE.md) |
-| Intelligence pipeline | [`src/swing_screener/intelligence/README.md`](src/swing_screener/intelligence/README.md) |
+| Intelligence pipeline and observability diagrams | [`src/swing_screener/intelligence/README.md`](src/swing_screener/intelligence/README.md) |
 | Config reference | [`config/README.md`](config/README.md) |
 | Roadmap | [`docs/engineering/ROADMAP.md`](docs/engineering/ROADMAP.md) |
 

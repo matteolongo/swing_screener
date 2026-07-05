@@ -290,12 +290,6 @@ export default function SymbolAnalysisContent({
               <CatalystContextCard opportunity={catalystQuery.data} />
             )}
             {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
-            {!hasNarrative &&
-              (candidate || position) &&
-              renderAnalyzePrompt(
-                t('workspacePage.panels.analysis.intelligence.overviewPromptDescription'),
-                true
-              )}
           </>
         )}
 

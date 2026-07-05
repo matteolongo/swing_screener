@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
 import Badge from '@/components/common/Badge';
 import Select from '@/components/common/Select';
@@ -14,28 +13,7 @@ import {
 } from '@/features/strategy/hooks';
 import { cn } from '@/utils/cn';
 
-interface HeaderProps {
-  isSidebarCollapsed?: boolean;
-  onToggleSidebar?: () => void;
-}
-
-function BrandMark() {
-  return (
-    <div className="flex items-center justify-center w-5 h-5 rounded bg-primary shrink-0">
-      <svg width="10" height="10" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <polyline
-          points="1,11 4.5,6.5 8,8.5 13,3"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
-
-export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: HeaderProps) {
+export default function Header() {
   const now = new Date();
   const { locale, t } = useI18n();
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -62,36 +40,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
   });
 
   return (
-    <header className="h-12 px-4 border-b border-border bg-surface flex items-center justify-between gap-4 shrink-0">
-      {/* Left: toggle + collapsed brand */}
-      <div className="flex items-center gap-2 shrink-0">
-        {onToggleSidebar && (
-          <button
-            type="button"
-            onClick={onToggleSidebar}
-            className={cn(
-              'flex items-center justify-center w-7 h-7 rounded transition-colors',
-              'text-muted hover:text-foreground hover:bg-foreground/5'
-            )}
-            title={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
-            aria-label={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
-          >
-            {isSidebarCollapsed
-              ? <PanelLeft className="w-4 h-4" />
-              : <PanelLeftClose className="w-4 h-4" />}
-          </button>
-        )}
-        {isSidebarCollapsed && (
-          <div className="flex items-center gap-2">
-            <BrandMark />
-            <span className="text-[13px] font-semibold text-foreground hidden sm:block">
-              {t('header.brand')}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Center: strategy selector */}
+    <header className="h-12 px-4 border-b border-border bg-surface flex items-center gap-4 shrink-0">
       <div className="flex-1 max-w-xs">
         <Select
           value={activeId}
@@ -117,7 +66,6 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
         </Select>
       </div>
 
-      {/* Right: review queue + risk summary + clock */}
       <div className="flex items-center gap-3 shrink-0">
         {reviewCount > 0 && (
           <button
@@ -130,22 +78,19 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
           </button>
         )}
         <ReviewQueueDrawer open={reviewOpen} onClose={() => setReviewOpen(false)} />
-        <div className="hidden xl:block">
-          <StrategyCapitalRiskSummary
-            strategy={activeStrategyQuery.data}
-            equitySnapshot={portfolioSummaryQuery.data ? {
-              effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
-              realizedPnl: portfolioSummaryQuery.data.realizedPnl,
-            } : undefined}
-            variant="compact"
-            className="max-w-[42rem]"
-          />
-        </div>
-        <div className="hidden md:flex items-center gap-1.5 text-[12px] text-muted">
+        <StrategyCapitalRiskSummary
+          strategy={activeStrategyQuery.data}
+          equitySnapshot={portfolioSummaryQuery.data ? {
+            effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
+            realizedPnl: portfolioSummaryQuery.data.realizedPnl,
+          } : undefined}
+          variant="compact"
+          className="max-w-[42rem]"
+        />
+        <div className="flex items-center gap-1.5 text-[12px] text-muted">
           <span>{dateStr}</span>
           <span className="font-mono">{timeStr}</span>
         </div>
-        <span className="font-mono text-[12px] text-muted md:hidden">{timeStr}</span>
       </div>
     </header>
   );

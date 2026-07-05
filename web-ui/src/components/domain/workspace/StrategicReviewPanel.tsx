@@ -2,8 +2,9 @@ import { useState } from 'react';
 
 import Button from '@/components/common/Button';
 import { useStrategicReviewMutation } from '@/features/intelligence/hooks';
-import type { StrategicReview, StrategicSituation } from '@/features/intelligence/strategicReviewTypes';
+import type { StrategicDirection, StrategicReview, StrategicSituation } from '@/features/intelligence/strategicReviewTypes';
 import { t } from '@/i18n/t';
+import { cn } from '@/utils/cn';
 
 const I18N_PREFIX = 'workspacePage.panels.analysis.intelligence.strategic';
 
@@ -11,19 +12,80 @@ interface StrategicReviewPanelProps {
   ticker: string;
 }
 
+const WATCH_AREAS = [
+  { id: 'macro', labelKey: 'watchArea.macro' },
+  { id: 'geopolitics', labelKey: 'watchArea.geopolitics' },
+  { id: 'earnings', labelKey: 'watchArea.earnings' },
+  { id: 'sector_rotation', labelKey: 'watchArea.sectorRotation' },
+] as const;
+
+type WatchAreaId = (typeof WATCH_AREAS)[number]['id'];
+
+const DEFAULT_WATCH_AREAS: WatchAreaId[] = ['macro', 'geopolitics', 'earnings'];
+
 function formatLabel(value: string) {
   return value.replace(/_/g, ' ').toLowerCase();
 }
 
+function directionTone(direction: StrategicDirection | null) {
+  switch (direction) {
+    case 'bullish':
+      return {
+        label: t(`${I18N_PREFIX}.signal.bullish`),
+        ariaLabel: 'Bullish strategic signal',
+        border: 'border-l-success',
+        dot: 'bg-success',
+        chip: 'border-success/40 bg-success/10 text-success',
+        text: 'text-success',
+      };
+    case 'bearish':
+      return {
+        label: t(`${I18N_PREFIX}.signal.bearish`),
+        ariaLabel: 'Bearish strategic signal',
+        border: 'border-l-danger',
+        dot: 'bg-danger',
+        chip: 'border-danger/40 bg-danger/10 text-danger',
+        text: 'text-danger',
+      };
+    case 'mixed':
+      return {
+        label: t(`${I18N_PREFIX}.signal.mixed`),
+        ariaLabel: 'Mixed strategic signal',
+        border: 'border-l-primary',
+        dot: 'bg-primary',
+        chip: 'border-primary/40 bg-primary/10 text-primary',
+        text: 'text-primary',
+      };
+    default:
+      return {
+        label: t(`${I18N_PREFIX}.signal.neutral`),
+        ariaLabel: 'Neutral strategic signal',
+        border: 'border-l-border',
+        dot: 'bg-muted',
+        chip: 'border-border bg-surface text-muted',
+        text: 'text-muted',
+      };
+  }
+}
+
 function SituationCard({ situation }: { situation: StrategicSituation }) {
   const prediction = situation.predictions[0] ?? null;
+  const tone = directionTone(prediction?.direction ?? 'neutral');
   return (
-    <article className="rounded-lg border border-border bg-background/40 p-3">
+    <article className={cn('rounded-lg border border-l-4 border-border bg-background/40 p-3', tone.border)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{situation.title}</h3>
-        <span className="rounded-full border border-border px-2 py-0.5 text-xs uppercase tracking-wide text-muted">
-          {situation.stage}
-        </span>
+        <div className="flex items-center gap-2">
+          <span aria-label={tone.ariaLabel} className={cn('h-2.5 w-2.5 rounded-full', tone.dot)} />
+          <h3 className="text-sm font-semibold text-foreground">{situation.title}</h3>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={cn('rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide', tone.chip)}>
+            {tone.label}
+          </span>
+          <span className="rounded-full border border-border px-2 py-0.5 text-xs uppercase tracking-wide text-muted">
+            {situation.stage}
+          </span>
+        </div>
       </div>
 
       {situation.affectedSymbols.length > 0 && (
@@ -41,7 +103,10 @@ function SituationCard({ situation }: { situation: StrategicSituation }) {
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t(`${I18N_PREFIX}.whyNow`)}</p>
           <ul className="mt-1 grid gap-1 text-sm text-muted">
             {situation.whyNow.map((item) => (
-              <li key={item}>• {item}</li>
+              <li key={item} className="flex gap-2">
+                <span aria-hidden="true" className={cn('mt-2 h-1.5 w-1.5 shrink-0 rounded-full', tone.dot)} />
+                <span>{item}</span>
+              </li>
             ))}
           </ul>
         </div>
@@ -66,7 +131,10 @@ function SituationCard({ situation }: { situation: StrategicSituation }) {
       {situation.actions.length > 0 && (
         <div className="mt-3 grid gap-2">
           {situation.actions.map((action) => (
-            <div key={`${action.actionType}-${action.title}`} className="rounded-md border border-border bg-surface px-3 py-2">
+            <div
+              key={`${action.actionType}-${action.title}`}
+              className={cn('rounded-md border border-l-4 border-border bg-surface px-3 py-2', tone.border)}
+            >
               <p className="text-sm font-medium text-foreground">{action.title}</p>
               <p className="mt-1 text-xs text-muted">{action.rationale}</p>
             </div>
@@ -101,17 +169,28 @@ function StrategicResult({ review }: { review: StrategicReview }) {
 export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelProps) {
   const [refreshSources, setRefreshSources] = useState(false);
   const [riskMode, setRiskMode] = useState<'normal' | 'defensive' | 'aggressive'>('normal');
+  const [watchAreas, setWatchAreas] = useState<WatchAreaId[]>(DEFAULT_WATCH_AREAS);
   const [topic, setTopic] = useState('');
   const mutation = useStrategicReviewMutation();
 
   const handleRun = () => {
+    const selectedWatchAreas = WATCH_AREAS.filter((area) => watchAreas.includes(area.id)).map((area) =>
+      t(`${I18N_PREFIX}.${area.labelKey}`).toLowerCase()
+    );
+    const investigationTopic = topic.trim();
+    const topicParts = [...selectedWatchAreas, ...(investigationTopic ? [investigationTopic] : [])];
+
     mutation.mutate({
       ticker,
-      topic: topic.trim() || null,
+      topic: topicParts.length > 0 ? topicParts.join(', ') : null,
       refreshSources,
       riskMode,
       horizonDays: 10,
     });
+  };
+
+  const toggleWatchArea = (id: WatchAreaId) => {
+    setWatchAreas((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
 
   return (
@@ -127,6 +206,31 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
       </div>
 
       <div className="grid gap-3 px-3 py-3">
+        <div className="grid gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t(`${I18N_PREFIX}.watchListLabel`)}</p>
+          <div className="flex flex-wrap gap-2">
+            {WATCH_AREAS.map((area) => (
+              <label
+                key={area.id}
+                className={cn(
+                  'flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium',
+                  watchAreas.includes(area.id)
+                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    : 'border-border bg-surface text-muted'
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={watchAreas.includes(area.id)}
+                  disabled={mutation.isPending}
+                  onChange={() => toggleWatchArea(area.id)}
+                />
+                {t(`${I18N_PREFIX}.${area.labelKey}`)}
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
           <label className="grid gap-1 text-xs text-muted">
             {t(`${I18N_PREFIX}.topicLabel`)}

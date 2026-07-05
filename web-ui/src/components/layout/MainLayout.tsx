@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import { cn } from '@/utils/cn';
 import { useOrders, usePositions } from '@/features/portfolio/hooks';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
@@ -12,19 +11,10 @@ export default function MainLayout() {
   const { status: onboardingStatus } = useOnboardingStore();
   const ordersQuery = useOrders('all');
   const positionsQuery = usePositions('all');
-  const isWorkspaceRoute = useMemo(
-    () => location.pathname === '/workspace' || location.pathname.startsWith('/workspace/'),
-    [location.pathname]
-  );
   const isOnboardingRoute = useMemo(
     () => location.pathname === '/onboarding' || location.pathname.startsWith('/onboarding/'),
     [location.pathname]
   );
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isWorkspaceRoute);
-
-  useEffect(() => {
-    setIsSidebarCollapsed(isWorkspaceRoute);
-  }, [isWorkspaceRoute]);
 
   useEffect(() => {
     if (onboardingStatus !== 'new' || isOnboardingRoute) {
@@ -57,18 +47,10 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-dvh flex flex-col bg-background">
-      <Header
-        isSidebarCollapsed={isSidebarCollapsed}
-        onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
-      />
+      <Header />
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {!isSidebarCollapsed ? <Sidebar className="w-56 shrink-0" /> : null}
-        <main
-          className={cn(
-            'flex-1 overflow-y-auto bg-background',
-            isWorkspaceRoute ? 'p-5' : 'p-6'
-          )}
-        >
+        <Sidebar className="w-56 shrink-0" />
+        <main className="flex-1 min-w-0 overflow-y-auto bg-background p-6">
           <Outlet />
         </main>
       </div>

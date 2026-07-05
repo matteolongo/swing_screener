@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
@@ -45,6 +45,7 @@ const threeCloseItemReview = {
 
 describe('Today page — keyboard navigation syncs with click', () => {
   it('pressing j after clicking the second item advances to the third, not from keyboard position 0', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error');
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [], asof: '2026-05-16' })
@@ -68,6 +69,13 @@ describe('Today page — keyboard navigation syncs with click', () => {
     fireEvent.keyDown(window, { key: 'j' });
 
     expect(msftButton).toHaveClass('ring-1');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(
+      consoleErrorSpy.mock.calls.some(([message]) =>
+        typeof message === 'string' && message.includes('Cannot update a component'),
+      ),
+    ).toBe(false);
+    consoleErrorSpy.mockRestore();
   });
 });
 
