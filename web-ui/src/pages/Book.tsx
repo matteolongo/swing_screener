@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import ConcentrationBar from '@/components/domain/portfolio/ConcentrationBar';
 import PortfolioRiskSummary from '@/components/domain/portfolio/PortfolioRiskSummary';
@@ -379,14 +380,45 @@ function WeeklyReviewTab() {
 const STORAGE_KEY = 'book.activeTab';
 type BookTab = 'positions' | 'orders' | 'journal' | 'performance' | 'review';
 
+function isBookTab(value: unknown): value is BookTab {
+  return (
+    value === 'positions' ||
+    value === 'orders' ||
+    value === 'journal' ||
+    value === 'performance' ||
+    value === 'review'
+  );
+}
+
+function getRouteStateTab(state: unknown): BookTab | null {
+  if (!state || typeof state !== 'object' || !('tab' in state)) {
+    return null;
+  }
+  const tab = (state as { tab?: unknown }).tab;
+  return isBookTab(tab) ? tab : null;
+}
+
 export default function Book() {
+  const location = useLocation();
+
   const [activeTab, setActiveTab] = useState<BookTab>(() => {
+    const routeTab = getRouteStateTab(location.state);
+    if (routeTab) {
+      return routeTab;
+    }
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'positions' || stored === 'orders' || stored === 'journal' || stored === 'performance' || stored === 'review') {
+    if (isBookTab(stored)) {
       return stored;
     }
     return 'positions';
   });
+
+  useEffect(() => {
+    const routeTab = getRouteStateTab(location.state);
+    if (routeTab) {
+      setActiveTab(routeTab);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, activeTab);
