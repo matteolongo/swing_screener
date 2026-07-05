@@ -43,7 +43,7 @@
 
 | Module | Doc | What it covers |
 | --- | --- | --- |
-| Intelligence | [`src/swing_screener/intelligence/README.md`](/src/swing_screener/intelligence/README.md) | LLM pipeline, two-call architecture, evidence collectors, caching, action types |
+| Intelligence | [`src/swing_screener/intelligence/README.md`](/src/swing_screener/intelligence/README.md) | LLM pipeline diagrams, data/source map, prompt flow, observability, evidence collectors, caching, action types |
 | Data | [`src/swing_screener/data/README.md`](/src/swing_screener/data/README.md) | OHLCV provider config, caching, universes, per-symbol eval cache |
 | Data providers | [`src/swing_screener/data/providers/README.md`](/src/swing_screener/data/providers/README.md) | Provider table, how to add/remove a data source |
 | Selection | [`src/swing_screener/selection/README.md`](/src/swing_screener/selection/README.md) | Universe filtering, momentum ranking, entry signal detection |
