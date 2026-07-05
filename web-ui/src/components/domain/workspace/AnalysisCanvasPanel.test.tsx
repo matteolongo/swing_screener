@@ -382,7 +382,7 @@ describe('AnalysisCanvasPanel', () => {
     ).toBeTruthy();
   });
 
-  it('can run AI analysis from the overview tab', async () => {
+  it('keeps AI analysis generation inside the Intelligence tab', async () => {
     const mockIntelligence: SymbolIntelligence = {
       symbol: 'AAPL',
       generatedAt: '2026-05-26T10:00:00',
@@ -470,7 +470,14 @@ describe('AnalysisCanvasPanel', () => {
 
     const { user } = renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText('AI narrative summary')).toBeInTheDocument();
+    expect(screen.queryByText('AI narrative summary')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Generate a web-search-grounded summary/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Analyze with AI' })).not.toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(screen.getByRole('tab', { name: 'Intelligence' }));
+    });
+
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Analyze with AI' }));
     });
@@ -479,12 +486,6 @@ describe('AnalysisCanvasPanel', () => {
       expect.objectContaining({ ticker: 'AAPL' }),
       expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    expect(screen.queryByText('AAPL is showing strong momentum with a confirmed breakout.')).not.toBeInTheDocument();
-
-    await act(async () => {
-      await user.click(screen.getByRole('tab', { name: 'Intelligence' }));
-    });
-
     expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
   });
 
@@ -791,7 +792,7 @@ describe('AnalysisCanvasPanel', () => {
     expect(aiTitle).not.toBeInTheDocument();
   });
 
-  it('shows the Analyze with AI button for a held position that has no screener candidate', async () => {
+  it('hides the Analyze with AI button from overview for a held position with no screener candidate', async () => {
     // VALE is an open position in the default MSW handler, with no screener candidate cached.
     useWorkspaceStore.setState({
       selectedTicker: 'VALE',
@@ -803,9 +804,9 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(
-      await screen.findByRole('button', { name: t('workspacePage.panels.analysis.intelligence.analyzeAction') })
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: t('workspacePage.panels.analysis.intelligence.analyzeAction') })).not.toBeInTheDocument();
+    });
   });
 
   it('auto-computes a live candidate for a held position with no screener candidate', async () => {
