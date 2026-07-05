@@ -125,6 +125,14 @@ and it intentionally emits a qualitative label rather than a false-precision
 | `window_start` | `"00:00"` | ET lower bound of the pre-open window (overnight tape) |
 | `session_close` | `"16:00"` | ET regular-session close; bounds the overnight news window |
 
+`config.tracing` controls per-run trace recording:
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `enabled` | `true` | Master switch for trace recording |
+| `max_runs_per_ticker` | `50` | Max persisted runs kept per ticker (older traces are pruned) |
+| `prompt_preview_chars` | `500` | Truncation length for prompt preview in traces (no full prompt stored) |
+
 ### `mcp.yaml`
 
 MCP feature flags and server metadata.
