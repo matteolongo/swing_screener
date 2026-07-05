@@ -27,5 +27,7 @@ class AnalyzerState(TypedDict, total=False):
     tokens: int | None
     evidence_ledger: EvidenceLedger | None
     result: SymbolIntelligence
+    run_id: str
+    _recorder: Any
     _search_usage: Any
     _parse_usage: Any
