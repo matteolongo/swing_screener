@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from typing import TYPE_CHECKING, Callable
 
 from langgraph.graph import END, START, StateGraph
@@ -10,6 +11,8 @@ from swing_screener.intelligence.graph.state import AnalyzerState
 
 if TYPE_CHECKING:
     from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
+
+logger = logging.getLogger(__name__)
 
 
 _ORDER = [
@@ -116,7 +119,10 @@ def _traced(analyzer: "SymbolAnalyzer", name: str, fn):
             new_state = fn(analyzer, state)
             summarizer = SUMMARIZERS.get(name)
             if summarizer is not None:
-                draft.update(summarizer(analyzer, new_state))
+                try:
+                    draft.update(summarizer(analyzer, new_state))
+                except Exception:
+                    logger.warning("trace summarizer failed for %s", name, exc_info=True)
         return new_state
 
     return wrapped

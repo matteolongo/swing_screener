@@ -717,7 +717,10 @@ class SymbolAnalyzer:
             return self._graph.invoke(state)["result"]
         except Exception as exc:
             if recorder is not None:
-                recorder.mark_error(exc)
+                try:
+                    recorder.mark_error(exc)
+                except Exception:
+                    logger.warning("Failed to mark trace error for %r", ticker, exc_info=True)
             raise
         finally:
             if owns:

@@ -130,6 +130,22 @@ def test_failed_search_records_error_trace_and_reraises(monkeypatch):
     assert [s.name for s in failed] == ["search"]
 
 
+def test_summarizer_failure_does_not_fail_analysis(monkeypatch):
+    _install_fake(monkeypatch)
+    from swing_screener.intelligence.graph import build
+
+    def _boom(analyzer, state):
+        raise RuntimeError("summ boom")
+
+    monkeypatch.setitem(build.SUMMARIZERS, "search", _boom)
+    result = SymbolAnalyzer().analyze("AAPL", _req())
+    assert result.run_id is not None
+    trace = tracing.read_run_trace(result.run_id)
+    assert trace is not None
+    search_step = next(s for s in trace.steps if s.name == "search")
+    assert search_step.status == "ok"
+
+
 def test_disabled_tracing_yields_no_trace_and_null_run_id(monkeypatch):
     _install_fake(monkeypatch)
     monkeypatch.setattr(tracing, "tracing_enabled", lambda: False)
