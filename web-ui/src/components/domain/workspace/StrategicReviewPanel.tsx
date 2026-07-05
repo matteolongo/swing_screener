@@ -3,6 +3,9 @@ import { useState } from 'react';
 import Button from '@/components/common/Button';
 import { useStrategicReviewMutation } from '@/features/intelligence/hooks';
 import type { StrategicReview, StrategicSituation } from '@/features/intelligence/strategicReviewTypes';
+import { t } from '@/i18n/t';
+
+const I18N_PREFIX = 'workspacePage.panels.analysis.intelligence.strategic';
 
 interface StrategicReviewPanelProps {
   ticker: string;
@@ -35,7 +38,7 @@ function SituationCard({ situation }: { situation: StrategicSituation }) {
 
       {situation.whyNow.length > 0 && (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Why now</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t(`${I18N_PREFIX}.whyNow`)}</p>
           <ul className="mt-1 grid gap-1 text-sm text-muted">
             {situation.whyNow.map((item) => (
               <li key={item}>• {item}</li>
@@ -47,10 +50,16 @@ function SituationCard({ situation }: { situation: StrategicSituation }) {
       {prediction && (
         <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {formatLabel(prediction.direction)} · {prediction.confidence} confidence · {prediction.horizonDays}d
+            {t(`${I18N_PREFIX}.predictionSummary`, {
+              direction: formatLabel(prediction.direction),
+              confidence: prediction.confidence,
+              horizonDays: prediction.horizonDays,
+            })}
           </p>
           <p className="mt-1 text-sm text-foreground">{prediction.thesis}</p>
-          <p className="mt-1 text-xs text-muted">Invalidation: {prediction.invalidation}</p>
+          <p className="mt-1 text-xs text-muted">
+            {t(`${I18N_PREFIX}.invalidationLabel`)}: {prediction.invalidation}
+          </p>
         </div>
       )}
 
@@ -73,12 +82,12 @@ function StrategicResult({ review }: { review: StrategicReview }) {
     <div className="grid gap-3">
       <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground">Strategic overlay</p>
+          <p className="text-sm font-semibold text-foreground">{t(`${I18N_PREFIX}.title`)}</p>
           <span className="text-xs text-muted">{new Date(review.generatedAt).toLocaleString()}</span>
         </div>
         <p className="mt-2 text-sm text-muted">{review.memo}</p>
         <p className="mt-1 text-xs text-muted">
-          App-context only · refreshed sources: {review.externalSourceCount}
+          {t(`${I18N_PREFIX}.appContextOnly`, { count: review.externalSourceCount })}
         </p>
       </div>
 
@@ -109,40 +118,38 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
     <section className="rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-3 py-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Strategic overlay</p>
-          <p className="mt-1 text-xs text-muted">
-            Manual macro/news context layer for when technical follow-through may need extra caution.
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t(`${I18N_PREFIX}.title`)}</p>
+          <p className="mt-1 text-xs text-muted">{t(`${I18N_PREFIX}.description`)}</p>
         </div>
         <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Building overlay...' : 'Run strategic overlay'}
+          {mutation.isPending ? t(`${I18N_PREFIX}.runningAction`) : t(`${I18N_PREFIX}.runAction`)}
         </Button>
       </div>
 
       <div className="grid gap-3 px-3 py-3">
         <div className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
           <label className="grid gap-1 text-xs text-muted">
-            Topic
+            {t(`${I18N_PREFIX}.topicLabel`)}
             <input
               className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               value={topic}
               disabled={mutation.isPending}
               onChange={(event) => setTopic(event.target.value)}
-              placeholder="Optional: rates, export controls, sector rotation..."
+              placeholder={t(`${I18N_PREFIX}.topicPlaceholder`)}
             />
           </label>
 
           <label className="grid gap-1 text-xs text-muted">
-            Risk mode
+            {t(`${I18N_PREFIX}.riskModeLabel`)}
             <select
               className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               value={riskMode}
               disabled={mutation.isPending}
               onChange={(event) => setRiskMode(event.target.value as typeof riskMode)}
             >
-              <option value="normal">Normal</option>
-              <option value="defensive">Defensive</option>
-              <option value="aggressive">Aggressive</option>
+              <option value="normal">{t(`${I18N_PREFIX}.riskMode.normal`)}</option>
+              <option value="defensive">{t(`${I18N_PREFIX}.riskMode.defensive`)}</option>
+              <option value="aggressive">{t(`${I18N_PREFIX}.riskMode.aggressive`)}</option>
             </select>
           </label>
 
@@ -153,23 +160,20 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
               disabled={mutation.isPending}
               onChange={(event) => setRefreshSources(event.target.checked)}
             />
-            Refresh app sources first
+            {t(`${I18N_PREFIX}.refreshSources`)}
           </label>
         </div>
 
         {mutation.isError && (
           <p className="text-sm text-danger">
-            {mutation.error instanceof Error ? mutation.error.message : 'Failed to run strategic overlay'}
+            {mutation.error instanceof Error ? mutation.error.message : t(`${I18N_PREFIX}.runError`)}
           </p>
         )}
 
         {mutation.data ? (
           <StrategicResult review={mutation.data} />
         ) : (
-          <p className="text-sm text-muted">
-            Run this manually when a position moves hard, a macro/geopolitical event appears relevant, or you want to
-            reinterpret the current analysis without creating a trade action.
-          </p>
+          <p className="text-sm text-muted">{t(`${I18N_PREFIX}.idle`)}</p>
         )}
       </div>
     </section>

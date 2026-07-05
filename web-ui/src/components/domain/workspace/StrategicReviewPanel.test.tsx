@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import StrategicReviewPanel from './StrategicReviewPanel';
 import * as intelligenceHooks from '@/features/intelligence/hooks';
 import type { StrategicReview } from '@/features/intelligence/strategicReviewTypes';
+import { t } from '@/i18n/t';
 import { renderWithProviders } from '@/test/utils';
+
+const I18N_PREFIX = 'workspacePage.panels.analysis.intelligence.strategic';
 
 vi.mock('@/features/intelligence/hooks', () => ({
   useStrategicReviewMutation: vi.fn(),
@@ -67,9 +70,9 @@ describe('StrategicReviewPanel', () => {
 
     const { user } = renderWithProviders(<StrategicReviewPanel ticker="ASML" />);
 
-    await user.click(screen.getByLabelText('Refresh app sources first'));
-    await user.selectOptions(screen.getByLabelText('Risk mode'), 'defensive');
-    await user.click(screen.getByRole('button', { name: 'Run strategic overlay' }));
+    await user.click(screen.getByLabelText(t(`${I18N_PREFIX}.refreshSources`)));
+    await user.selectOptions(screen.getByLabelText(t(`${I18N_PREFIX}.riskModeLabel`)), 'defensive');
+    await user.click(screen.getByRole('button', { name: t(`${I18N_PREFIX}.runAction`) }));
 
     await waitFor(() => {
       expect(mutate).toHaveBeenCalledWith({
