@@ -290,7 +290,7 @@ class PositionReviewService:
         if thesis_status == "broken":
             return "EXIT"
         if profit_protection.trim_advice != "none":
-            return "TRIM" if stop_advice.method == "keep" else "RAISE_STOP"
+            return "TRIM"
         if stop_advice.method in {"breakeven", "trail_sma20", "trail_recent_low"}:
             return "RAISE_STOP"
         if macro_overlay.technical_reliability == "unreliable":

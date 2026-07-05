@@ -78,7 +78,7 @@ def compute_setup_quality(
 
         # ── consolidation_tightness ──────────────────────────────────────────
         ct = float("nan")
-        if len(h) >= 77 and len(l) >= 77:
+        if len(h) >= 78 and len(l) >= 78 and len(c) >= 78:
             # ATR14: simple mean of true range over most recent 14 bars
             h14 = h.iloc[-14:].values
             l14 = l.iloc[-14:].values

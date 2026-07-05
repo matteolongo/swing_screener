@@ -149,7 +149,7 @@ def test_review_position_protects_profit_without_mutating_position():
 
     assert response.mode == "position"
     assert response.ticker == "MNST"
-    assert response.suggested_action == "RAISE_STOP"
+    assert response.suggested_action == "TRIM"
     assert response.thesis_status == "intact"
     assert response.profit_protection.current_r == pytest.approx(2.25)
     assert response.profit_protection.trim_advice == "trim_25_percent"

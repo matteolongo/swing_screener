@@ -135,7 +135,12 @@ class PositionPricingService:
             for pos in positions:
                 if pos.get("status") == "open":
                     ticker = str(pos.get("ticker", "")).upper()
-                    pos["current_price"] = last_prices.get(ticker)
+                    # Only overwrite when a fresh price was resolved; when both the
+                    # live quote and last-close fetch fail, keep any stored price
+                    # instead of clobbering it with None.
+                    price = last_prices.get(ticker)
+                    if price is not None:
+                        pos["current_price"] = price
 
         return last_prices, live_tickers
 
