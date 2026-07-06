@@ -113,23 +113,26 @@ class TraceRecorder:
             raise
         finally:
             end = _now()
-            self.record(
-                StepTrace(
-                    name=name,
-                    status=status,  # type: ignore[arg-type]
-                    started_at=start.isoformat(),
-                    finished_at=end.isoformat(),
-                    duration_ms=round((end - start).total_seconds() * 1000.0, 3),
-                    inputs_summary=draft.inputs_summary,
-                    outputs_summary=draft.outputs_summary,
-                    error=error,
-                    model=draft.model,
-                    tokens=draft.tokens,
-                    source_counts=draft.source_counts,
-                    prompt_hash=draft.prompt_hash,
-                    prompt_preview=draft.prompt_preview,
+            try:
+                self.record(
+                    StepTrace(
+                        name=name,
+                        status=status,  # type: ignore[arg-type]
+                        started_at=start.isoformat(),
+                        finished_at=end.isoformat(),
+                        duration_ms=round((end - start).total_seconds() * 1000.0, 3),
+                        inputs_summary=draft.inputs_summary,
+                        outputs_summary=draft.outputs_summary,
+                        error=error,
+                        model=draft.model,
+                        tokens=draft.tokens,
+                        source_counts=draft.source_counts,
+                        prompt_hash=draft.prompt_hash,
+                        prompt_preview=draft.prompt_preview,
+                    )
                 )
-            )
+            except Exception:  # noqa: BLE001 - never fail an analysis on trace recording
+                logger.warning("Failed to record trace step %r", name, exc_info=True)
 
     def record(self, step: StepTrace) -> None:
         self.trace.steps.append(step)
@@ -148,9 +151,13 @@ class TraceRecorder:
 
 
 def new_recorder(ticker: str) -> TraceRecorder | None:
-    if not tracing_enabled():
+    try:
+        if not tracing_enabled():
+            return None
+        return TraceRecorder(ticker)
+    except Exception:  # noqa: BLE001 - never fail an analysis on trace setup
+        logger.warning("Failed to create intelligence trace recorder for %r", ticker, exc_info=True)
         return None
-    return TraceRecorder(ticker)
 
 
 def step(recorder: TraceRecorder | None, name: str):
@@ -217,12 +224,15 @@ def _upsert_index(trace: RunTrace, root: Path | None = None) -> None:
     cap = _max_runs_per_ticker()
     kept, dropped = entries[:cap], entries[cap:]
     for dropped_entry in dropped:
+        dropped_run_id = dropped_entry.get("run_id")
+        if not dropped_run_id:
+            continue
         try:
-            (runs_dir(root) / f"{dropped_entry['run_id']}.json").unlink(missing_ok=True)
+            (runs_dir(root) / f"{dropped_run_id}.json").unlink(missing_ok=True)
         except OSError:
             logger.warning(
                 "Failed to delete pruned intelligence run trace %r",
-                dropped_entry.get("run_id"),
+                dropped_run_id,
                 exc_info=True,
             )
     path.write_text(json.dumps(kept, indent=2))

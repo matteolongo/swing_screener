@@ -122,3 +122,23 @@ def test_new_recorder_none_when_disabled(monkeypatch):
 def test_step_helper_nullcontext_when_recorder_none():
     with tracing.step(None, "search"):
         pass  # no error, no recording
+
+
+def test_step_with_invalid_draft_value_does_not_raise():
+    rec = tracing.TraceRecorder("AAPL", run_id="r1")
+    # A non-coercible tokens value would fail StepTrace validation in the finally;
+    # it must be swallowed, not propagated, and the bad step simply dropped.
+    with rec.step("search") as draft:
+        draft.tokens = object()  # invalid for int | None
+    assert rec.trace.steps == []            # bad step dropped, no exception
+    # A subsequent good step still records fine.
+    with rec.step("format"):
+        pass
+    assert [s.name for s in rec.trace.steps] == ["format"]
+
+
+def test_new_recorder_returns_none_when_config_raises(monkeypatch):
+    def _boom():
+        raise RuntimeError("config boom")
+    monkeypatch.setattr(tracing, "tracing_enabled", _boom)
+    assert tracing.new_recorder("AAPL") is None
