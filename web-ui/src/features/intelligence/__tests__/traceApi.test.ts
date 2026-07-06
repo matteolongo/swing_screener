@@ -15,7 +15,6 @@ describe('intelligence api — run trace transform seam', () => {
           started_at: '2026-07-05T10:00:00+00:00',
           finished_at: '2026-07-05T10:00:02+00:00',
           status: 'ok',
-          cache_hit: false,
           error: null,
           steps: [
             {
@@ -41,7 +40,6 @@ describe('intelligence api — run trace transform seam', () => {
     const trace = await getRunTrace('r1');
 
     expect(trace.runId).toBe('r1');
-    expect(trace.cacheHit).toBe(false);
     expect(trace.steps[0].durationMs).toBe(1000);
     expect(trace.steps[0].sourceCounts).toEqual({ polygon_news: 2 });
     expect(trace.steps[0].promptHash).toBe('abc123');

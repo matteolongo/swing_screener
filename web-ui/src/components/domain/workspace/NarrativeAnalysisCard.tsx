@@ -245,6 +245,7 @@ export default function NarrativeAnalysisCard({
   const { action, conviction, summaryLine, narrative, symbol } = intelligence;
   const summary = candidate?.decisionSummary;
   const warnings = (summary?.explanation?.confidenceNotes ?? summary?.drivers.warnings ?? []).filter(Boolean);
+  const tradeState = (summary?.drivers.tradeState ?? []).filter(Boolean);
 
   // Position vs screened drives the fixed panel skeleton. Prefer the explicit prop;
   // fall back to the MANAGE_ONLY action the analyzer forces for open positions.
@@ -526,6 +527,18 @@ export default function NarrativeAnalysisCard({
             </div>
             <ul className="mt-2 space-y-1 text-sm text-warning">
               {warnings.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {/* Trade State */}
+        {tradeState.length > 0 && (
+          <div className="rounded-md border border-border bg-foreground/5 px-3 py-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted">
+              {t('workspacePage.panels.analysis.decisionSummary.tradeStateTitle')}
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-foreground">
+              {tradeState.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </div>
         )}

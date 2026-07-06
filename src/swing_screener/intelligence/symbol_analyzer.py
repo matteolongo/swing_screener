@@ -37,7 +37,7 @@ from swing_screener.intelligence.models import (
 )
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 from swing_screener.settings import get_settings_manager
-from swing_screener.intelligence.tracing import finalize_trace, new_recorder
+from swing_screener.intelligence.tracing import recording_run
 from swing_screener.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -700,10 +700,15 @@ class SymbolAnalyzer:
 
             self._graph = build_graph(self)
 
-        owns = recorder is None
-        if recorder is None:
-            recorder = new_recorder(ticker)
+        # When a caller supplies a recorder it also owns the lifecycle (create,
+        # error-capture, finalize); we only invoke the graph. Otherwise own the
+        # whole lifecycle via recording_run so create/error/finalize live in one place.
+        if recorder is not None:
+            return self._invoke_graph(ticker, req, past_positions, now, recorder)
+        with recording_run(ticker) as recorder:
+            return self._invoke_graph(ticker, req, past_positions, now, recorder)
 
+    def _invoke_graph(self, ticker, req, past_positions, now, recorder):
         state = {
             "ticker": ticker,
             "req": req,
@@ -713,15 +718,4 @@ class SymbolAnalyzer:
         }
         if now is not None:
             state["now"] = now
-        try:
-            return self._graph.invoke(state)["result"]
-        except Exception as exc:
-            if recorder is not None:
-                try:
-                    recorder.mark_error(exc)
-                except Exception:
-                    logger.warning("Failed to mark trace error for %r", ticker, exc_info=True)
-            raise
-        finally:
-            if owns:
-                finalize_trace(recorder)
+        return self._graph.invoke(state)["result"]

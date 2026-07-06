@@ -135,9 +135,11 @@ export default function DecisionSummaryCard({
 }: DecisionSummaryCardProps) {
   const warningItems = (summary.explanation?.confidenceNotes ?? summary.drivers.warnings).filter(Boolean);
   const tradeStateItems = (summary.drivers.tradeState ?? []).filter(Boolean);
-  const hasStaleFundamentalsWarning = warningItems.some((warning) =>
-    warning.toLowerCase().startsWith('fundamentals stale:')
-  );
+  // Structured flag from the backend contract; fall back to prefix-matching the
+  // warning prose only for payloads predating the flag.
+  const hasStaleFundamentalsWarning =
+    summary.drivers.staleFundamentals ??
+    warningItems.some((warning) => warning.toLowerCase().startsWith('fundamentals stale:'));
   const hasFairValue =
     summary.valuationContext.fairValueLow != null &&
     summary.valuationContext.fairValueBase != null &&

@@ -20,7 +20,6 @@ export interface RunTraceAPI {
   started_at: string;
   finished_at: string | null;
   status: 'ok' | 'error' | 'running';
-  cache_hit: boolean;
   steps: StepTraceAPI[];
   error: string | null;
 }
@@ -57,7 +56,6 @@ export interface RunTrace {
   startedAt: string;
   finishedAt: string | null;
   status: 'ok' | 'error' | 'running';
-  cacheHit: boolean;
   steps: StepTrace[];
   error: string | null;
 }
@@ -97,7 +95,6 @@ export function transformRunTrace(api: RunTraceAPI): RunTrace {
     startedAt: api.started_at,
     finishedAt: api.finished_at ?? null,
     status: api.status,
-    cacheHit: api.cache_hit ?? false,
     steps: (api.steps ?? []).map(transformStepTrace),
     error: api.error ?? null,
   };

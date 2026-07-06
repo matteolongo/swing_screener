@@ -46,6 +46,7 @@ class DecisionDrivers(BaseModel):
     negatives: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     trade_state: list[str] = Field(default_factory=list)
+    stale_fundamentals: bool = False
 
 
 class ExplanationContract(BaseModel):

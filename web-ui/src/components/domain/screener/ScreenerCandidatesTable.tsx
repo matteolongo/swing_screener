@@ -16,19 +16,19 @@ import { t } from '@/i18n/t';
 function signalBadge(action?: string): { label: string; className: string } | null {
   switch (action) {
     case 'BUY_NOW':
-      return { label: 'Buy Now', className: 'bg-success/10 text-success' };
+      return { label: t('screener.table.signalBadge.buyNow'), className: 'bg-success/10 text-success' };
     case 'BUY_ON_PULLBACK':
-      return { label: 'Pullback', className: 'bg-primary/10 text-primary' };
+      return { label: t('screener.table.signalBadge.pullback'), className: 'bg-primary/10 text-primary' };
     case 'WAIT_FOR_BREAKOUT':
-      return { label: 'Breakout setup', className: 'bg-primary/10 text-primary' };
+      return { label: t('screener.table.signalBadge.breakout'), className: 'bg-primary/10 text-primary' };
     case 'WATCH':
-      return { label: 'Watch', className: 'bg-warning/10 text-warning' };
+      return { label: t('screener.table.signalBadge.watch'), className: 'bg-warning/10 text-warning' };
     case 'TACTICAL_ONLY':
-      return { label: 'Tactical', className: 'bg-primary/10 text-primary' };
+      return { label: t('screener.table.signalBadge.tactical'), className: 'bg-primary/10 text-primary' };
     case 'AVOID':
-      return { label: 'Avoid', className: 'bg-danger/10 text-danger' };
+      return { label: t('screener.table.signalBadge.avoid'), className: 'bg-danger/10 text-danger' };
     case 'MANAGE_ONLY':
-      return { label: 'Manage', className: 'bg-foreground/5 text-muted' };
+      return { label: t('screener.table.signalBadge.manage'), className: 'bg-foreground/5 text-muted' };
     default:
       return null;
   }

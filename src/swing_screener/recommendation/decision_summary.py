@@ -647,6 +647,7 @@ def _drivers(
     negatives: list[str] = []
     warnings: list[str] = []
     trade_state: list[str] = []
+    stale_fundamentals = False
 
     if technical_label == "strong":
         _append_unique(positives, "Technical setup is ready.")
@@ -674,6 +675,7 @@ def _drivers(
         if str(snapshot.coverage_status or "").strip().lower() in {"partial", "insufficient", "unsupported"}:
             _append_unique(warnings, "Fundamental coverage is partial.")
         if str(snapshot.freshness_status or "").strip().lower() == "stale":
+            stale_fundamentals = True
             _append_unique(warnings, _fundamentals_stale_warning(snapshot))
         if str(snapshot.data_quality_status or "").strip().lower() == "low":
             _append_unique(warnings, "Fundamental data quality is limited.")
@@ -723,6 +725,7 @@ def _drivers(
         negatives=negatives[:2],
         warnings=warnings[:2],
         trade_state=trade_state[:2],
+        stale_fundamentals=stale_fundamentals,
     )
 
 
@@ -900,6 +903,7 @@ def build_decision_summary(
             negatives=drivers.negatives,
             warnings=drivers.warnings,
             trade_state=drivers.trade_state,
+            stale_fundamentals=drivers.stale_fundamentals,
         ),
         explanation=explanation,
     )

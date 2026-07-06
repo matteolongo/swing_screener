@@ -1477,6 +1477,15 @@ export const messagesEn = {
     },
     table: {
       empty: 'No candidates found',
+      signalBadge: {
+        buyNow: 'Buy Now',
+        pullback: 'Pullback',
+        breakout: 'Breakout setup',
+        watch: 'Watch',
+        tactical: 'Tactical',
+        avoid: 'Avoid',
+        manage: 'Manage',
+      },
       headers: {
         rank: 'Rank',
         priority: 'Priority',

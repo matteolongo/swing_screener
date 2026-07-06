@@ -305,13 +305,16 @@ cached result and the per-date evidence cache.
 ### Per-run trace
 
 Every graph run (and its pre-graph enrichment) is recorded to a durable trace via
-`tracing.py`. A `TraceRecorder` is created at the API endpoint, records each
-enrichment step (`enrich_request`, `enrich_technicals`, `enrich_polygon`), and is
-passed into `SymbolAnalyzer.analyze(..., recorder=...)`; a wrapper in `graph/build.py`
-records each graph node (nodes stay pure). Traces are written to
-`data/intelligence/runs/{run_id}.json` with a per-ticker index at
+`tracing.py`. The API endpoint owns the recorder lifecycle through the
+`recording_run(ticker)` context manager (create → capture any error → always
+finalize); it records each enrichment step (`enrich_request`, `enrich_technicals`,
+`enrich_polygon`) and passes the recorder into `SymbolAnalyzer.analyze(..., recorder=...)`;
+a wrapper in `graph/build.py` records each graph node (nodes stay pure). Traces are
+written to `data/intelligence/runs/{run_id}.json` with a per-ticker index at
 `data/intelligence/runs/index/{TICKER}.json` (newest-first, capped at
-`config.tracing.max_runs_per_ticker`). Each `SymbolIntelligence` result (and its
+`config.tracing.max_runs_per_ticker`). The index is updated under an exclusive file
+lock so concurrent same-ticker runs cannot clobber each other, and the run just
+written is never pruned from its own index. Each `SymbolIntelligence` result (and its
 cache entry) carries the `run_id` that produced it, so a cache hit still resolves
 its trace. Each step records status, timing, model, token usage, source counts,
 `prompt_hash` + a truncated `prompt_preview` (no full prompt), and any error.

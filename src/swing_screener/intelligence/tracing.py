@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from swing_screener.intelligence.config_access import intelligence_config_section
 from swing_screener.settings.paths import data_dir
+from swing_screener.utils.file_lock import FileLockTimeoutError, open_locked_text
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,6 @@ class RunTrace(BaseModel):
     started_at: str
     finished_at: str | None = None
     status: Literal["ok", "error", "running"] = "running"
-    cache_hit: bool = False
     steps: list[StepTrace] = Field(default_factory=list)
     error: str | None = None
 
@@ -178,6 +178,25 @@ def finalize_trace(recorder: TraceRecorder | None, *, error: BaseException | Non
         logger.warning("Failed to finalize intelligence trace %r", recorder.run_id, exc_info=True)
 
 
+@contextmanager
+def recording_run(ticker: str) -> Iterator[TraceRecorder | None]:
+    """Own a recorder's full lifecycle: create, capture any error, always finalize.
+
+    Yields None when tracing is disabled. The recorder is finalized on exit for
+    both success and failure paths, so callers never hand-coordinate
+    ``new_recorder`` / ``mark_error`` / ``finalize_trace``.
+    """
+    recorder = new_recorder(ticker)
+    error: BaseException | None = None
+    try:
+        yield recorder
+    except BaseException as exc:  # noqa: BLE001 - record then re-raise
+        error = exc
+        raise
+    finally:
+        finalize_trace(recorder, error=error)
+
+
 def runs_dir(root: Path | None = None) -> Path:
     return (root or data_dir()) / "intelligence" / "runs"
 
@@ -199,14 +218,6 @@ def write_run_trace(trace: RunTrace, root: Path | None = None) -> None:
 def _upsert_index(trace: RunTrace, root: Path | None = None) -> None:
     path = _index_path(trace.ticker, root)
     path.parent.mkdir(parents=True, exist_ok=True)
-    entries: list[dict] = []
-    if path.exists():
-        try:
-            loaded = json.loads(path.read_text())
-            if isinstance(loaded, list):
-                entries = [e for e in loaded if e.get("run_id") != trace.run_id]
-        except (OSError, ValueError):
-            entries = []
     duration = None
     if trace.steps:
         duration = round(sum(s.duration_ms for s in trace.steps), 3)
@@ -219,14 +230,45 @@ def _upsert_index(trace: RunTrace, root: Path | None = None) -> None:
         duration_ms=duration,
         step_count=len(trace.steps),
     ).model_dump()
-    entries.insert(0, entry)
-    entries.sort(key=lambda e: e.get("started_at") or "", reverse=True)
     cap = _max_runs_per_ticker()
-    kept, dropped = entries[:cap], entries[cap:]
-    for dropped_entry in dropped:
-        dropped_run_id = dropped_entry.get("run_id")
-        if not dropped_run_id:
-            continue
+    dropped_ids: list[str] = []
+    # Read-modify-write under an exclusive lock so concurrent same-ticker runs
+    # cannot clobber each other's index entry (and orphan the trace file).
+    try:
+        with open_locked_text(path, mode="r+", lock_kind="exclusive", create_file=True) as fh:
+            raw = fh.read()
+            entries: list[dict] = []
+            if raw.strip():
+                try:
+                    loaded = json.loads(raw)
+                    if isinstance(loaded, list):
+                        entries = [
+                            e
+                            for e in loaded
+                            if isinstance(e, dict) and e.get("run_id") != trace.run_id
+                        ]
+                except ValueError:
+                    entries = []
+            entries.insert(0, entry)
+            entries.sort(key=lambda e: e.get("started_at") or "", reverse=True)
+            kept = entries[:cap]
+            # Never prune the run we just wrote, even if clock skew sorts it below
+            # the cap — otherwise its own trace file would be unlinked here.
+            if not any(e.get("run_id") == trace.run_id for e in kept):
+                others = [e for e in entries if e.get("run_id") != trace.run_id]
+                kept = [entry, *others[: cap - 1]]
+            kept_ids = {e.get("run_id") for e in kept}
+            dropped_ids = [
+                rid for e in entries if (rid := e.get("run_id")) and rid not in kept_ids
+            ]
+            fh.seek(0)
+            fh.truncate()
+            json.dump(kept, fh, indent=2)
+            fh.flush()
+    except FileLockTimeoutError:
+        logger.warning("Timed out locking intelligence run index for %r", trace.ticker)
+        return
+    for dropped_run_id in dropped_ids:
         try:
             (runs_dir(root) / f"{dropped_run_id}.json").unlink(missing_ok=True)
         except OSError:
@@ -235,7 +277,6 @@ def _upsert_index(trace: RunTrace, root: Path | None = None) -> None:
                 dropped_run_id,
                 exc_info=True,
             )
-    path.write_text(json.dumps(kept, indent=2))
 
 
 def read_run_trace(run_id: str, root: Path | None = None) -> RunTrace | None:
@@ -261,5 +302,11 @@ def list_runs_for_ticker(
         return []
     if not isinstance(loaded, list):
         return []
-    entries = [RunIndexEntry.model_validate(e) for e in loaded]
+    entries: list[RunIndexEntry] = []
+    for e in loaded:
+        try:
+            entries.append(RunIndexEntry.model_validate(e))
+        except ValueError:
+            # Skip a schema-invalid / hand-edited row rather than 500 the endpoint.
+            continue
     return entries[:limit] if limit is not None else entries

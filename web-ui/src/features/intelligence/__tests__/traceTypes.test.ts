@@ -8,7 +8,6 @@ const apiTrace: RunTraceAPI = {
   started_at: '2026-07-05T10:00:00+00:00',
   finished_at: '2026-07-05T10:00:02+00:00',
   status: 'ok',
-  cache_hit: false,
   error: null,
   steps: [
     {
@@ -33,7 +32,6 @@ describe('transformRunTrace', () => {
   it('maps snake_case to camelCase', () => {
     const t = transformRunTrace(apiTrace);
     expect(t.runId).toBe('r1');
-    expect(t.cacheHit).toBe(false);
     expect(t.steps[0].durationMs).toBe(1000);
     expect(t.steps[0].sourceCounts).toEqual({ polygon_news: 2 });
     expect(t.steps[0].model).toBe('gpt-4o');

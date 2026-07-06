@@ -35,7 +35,6 @@ describe('useRunTrace', () => {
       startedAt: '2026-07-05T10:00:00+00:00',
       finishedAt: '2026-07-05T10:00:02+00:00',
       status: 'ok',
-      cacheHit: false,
       error: null,
       steps: [],
     });

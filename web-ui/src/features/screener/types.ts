@@ -103,6 +103,7 @@ export interface DecisionDrivers {
   negatives: string[];
   warnings: string[];
   tradeState?: string[];
+  staleFundamentals?: boolean;
 }
 
 export interface ExplanationContract {
@@ -232,6 +233,7 @@ export interface DecisionDriversAPI {
   negatives?: string[];
   warnings?: string[];
   trade_state?: string[];
+  stale_fundamentals?: boolean;
 }
 
 export interface ExplanationContractAPI {
@@ -463,6 +465,7 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       negatives: apiSummary.drivers?.negatives ?? [],
       warnings: apiSummary.drivers?.warnings ?? [],
       tradeState: apiSummary.drivers?.trade_state ?? [],
+      staleFundamentals: apiSummary.drivers?.stale_fundamentals ?? false,
     },
     explanation: apiSummary.explanation
       ? {

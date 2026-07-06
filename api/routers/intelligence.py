@@ -32,10 +32,9 @@ from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
 from swing_screener.intelligence.tracing import (
     RunIndexEntry,
     RunTrace,
-    finalize_trace,
     list_runs_for_ticker,
-    new_recorder,
     read_run_trace,
+    recording_run,
     step,
 )
 
@@ -146,8 +145,7 @@ def sweep(
                 if cached is not None:
                     analyzed.append(upper)
                     continue
-            recorder = new_recorder(upper)
-            try:
+            with recording_run(upper) as recorder:
                 with step(recorder, "enrich_request"):
                     item_req = enrich_intelligence_request(
                         upper,
@@ -170,13 +168,7 @@ def sweep(
                 with step(recorder, "enrich_polygon"):
                     item_req = enrich_with_polygon_prices(upper, item_req)
                 analyzer.analyze(upper, item_req, past_positions=past_positions, recorder=recorder)
-                analyzed.append(upper)
-            except Exception as exc:
-                if recorder is not None:
-                    recorder.mark_error(exc)
-                raise
-            finally:
-                finalize_trace(recorder)
+            analyzed.append(upper)
         except Exception as exc:
             logger.warning("Sweep failed for %s: %s", item.ticker, exc)
             failed.append(SweepFailure(ticker=item.ticker.upper(), error=str(exc)))
@@ -300,31 +292,27 @@ def analyze_symbol(
         ep = portfolio_service.get_earnings_proximity(t)
         return ep.days_until, ep.next_earnings_date
 
-    recorder = new_recorder(upper)
     try:
-        with step(recorder, "enrich_request"):
-            request = enrich_intelligence_request(
-                upper,
-                request,
-                fundamentals=fundamentals_service,
-                earnings=_earnings,
-                dividend=_dividend_for,
-                evidence=lambda t: collect_evidence(t),
+        with recording_run(upper) as recorder:
+            with step(recorder, "enrich_request"):
+                request = enrich_intelligence_request(
+                    upper,
+                    request,
+                    fundamentals=fundamentals_service,
+                    earnings=_earnings,
+                    dividend=_dividend_for,
+                    evidence=lambda t: collect_evidence(t),
+                )
+            with step(recorder, "enrich_polygon"):
+                request = enrich_with_polygon_prices(upper, request)
+            past_positions, _ = positions_repo.list_positions(status="closed")
+            return _get_analyzer().analyze(
+                upper, request, past_positions=past_positions, recorder=recorder
             )
-        with step(recorder, "enrich_polygon"):
-            request = enrich_with_polygon_prices(upper, request)
-        past_positions, _ = positions_repo.list_positions(status="closed")
-        return _get_analyzer().analyze(
-            upper, request, past_positions=past_positions, recorder=recorder
-        )
     except HTTPException:
         raise
     except Exception as exc:
-        if recorder is not None:
-            recorder.mark_error(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    finally:
-        finalize_trace(recorder)
 
 
 @router.post("/position/{position_id}", response_model=SymbolIntelligence)
@@ -365,37 +353,33 @@ def analyze_position(
         ep = portfolio_service.get_earnings_proximity(t)
         return ep.days_until, ep.next_earnings_date
 
-    recorder = new_recorder(pos.ticker.upper())
     try:
-        with step(recorder, "enrich_request"):
-            request = enrich_intelligence_request(
-                pos.ticker,
-                request,
-                fundamentals=fundamentals_service,
-                earnings=_earnings,
-                dividend=_dividend_for,
-                evidence=lambda t: collect_evidence(t),
-            )
-        with step(recorder, "enrich_technicals"):
-            try:
-                ohlcv = portfolio_service.fetch_recent_ohlcv(pos.ticker)
-                request = enrich_with_technicals(pos.ticker, request, ohlcv)
-            except Exception:
-                logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
-        with step(recorder, "enrich_polygon"):
-            request = enrich_with_polygon_prices(pos.ticker, request)
-        # Re-pin close to the live position price after Polygon enrichment.
-        # Polygon OHLCV only carries completed-session closes, so during an open
-        # session it returns yesterday's close — contradicting r_now computed from
-        # today's intraday price and causing the LLM to misread position direction.
-        if pos.current_price is not None:
-            request = request.model_copy(update={"close": float(pos.current_price)})
-        return _get_analyzer().analyze(pos.ticker.upper(), request, recorder=recorder)
+        with recording_run(pos.ticker.upper()) as recorder:
+            with step(recorder, "enrich_request"):
+                request = enrich_intelligence_request(
+                    pos.ticker,
+                    request,
+                    fundamentals=fundamentals_service,
+                    earnings=_earnings,
+                    dividend=_dividend_for,
+                    evidence=lambda t: collect_evidence(t),
+                )
+            with step(recorder, "enrich_technicals"):
+                try:
+                    ohlcv = portfolio_service.fetch_recent_ohlcv(pos.ticker)
+                    request = enrich_with_technicals(pos.ticker, request, ohlcv)
+                except Exception:
+                    logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
+            with step(recorder, "enrich_polygon"):
+                request = enrich_with_polygon_prices(pos.ticker, request)
+            # Re-pin close to the live position price after Polygon enrichment.
+            # Polygon OHLCV only carries completed-session closes, so during an open
+            # session it returns yesterday's close — contradicting r_now computed from
+            # today's intraday price and causing the LLM to misread position direction.
+            if pos.current_price is not None:
+                request = request.model_copy(update={"close": float(pos.current_price)})
+            return _get_analyzer().analyze(pos.ticker.upper(), request, recorder=recorder)
     except HTTPException:
         raise
     except Exception as exc:
-        if recorder is not None:
-            recorder.mark_error(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    finally:
-        finalize_trace(recorder)

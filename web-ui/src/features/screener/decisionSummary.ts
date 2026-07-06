@@ -531,6 +531,7 @@ function buildDrivers(
   const negatives: string[] = [];
   const warnings: string[] = [];
   const tradeState: string[] = [];
+  const staleFundamentals = snapshot.freshnessStatus === 'stale';
 
   const push = (target: string[], value: string, limit = 2) => {
     if (!value || target.includes(value) || target.length >= limit) return;
@@ -571,7 +572,7 @@ function buildDrivers(
     push(tradeState, 'This symbol is already in an active manage-only state.');
   }
 
-  return { positives, negatives, warnings, tradeState };
+  return { positives, negatives, warnings, tradeState, staleFundamentals };
 }
 
 function mainRisk(

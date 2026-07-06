@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
+import { t } from '@/i18n/t';
 import type { DecisionSummary } from '@/features/screener/types';
 
 function buildSummary(overrides: Partial<DecisionSummary> = {}): DecisionSummary {
@@ -55,7 +56,11 @@ describe('DecisionSummaryCard', () => {
     expect(screen.getByText('High')).toBeInTheDocument();
     expect(screen.getByText('Coverage Warnings')).toBeInTheDocument();
     expect(screen.getByText('Fundamentals stale: latest quarter 2024-12-31.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh fundamentals' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: t('workspacePage.panels.analysis.decisionSummary.refreshFundamentalsAction'),
+      })
+    ).toBeInTheDocument();
     expect(screen.getByText('Valuation Context')).toBeInTheDocument();
     expect(screen.getByText('Method: Earnings multiple')).toBeInTheDocument();
     expect(screen.getByText('24.6x')).toBeInTheDocument();
@@ -75,7 +80,13 @@ describe('DecisionSummaryCard', () => {
       />
     );
 
-    expect(screen.getByText('Catalyst: Not evaluated')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `${t('workspacePage.panels.analysis.decisionSummary.labels.catalyst')}: ${t(
+          'workspacePage.panels.analysis.decisionSummary.catalyst.unknown'
+        )}`
+      )
+    ).toBeInTheDocument();
   });
 
   it('renders trade state outside coverage warnings', () => {
@@ -95,7 +106,9 @@ describe('DecisionSummaryCard', () => {
     );
 
     expect(screen.queryByText('Coverage Warnings')).not.toBeInTheDocument();
-    expect(screen.getByText('Trade State')).toBeInTheDocument();
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradeStateTitle'))
+    ).toBeInTheDocument();
     expect(screen.getByText('This symbol is already in an active manage-only state.')).toBeInTheDocument();
   });
 

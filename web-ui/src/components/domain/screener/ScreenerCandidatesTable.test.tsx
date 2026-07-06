@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
 import { renderWithProviders } from '@/test/utils';
 import { server } from '@/test/mocks/server';
+import { t } from '@/i18n/t';
 import type { ScreenerCandidate } from '@/features/screener/types';
 
 function candidate(): ScreenerCandidate {
@@ -53,7 +54,7 @@ describe('ScreenerCandidatesTable', () => {
       />
     );
 
-    expect(screen.getByText('Breakout setup')).toBeInTheDocument();
+    expect(screen.getByText(t('screener.table.signalBadge.breakout'))).toBeInTheDocument();
     expect(screen.queryByText(/^Breakout$/)).not.toBeInTheDocument();
   });
 });

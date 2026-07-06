@@ -44,8 +44,10 @@ def _summ_assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> d
 
 def _summ_build_prompt(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> dict:
     prompt = state.get("user_prompt") or ""
+    # Only reached from _traced with a live recorder, which carries the
+    # config-derived preview length — no need to re-hardcode the default.
     recorder = state.get("_recorder")
-    preview_chars = getattr(recorder, "preview_chars", 500)
+    preview_chars = recorder.preview_chars if recorder is not None else 0
     return {
         "prompt_hash": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16],
         "prompt_preview": prompt[:preview_chars],

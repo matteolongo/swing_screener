@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import { renderWithProviders } from '@/test/utils';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { t } from '@/i18n/t';
 import type { DecisionSummary } from '@/features/screener/types';
 
 const { mutateMock } = vi.hoisted(() => ({
@@ -143,7 +144,7 @@ describe('ActionPanel', () => {
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_LIMIT');
-    expect(screen.getAllByText('Breakout setup').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(t('order.setupGuidance.signals.breakout.label')).length).toBeGreaterThan(0);
     expect(screen.queryAllByText('Pullback setup')).toHaveLength(0);
     expect(screen.getAllByText(/buy-limit entry on a controlled retest/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Breakout already occurred/i)).toBeInTheDocument();
