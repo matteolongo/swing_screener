@@ -16,7 +16,7 @@ DecisionAction = Literal[
 DecisionConviction = Literal["high", "medium", "low"]
 SignalLabel = Literal["strong", "neutral", "weak"]
 ValuationLabel = Literal["cheap", "fair", "expensive", "unknown"]
-CatalystLabel = Literal["active", "neutral", "weak"]
+CatalystLabel = Literal["active", "neutral", "weak", "unknown"]
 FairValueMethod = Literal["earnings_multiple", "sales_multiple", "book_multiple", "not_available"]
 
 
@@ -45,6 +45,7 @@ class DecisionDrivers(BaseModel):
     positives: list[str] = Field(default_factory=list)
     negatives: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    trade_state: list[str] = Field(default_factory=list)
 
 
 class ExplanationContract(BaseModel):

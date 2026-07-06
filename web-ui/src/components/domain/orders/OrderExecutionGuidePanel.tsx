@@ -54,7 +54,7 @@ export default function OrderExecutionGuidePanel({
           {t('order.review.brokerStepsTitle' as any)}
         </summary>
         <div className="mt-3">
-          <SetupExecutionGuide signal={guidanceSignal} />
+          <SetupExecutionGuide signal={guidanceSignal} orderType={orderType} />
         </div>
       </details>
 

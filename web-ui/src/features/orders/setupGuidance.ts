@@ -18,10 +18,29 @@ export function normalizeSetupSignal(signal?: string | null): SetupSignal {
   return 'unknown';
 }
 
-export function getSetupExecutionGuidance(signal?: string | null): SetupExecutionGuidance {
+function normalizeEntryOrderType(orderType?: string | null): string {
+  return String(orderType ?? '').trim().toUpperCase();
+}
+
+export function getSetupExecutionGuidance(signal?: string | null, orderType?: string | null): SetupExecutionGuidance {
   const normalized = normalizeSetupSignal(signal);
+  const normalizedOrderType = normalizeEntryOrderType(orderType);
 
   if (normalized === 'breakout') {
+    if (normalizedOrderType === 'BUY_LIMIT') {
+      return {
+        signal: normalized,
+        setupLabelKey: 'order.setupGuidance.signals.breakout.label',
+        whatItMeansKey: 'order.setupGuidance.signals.breakout.limitEntry.whatItMeans',
+        stepsKeys: [
+          'order.setupGuidance.signals.breakout.limitEntry.steps.step1',
+          'order.setupGuidance.signals.breakout.limitEntry.steps.step2',
+          'order.setupGuidance.signals.breakout.limitEntry.steps.step3',
+        ],
+        cautionKey: 'order.setupGuidance.signals.breakout.limitEntry.caution',
+      };
+    }
+
     return {
       signal: normalized,
       setupLabelKey: 'order.setupGuidance.signals.breakout.label',

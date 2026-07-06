@@ -20,7 +20,7 @@ function signalBadge(action?: string): { label: string; className: string } | nu
     case 'BUY_ON_PULLBACK':
       return { label: 'Pullback', className: 'bg-primary/10 text-primary' };
     case 'WAIT_FOR_BREAKOUT':
-      return { label: 'Breakout', className: 'bg-primary/10 text-primary' };
+      return { label: 'Breakout setup', className: 'bg-primary/10 text-primary' };
     case 'WATCH':
       return { label: 'Watch', className: 'bg-warning/10 text-warning' };
     case 'TACTICAL_ONLY':

@@ -93,6 +93,16 @@ def _append_unique(target: list[str], value: str | None, *, limit: int = 2) -> N
     target.append(text)
 
 
+def _fundamentals_stale_warning(snapshot: FundamentalSnapshot) -> str:
+    latest_quarter = str(getattr(snapshot, "most_recent_quarter", "") or "").strip()
+    if latest_quarter:
+        return f"Fundamentals stale: latest quarter {latest_quarter}."
+    asof_date = str(getattr(snapshot, "asof_date", "") or "").strip()
+    if asof_date:
+        return f"Fundamentals stale: snapshot as of {asof_date}."
+    return "Fundamental snapshot is stale."
+
+
 def _join_detail_parts(parts: list[str]) -> str | None:
     if not parts:
         return None
@@ -541,7 +551,7 @@ def _valuation_context(
 
 def _catalyst_label(opportunity: Any | None) -> CatalystLabel:
     if opportunity is None:
-        return "weak"
+        return "unknown"
     state = str(_get_value(opportunity, "state", "")).strip().upper()
     strength = _safe_float(_get_value(opportunity, "catalyst_strength"))
     if state in {"CATALYST_ACTIVE", "TRENDING"} or (strength is not None and strength >= 6.7):
@@ -567,7 +577,7 @@ def _conviction(
     score = 0.0
     score += {"strong": 2.0, "neutral": 1.0, "weak": 0.0}[technical_label]
     score += {"strong": 2.0, "neutral": 1.0, "weak": 0.0}[fundamentals_label]
-    score += {"active": 1.0, "neutral": 0.5, "weak": 0.0}[catalyst_label]
+    score += {"active": 1.0, "neutral": 0.5, "weak": 0.0, "unknown": 0.0}[catalyst_label]
     score += {"cheap": 0.5, "fair": 0.25, "expensive": -0.5, "unknown": 0.0}[valuation_label]
 
     if snapshot is None:
@@ -618,7 +628,7 @@ def _action(
     if technical_label == "weak" and fundamentals_label == "weak":
         return "AVOID"
     if technical_label == "weak":
-        return "WATCH" if catalyst_label != "weak" or fundamentals_label == "neutral" else "AVOID"
+        return "WATCH" if catalyst_label in {"active", "neutral"} or fundamentals_label == "neutral" else "AVOID"
     return "WATCH"
 
 
@@ -636,6 +646,7 @@ def _drivers(
     positives: list[str] = []
     negatives: list[str] = []
     warnings: list[str] = []
+    trade_state: list[str] = []
 
     if technical_label == "strong":
         _append_unique(positives, "Technical setup is ready.")
@@ -656,8 +667,6 @@ def _drivers(
 
     if catalyst_label == "active":
         _append_unique(positives, "Recent catalyst flow keeps the symbol relevant now.")
-    elif catalyst_label == "weak" and opportunity is None:
-        _append_unique(warnings, "No cached catalyst snapshot is available yet.")
 
     if snapshot is None:
         _append_unique(warnings, "No cached fundamentals snapshot is available yet.")
@@ -665,7 +674,7 @@ def _drivers(
         if str(snapshot.coverage_status or "").strip().lower() in {"partial", "insufficient", "unsupported"}:
             _append_unique(warnings, "Fundamental coverage is partial.")
         if str(snapshot.freshness_status or "").strip().lower() == "stale":
-            _append_unique(warnings, "Fundamental snapshot is stale.")
+            _append_unique(warnings, _fundamentals_stale_warning(snapshot))
         if str(snapshot.data_quality_status or "").strip().lower() == "low":
             _append_unique(warnings, "Fundamental data quality is limited.")
         # Numeric conviction modifiers from PR6
@@ -707,12 +716,13 @@ def _drivers(
         _append_unique(warnings, "Extended — avoid chasing at current levels.")
 
     if same_symbol_mode == "MANAGE_ONLY":
-        _append_unique(warnings, "This symbol is already in an active manage-only state.")
+        _append_unique(trade_state, "This symbol is already in an active manage-only state.")
 
     return DecisionDrivers(
         positives=positives[:2],
         negatives=negatives[:2],
         warnings=warnings[:2],
+        trade_state=trade_state[:2],
     )
 
 
@@ -889,6 +899,7 @@ def build_decision_summary(
             positives=drivers.positives,
             negatives=drivers.negatives,
             warnings=drivers.warnings,
+            trade_state=drivers.trade_state,
         ),
         explanation=explanation,
     )

@@ -60,6 +60,16 @@ function catalystLabel(label: DecisionCatalystLabel): string {
     case 'active': return t('workspacePage.panels.analysis.decisionSummary.catalyst.active');
     case 'neutral': return t('workspacePage.panels.analysis.decisionSummary.catalyst.neutral');
     case 'weak': return t('workspacePage.panels.analysis.decisionSummary.catalyst.weak');
+    case 'unknown': return t('workspacePage.panels.analysis.decisionSummary.catalyst.unknown');
+  }
+}
+
+function catalystVariant(label: DecisionCatalystLabel): 'default' | 'success' | 'warning' | 'error' {
+  switch (label) {
+    case 'active': return 'success';
+    case 'neutral': return 'warning';
+    case 'weak': return 'error';
+    case 'unknown': return 'default';
   }
 }
 
@@ -756,7 +766,7 @@ export default function NarrativeAnalysisCard({
               <Badge variant={summary.valuationLabel === 'cheap' ? 'success' : summary.valuationLabel === 'expensive' ? 'error' : 'warning'}>
                 {t('workspacePage.panels.analysis.decisionSummary.labels.valuation')}: {valuationLabel(summary.valuationLabel)}
               </Badge>
-              <Badge variant={summary.catalystLabel === 'active' ? 'success' : summary.catalystLabel === 'weak' ? 'error' : 'warning'}>
+              <Badge variant={catalystVariant(summary.catalystLabel)}>
                 {t('workspacePage.panels.analysis.decisionSummary.labels.catalyst')}: {catalystLabel(summary.catalystLabel)}
               </Badge>
             </div>

@@ -273,6 +273,8 @@ export default function SymbolAnalysisContent({
               <DecisionSummaryCard
                 summary={candidate.decisionSummary}
                 currency={candidate.currency}
+                onRefreshFundamentals={() => refreshFundamentalsMutation.mutate(ticker)}
+                isRefreshingFundamentals={refreshFundamentalsMutation.isPending}
               />
             ) : null}
             <div className="rounded-lg border border-border bg-surface p-3">

@@ -485,7 +485,9 @@ function deriveAction(
   }
   if (technicalLabel === 'weak' && fundamentalsLabel === 'weak') return 'AVOID';
   if (technicalLabel === 'weak') {
-    return catalystLabel !== 'weak' || fundamentalsLabel === 'neutral' ? 'WATCH' : 'AVOID';
+    return catalystLabel === 'active' || catalystLabel === 'neutral' || fundamentalsLabel === 'neutral'
+      ? 'WATCH'
+      : 'AVOID';
   }
   return 'WATCH';
 }
@@ -503,7 +505,7 @@ function deriveConviction(
   let score = 0;
   score += { strong: 2, neutral: 1, weak: 0 }[technicalLabel];
   score += { strong: 2, neutral: 1, weak: 0 }[fundamentalsLabel];
-  score += { active: 1, neutral: 0.5, weak: 0 }[catalystLabel];
+  score += { active: 1, neutral: 0.5, weak: 0, unknown: 0 }[catalystLabel];
   score += { cheap: 0.5, fair: 0.25, expensive: -0.5, unknown: 0 }[valuationLabel];
 
   if (snapshot.coverageStatus === 'partial') score -= 0.5;
@@ -528,6 +530,7 @@ function buildDrivers(
   const positives: string[] = [];
   const negatives: string[] = [];
   const warnings: string[] = [];
+  const tradeState: string[] = [];
 
   const push = (target: string[], value: string, limit = 2) => {
     if (!value || target.includes(value) || target.length >= limit) return;
@@ -549,16 +552,26 @@ function buildDrivers(
   if (snapshot.coverageStatus === 'partial' || snapshot.coverageStatus === 'insufficient' || snapshot.coverageStatus === 'unsupported') {
     push(warnings, 'Fundamental coverage is partial.');
   }
-  if (snapshot.freshnessStatus === 'stale') push(warnings, 'Fundamental snapshot is stale.');
+  if (snapshot.freshnessStatus === 'stale') {
+    const latest = snapshot.mostRecentQuarter || snapshot.asofDate;
+    push(
+      warnings,
+      latest
+        ? `Fundamentals stale: ${snapshot.mostRecentQuarter ? 'latest quarter' : 'snapshot as of'} ${latest}.`
+        : 'Fundamental snapshot is stale.'
+    );
+  }
   if (snapshot.dataQualityStatus === 'low') push(warnings, 'Fundamental data quality is limited.');
 
   if (candidate.rr === undefined) push(warnings, 'Reward-to-risk is not available yet.');
   else if (candidate.rr >= 2) push(positives, 'Trade plan has acceptable reward-to-risk.');
   else if (candidate.rr < 1.5) push(negatives, 'Reward-to-risk is light for a swing setup.');
 
-  if (sameSymbolMode === 'MANAGE_ONLY') push(warnings, 'This symbol is already in an active manage-only state.');
+  if (sameSymbolMode === 'MANAGE_ONLY') {
+    push(tradeState, 'This symbol is already in an active manage-only state.');
+  }
 
-  return { positives, negatives, warnings };
+  return { positives, negatives, warnings, tradeState };
 }
 
 function mainRisk(
@@ -595,7 +608,7 @@ export function rebuildDecisionSummaryWithFundamentals(
   snapshot: FundamentalSnapshot
 ): DecisionSummary {
   const technicalLabel = candidate.decisionSummary?.technicalLabel ?? deriveTechnicalLabel(candidate);
-  const catalystLabel = candidate.decisionSummary?.catalystLabel ?? 'weak';
+  const catalystLabel = candidate.decisionSummary?.catalystLabel ?? 'unknown';
   const fundamentalsLabel = deriveFundamentalsLabel(snapshot);
   const valuationLabel = deriveValuationLabel(candidate, snapshot);
   const valuationContext = buildValuationContext(candidate, snapshot, valuationLabel);
