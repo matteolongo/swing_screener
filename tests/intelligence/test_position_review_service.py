@@ -173,10 +173,17 @@ def test_review_symbol_requires_cached_intelligence_or_evidence():
         service.review_symbol("msft", PositionReviewRequest(refresh_sources=False))
 
 
-def test_review_symbol_uses_cached_intelligence_when_not_held():
+def test_review_symbol_frames_entry_from_cached_intelligence():
     service = PositionReviewService(
         portfolio_service=FakePortfolioService(None),
-        read_intelligence_fn=lambda _ticker: _intelligence(symbol="MSFT"),
+        read_intelligence_fn=lambda _ticker: _intelligence(
+            symbol="MSFT",
+            action="BUY_NOW",
+            conviction="high",
+            summary_line="Technical setup is ready, high conviction, set up to buy now.",
+            price_hook="Reclaim of the breakout keeps the entry live.",
+            risk_factors=["A failed breakout would invalidate the setup."],
+        ),
         collect_evidence_fn=lambda _ticker: [],
         now_fn=lambda: "2026-07-03T12:00:00Z",
     )
@@ -185,6 +192,29 @@ def test_review_symbol_uses_cached_intelligence_when_not_held():
 
     assert response.mode == "symbol"
     assert response.ticker == "MSFT"
-    assert response.suggested_action == "WATCH"
-    assert response.profit_protection.current_r is None
-    assert response.stop_advice.method == "manual_review"
+    # A BUY_NOW candidate is actionable, not a blanket WATCH, and has no position fields.
+    assert response.suggested_action == "ENTER"
+    assert response.thesis_status == "intact"
+    assert response.profit_protection is None
+    assert response.stop_advice is None
+    assert response.entry_plan is not None
+    assert response.entry_plan.stance == "ENTER"
+    assert response.entry_plan.reason.startswith("Technical setup is ready")
+    assert any("planned stop" in item for item in response.entry_plan.what_invalidates)
+    assert "not applicable" not in response.narrative
+    assert "no held position" not in response.narrative.lower()
+
+
+def test_review_symbol_maps_avoid_to_broken_thesis():
+    service = PositionReviewService(
+        portfolio_service=FakePortfolioService(None),
+        read_intelligence_fn=lambda _ticker: _intelligence(symbol="MSFT", action="AVOID"),
+        collect_evidence_fn=lambda _ticker: [],
+        now_fn=lambda: "2026-07-03T12:00:00Z",
+    )
+
+    response = service.review_symbol("msft", PositionReviewRequest(refresh_sources=False))
+
+    assert response.suggested_action == "AVOID"
+    assert response.thesis_status == "broken"
+    assert response.entry_plan is not None

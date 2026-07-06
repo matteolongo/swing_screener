@@ -1,0 +1,11 @@
+[
+  {
+    "run_id": "9e49258c5ae04dbea84588c20ddd90e3",
+    "ticker": "GE",
+    "started_at": "2026-07-06T17:21:31.875485+00:00",
+    "finished_at": "2026-07-06T17:22:05.336336+00:00",
+    "status": "ok",
+    "duration_ms": 33382.086,
+    "step_count": 11
+  }
+]

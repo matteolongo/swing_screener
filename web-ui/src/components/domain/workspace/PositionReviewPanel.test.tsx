@@ -36,6 +36,7 @@ const review: PositionReview = {
     method: 'trail_sma20',
     reason: 'SMA trail: protect profit after >2R.',
   },
+  entryPlan: null,
   macroOverlay: {
     riskLevel: 'medium',
     technicalReliability: 'reduced',
@@ -122,5 +123,45 @@ describe('PositionReviewPanel', () => {
     expect(screen.getByText('2.25R')).toBeInTheDocument();
     expect(screen.getByText('109.50')).toBeInTheDocument();
     expect(screen.getByText('Macro risk update')).toBeInTheDocument();
+  });
+
+  it('runs a non-held symbol review and renders the entry plan instead of position cards', async () => {
+    const mutate = vi.fn();
+    const symbolReview: PositionReview = {
+      ...review,
+      mode: 'symbol',
+      suggestedAction: 'ENTER',
+      thesisStatus: 'intact',
+      profitProtection: null,
+      stopAdvice: null,
+      entryPlan: {
+        stance: 'ENTER',
+        whatConfirms: ['Setup is ready now; the planned entry is actionable.'],
+        whatInvalidates: ['A close below the planned stop invalidates the setup.'],
+        reason: 'Technical setup is ready, high conviction, set up to buy now.',
+      },
+      narrative: 'GOOG: ENTER. Setup thesis is intact.',
+    };
+    vi.mocked(intelligenceHooks.usePositionReviewMutation).mockReturnValue({
+      mutate,
+      data: symbolReview,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    const { user } = renderWithProviders(<PositionReviewPanel ticker="GOOG" />);
+
+    expect(screen.getByText('Manual symbol review')).toBeInTheDocument();
+    expect(screen.getByText('Entry plan')).toBeInTheDocument();
+    expect(screen.getByText('What confirms entry')).toBeInTheDocument();
+    expect(screen.getByText(/A close below the planned stop invalidates the setup\./)).toBeInTheDocument();
+    expect(screen.queryByText('Protect profit')).not.toBeInTheDocument();
+    expect(screen.queryByText('Stop advice')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Run symbol review' }));
+    await waitFor(() => {
+      expect(mutate).toHaveBeenCalledWith({ ticker: 'GOOG', positionId: null, refreshSources: false });
+    });
   });
 });

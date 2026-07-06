@@ -1,0 +1,38 @@
+[
+  {
+    "run_id": "08451a48e3d14a64ade16b3c3c6b0905",
+    "ticker": "BESI.AS",
+    "started_at": "2026-07-06T18:05:22.407424+00:00",
+    "finished_at": "2026-07-06T18:05:22.816566+00:00",
+    "status": "ok",
+    "duration_ms": 408.903,
+    "step_count": 3
+  },
+  {
+    "run_id": "de8b70ea561d4162ac7b40ee2532b13a",
+    "ticker": "BESI.AS",
+    "started_at": "2026-07-06T17:11:33.296659+00:00",
+    "finished_at": "2026-07-06T17:11:33.656978+00:00",
+    "status": "ok",
+    "duration_ms": 360.065,
+    "step_count": 3
+  },
+  {
+    "run_id": "3f70ef617d4948338602ccc7aa908ccb",
+    "ticker": "BESI.AS",
+    "started_at": "2026-07-06T17:10:14.446243+00:00",
+    "finished_at": "2026-07-06T17:10:15.169383+00:00",
+    "status": "ok",
+    "duration_ms": 722.726,
+    "step_count": 3
+  },
+  {
+    "run_id": "259171aa70f64f809bab6d06f85cc40f",
+    "ticker": "BESI.AS",
+    "started_at": "2026-07-05T21:46:15.572776+00:00",
+    "finished_at": "2026-07-05T21:46:15.934687+00:00",
+    "status": "ok",
+    "duration_ms": 360.261,
+    "step_count": 3
+  }
+]

@@ -1,0 +1,11 @@
+[
+  {
+    "run_id": "dc9d8eb8c79d4fc4a04942a2fefdc834",
+    "ticker": "LRCX",
+    "started_at": "2026-07-06T12:07:16.452660+00:00",
+    "finished_at": "2026-07-06T12:07:53.215177+00:00",
+    "status": "ok",
+    "duration_ms": 36290.503,
+    "step_count": 11
+  }
+]

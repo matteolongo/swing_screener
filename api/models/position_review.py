@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 PositionReviewMode = Literal["position", "symbol"]
-SuggestedAction = Literal["HOLD", "TRIM", "EXIT", "RAISE_STOP", "WATCH"]
+SuggestedAction = Literal["HOLD", "TRIM", "EXIT", "RAISE_STOP", "WATCH", "ENTER", "AVOID"]
 ThesisStatus = Literal["intact", "weakening", "broken", "unclear"]
 MoveExtension = Literal["low", "medium", "high", "unknown"]
 TrimAdvice = Literal["none", "trim_25_percent", "trim_33_percent", "trim_50_percent", "exit"]
@@ -46,6 +46,15 @@ class StopAdvice(BaseModel):
     reason: str
 
 
+class EntryPlan(BaseModel):
+    """Entry framing for a non-held symbol review (candidate, not a position)."""
+
+    stance: SuggestedAction
+    what_confirms: list[str] = Field(default_factory=list)
+    what_invalidates: list[str] = Field(default_factory=list)
+    reason: str
+
+
 class MacroOverlay(BaseModel):
     risk_level: MacroRiskLevel
     technical_reliability: TechnicalReliability
@@ -69,8 +78,9 @@ class PositionReviewResponse(BaseModel):
     suggested_action: SuggestedAction
     thesis_status: ThesisStatus
     move_explanation: MoveExplanation
-    profit_protection: ProfitProtection
-    stop_advice: StopAdvice
+    profit_protection: ProfitProtection | None = None
+    stop_advice: StopAdvice | None = None
+    entry_plan: EntryPlan | None = None
     macro_overlay: MacroOverlay
     evidence_used: list[ReviewEvidence] = Field(default_factory=list)
     narrative: str

@@ -50,7 +50,7 @@ function ReviewResult({ review }: { review: PositionReview }) {
         <p className="mt-2 text-sm text-muted">{review.narrative}</p>
       </div>
 
-      <ReviewCard title="Why it moved">
+      <ReviewCard title={review.mode === 'symbol' ? "What's driving it" : 'Why it moved'}>
         <p className="text-sm text-foreground">{review.moveExplanation.summary}</p>
         {review.moveExplanation.drivers.length > 0 && (
           <ul className="mt-2 grid gap-1 text-sm text-muted">
@@ -67,25 +67,55 @@ function ReviewResult({ review }: { review: PositionReview }) {
         </div>
       </ReviewCard>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <ReviewCard title="Protect profit">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <ReviewMetric label="Current R" value={review.profitProtection.currentR == null ? 'N/A' : `${formatNumber(review.profitProtection.currentR)}R`} />
-            <ReviewMetric label="Extension" value={formatLabel(review.profitProtection.moveExtension)} />
-            <ReviewMetric label="Trim" value={formatLabel(review.profitProtection.trimAdvice)} />
-          </div>
-          <p className="mt-3 text-sm text-muted">{review.profitProtection.reason}</p>
+      {review.entryPlan ? (
+        <ReviewCard title="Entry plan">
+          <p className="text-sm text-foreground">{review.entryPlan.reason}</p>
+          {review.entryPlan.whatConfirms.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">What confirms entry</p>
+              <ul className="mt-1 grid gap-1 text-sm text-muted">
+                {review.entryPlan.whatConfirms.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {review.entryPlan.whatInvalidates.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">What invalidates it</p>
+              <ul className="mt-1 grid gap-1 text-sm text-muted">
+                {review.entryPlan.whatInvalidates.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </ReviewCard>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {review.profitProtection && (
+            <ReviewCard title="Protect profit">
+              <div className="grid gap-2 sm:grid-cols-3">
+                <ReviewMetric label="Current R" value={review.profitProtection.currentR == null ? 'N/A' : `${formatNumber(review.profitProtection.currentR)}R`} />
+                <ReviewMetric label="Extension" value={formatLabel(review.profitProtection.moveExtension)} />
+                <ReviewMetric label="Trim" value={formatLabel(review.profitProtection.trimAdvice)} />
+              </div>
+              <p className="mt-3 text-sm text-muted">{review.profitProtection.reason}</p>
+            </ReviewCard>
+          )}
 
-        <ReviewCard title="Stop advice">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <ReviewMetric label="Current" value={formatNumber(review.stopAdvice.currentStop)} />
-            <ReviewMetric label="Suggested" value={formatNumber(review.stopAdvice.suggestedStop)} />
-            <ReviewMetric label="Method" value={formatLabel(review.stopAdvice.method)} />
-          </div>
-          <p className="mt-3 text-sm text-muted">{review.stopAdvice.reason}</p>
-        </ReviewCard>
-      </div>
+          {review.stopAdvice && (
+            <ReviewCard title="Stop advice">
+              <div className="grid gap-2 sm:grid-cols-3">
+                <ReviewMetric label="Current" value={formatNumber(review.stopAdvice.currentStop)} />
+                <ReviewMetric label="Suggested" value={formatNumber(review.stopAdvice.suggestedStop)} />
+                <ReviewMetric label="Method" value={formatLabel(review.stopAdvice.method)} />
+              </div>
+              <p className="mt-3 text-sm text-muted">{review.stopAdvice.reason}</p>
+            </ReviewCard>
+          )}
+        </div>
+      )}
 
       <ReviewCard title="Macro/geopolitical overlay">
         <div className="grid gap-2 sm:grid-cols-3">
@@ -140,9 +170,13 @@ export default function PositionReviewPanel({ ticker, position = null }: Positio
     <section className="rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-3 py-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Manual position review</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {isHeld ? 'Manual position review' : 'Manual symbol review'}
+          </p>
           <p className="mt-1 text-xs text-muted">
-            Explain the move, protect open profit, adjust stop logic, and check macro/geopolitical overrides.
+            {isHeld
+              ? 'Explain the move, protect open profit, adjust stop logic, and check macro/geopolitical overrides.'
+              : 'Assess the setup thesis, what confirms or invalidates entry, and check macro/geopolitical overrides.'}
           </p>
         </div>
         <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={mutation.isPending}>
@@ -170,7 +204,9 @@ export default function PositionReviewPanel({ ticker, position = null }: Positio
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted">
-            Run this manually when you want to understand an intraday move, protect a winner, or reassess the thesis.
+            {isHeld
+              ? 'Run this manually when you want to understand an intraday move, protect a winner, or reassess the thesis.'
+              : 'Run this manually to reassess the setup thesis and entry conditions before acting.'}
           </p>
         )}
       </div>
