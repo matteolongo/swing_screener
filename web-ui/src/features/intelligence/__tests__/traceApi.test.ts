@@ -23,7 +23,6 @@ describe('intelligence api — run trace transform seam', () => {
               started_at: '2026-07-05T10:00:00+00:00',
               finished_at: '2026-07-05T10:00:01+00:00',
               duration_ms: 1000,
-              inputs_summary: {},
               outputs_summary: { search_chars: 42 },
               error: null,
               model: 'gpt-4o',

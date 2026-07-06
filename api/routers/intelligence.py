@@ -42,6 +42,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 
 
+def _set_step_output(draft, **fields) -> None:
+    """Record a compact outputs summary on a trace step draft.
+
+    ``draft`` is None when tracing is disabled (``step`` yields a nullcontext),
+    so the enrichment steps stay meaningful in the trace without hard-coupling to
+    the recorder. None-valued fields are dropped so empty facts don't clutter the UI.
+    """
+    if draft is not None:
+        draft.outputs_summary = {k: v for k, v in fields.items() if v is not None}
+
+
 def _dividend_for(ticker: str) -> tuple[int | None, str | None, float | None]:
     try:
         from swing_screener.fundamentals.providers.degiro import _load_isin_map
@@ -146,7 +157,7 @@ def sweep(
                     analyzed.append(upper)
                     continue
             with recording_run(upper) as recorder:
-                with step(recorder, "enrich_request"):
+                with step(recorder, "enrich_request") as draft:
                     item_req = enrich_intelligence_request(
                         upper,
                         item.request,
@@ -157,16 +168,25 @@ def sweep(
                         dividend=_dividend_for,
                         evidence=lambda t: collect_evidence(t),
                     )
-                with step(recorder, "enrich_technicals"):
+                    _set_step_output(
+                        draft,
+                        close=item_req.close,
+                        catalyst_evidence=len(item_req.catalyst_evidence),
+                    )
+                with step(recorder, "enrich_technicals") as draft:
+                    ohlcv_rows = 0
                     try:
                         ohlcv = portfolio_service.fetch_recent_ohlcv(upper)
                         item_req = enrich_with_technicals(upper, item_req, ohlcv)
+                        ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
                     except Exception:
                         logger.warning(
                             "Sweep technical enrichment skipped for %r", item.ticker, exc_info=True
                         )
-                with step(recorder, "enrich_polygon"):
+                    _set_step_output(draft, ohlcv_rows=ohlcv_rows)
+                with step(recorder, "enrich_polygon") as draft:
                     item_req = enrich_with_polygon_prices(upper, item_req)
+                    _set_step_output(draft, close=item_req.close)
                 analyzer.analyze(upper, item_req, past_positions=past_positions, recorder=recorder)
             analyzed.append(upper)
         except Exception as exc:
@@ -294,7 +314,7 @@ def analyze_symbol(
 
     try:
         with recording_run(upper) as recorder:
-            with step(recorder, "enrich_request"):
+            with step(recorder, "enrich_request") as draft:
                 request = enrich_intelligence_request(
                     upper,
                     request,
@@ -303,8 +323,14 @@ def analyze_symbol(
                     dividend=_dividend_for,
                     evidence=lambda t: collect_evidence(t),
                 )
-            with step(recorder, "enrich_polygon"):
+                _set_step_output(
+                    draft,
+                    close=request.close,
+                    catalyst_evidence=len(request.catalyst_evidence),
+                )
+            with step(recorder, "enrich_polygon") as draft:
                 request = enrich_with_polygon_prices(upper, request)
+                _set_step_output(draft, close=request.close)
             past_positions, _ = positions_repo.list_positions(status="closed")
             return _get_analyzer().analyze(
                 upper, request, past_positions=past_positions, recorder=recorder
@@ -355,7 +381,7 @@ def analyze_position(
 
     try:
         with recording_run(pos.ticker.upper()) as recorder:
-            with step(recorder, "enrich_request"):
+            with step(recorder, "enrich_request") as draft:
                 request = enrich_intelligence_request(
                     pos.ticker,
                     request,
@@ -364,14 +390,23 @@ def analyze_position(
                     dividend=_dividend_for,
                     evidence=lambda t: collect_evidence(t),
                 )
-            with step(recorder, "enrich_technicals"):
+                _set_step_output(
+                    draft,
+                    close=request.close,
+                    catalyst_evidence=len(request.catalyst_evidence),
+                )
+            with step(recorder, "enrich_technicals") as draft:
+                ohlcv_rows = 0
                 try:
                     ohlcv = portfolio_service.fetch_recent_ohlcv(pos.ticker)
                     request = enrich_with_technicals(pos.ticker, request, ohlcv)
+                    ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
                 except Exception:
                     logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
-            with step(recorder, "enrich_polygon"):
+                _set_step_output(draft, ohlcv_rows=ohlcv_rows)
+            with step(recorder, "enrich_polygon") as draft:
                 request = enrich_with_polygon_prices(pos.ticker, request)
+                _set_step_output(draft, close=request.close)
             # Re-pin close to the live position price after Polygon enrichment.
             # Polygon OHLCV only carries completed-session closes, so during an open
             # session it returns yesterday's close — contradicting r_now computed from
