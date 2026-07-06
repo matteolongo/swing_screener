@@ -465,7 +465,7 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       negatives: apiSummary.drivers?.negatives ?? [],
       warnings: apiSummary.drivers?.warnings ?? [],
       tradeState: apiSummary.drivers?.trade_state ?? [],
-      staleFundamentals: apiSummary.drivers?.stale_fundamentals ?? false,
+      staleFundamentals: apiSummary.drivers?.stale_fundamentals,
     },
     explanation: apiSummary.explanation
       ? {

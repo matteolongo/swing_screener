@@ -330,7 +330,7 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
             negatives: api.decision_summary.drivers?.negatives ?? [],
             warnings: api.decision_summary.drivers?.warnings ?? [],
             tradeState: api.decision_summary.drivers?.trade_state ?? [],
-            staleFundamentals: api.decision_summary.drivers?.stale_fundamentals ?? false,
+            staleFundamentals: api.decision_summary.drivers?.stale_fundamentals,
           },
         }
       : undefined,

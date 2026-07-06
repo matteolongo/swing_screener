@@ -162,6 +162,7 @@ describe('transformDailyReview', () => {
     expect(result.newCandidates[0].suggestedOrderPrice).toBe(101.2);
     expect(result.newCandidates[0].executionNote).toContain('BUY STOP');
     expect(result.newCandidates[0].decisionSummary?.action).toBe('BUY_NOW');
+    expect(result.newCandidates[0].decisionSummary?.drivers.staleFundamentals).toBeUndefined();
   });
 
   it('transforms positions_exit_signal with camelCase and defaults', () => {
