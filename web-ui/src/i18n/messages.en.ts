@@ -259,6 +259,16 @@ export const messagesEn = {
             step3: 'If price never triggers and instead weakens, skip the order instead of chasing.',
           },
           caution: 'Do not convert this to a market chase after a large spike.',
+          limitEntry: {
+            whatItMeans:
+              'Breakout setup; the breakout already triggered, so this ticket is a buy-limit entry on a controlled retest rather than a buy-stop trigger.',
+            steps: {
+              step1: 'In Degiro Acquisto, use Tipo di Ordine = Limite at the planned limit/retest price.',
+              step2: 'Do not use buy-side Stop Loss for this second-chance entry; that is only for breakouts still below trigger.',
+              step3: 'After entry fills, place a separate Degiro Vendita Stop Loss using this app Stop Price as protection.',
+            },
+            caution: 'Do not lift the limit to chase; if the retest does not fill, skip.',
+          },
         },
         pullback: {
           label: 'Pullback setup',
@@ -922,6 +932,35 @@ export const messagesEn = {
             predictionSummary: '{{direction}} · {{confidence}} confidence · {{horizonDays}}d',
             invalidationLabel: 'Invalidation',
           },
+          agentTrace: {
+            tab: 'Agent Trace',
+            analysisTab: 'Analysis',
+            empty: 'No trace for this analysis yet. Run a fresh analysis to record one.',
+            loading: 'Loading trace…',
+            error: 'Failed to load the agent trace.',
+            steps: 'Steps',
+            duration: '{{ms}} ms',
+            status: { ok: 'OK', error: 'Error', running: 'Running' },
+            tabs: {
+              data: 'Data',
+              sources: 'Sources',
+              prompt: 'Prompt',
+              model: 'Model',
+              errors: 'Errors',
+            },
+            fields: {
+              model: 'Model',
+              tokens: 'Tokens',
+              promptHash: 'Prompt hash',
+              promptPreview: 'Prompt preview (truncated)',
+              inputs: 'Inputs',
+              outputs: 'Outputs',
+              sourceCounts: 'Source counts',
+              noError: 'No error recorded.',
+              noPrompt: 'No prompt captured for this step.',
+              noSources: 'No source counts for this step.',
+            },
+          },
         },
         decisionWhy: {
           title: 'What to do & why',
@@ -977,7 +1016,11 @@ export const messagesEn = {
             active: 'Active',
             neutral: 'Neutral',
             weak: 'Weak',
+            unknown: 'Not evaluated',
           },
+          tradeStateTitle: 'Trade State',
+          refreshFundamentalsAction: 'Refresh fundamentals',
+          refreshingFundamentalsAction: 'Refreshing...',
           valuationContext: {
             title: 'Valuation Context',
             method: 'Method: {{method}}',
@@ -1434,6 +1477,15 @@ export const messagesEn = {
     },
     table: {
       empty: 'No candidates found',
+      signalBadge: {
+        buyNow: 'Buy Now',
+        pullback: 'Pullback',
+        breakout: 'Breakout setup',
+        watch: 'Watch',
+        tactical: 'Tactical',
+        avoid: 'Avoid',
+        manage: 'Manage',
+      },
       headers: {
         rank: 'Rank',
         priority: 'Priority',

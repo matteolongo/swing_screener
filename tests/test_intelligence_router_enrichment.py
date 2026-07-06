@@ -32,7 +32,7 @@ def test_analyze_enriches_request_before_calling_llm(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     captured = {}
 
-    def _fake_analyze(self, ticker, req, past_positions=None):
+    def _fake_analyze(self, ticker, req, past_positions=None, recorder=None):
         captured["req"] = req
         return SymbolIntelligence(
             symbol=ticker,

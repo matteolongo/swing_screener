@@ -14,6 +14,8 @@ import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters'
 interface DecisionSummaryCardProps {
   summary: DecisionSummary;
   currency?: string;
+  onRefreshFundamentals?: () => void;
+  isRefreshingFundamentals?: boolean;
 }
 
 function actionLabel(action: DecisionAction): string {
@@ -78,6 +80,8 @@ function catalystLabel(label: DecisionCatalystLabel): string {
       return t('workspacePage.panels.analysis.decisionSummary.catalyst.neutral');
     case 'weak':
       return t('workspacePage.panels.analysis.decisionSummary.catalyst.weak');
+    case 'unknown':
+      return t('workspacePage.panels.analysis.decisionSummary.catalyst.unknown');
   }
 }
 
@@ -126,8 +130,16 @@ function fairValueMethodLabel(method: FairValueMethod): string {
 export default function DecisionSummaryCard({
   summary,
   currency = 'USD',
+  onRefreshFundamentals,
+  isRefreshingFundamentals = false,
 }: DecisionSummaryCardProps) {
   const warningItems = (summary.explanation?.confidenceNotes ?? summary.drivers.warnings).filter(Boolean);
+  const tradeStateItems = (summary.drivers.tradeState ?? []).filter(Boolean);
+  // Structured flag from the backend contract; fall back to prefix-matching the
+  // warning prose only for payloads predating the flag.
+  const hasStaleFundamentalsWarning =
+    summary.drivers.staleFundamentals ??
+    warningItems.some((warning) => warning.toLowerCase().startsWith('fundamentals stale:'));
   const hasFairValue =
     summary.valuationContext.fairValueLow != null &&
     summary.valuationContext.fairValueBase != null &&
@@ -238,12 +250,39 @@ export default function DecisionSummaryCard({
 
       {warningItems.length ? (
         <div className="mt-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
-          <div className="text-xs font-medium uppercase tracking-wide text-warning">
-            {t('workspacePage.panels.analysis.decisionSummary.warningsTitle')}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-warning">
+              {t('workspacePage.panels.analysis.decisionSummary.warningsTitle')}
+            </div>
+            {hasStaleFundamentalsWarning && onRefreshFundamentals ? (
+              <button
+                type="button"
+                className="rounded border border-warning/40 px-2 py-1 text-xs font-medium text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={onRefreshFundamentals}
+                disabled={isRefreshingFundamentals}
+              >
+                {isRefreshingFundamentals
+                  ? t('workspacePage.panels.analysis.decisionSummary.refreshingFundamentalsAction')
+                  : t('workspacePage.panels.analysis.decisionSummary.refreshFundamentalsAction')}
+              </button>
+            ) : null}
           </div>
           <ul className="mt-2 space-y-1 text-sm text-warning">
             {warningItems.map((warning) => (
               <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {tradeStateItems.length ? (
+        <div className="mt-3 rounded-md border border-border bg-foreground/5 px-3 py-2">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted">
+            {t('workspacePage.panels.analysis.decisionSummary.tradeStateTitle')}
+          </div>
+          <ul className="mt-2 space-y-1 text-sm text-foreground">
+            {tradeStateItems.map((item) => (
+              <li key={item}>{item}</li>
             ))}
           </ul>
         </div>

@@ -60,6 +60,16 @@ function catalystLabel(label: DecisionCatalystLabel): string {
     case 'active': return t('workspacePage.panels.analysis.decisionSummary.catalyst.active');
     case 'neutral': return t('workspacePage.panels.analysis.decisionSummary.catalyst.neutral');
     case 'weak': return t('workspacePage.panels.analysis.decisionSummary.catalyst.weak');
+    case 'unknown': return t('workspacePage.panels.analysis.decisionSummary.catalyst.unknown');
+  }
+}
+
+function catalystVariant(label: DecisionCatalystLabel): 'default' | 'success' | 'warning' | 'error' {
+  switch (label) {
+    case 'active': return 'success';
+    case 'neutral': return 'warning';
+    case 'weak': return 'error';
+    case 'unknown': return 'default';
   }
 }
 
@@ -235,6 +245,7 @@ export default function NarrativeAnalysisCard({
   const { action, conviction, summaryLine, narrative, symbol } = intelligence;
   const summary = candidate?.decisionSummary;
   const warnings = (summary?.explanation?.confidenceNotes ?? summary?.drivers.warnings ?? []).filter(Boolean);
+  const tradeState = (summary?.drivers.tradeState ?? []).filter(Boolean);
 
   // Position vs screened drives the fixed panel skeleton. Prefer the explicit prop;
   // fall back to the MANAGE_ONLY action the analyzer forces for open positions.
@@ -520,6 +531,18 @@ export default function NarrativeAnalysisCard({
           </div>
         )}
 
+        {/* Trade State */}
+        {tradeState.length > 0 && (
+          <div className="rounded-md border border-border bg-foreground/5 px-3 py-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted">
+              {t('workspacePage.panels.analysis.decisionSummary.tradeStateTitle')}
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-foreground">
+              {tradeState.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+        )}
+
         {/* WHY NOW — fixed (screened) */}
         {!positionMode && (
           <div className="rounded-md bg-surface border border-border p-3">
@@ -756,7 +779,7 @@ export default function NarrativeAnalysisCard({
               <Badge variant={summary.valuationLabel === 'cheap' ? 'success' : summary.valuationLabel === 'expensive' ? 'error' : 'warning'}>
                 {t('workspacePage.panels.analysis.decisionSummary.labels.valuation')}: {valuationLabel(summary.valuationLabel)}
               </Badge>
-              <Badge variant={summary.catalystLabel === 'active' ? 'success' : summary.catalystLabel === 'weak' ? 'error' : 'warning'}>
+              <Badge variant={catalystVariant(summary.catalystLabel)}>
                 {t('workspacePage.panels.analysis.decisionSummary.labels.catalyst')}: {catalystLabel(summary.catalystLabel)}
               </Badge>
             </div>

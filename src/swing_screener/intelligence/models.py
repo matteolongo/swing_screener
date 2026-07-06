@@ -231,3 +231,4 @@ class SymbolIntelligence(BaseModel):
     thesis_delta: ThesisDelta | None = None
     evidence_ledger: EvidenceLedger | None = None
     classified_catalysts: list[ClassifiedCatalyst] = Field(default_factory=list)
+    run_id: str | None = None

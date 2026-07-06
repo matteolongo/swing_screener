@@ -37,6 +37,7 @@ from swing_screener.intelligence.models import (
 )
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 from swing_screener.settings import get_settings_manager
+from swing_screener.intelligence.tracing import recording_run
 from swing_screener.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -692,16 +693,28 @@ class SymbolAnalyzer:
         past_positions: list[dict] | None = None,
         *,
         now: datetime | None = None,
+        recorder=None,
     ) -> SymbolIntelligence:
         if self._graph is None:
             from swing_screener.intelligence.graph.build import build_graph
 
             self._graph = build_graph(self)
 
+        # When a caller supplies a recorder it also owns the lifecycle (create,
+        # error-capture, finalize); we only invoke the graph. Otherwise own the
+        # whole lifecycle via recording_run so create/error/finalize live in one place.
+        if recorder is not None:
+            return self._invoke_graph(ticker, req, past_positions, now, recorder)
+        with recording_run(ticker) as recorder:
+            return self._invoke_graph(ticker, req, past_positions, now, recorder)
+
+    def _invoke_graph(self, ticker, req, past_positions, now, recorder):
         state = {
             "ticker": ticker,
             "req": req,
             "past_positions": past_positions or [],
+            "run_id": recorder.run_id if recorder is not None else None,
+            "_recorder": recorder,
         }
         if now is not None:
             state["now"] = now

@@ -20,3 +20,22 @@ def test_position_update_api_model_has_exhaustion_fields():
     )
     assert u2.exhaustion_score == 5.5
     assert u2.exhaustion_label == "watch"
+
+
+def test_position_update_api_model_accepts_exit_signal_action():
+    from api.models.portfolio import PositionUpdate
+
+    update = PositionUpdate(
+        ticker="AAA",
+        status="open",
+        last=94.0,
+        entry=100.0,
+        stop_old=90.0,
+        stop_suggested=90.0,
+        shares=1,
+        r_now=-0.6,
+        action="CLOSE_EXIT_SIGNAL",
+        reason="Below SMA20 for 2d.",
+    )
+
+    assert update.action == "CLOSE_EXIT_SIGNAL"

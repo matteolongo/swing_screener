@@ -46,6 +46,7 @@ def _snapshot(
     book_value_per_share: float | None = None,
     price_to_book: float | None = None,
     book_to_price: float | None = None,
+    most_recent_quarter: str | None = None,
     sector: str | None = None,
 ) -> FundamentalSnapshot:
     score_map = {"strong": 0.9, "neutral": 0.55, "weak": 0.2}
@@ -63,6 +64,7 @@ def _snapshot(
         book_value_per_share=book_value_per_share,
         price_to_book=price_to_book,
         book_to_price=book_to_price,
+        most_recent_quarter=most_recent_quarter,
         pillars={
             "growth": FundamentalPillarScore(
                 score=score_map[fundamentals_status],
@@ -295,6 +297,17 @@ def test_stale_partial_fundamentals_lower_conviction_and_add_warning() -> None:
     assert "Fundamental coverage is partial." in summary.drivers.warnings
 
 
+def test_missing_opportunity_is_unknown_catalyst_without_coverage_warning() -> None:
+    summary = build_decision_summary(
+        _candidate(),
+        opportunity=None,
+        fundamentals=_snapshot(),
+    )
+
+    assert summary.catalyst_label == "unknown"
+    assert "No cached catalyst snapshot is available yet." not in summary.drivers.warnings
+
+
 def test_valuation_context_handles_missing_raw_multiples() -> None:
     summary = build_decision_summary(
         _candidate(),
@@ -323,6 +336,22 @@ def test_manage_only_context_maps_to_manage_only() -> None:
 
     assert summary.action == "MANAGE_ONLY"
     assert summary.conviction == "low"
+    assert "This symbol is already in an active manage-only state." not in summary.drivers.warnings
+    assert "This symbol is already in an active manage-only state." in summary.drivers.trade_state
+
+
+def test_stale_fundamentals_warning_includes_latest_quarter() -> None:
+    summary = build_decision_summary(
+        _candidate(),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(
+            freshness_status="stale",
+            most_recent_quarter="2024-12-31",
+        ),
+    )
+
+    assert "Fundamentals stale: latest quarter 2024-12-31." in summary.drivers.warnings
+    assert "Fundamental snapshot is stale." not in summary.drivers.warnings
 
 
 # ── ExplanationContract tests ──────────────────────────────────────────────────

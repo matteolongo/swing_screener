@@ -16,16 +16,19 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 | `history.py` | Durable per-symbol analysis history (newest-first, capped). Feeds the thesis-drift digest + UI timeline. |
 | `market_hours.py` | Minimal zoneinfo US market-hours helper. Decides pre-open mode + previous session close. |
 | `metrics.py` | Append-only per-analysis metrics log (`data/intelligence/intelligence_metrics.json`). |
+| `tracing.py` | Per-run trace recording and durable persistence (pydantic models, `TraceRecorder`, disk I/O with per-ticker index). |
 | `graph/` | LangGraph state graph for `SymbolAnalyzer.analyze()` (`resolve_context` → `assemble_inputs` → `build_prompt` → `search` → `format` → `postprocess` → `weigh_evidence` → `assemble_result` → `persist`). |
 | `weighting/` | Deterministic advisory evidence weighting (`EvidenceLedger`, `WeightedSignal`, `weigh(...)`, YAML-backed config). |
 
 ## API Surface
 
 ```
-POST /api/intelligence/{ticker}         — run analysis; cache result
-GET  /api/intelligence/{ticker}/latest  — return most-recent cached result
-GET  /api/intelligence/{ticker}/history — return per-symbol analysis history (newest-first, capped)
-POST /api/intelligence/sweep            — batch run across watchlist + open positions
+POST /api/intelligence/{ticker}            — run analysis; cache result
+GET  /api/intelligence/{ticker}/latest     — return most-recent cached result
+GET  /api/intelligence/{ticker}/history    — return per-symbol analysis history (newest-first, capped)
+GET  /api/intelligence/runs/{run_id}       — return a single persisted agent-run trace
+GET  /api/intelligence/{ticker}/runs       — per-symbol run-trace index (newest-first, capped)
+POST /api/intelligence/sweep               — batch run across watchlist + open positions
 ```
 
 Router: `api/routers/intelligence.py`
@@ -299,12 +302,25 @@ flowchart LR
 not complete; source coverage is visible through `inputs_used.sources` on the
 cached result and the per-date evidence cache.
 
-The next observability increment should be a durable per-run trace. That trace
-would store one row per graph step (`resolve_context`, `assemble_inputs`,
-`build_prompt`, `search`, `format`, `postprocess`, `weigh_evidence`,
-`assemble_result`, `persist`) with status, duration, prompt hash or redacted
-preview, model name, token usage, source counts, and errors. The UI can then
-render a step timeline without exposing full prompts by default.
+### Per-run trace
+
+Every graph run (and its pre-graph enrichment) is recorded to a durable trace via
+`tracing.py`. The API endpoint owns the recorder lifecycle through the
+`recording_run(ticker)` context manager (create → capture any error → always
+finalize); it records each enrichment step (`enrich_request`, `enrich_technicals`,
+`enrich_polygon`) and passes the recorder into `SymbolAnalyzer.analyze(..., recorder=...)`;
+a wrapper in `graph/build.py` records each graph node (nodes stay pure). Traces are
+written to `data/intelligence/runs/{run_id}.json` with a per-ticker index at
+`data/intelligence/runs/index/{TICKER}.json` (newest-first, capped at
+`config.tracing.max_runs_per_ticker`). The index is updated under an exclusive file
+lock so concurrent same-ticker runs cannot clobber each other, and the run just
+written is never pruned from its own index. Each `SymbolIntelligence` result (and its
+cache entry) carries the `run_id` that produced it, so a cache hit still resolves
+its trace. Each step records status, timing, model, token usage, source counts,
+`prompt_hash` + a truncated `prompt_preview` (no full prompt), and any error.
+Tracing is fail-soft and controlled by `config.tracing.enabled` (default `true`).
+
+Endpoints: `GET /api/intelligence/runs/{run_id}`, `GET /api/intelligence/{ticker}/runs`.
 
 ## Action Types
 

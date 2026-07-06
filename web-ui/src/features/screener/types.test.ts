@@ -150,6 +150,7 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].decisionSummary?.valuationContext.bookValuePerShare).toBe(18.4);
     expect(result.candidates[0].decisionSummary?.valuationContext.priceToBook).toBe(5.4);
     expect(result.candidates[0].decisionSummary?.valuationContext.fairValueBase).toBe(107.32);
+    expect(result.candidates[0].decisionSummary?.drivers.staleFundamentals).toBeUndefined();
   });
 
   it('maps data source summary from API payload', () => {
