@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 from api.models.portfolio import PositionUpdate, PositionWithMetrics
 from api.models.position_review import (
+    EntryPlan,
     MacroOverlay,
     MoveExplanation,
     PositionReviewRequest,
@@ -19,7 +20,16 @@ from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.evidence.collect import collect_evidence
 from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.intelligence.models import SymbolIntelligence
-from swing_screener.intelligence.cache import read_from_cache
+from swing_screener.intelligence.cache import read_latest_from_cache
+
+
+_BULLISH_ACTIONS = {"BUY_NOW", "BUY_ON_PULLBACK", "WAIT_FOR_BREAKOUT", "TACTICAL_ONLY"}
+_ENTRY_CONFIRM_HINTS = {
+    "BUY_NOW": "Setup is ready now; the planned entry is actionable.",
+    "BUY_ON_PULLBACK": "Wait for a pullback toward the planned entry before acting.",
+    "WAIT_FOR_BREAKOUT": "Wait for a breakout above the trigger before acting.",
+    "TACTICAL_ONLY": "Only a small tactical entry is justified on the current setup.",
+}
 
 
 class MissingPositionReviewContextError(RuntimeError):
@@ -31,7 +41,7 @@ class PositionReviewService:
         self,
         *,
         portfolio_service: PortfolioService,
-        read_intelligence_fn: Callable[[str], SymbolIntelligence | None] = read_from_cache,
+        read_intelligence_fn: Callable[[str], SymbolIntelligence | None] = read_latest_from_cache,
         collect_evidence_fn: Callable[[str], list[SourceEvidence]] | None = None,
         now_fn: Callable[[], str] | None = None,
     ) -> None:
@@ -114,22 +124,51 @@ class PositionReviewService:
         evidence: list[ReviewEvidence],
         stop_update: PositionUpdate | None,
     ) -> PositionReviewResponse:
-        thesis_status = self._thesis_status(intelligence, evidence)
         macro_overlay = self._macro_overlay(intelligence, fresh_evidence, evidence)
-        profit_protection = self._profit_protection(position, intelligence, macro_overlay)
-        stop_advice = self._stop_advice(position, stop_update)
-        suggested_action = self._suggested_action(
-            mode=mode,
-            thesis_status=thesis_status,
-            profit_protection=profit_protection,
-            stop_advice=stop_advice,
-            macro_overlay=macro_overlay,
-        )
         move_explanation = self._move_explanation(
             ticker=ticker,
             position=position,
             intelligence=intelligence,
             evidence=evidence,
+            macro_overlay=macro_overlay,
+        )
+
+        # A non-held symbol is an entry candidate, not a managed position: frame it
+        # around the cached analysis (stance, thesis, what confirms/invalidates entry)
+        # instead of reporting profit-protection and stop-management as "not applicable".
+        if mode == "symbol":
+            thesis_status = self._symbol_thesis(intelligence)
+            suggested_action = self._symbol_action(intelligence)
+            entry_plan = self._entry_plan(intelligence, suggested_action)
+            narrative = self._symbol_narrative(
+                ticker=ticker,
+                suggested_action=suggested_action,
+                thesis_status=thesis_status,
+                entry_plan=entry_plan,
+                macro_overlay=macro_overlay,
+            )
+            return PositionReviewResponse(
+                ticker=ticker,
+                generated_at=self._now(),
+                mode=mode,  # type: ignore[arg-type]
+                suggested_action=suggested_action,
+                thesis_status=thesis_status,
+                move_explanation=move_explanation,
+                profit_protection=None,
+                stop_advice=None,
+                entry_plan=entry_plan,
+                macro_overlay=macro_overlay,
+                evidence_used=evidence,
+                narrative=narrative,
+            )
+
+        thesis_status = self._thesis_status(intelligence, evidence)
+        profit_protection = self._profit_protection(position, intelligence, macro_overlay)
+        stop_advice = self._stop_advice(position, stop_update)
+        suggested_action = self._suggested_action(
+            thesis_status=thesis_status,
+            profit_protection=profit_protection,
+            stop_advice=stop_advice,
             macro_overlay=macro_overlay,
         )
         narrative = self._narrative(
@@ -149,9 +188,72 @@ class PositionReviewService:
             move_explanation=move_explanation,
             profit_protection=profit_protection,
             stop_advice=stop_advice,
+            entry_plan=None,
             macro_overlay=macro_overlay,
             evidence_used=evidence,
             narrative=narrative,
+        )
+
+    def _symbol_action(self, intelligence: SymbolIntelligence | None) -> SuggestedAction:
+        if intelligence is None:
+            return "WATCH"
+        if intelligence.action == "BUY_NOW":
+            return "ENTER"
+        if intelligence.action == "AVOID":
+            return "AVOID"
+        return "WATCH"
+
+    def _symbol_thesis(self, intelligence: SymbolIntelligence | None) -> ThesisStatus:
+        if intelligence is None:
+            return "unclear"
+        if intelligence.action == "AVOID":
+            return "broken"
+        if intelligence.action in _BULLISH_ACTIONS:
+            return "intact"
+        return "unclear"
+
+    def _entry_plan(
+        self,
+        intelligence: SymbolIntelligence | None,
+        stance: SuggestedAction,
+    ) -> EntryPlan:
+        what_confirms: list[str] = []
+        what_invalidates: list[str] = []
+        if intelligence is not None:
+            hint = _ENTRY_CONFIRM_HINTS.get(intelligence.action)
+            if hint:
+                what_confirms.append(hint)
+            if intelligence.price_hook:
+                what_confirms.append(intelligence.price_hook)
+            for risk in intelligence.risk_factors[:3]:
+                if risk:
+                    what_invalidates.append(risk)
+            reason = intelligence.summary_line or "Entry candidate based on available app context."
+        else:
+            reason = (
+                "No cached analysis was available, so this entry read is based on "
+                "refreshed evidence only."
+            )
+        what_invalidates.append("A close below the planned stop invalidates the setup.")
+        return EntryPlan(
+            stance=stance,
+            what_confirms=what_confirms,
+            what_invalidates=what_invalidates,
+            reason=reason,
+        )
+
+    def _symbol_narrative(
+        self,
+        *,
+        ticker: str,
+        suggested_action: SuggestedAction,
+        thesis_status: ThesisStatus,
+        entry_plan: EntryPlan,
+        macro_overlay: MacroOverlay,
+    ) -> str:
+        return (
+            f"{ticker}: {suggested_action}. Setup thesis is {thesis_status}. "
+            f"{entry_plan.reason} Macro overlay: {macro_overlay.reason}"
         )
 
     def _thesis_status(
@@ -279,14 +381,11 @@ class PositionReviewService:
     def _suggested_action(
         self,
         *,
-        mode: str,
         thesis_status: ThesisStatus,
         profit_protection: ProfitProtection,
         stop_advice: StopAdvice,
         macro_overlay: MacroOverlay,
     ) -> SuggestedAction:
-        if mode == "symbol":
-            return "WATCH"
         if thesis_status == "broken":
             return "EXIT"
         if profit_protection.trim_advice != "none":

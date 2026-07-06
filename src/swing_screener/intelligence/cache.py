@@ -39,3 +39,30 @@ def read_from_cache(ticker: str, for_date: date | None = None) -> SymbolIntellig
         return SymbolIntelligence.model_validate(entry)
     except (json.JSONDecodeError, OSError, ValueError):
         return None
+
+
+def read_latest_from_cache(ticker: str) -> SymbolIntelligence | None:
+    """Return the most recent cached analysis for a ticker across all sweep dates.
+
+    ``read_from_cache`` is scoped to a single (default: today) sweep file, so it
+    misses an analysis produced on a prior session. Callers that just want the
+    latest available read (manual reviews, cross-day lookups) scan newest-first.
+    """
+    base = data_dir() / "intelligence"
+    if not base.exists():
+        return None
+    upper = ticker.upper()
+    # ISO date filenames sort lexicographically in chronological order.
+    for path in sorted(base.glob("sweep_*.json"), reverse=True):
+        try:
+            data = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        entry = data.get(upper)
+        if entry is None:
+            continue
+        try:
+            return SymbolIntelligence.model_validate(entry)
+        except ValueError:
+            continue
+    return None

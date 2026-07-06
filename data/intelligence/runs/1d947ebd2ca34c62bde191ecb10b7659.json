@@ -1,0 +1,40 @@
+{
+  "run_id": "1d947ebd2ca34c62bde191ecb10b7659",
+  "ticker": "AAPL",
+  "started_at": "2026-07-06T18:06:42.952291+00:00",
+  "finished_at": "2026-07-06T18:06:42.967264+00:00",
+  "status": "ok",
+  "steps": [
+    {
+      "name": "enrich_request",
+      "status": "ok",
+      "started_at": "2026-07-06T18:06:42.952315+00:00",
+      "finished_at": "2026-07-06T18:06:42.952992+00:00",
+      "duration_ms": 0.677,
+      "inputs_summary": {},
+      "outputs_summary": {},
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "enrich_polygon",
+      "status": "ok",
+      "started_at": "2026-07-06T18:06:42.953015+00:00",
+      "finished_at": "2026-07-06T18:06:42.967207+00:00",
+      "duration_ms": 14.192,
+      "inputs_summary": {},
+      "outputs_summary": {},
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    }
+  ],
+  "error": null
+}

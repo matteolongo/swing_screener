@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 from datetime import date
 
-from swing_screener.intelligence.cache import read_from_cache, write_to_cache
+from swing_screener.intelligence.cache import (
+    read_from_cache,
+    read_latest_from_cache,
+    write_to_cache,
+)
 from swing_screener.intelligence.models import SymbolIntelligence
 
 
@@ -67,6 +71,29 @@ def test_write_updates_existing_entry(tmp_path, monkeypatch):
     result = read_from_cache("AAPL", for_date=d)
     assert result is not None
     assert result.summary_line == "Updated summary."
+
+
+def test_read_latest_returns_most_recent_across_dates(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    write_to_cache("AAPL", _make_intel().model_copy(update={"summary_line": "Older."}), for_date=date(2026, 5, 23))
+    write_to_cache("AAPL", _make_intel().model_copy(update={"summary_line": "Newer."}), for_date=date(2026, 5, 25))
+    write_to_cache("AAPL", _make_intel().model_copy(update={"summary_line": "Middle."}), for_date=date(2026, 5, 24))
+    result = read_latest_from_cache("AAPL")
+    assert result is not None
+    assert result.summary_line == "Newer."
+
+
+def test_read_latest_returns_prior_day_when_today_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    # Only a prior-day file exists; the same-day read misses but latest still resolves it.
+    write_to_cache("AAPL", _make_intel(), for_date=date(2026, 5, 23))
+    assert read_from_cache("AAPL", for_date=date(2026, 5, 24)) is None
+    assert read_latest_from_cache("AAPL") is not None
+
+
+def test_read_latest_returns_none_when_absent(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    assert read_latest_from_cache("AAPL") is None
 
 
 def test_multiple_tickers_in_same_file(tmp_path, monkeypatch):

@@ -1,0 +1,208 @@
+{
+  "run_id": "dc9d8eb8c79d4fc4a04942a2fefdc834",
+  "ticker": "LRCX",
+  "started_at": "2026-07-06T12:07:16.452660+00:00",
+  "finished_at": "2026-07-06T12:07:53.215177+00:00",
+  "status": "ok",
+  "cache_hit": false,
+  "steps": [
+    {
+      "name": "enrich_request",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:16.453330+00:00",
+      "finished_at": "2026-07-06T12:07:16.464554+00:00",
+      "duration_ms": 11.224,
+      "inputs_summary": {},
+      "outputs_summary": {},
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "enrich_polygon",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:16.464652+00:00",
+      "finished_at": "2026-07-06T12:07:17.060045+00:00",
+      "duration_ms": 595.393,
+      "inputs_summary": {},
+      "outputs_summary": {},
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "resolve_context",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:17.500657+00:00",
+      "finished_at": "2026-07-06T12:07:17.502122+00:00",
+      "duration_ms": 1.465,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "pre_open": true,
+        "has_position": false,
+        "prior_runs": 5
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "assemble_inputs",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:17.502880+00:00",
+      "finished_at": "2026-07-06T12:07:17.502902+00:00",
+      "duration_ms": 0.022,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "categories": [
+          "candles",
+          "catalyst_evidence",
+          "decision_context",
+          "finnhub_signals",
+          "history",
+          "pre_open",
+          "technical",
+          "trade_plan"
+        ]
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "build_prompt",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:17.503493+00:00",
+      "finished_at": "2026-07-06T12:07:17.503813+00:00",
+      "duration_ms": 0.32,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "prompt_chars": 8714
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": "efed165f344fe849",
+      "prompt_preview": "Symbol: LRCX\nSignal: none\n\n--- Trade plan (use these prices in the narrative) ---\nPlanned entry: 351.41 USD | Stop loss: 293.61 USD | Price target: 467.01 USD\nRisk/Reward: 2.0x | Upside to target: 32.9%\nCurrent market price (context only, NOT the entry): 351.41 USD\n\n--- Technical context ---\nSMA20: 369.37 | SMA50: 321.08 | SMA200: 222.83\nMomentum 6m: 1.02% | 12m: 2.63%\nSector: Technology\nRecent candlestick patterns: hammer @ none, inside bar @ none\n\n--- Fundamentals ---\nP/E: 82.02 | Revenue grow"
+    },
+    {
+      "name": "search",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:17.504493+00:00",
+      "finished_at": "2026-07-06T12:07:37.024114+00:00",
+      "duration_ms": 19519.621,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "search_chars": 4333
+      },
+      "error": null,
+      "model": "gpt-4o",
+      "tokens": 5763,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "format",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:37.033860+00:00",
+      "finished_at": "2026-07-06T12:07:53.185290+00:00",
+      "duration_ms": 16151.43,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "has_position": false
+      },
+      "error": null,
+      "model": "gpt-4o-mini",
+      "tokens": 4041,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "postprocess",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:53.194407+00:00",
+      "finished_at": "2026-07-06T12:07:53.196016+00:00",
+      "duration_ms": 1.609,
+      "inputs_summary": {},
+      "outputs_summary": {},
+      "error": null,
+      "model": null,
+      "tokens": 9804,
+      "source_counts": {
+        "REFINITIV_LATEST_NEWS": 6,
+        "The Motley Fool": 2
+      },
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "weigh_evidence",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:53.197081+00:00",
+      "finished_at": "2026-07-06T12:07:53.197452+00:00",
+      "duration_ms": 0.371,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "balance_label": "bullish",
+        "net": 15.0
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "assemble_result",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:53.198218+00:00",
+      "finished_at": "2026-07-06T12:07:53.198314+00:00",
+      "duration_ms": 0.096,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "action": "BUY_ON_PULLBACK",
+        "conviction": "medium"
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "persist",
+      "status": "ok",
+      "started_at": "2026-07-06T12:07:53.199116+00:00",
+      "finished_at": "2026-07-06T12:07:53.208068+00:00",
+      "duration_ms": 8.952,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "cached": true
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    }
+  ],
+  "error": null
+}
