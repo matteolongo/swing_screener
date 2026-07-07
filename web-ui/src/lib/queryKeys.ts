@@ -33,6 +33,8 @@ export const queryKeys = {
     ['calendar-events', daysAhead ?? 30] as const,
   openPositionsIntelligence: () => ['openPositionsIntelligence'] as const,
   tickerCandles: (ticker?: string | null) => ['ticker-candles', ticker ?? null] as const,
+  volumeAnalysis: (ticker: string | null | undefined, lookback: number, minRr: number) =>
+    ['volume-analysis', ticker ?? null, lookback, minRr] as const,
   datasources: () => ['datasources'] as const,
   datasourcesEvents: () => ['datasources', 'events'] as const,
   cacheStatus: () => ['cache-status'] as const,

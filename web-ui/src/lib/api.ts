@@ -99,6 +99,7 @@ export const API_ENDPOINTS = {
 
   // Market data
   marketDataCandles: (ticker: string) => `/api/market-data/${encodeURIComponent(ticker)}/candles`,
+  volumeAnalysis: (ticker: string) => `/api/market-data/${encodeURIComponent(ticker)}/volume-analysis`,
 
   // Data sources
   datasources: '/api/datasources',
