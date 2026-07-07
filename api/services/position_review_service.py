@@ -234,13 +234,25 @@ class PositionReviewService:
                 "No cached analysis was available, so this entry read is based on "
                 "refreshed evidence only."
             )
-        what_invalidates.append("A close below the planned stop invalidates the setup.")
+        if self._has_planned_stop(intelligence):
+            what_invalidates.append("A close below the planned stop invalidates the setup.")
+        else:
+            what_invalidates.append("A loss of setup support invalidates the entry read.")
         return EntryPlan(
             stance=stance,
             what_confirms=what_confirms,
             what_invalidates=what_invalidates,
             reason=reason,
         )
+
+    def _has_planned_stop(self, intelligence: SymbolIntelligence | None) -> bool:
+        if intelligence is None:
+            return False
+        inputs_used = intelligence.inputs_used or {}
+        trade_plan = inputs_used.get("trade_plan")
+        if not isinstance(trade_plan, dict):
+            return False
+        return trade_plan.get("stop") is not None
 
     def _symbol_narrative(
         self,
