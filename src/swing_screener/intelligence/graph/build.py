@@ -117,7 +117,7 @@ def _summ_assemble_result(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> d
 
 
 def _summ_persist(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> dict:
-    return {"outputs_summary": {"cached": True}}
+    return {"outputs_summary": state.get("persist_summary", {})}
 
 
 SUMMARIZERS: dict[str, Callable[["SymbolAnalyzer", AnalyzerState], dict]] = {
