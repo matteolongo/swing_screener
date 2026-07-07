@@ -121,6 +121,7 @@ Watchlist (`/api/watchlist`):
 
 Market Data (`/api/market-data`):
 - `GET /api/market-data/{ticker}/candles` — returns `price_history` (OHLCV, up to 252 bars) and `patterns` for any ticker. Used as a fallback when the ticker is not present in the last screener result (e.g. open positions, watchlist items).
+- `GET /api/market-data/{ticker}/volume-analysis` — read-only advisory volume-zone analysis for one symbol. Query params: `interval` (default `1d`), `lookback` (default `120`), and `min_rr` (default `2.0`). Uses the configured market-data provider's OHLCV bars only, returns an approximate bar-based profile warning, and does not affect screener ranking, sizing, positions, or orders.
 
 Calendar:
 - `GET /api/calendar/events`
