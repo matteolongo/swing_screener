@@ -4,6 +4,7 @@ This is approximate. Real volume-at-price needs tick/trade data. Here each bar's
 single volume total is distributed evenly across the price bins its high-low range
 touches: a deterministic proxy, never true order flow.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -60,11 +61,19 @@ def _merge_runs(indices: list[int]) -> list[tuple[int, int]]:
     return runs
 
 
-def _zone_from_run(kind: str, bins: list[VolumeBin], start: int, end: int) -> ProfileZone:
+def _zone_from_run(
+    kind: str, bins: list[VolumeBin], start: int, end: int
+) -> ProfileZone:
     lo = bins[start].price_low
     hi = bins[end].price_high
     share = sum(b.volume_share for b in bins[start : end + 1])
-    return ProfileZone(kind=kind, price_low=lo, price_high=hi, center=(lo + hi) / 2.0, volume_share=share)
+    return ProfileZone(
+        kind=kind,
+        price_low=lo,
+        price_high=hi,
+        center=(lo + hi) / 2.0,
+        volume_share=share,
+    )
 
 
 def build_volume_profile(
@@ -97,11 +106,13 @@ def build_volume_profile(
         idx = int((price - price_low) / bin_width)
         return min(max(idx, 0), cfg.bins - 1)
 
-    for h, l, v in zip(frame["h"].to_numpy(), frame["l"].to_numpy(), frame["v"].to_numpy(), strict=True):
-        first = _bin_index(float(l))
-        last = _bin_index(float(h))
+    for high_value, low_value, volume_value in zip(
+        frame["h"].to_numpy(), frame["l"].to_numpy(), frame["v"].to_numpy(), strict=True
+    ):
+        first = _bin_index(float(low_value))
+        last = _bin_index(float(high_value))
         n = last - first + 1
-        per = float(v) / n
+        per = float(volume_value) / n
         for b in range(first, last + 1):
             bin_vol[b] += per
 
@@ -134,7 +145,11 @@ def build_volume_profile(
         for i in range(cfg.bins)
         if i != poc_idx and bins[i].volume_share >= cfg.hvn_peak_ratio * poc_share
     ]
-    lvn_idx = [i for i in range(cfg.bins) if bins[i].volume_share <= cfg.lvn_peak_ratio * poc_share]
+    lvn_idx = [
+        i
+        for i in range(cfg.bins)
+        if bins[i].volume_share <= cfg.lvn_peak_ratio * poc_share
+    ]
 
     hvns = [_zone_from_run("hvn", bins, s, e) for s, e in _merge_runs(hvn_idx)]
     lvns = [_zone_from_run("lvn", bins, s, e) for s, e in _merge_runs(lvn_idx)]
