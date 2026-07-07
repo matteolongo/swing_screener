@@ -15,7 +15,9 @@ def _s(vals):
 
 def test_constant_price_equals_that_price():
     h = _s([10.0, 10.0, 10.0])
-    assert anchored_vwap(h, h.copy(), h.copy(), _s([100.0, 200.0, 50.0])) == pytest.approx(10.0)
+    assert anchored_vwap(
+        h, h.copy(), h.copy(), _s([100.0, 200.0, 50.0])
+    ) == pytest.approx(10.0)
 
 
 def test_volume_weighting():
@@ -25,7 +27,9 @@ def test_volume_weighting():
 
 
 def test_typical_price_uses_hlc_mean():
-    assert anchored_vwap(_s([12.0]), _s([6.0]), _s([9.0]), _s([10.0])) == pytest.approx(9.0)
+    assert anchored_vwap(_s([12.0]), _s([6.0]), _s([9.0]), _s([10.0])) == pytest.approx(
+        9.0
+    )
 
 
 def test_nan_when_zero_volume():

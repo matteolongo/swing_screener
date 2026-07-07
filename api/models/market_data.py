@@ -1,4 +1,5 @@
 """Response models for market-data volume-zone analysis."""
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
@@ -60,7 +61,9 @@ class VolumeAnalysisResponse(BaseModel):
     warnings: list[str]
 
 
-def build_volume_analysis_response(analysis: VolumeZoneAnalysis, provider: str) -> VolumeAnalysisResponse:
+def build_volume_analysis_response(
+    analysis: VolumeZoneAnalysis, provider: str
+) -> VolumeAnalysisResponse:
     return VolumeAnalysisResponse(
         symbol=analysis.symbol,
         provider=provider,

@@ -1,4 +1,5 @@
 """Market data endpoints."""
+
 from __future__ import annotations
 
 import logging
@@ -7,7 +8,10 @@ import pandas as pd
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
-from api.models.market_data import VolumeAnalysisResponse, build_volume_analysis_response
+from api.models.market_data import (
+    VolumeAnalysisResponse,
+    build_volume_analysis_response,
+)
 from api.models.screener import CandlePatternOut, PriceHistoryPoint
 from api.utils.files import get_today_str
 from swing_screener.analysis.volume_zones import VolumeZoneConfig, analyze_volume_zones
@@ -70,7 +74,9 @@ def get_ticker_candles(
         for p in patterns_map.get(symbol, [])
     ]
 
-    return TickerCandlesResponse(ticker=symbol, price_history=price_history, patterns=patterns)
+    return TickerCandlesResponse(
+        ticker=symbol, price_history=price_history, patterns=patterns
+    )
 
 
 @router.get("/{ticker}/volume-analysis", response_model=VolumeAnalysisResponse)
@@ -86,10 +92,14 @@ def get_ticker_volume_analysis(
     provider_name = provider.get_provider_name()
 
     end_date = get_today_str()
-    start_date = (pd.Timestamp(end_date) - pd.Timedelta(days=int(lookback) * 2 + 400)).strftime("%Y-%m-%d")
+    start_date = (
+        pd.Timestamp(end_date) - pd.Timedelta(days=int(lookback) * 2 + 400)
+    ).strftime("%Y-%m-%d")
 
     try:
-        ohlcv = provider.fetch_ohlcv([symbol], start_date=start_date, end_date=end_date, interval=interval)
+        ohlcv = provider.fetch_ohlcv(
+            [symbol], start_date=start_date, end_date=end_date, interval=interval
+        )
     except Exception as exc:
         logger.warning("Volume-analysis OHLCV fetch failed for %s: %s", symbol, exc)
         ohlcv = None

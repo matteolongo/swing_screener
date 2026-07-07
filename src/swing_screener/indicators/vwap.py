@@ -1,10 +1,13 @@
 """Anchored volume-weighted average price from OHLCV bars."""
+
 from __future__ import annotations
 
 import pandas as pd
 
 
-def anchored_vwap(high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series) -> float:
+def anchored_vwap(
+    high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series
+) -> float:
     """Sum(typical_price * volume) / Sum(volume) over all aligned bars.
 
     typical_price = (high + low + close) / 3. Returns NaN when there are no aligned

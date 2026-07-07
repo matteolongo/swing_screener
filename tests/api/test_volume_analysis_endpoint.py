@@ -23,7 +23,9 @@ def _ohlcv(n=160, ticker="AAPL"):
         "Volume": pd.DataFrame({ticker: vol}, index=idx),
     }
     combined = pd.concat(frames, axis=1)
-    combined.columns = pd.MultiIndex.from_tuples([(f, ticker) for f, _ in combined.columns])
+    combined.columns = pd.MultiIndex.from_tuples(
+        [(f, ticker) for f, _ in combined.columns]
+    )
     return combined
 
 
@@ -35,7 +37,10 @@ def _mock_provider(ohlcv):
 
 
 def test_volume_analysis_happy_path(monkeypatch):
-    monkeypatch.setattr("api.routers.market_data.get_default_provider", lambda *a, **k: _mock_provider(_ohlcv()))
+    monkeypatch.setattr(
+        "api.routers.market_data.get_default_provider",
+        lambda *a, **k: _mock_provider(_ohlcv()),
+    )
     res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
     assert res.status_code == 200
     data = res.json()
@@ -50,8 +55,12 @@ def test_volume_analysis_happy_path(monkeypatch):
 
 def test_volume_analysis_query_params(monkeypatch):
     prov = _mock_provider(_ohlcv())
-    monkeypatch.setattr("api.routers.market_data.get_default_provider", lambda *a, **k: prov)
-    res = TestClient(app).get("/api/market-data/AAPL/volume-analysis?interval=1d&lookback=60&min_rr=3")
+    monkeypatch.setattr(
+        "api.routers.market_data.get_default_provider", lambda *a, **k: prov
+    )
+    res = TestClient(app).get(
+        "/api/market-data/AAPL/volume-analysis?interval=1d&lookback=60&min_rr=3"
+    )
     assert res.status_code == 200
     assert res.json()["lookback"] == 60
     assert prov.fetch_ohlcv.called
@@ -61,7 +70,9 @@ def test_volume_analysis_soft_fail_on_fetch_error(monkeypatch):
     prov = MagicMock(spec=MarketDataProvider)
     prov.fetch_ohlcv.side_effect = RuntimeError("boom")
     prov.get_provider_name.return_value = "mock"
-    monkeypatch.setattr("api.routers.market_data.get_default_provider", lambda *a, **k: prov)
+    monkeypatch.setattr(
+        "api.routers.market_data.get_default_provider", lambda *a, **k: prov
+    )
     res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
     assert res.status_code == 200
     data = res.json()
