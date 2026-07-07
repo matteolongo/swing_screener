@@ -239,9 +239,16 @@ def assemble_result(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
 
 def persist(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
     ticker, result = state["ticker"], state["result"]
+    summary: dict = {
+        "cache_written": False,
+        "history_appended": False,
+        "metrics_recorded": False,
+    }
     try:
         mod.write_to_cache(ticker, result)
-    except Exception:
+        summary["cache_written"] = True
+    except Exception as exc:
+        summary["cache_error"] = f"{type(exc).__name__}: {exc}"
         mod.logger.warning(
             "Failed to write intelligence cache for %r; result will not be cached",
             ticker,
@@ -249,14 +256,19 @@ def persist(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
         )
     try:
         mod.append_history(ticker, result, max_entries=analyzer._history_max_entries)
-    except Exception:
+        summary["history_appended"] = True
+    except Exception as exc:
+        summary["history_error"] = f"{type(exc).__name__}: {exc}"
         mod.logger.warning(
             "Failed to append intelligence history for %r", ticker, exc_info=True
         )
     try:
         mod.record_analysis_metrics(ticker, tokens=state.get("tokens"))
-    except Exception:
+        summary["metrics_recorded"] = True
+    except Exception as exc:
+        summary["metrics_error"] = f"{type(exc).__name__}: {exc}"
         mod.logger.warning(
             "Failed to record analysis metrics for %r", ticker, exc_info=True
         )
+    state["persist_summary"] = summary
     return state

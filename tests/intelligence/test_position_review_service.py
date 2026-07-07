@@ -183,6 +183,7 @@ def test_review_symbol_frames_entry_from_cached_intelligence():
             summary_line="Technical setup is ready, high conviction, set up to buy now.",
             price_hook="Reclaim of the breakout keeps the entry live.",
             risk_factors=["A failed breakout would invalidate the setup."],
+            inputs_used={"trade_plan": {"stop": 95.0}},
         ),
         collect_evidence_fn=lambda _ticker: [],
         now_fn=lambda: "2026-07-03T12:00:00Z",
@@ -218,3 +219,27 @@ def test_review_symbol_maps_avoid_to_broken_thesis():
     assert response.suggested_action == "AVOID"
     assert response.thesis_status == "broken"
     assert response.entry_plan is not None
+
+
+def test_review_symbol_without_trade_plan_does_not_invent_planned_stop():
+    service = PositionReviewService(
+        portfolio_service=FakePortfolioService(None),
+        read_intelligence_fn=lambda _ticker: None,
+        collect_evidence_fn=lambda _ticker: [
+            SourceEvidence(
+                title="Fresh source",
+                url="https://example.com/fresh",
+                publisher="Example",
+                published_at="2026-07-03",
+                quote_or_summary="Setup is still forming.",
+                relevance="setup",
+            )
+        ],
+        now_fn=lambda: "2026-07-03T12:00:00Z",
+    )
+
+    response = service.review_symbol("msft", PositionReviewRequest(refresh_sources=True))
+
+    assert response.entry_plan is not None
+    assert not any("planned stop" in item for item in response.entry_plan.what_invalidates)
+    assert any("support" in item.lower() for item in response.entry_plan.what_invalidates)
