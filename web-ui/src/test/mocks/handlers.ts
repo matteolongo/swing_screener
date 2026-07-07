@@ -1016,6 +1016,14 @@ export const handlers = [
     return HttpResponse.json(mockVolumeAnalysis)
   }),
 
+  http.get(`${API_BASE_URL}/api/market-data/:ticker/candles`, ({ params }) => {
+    return HttpResponse.json({
+      ticker: String(params.ticker ?? 'AAPL').toUpperCase(),
+      price_history: [],
+      patterns: [],
+    })
+  }),
+
   // Catalyst endpoints
   http.post(`${API_BASE_URL}/api/catalysts/daily-scan`, () =>
     HttpResponse.json({

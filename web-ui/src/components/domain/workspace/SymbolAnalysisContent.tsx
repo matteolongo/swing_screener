@@ -18,6 +18,7 @@ import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPan
 import StrategicReviewPanel from '@/components/domain/workspace/StrategicReviewPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
+import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { ScreenerResponse } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
@@ -171,6 +172,7 @@ export default function SymbolAnalysisContent({
       ? [{ id: 'order' as const, label: t('workspacePage.panels.analysis.tabs.order') }]
       : []),
     { id: 'backtest', label: t('workspacePage.panels.analysis.tabs.backtest') },
+    { id: 'volumeZones', label: t('workspacePage.panels.analysis.tabs.volumeZones') },
   ];
   const watchedTickers = new Set((watchlistQuery.data ?? []).map((item) => item.ticker.toUpperCase()));
   const isWatched = watchedTickers.has(ticker.toUpperCase());
@@ -301,6 +303,8 @@ export default function SymbolAnalysisContent({
         {activeTab === 'order' ? orderPanel : null}
 
         {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
+
+        {activeTab === 'volumeZones' && <VolumeZonesTab ticker={ticker} />}
 
         {activeTab === 'intelligence' && (
           <>

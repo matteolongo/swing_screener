@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { CandleChart, selectDrawnZones, type ChartVolumeZone } from './CandleChart';
 
-const createPriceLine = vi.fn(() => ({ applyOptions: vi.fn() }));
+const createPriceLine = vi.fn((_options: { price: number }) => ({ applyOptions: vi.fn() }));
 const addSeries = vi.fn(() => ({
   setData: vi.fn(),
   createPriceLine,
@@ -65,7 +65,9 @@ describe('selectDrawnZones', () => {
 });
 
 describe('CandleChart volume zones', () => {
-  beforeEach(() => createPriceLine.mockClear());
+  beforeEach(() => {
+    createPriceLine.mockClear();
+  });
 
   it('draws POC center + HVN/LVN edge lines when enabled', () => {
     render(<CandleChart ticker="AAPL" bars={bars} patterns={[]} volumeZones={zones} showVolumeZones />);
