@@ -4,7 +4,6 @@ export interface StepTraceAPI {
   started_at: string;
   finished_at: string;
   duration_ms: number;
-  inputs_summary: Record<string, unknown>;
   outputs_summary: Record<string, unknown>;
   error: string | null;
   model: string | null;
@@ -40,7 +39,6 @@ export interface StepTrace {
   startedAt: string;
   finishedAt: string;
   durationMs: number;
-  inputsSummary: Record<string, unknown>;
   outputsSummary: Record<string, unknown>;
   error: string | null;
   model: string | null;
@@ -77,7 +75,6 @@ export function transformStepTrace(api: StepTraceAPI): StepTrace {
     startedAt: api.started_at,
     finishedAt: api.finished_at,
     durationMs: api.duration_ms,
-    inputsSummary: api.inputs_summary ?? {},
     outputsSummary: api.outputs_summary ?? {},
     error: api.error ?? null,
     model: api.model ?? null,

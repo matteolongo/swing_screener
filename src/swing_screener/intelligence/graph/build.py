@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from typing import TYPE_CHECKING, Callable
+from urllib.parse import urlparse
 
 from langgraph.graph import END, START, StateGraph
 
@@ -73,11 +74,31 @@ def _summ_format(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> dict:
     }
 
 
+def _citation_host(url: str) -> str:
+    try:
+        host = urlparse(url).netloc.lower()
+    except ValueError:
+        return "other"
+    if host.startswith("www."):
+        host = host[4:]
+    return host or "other"
+
+
 def _summ_postprocess(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> dict:
-    sources = state.get("inputs_used", {}).get("sources", {})
+    # Count the web-search citations the run actually used (result.sources), by host.
+    # inputs_used["sources"]["returned"] only tracks catalyst-evidence publishers,
+    # which are inert stubs today, so it is not what the "Sources" tab should show.
+    draft = state.get("draft")
+    citations = getattr(draft, "sources", None) or []
+    counts: dict[str, int] = {}
+    for url in citations:
+        if not url:
+            continue
+        host = _citation_host(str(url))
+        counts[host] = counts.get(host, 0) + 1
     return {
         "tokens": state.get("tokens"),
-        "source_counts": sources.get("returned") or {},
+        "source_counts": counts,
     }
 
 

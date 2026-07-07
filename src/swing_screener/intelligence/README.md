@@ -316,8 +316,13 @@ written to `data/intelligence/runs/{run_id}.json` with a per-ticker index at
 lock so concurrent same-ticker runs cannot clobber each other, and the run just
 written is never pruned from its own index. Each `SymbolIntelligence` result (and its
 cache entry) carries the `run_id` that produced it, so a cache hit still resolves
-its trace. Each step records status, timing, model, token usage, source counts,
-`prompt_hash` + a truncated `prompt_preview` (no full prompt), and any error.
+its trace. Each step records status, timing, and an `outputs_summary`; steps that
+have them also record model, token usage, `source_counts`, `prompt_hash` + a
+truncated `prompt_preview` (no full prompt), and any error. `source_counts` is the
+per-host tally of the web-search citations the run actually used (`result.sources`),
+not catalyst-evidence publishers. The enrichment steps record a compact
+`outputs_summary` (e.g. resolved `close`, fetched OHLCV rows) rather than timing
+alone, and the UI renders a detail tab only when its field is present.
 Tracing is fail-soft and controlled by `config.tracing.enabled` (default `true`).
 
 Endpoints: `GET /api/intelligence/runs/{run_id}`, `GET /api/intelligence/{ticker}/runs`.

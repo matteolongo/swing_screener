@@ -23,7 +23,6 @@ class StepTrace(BaseModel):
     started_at: str
     finished_at: str
     duration_ms: float
-    inputs_summary: dict = Field(default_factory=dict)
     outputs_summary: dict = Field(default_factory=dict)
     error: str | None = None
     model: str | None = None
@@ -57,7 +56,6 @@ class StepDraft:
     """Mutable scratch a node/step can fill during execution."""
 
     def __init__(self) -> None:
-        self.inputs_summary: dict = {}
         self.outputs_summary: dict = {}
         self.model: str | None = None
         self.tokens: int | None = None
@@ -121,7 +119,6 @@ class TraceRecorder:
                         started_at=start.isoformat(),
                         finished_at=end.isoformat(),
                         duration_ms=round((end - start).total_seconds() * 1000.0, 3),
-                        inputs_summary=draft.inputs_summary,
                         outputs_summary=draft.outputs_summary,
                         error=error,
                         model=draft.model,
