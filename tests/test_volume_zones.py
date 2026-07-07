@@ -21,7 +21,10 @@ def test_defaults_load_from_config():
 
 def test_constants():
     assert PROFILE_TYPE == "approximate_bar_based"
-    assert APPROX_WARNING == "Approximate volume profile built from OHLCV bars, not tick-level trades."
+    assert (
+        APPROX_WARNING
+        == "Approximate volume profile built from OHLCV bars, not tick-level trades."
+    )
 
 
 def _ohlcv(close, high=None, low=None, volume=None, ticker="TEST"):
@@ -33,7 +36,9 @@ def _ohlcv(close, high=None, low=None, volume=None, ticker="TEST"):
     arrays = {"Close": close, "High": high, "Low": low, "Volume": volume}
     frames = {f: pd.DataFrame({ticker: vals}, index=idx) for f, vals in arrays.items()}
     combined = pd.concat(frames, axis=1)
-    combined.columns = pd.MultiIndex.from_tuples([(f, ticker) for f, _ in combined.columns])
+    combined.columns = pd.MultiIndex.from_tuples(
+        [(f, ticker) for f, _ in combined.columns]
+    )
     return combined
 
 
@@ -90,3 +95,61 @@ def test_confidence_in_range_and_monotone_on_rr():
     )
     assert 0.0 <= lo <= 100.0 and 0.0 <= hi <= 100.0
     assert hi >= lo
+
+
+def _degenerate_ohlcv():
+    return _ohlcv([10.0, 10.5, 11.0])
+
+
+def test_no_trade_and_warning_on_insufficient_data():
+    result = vz.analyze_volume_zones(
+        "TEST", _degenerate_ohlcv(), lookback=120, min_rr=2.0
+    )
+    assert result.action == "No Trade"
+    assert result.data_quality.ok is False
+    assert result.market_bias == "neutral"
+    assert vz.APPROX_WARNING in result.warnings
+    assert result.profile_type == vz.PROFILE_TYPE
+    assert result.trade_plan.direction == "none"
+
+
+def test_approx_warning_always_present_even_on_valid_analysis():
+    base = [20.0] * 40
+    ramp = [20.0 + 0.4 * i for i in range(40)]
+    pull = [34.0, 33.0, 32.0]
+    closes = base + ramp + pull
+    result = vz.analyze_volume_zones("TEST", _ohlcv(closes), lookback=120, min_rr=1.0)
+    assert vz.APPROX_WARNING in result.warnings
+    assert result.action in {"Long", "Short", "Watch", "No Trade"}
+    assert 0.0 <= result.confidence_score <= 100.0
+
+
+def test_long_setup_has_stop_below_entry_and_positive_rr():
+    base = [20.0] * 60
+    ramp = [20.0 + 0.5 * i for i in range(30)]
+    pull = [33.0, 31.0, 29.0]
+    result = vz.analyze_volume_zones(
+        "TEST", _ohlcv(base + ramp + pull), lookback=150, min_rr=1.0
+    )
+    if result.action == "Long":
+        assert result.trade_plan.entry is not None
+        assert result.trade_plan.stop is not None
+        assert result.trade_plan.stop < result.trade_plan.entry
+        assert result.trade_plan.rr is not None and result.trade_plan.rr > 0
+
+
+def test_watch_when_rr_below_threshold_but_setup_exists():
+    base = [20.0] * 60
+    ramp = [20.0 + 0.5 * i for i in range(30)]
+    pull = [33.0, 31.0, 29.0]
+    result = vz.analyze_volume_zones(
+        "TEST", _ohlcv(base + ramp + pull), lookback=150, min_rr=99.0
+    )
+    assert result.action in {"Watch", "No Trade"}
+
+
+def test_deterministic():
+    ohlcv = _ohlcv([20.0 + 0.3 * i for i in range(80)])
+    a = vz.analyze_volume_zones("TEST", ohlcv)
+    b = vz.analyze_volume_zones("TEST", ohlcv)
+    assert a == b
