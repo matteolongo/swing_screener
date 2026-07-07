@@ -78,6 +78,8 @@ export const API_ENDPOINTS = {
   intelligenceSymbolReview: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/position-review`,
   intelligenceStrategicReview: '/api/intelligence/strategic-review',
   intelligenceSweep: '/api/intelligence/sweep',
+  intelligenceRunTrace: (runId: string) => `/api/intelligence/runs/${encodeURIComponent(runId)}`,
+  intelligenceRuns: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/runs`,
 
   // Catalysts
   catalystsManual: '/api/catalysts/manual',

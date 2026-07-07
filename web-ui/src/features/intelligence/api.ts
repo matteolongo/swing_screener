@@ -15,6 +15,8 @@ import type { PositionReviewAPI } from '@/features/intelligence/positionReviewTy
 import { transformPositionReview } from '@/features/intelligence/positionReviewTypes';
 import type { StrategicReviewAPI } from '@/features/intelligence/strategicReviewTypes';
 import { transformStrategicReview } from '@/features/intelligence/strategicReviewTypes';
+import type { RunTraceAPI, RunIndexEntryAPI, RunTrace, RunIndexEntry } from '@/features/intelligence/traceTypes';
+import { transformRunTrace, transformRunIndexEntry } from '@/features/intelligence/traceTypes';
 
 export interface IntelligenceRequestPayload {
   close: number;
@@ -235,4 +237,18 @@ export async function postIntelligenceSweep(symbols: SweepSymbolPayload[]): Prom
     body: JSON.stringify({ symbols }),
     errorMessage: 'Intelligence sweep failed',
   });
+}
+
+export async function getRunTrace(runId: string): Promise<RunTrace> {
+  const res = await fetchJson<RunTraceAPI>(API_ENDPOINTS.intelligenceRunTrace(runId), {
+    errorMessage: `Failed to load run trace ${runId}`,
+  });
+  return transformRunTrace(res);
+}
+
+export async function getTickerRuns(ticker: string): Promise<RunIndexEntry[]> {
+  const res = await fetchJson<{ entries: RunIndexEntryAPI[] }>(API_ENDPOINTS.intelligenceRuns(ticker), {
+    errorMessage: `Failed to load runs for ${ticker}`,
+  });
+  return (res.entries ?? []).map(transformRunIndexEntry);
 }

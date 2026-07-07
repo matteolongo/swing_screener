@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import OrderReviewExperience from './OrderReviewExperience';
@@ -119,6 +119,30 @@ describe('OrderReviewExperience — liquidity slippage warning', () => {
     if (brokerStep) {
       expect(brokerStep).not.toBeVisible();
     }
+  });
+
+  it('uses Degiro Limit entry instructions for a breakout second-chance BUY_LIMIT ticket', async () => {
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext({
+          suggestedOrderType: 'BUY_LIMIT',
+          suggestedOrderPrice: 19.4,
+          executionNote: 'Breakout already occurred. Do NOT use buy-stop. Limit entry only on pullback.',
+        })}
+        risk={risk}
+        defaultNotes=""
+        onSubmitOrder={vi.fn()}
+      />
+    );
+
+    await screen.findByRole('heading', { name: 'Order ticket' });
+    const degiroDetails = screen.getByText('Exact DeGiro setup').closest('details');
+    expect(degiroDetails).not.toBeNull();
+    const exactGuide = within(degiroDetails as HTMLElement);
+
+    expect(exactGuide.getByText('Order type: Limit')).toBeInTheDocument();
+    expect(exactGuide.getByText('Limit price: $19.40')).toBeInTheDocument();
+    expect(exactGuide.queryByText('Order type: Stop Loss (Buy Stop entry trigger)')).not.toBeInTheDocument();
   });
 });
 

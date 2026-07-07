@@ -21,6 +21,14 @@ describe('setup guidance mapper', () => {
     expect(guidance.stepsKeys[0]).toBe('order.setupGuidance.signals.breakout.steps.step1');
   });
 
+  it('keeps breakout as the setup family for second-chance limit entries', () => {
+    const guidance = getSetupExecutionGuidance('breakout', 'BUY_LIMIT');
+    expect(guidance.signal).toBe('breakout');
+    expect(guidance.setupLabelKey).toBe('order.setupGuidance.signals.breakout.label');
+    expect(guidance.whatItMeansKey).toBe('order.setupGuidance.signals.breakout.limitEntry.whatItMeans');
+    expect(guidance.stepsKeys[0]).toBe('order.setupGuidance.signals.breakout.limitEntry.steps.step1');
+  });
+
   it('returns pullback-specific guidance', () => {
     const guidance = getSetupExecutionGuidance('pullback');
     expect(guidance.signal).toBe('pullback');

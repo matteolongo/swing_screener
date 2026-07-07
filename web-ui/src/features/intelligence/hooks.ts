@@ -4,6 +4,8 @@ import {
   getIntelligenceChat,
   getIntelligenceHistory,
   getIntelligenceLatest,
+  getRunTrace,
+  getTickerRuns,
   postPositionReview,
   postStrategicReview,
   postIntelligenceAnalysis,
@@ -17,6 +19,7 @@ import { transformIntelligence } from '@/features/intelligence/types';
 import type { HistoryEntry, IntelligenceChatResponse, SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
 import type { PositionReview } from '@/features/intelligence/positionReviewTypes';
 import type { StrategicReview } from '@/features/intelligence/strategicReviewTypes';
+import type { RunTrace, RunIndexEntry } from '@/features/intelligence/traceTypes';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -99,5 +102,25 @@ export function useStrategicReviewMutation() {
 export function useIntelligenceSweepMutation() {
   return useMutation<SweepResponseAPI, Error, SweepSymbolPayload[]>({
     mutationFn: postIntelligenceSweep,
+  });
+}
+
+export function useRunTrace(runId: string | null | undefined, enabled: boolean) {
+  return useQuery<RunTrace, Error>({
+    queryKey: ['intelligence', 'runTrace', runId],
+    queryFn: () => getRunTrace(runId as string),
+    enabled: enabled && !!runId,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useTickerRuns(ticker: string, enabled: boolean) {
+  return useQuery<RunIndexEntry[], Error>({
+    queryKey: ['intelligence', 'runs', ticker],
+    queryFn: () => getTickerRuns(ticker),
+    enabled,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 }

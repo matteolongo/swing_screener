@@ -203,6 +203,7 @@ export interface ThesisDelta {
 export interface SymbolIntelligenceAPI {
   symbol: string;
   generated_at: string;
+  run_id?: string | null;
   action: DecisionAction;
   conviction: DecisionConviction;
   catalyst_urgency: CatalystUrgency;
@@ -229,6 +230,7 @@ export interface SymbolIntelligenceAPI {
 export interface SymbolIntelligence {
   symbol: string;
   generatedAt: string;
+  runId?: string | null;
   action: DecisionAction;
   conviction: DecisionConviction;
   catalystUrgency: CatalystUrgency;
@@ -318,6 +320,7 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
   return {
     symbol: api.symbol,
     generatedAt: api.generated_at,
+    runId: api.run_id ?? null,
     action: api.action,
     conviction: api.conviction,
     catalystUrgency: api.catalyst_urgency,

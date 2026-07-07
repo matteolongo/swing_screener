@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
+import { t } from '@/i18n/t';
 import type { DecisionSummary } from '@/features/screener/types';
 
 function buildSummary(overrides: Partial<DecisionSummary> = {}): DecisionSummary {
@@ -39,7 +40,8 @@ function buildSummary(overrides: Partial<DecisionSummary> = {}): DecisionSummary
     drivers: {
       positives: ['Technical setup is ready.'],
       negatives: [],
-      warnings: ['No cached catalyst snapshot is available yet.'],
+      warnings: ['Fundamentals stale: latest quarter 2024-12-31.'],
+      tradeState: [],
     },
     ...overrides,
   };
@@ -47,19 +49,67 @@ function buildSummary(overrides: Partial<DecisionSummary> = {}): DecisionSummary
 
 describe('DecisionSummaryCard', () => {
   it('renders the decision summary card with trade plan and warnings', () => {
-    render(<DecisionSummaryCard summary={buildSummary()} currency="USD" />);
+    render(<DecisionSummaryCard summary={buildSummary()} currency="USD" onRefreshFundamentals={() => undefined} />);
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
     expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
     expect(screen.getByText('Coverage Warnings')).toBeInTheDocument();
-    expect(screen.getByText('No cached catalyst snapshot is available yet.')).toBeInTheDocument();
+    expect(screen.getByText('Fundamentals stale: latest quarter 2024-12-31.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: t('workspacePage.panels.analysis.decisionSummary.refreshFundamentalsAction'),
+      })
+    ).toBeInTheDocument();
     expect(screen.getByText('Valuation Context')).toBeInTheDocument();
     expect(screen.getByText('Method: Earnings multiple')).toBeInTheDocument();
     expect(screen.getByText('24.6x')).toBeInTheDocument();
     expect(screen.getByText('$18.40')).toBeInTheDocument();
     expect(screen.getByText('$193.17')).toBeInTheDocument();
     expect(screen.getByText('-6.8%')).toBeInTheDocument();
+  });
+
+  it('renders unknown catalyst as a neutral data state', () => {
+    render(
+      <DecisionSummaryCard
+        summary={buildSummary({
+          catalystLabel: 'unknown',
+          drivers: { positives: [], negatives: [], warnings: [], tradeState: [] },
+        })}
+        currency="USD"
+      />
+    );
+
+    expect(
+      screen.getByText(
+        `${t('workspacePage.panels.analysis.decisionSummary.labels.catalyst')}: ${t(
+          'workspacePage.panels.analysis.decisionSummary.catalyst.unknown'
+        )}`
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('renders trade state outside coverage warnings', () => {
+    render(
+      <DecisionSummaryCard
+        summary={buildSummary({
+          action: 'MANAGE_ONLY',
+          drivers: {
+            positives: [],
+            negatives: [],
+            warnings: [],
+            tradeState: ['This symbol is already in an active manage-only state.'],
+          },
+        })}
+        currency="USD"
+      />
+    );
+
+    expect(screen.queryByText('Coverage Warnings')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradeStateTitle'))
+    ).toBeInTheDocument();
+    expect(screen.getByText('This symbol is already in an active manage-only state.')).toBeInTheDocument();
   });
 
   it('hides the trade plan grid when trade values are missing', () => {
@@ -126,12 +176,12 @@ describe('DecisionSummaryCard — warning position', () => {
         mainRisks: ['Valuation demanding.'],
         whatInvalidatesIt: ['Price below 274.03.'],
         nextBestAction: 'Wait for a pullback toward the stop.',
-        confidenceNotes: ['No cached catalyst snapshot is available yet.'],
+        confidenceNotes: ['Fundamentals stale: latest quarter 2024-12-31.'],
       },
     });
     render(<DecisionSummaryCard summary={summary} currency="USD" />);
 
-    const warning = screen.getByText('No cached catalyst snapshot is available yet.');
+    const warning = screen.getByText('Fundamentals stale: latest quarter 2024-12-31.');
     const whyItQualified = screen.getByText('Why It Qualified');
     expect(
       warning.compareDocumentPosition(whyItQualified) & Node.DOCUMENT_POSITION_FOLLOWING

@@ -18,7 +18,7 @@ import {
 
 import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetrics';
 import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
-import { getSetupExecutionGuidance, normalizeSetupSignal } from '@/features/orders/setupGuidance';
+import { getSetupExecutionGuidance } from '@/features/orders/setupGuidance';
 import { normalizeSuggestedOrderType, resolveDefaultOrderType } from '@/features/orders/executionDefaults';
 import { usePortfolioSummary } from '@/features/portfolio/hooks';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
@@ -74,15 +74,9 @@ export default function OrderReviewExperience({
   const normalizedTicker = context.ticker.trim().toUpperCase();
   const recRisk = context.recommendation?.risk;
   const defaultOrderType = resolveDefaultOrderType(context.signal, context.suggestedOrderType);
-  const normalizedSignal = normalizeSetupSignal(context.signal);
   const normalizedSuggestedOrderType = normalizeSuggestedOrderType(context.suggestedOrderType);
   const hasSuggestedOrderType = normalizedSuggestedOrderType === 'BUY_LIMIT' || normalizedSuggestedOrderType === 'BUY_STOP';
   const hasSkipSuggestion = normalizedSuggestedOrderType === 'SKIP';
-  const guidanceSignal =
-    normalizedSignal === 'breakout' && normalizedSuggestedOrderType === 'BUY_LIMIT'
-      ? 'pullback'
-      : context.signal;
-  const guidance = getSetupExecutionGuidance(guidanceSignal);
   const thesis = context.recommendation?.thesis;
   const thesisEducation = thesis?.educationGenerated?.thesis;
   const fallbackEntry = 100;
@@ -157,6 +151,8 @@ export default function OrderReviewExperience({
   }, [defaultNotes, defaultOrderType, form, suggestedEntry, suggestedShares, suggestedStop, suggestedTarget, normalizedTicker]);
 
   const orderType = form.watch('orderType') ?? defaultOrderType;
+  const guidanceSignal = context.signal;
+  const guidance = getSetupExecutionGuidance(guidanceSignal, orderType);
   const quantity = form.watch('quantity') ?? 0;
   const limitPrice = form.watch('limitPrice') ?? 0;
   const stopPrice = form.watch('stopPrice') ?? 0;

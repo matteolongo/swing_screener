@@ -159,6 +159,7 @@ def _mock_openai(monkeypatch):
 def _strip_dynamic(result):
     dumped = result.model_dump(mode="json")
     dumped.pop("generated_at", None)
+    dumped.pop("run_id", None)
     return dumped
 
 

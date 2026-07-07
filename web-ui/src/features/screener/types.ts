@@ -74,7 +74,7 @@ export type DecisionAction =
 export type DecisionConviction = 'high' | 'medium' | 'low';
 export type DecisionSignalLabel = 'strong' | 'neutral' | 'weak';
 export type DecisionValuationLabel = 'cheap' | 'fair' | 'expensive' | 'unknown';
-export type DecisionCatalystLabel = 'active' | 'neutral' | 'weak';
+export type DecisionCatalystLabel = 'active' | 'neutral' | 'weak' | 'unknown';
 export type FairValueMethod = 'earnings_multiple' | 'sales_multiple' | 'book_multiple' | 'not_available';
 
 export interface DecisionTradePlan {
@@ -102,6 +102,8 @@ export interface DecisionDrivers {
   positives: string[];
   negatives: string[];
   warnings: string[];
+  tradeState?: string[];
+  staleFundamentals?: boolean;
 }
 
 export interface ExplanationContract {
@@ -230,6 +232,8 @@ export interface DecisionDriversAPI {
   positives?: string[];
   negatives?: string[];
   warnings?: string[];
+  trade_state?: string[];
+  stale_fundamentals?: boolean;
 }
 
 export interface ExplanationContractAPI {
@@ -460,6 +464,8 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       positives: apiSummary.drivers?.positives ?? [],
       negatives: apiSummary.drivers?.negatives ?? [],
       warnings: apiSummary.drivers?.warnings ?? [],
+      tradeState: apiSummary.drivers?.trade_state ?? [],
+      staleFundamentals: apiSummary.drivers?.stale_fundamentals,
     },
     explanation: apiSummary.explanation
       ? {

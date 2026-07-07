@@ -3,10 +3,11 @@ import { t } from '@/i18n/t';
 
 interface SetupExecutionGuideProps {
   signal?: string | null;
+  orderType?: string | null;
 }
 
-export default function SetupExecutionGuide({ signal }: SetupExecutionGuideProps) {
-  const guidance = getSetupExecutionGuidance(signal);
+export default function SetupExecutionGuide({ signal, orderType }: SetupExecutionGuideProps) {
+  const guidance = getSetupExecutionGuidance(signal, orderType);
 
   return (
     <div className="rounded border border-primary/40 bg-primary/10 p-3 text-xs text-primary">

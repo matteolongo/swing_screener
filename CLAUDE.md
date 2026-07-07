@@ -8,6 +8,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Non-goals (never add):** live trading/broker APIs, intraday logic, ML/curve-fitting, auto-execution of positions, hidden state or heuristic magic.
 
+## Where things live (read the doc before grepping)
+
+These docs are the index to this repo. **Locate your area here and read that doc first** — it lists the public API, files, and config keys for the area. Open source code only to confirm the exact lines you will edit; do not sweep the tree to rediscover structure the docs already record. They are kept current by the "Documentation Rules" checklist below (enforced on every change), so trust them as the map.
+
+Start with [`docs/overview/INDEX.md`](docs/overview/INDEX.md) — the full doc catalog. Fast paths:
+
+| Working on… | Read first |
+|---|---|
+| A REST endpoint (request/response shapes) | [`api/README.md`](api/README.md) |
+| A React page or feature | [`web-ui/docs/WEB_UI_GUIDE.md`](web-ui/docs/WEB_UI_GUIDE.md) |
+| Web UI structure / API contract / state rules | [`web-ui/docs/WEB_UI_ARCHITECTURE.md`](web-ui/docs/WEB_UI_ARCHITECTURE.md) |
+| Any config key | [`config/README.md`](config/README.md) |
+| Runtime state schema (positions, orders) | [`data/README.md`](data/README.md) |
+| The LLM / intelligence pipeline | [`src/swing_screener/intelligence/README.md`](src/swing_screener/intelligence/README.md) |
+| Position sizing / R-multiple risk logic | [`src/swing_screener/risk/README.md`](src/swing_screener/risk/README.md) |
+| Universe filtering, ranking, entry signals | [`src/swing_screener/selection/README.md`](src/swing_screener/selection/README.md) |
+| A strategy plugin | [`src/swing_screener/strategy/README.md`](src/swing_screener/strategy/README.md) |
+| Position / portfolio metrics | [`src/swing_screener/portfolio/README.md`](src/swing_screener/portfolio/README.md) |
+| Order lifecycle / DeGiro fees | [`src/swing_screener/execution/README.md`](src/swing_screener/execution/README.md) |
+| OHLCV data, caching, providers | [`src/swing_screener/data/README.md`](src/swing_screener/data/README.md) + [`providers/README.md`](src/swing_screener/data/providers/README.md) |
+| Indicators (trend/momentum/volatility) | [`src/swing_screener/indicators/README.md`](src/swing_screener/indicators/README.md) |
+| Daily report / CSV / today_actions | [`src/swing_screener/reporting/README.md`](src/swing_screener/reporting/README.md) |
+| Backtesting | [`src/swing_screener/backtest/README.md`](src/swing_screener/backtest/README.md) |
+| Fundamentals providers | [`src/swing_screener/fundamentals/providers/README.md`](src/swing_screener/fundamentals/providers/README.md) |
+| Canonical module layout / design rules | [`docs/engineering/MODULE_ARCHITECTURE.md`](docs/engineering/MODULE_ARCHITECTURE.md) |
+
+If a doc contradicts the code, the code is right — fix the doc as part of your change (see "Documentation Rules").
+
 ## Commands
 
 ### Backend (Python)

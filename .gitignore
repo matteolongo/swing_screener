@@ -79,6 +79,7 @@ data/intelligence/sweep_*.json
 data/intelligence/evidence/
 data/intelligence/history/
 data/intelligence/chat/
+data/intelligence/runs/
 data/screener_history.json
 
 # =========================

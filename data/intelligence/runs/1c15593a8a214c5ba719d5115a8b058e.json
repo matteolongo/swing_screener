@@ -1,0 +1,208 @@
+{
+  "run_id": "1c15593a8a214c5ba719d5115a8b058e",
+  "ticker": "MNST",
+  "started_at": "2026-07-06T12:13:02.067369+00:00",
+  "finished_at": "2026-07-06T12:13:57.570291+00:00",
+  "status": "ok",
+  "cache_hit": false,
+  "steps": [
+    {
+      "name": "enrich_request",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:02.067559+00:00",
+      "finished_at": "2026-07-06T12:13:06.941913+00:00",
+      "duration_ms": 4874.354,
+      "inputs_summary": {},
+      "outputs_summary": {},
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "enrich_polygon",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:06.942241+00:00",
+      "finished_at": "2026-07-06T12:13:07.426751+00:00",
+      "duration_ms": 484.51,
+      "inputs_summary": {},
+      "outputs_summary": {},
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "resolve_context",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:07.437314+00:00",
+      "finished_at": "2026-07-06T12:13:07.439321+00:00",
+      "duration_ms": 2.007,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "pre_open": true,
+        "has_position": true,
+        "prior_runs": 5
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "assemble_inputs",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:07.440295+00:00",
+      "finished_at": "2026-07-06T12:13:07.440364+00:00",
+      "duration_ms": 0.069,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "categories": [
+          "candles",
+          "catalyst_evidence",
+          "decision_context",
+          "finnhub_signals",
+          "history",
+          "pre_open",
+          "technical",
+          "trade_plan"
+        ]
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "build_prompt",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:07.440920+00:00",
+      "finished_at": "2026-07-06T12:13:07.441305+00:00",
+      "duration_ms": 0.385,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "prompt_chars": 5865
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": "c466518f19c3f969",
+      "prompt_preview": "⚠️  OPEN POSITION — the user already holds this stock. Do NOT suggest initiating.\n  Filled entry:  94.23 USD\n  Entry date:    2026-06-25\n  Current price: 97.60 USD\n  Current P&L:   +1.82R\n  Days held:     11\n  Current stop:  94.23 USD\n\nFocus on whether to HOLD, TRIM, or EXIT. Set action = MANAGE_ONLY.\nExplain why the price moved from the entry to now over the holding window: use live news, earnings and sector moves since the entry date to account for the sign and size of the current P&L (R). Put"
+    },
+    {
+      "name": "search",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:07.442178+00:00",
+      "finished_at": "2026-07-06T12:13:36.415964+00:00",
+      "duration_ms": 28973.786,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "search_chars": 4766
+      },
+      "error": null,
+      "model": "gpt-4o",
+      "tokens": 4853,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "format",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:36.426832+00:00",
+      "finished_at": "2026-07-06T12:13:57.525245+00:00",
+      "duration_ms": 21098.413,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "has_position": true
+      },
+      "error": null,
+      "model": "gpt-4o-mini",
+      "tokens": 4341,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "postprocess",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:57.539452+00:00",
+      "finished_at": "2026-07-06T12:13:57.541206+00:00",
+      "duration_ms": 1.754,
+      "inputs_summary": {},
+      "outputs_summary": {},
+      "error": null,
+      "model": null,
+      "tokens": 9194,
+      "source_counts": {
+        "The Motley Fool": 2,
+        "REFINITIV_LATEST_NEWS": 1
+      },
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "weigh_evidence",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:57.542172+00:00",
+      "finished_at": "2026-07-06T12:13:57.542680+00:00",
+      "duration_ms": 0.508,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "balance_label": "bullish",
+        "net": 9.0
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "assemble_result",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:57.543515+00:00",
+      "finished_at": "2026-07-06T12:13:57.543632+00:00",
+      "duration_ms": 0.117,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "action": "WAIT_FOR_BREAKOUT",
+        "conviction": "medium"
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    },
+    {
+      "name": "persist",
+      "status": "ok",
+      "started_at": "2026-07-06T12:13:57.544575+00:00",
+      "finished_at": "2026-07-06T12:13:57.554270+00:00",
+      "duration_ms": 9.695,
+      "inputs_summary": {},
+      "outputs_summary": {
+        "cached": true
+      },
+      "error": null,
+      "model": null,
+      "tokens": null,
+      "source_counts": null,
+      "prompt_hash": null,
+      "prompt_preview": null
+    }
+  ],
+  "error": null
+}

@@ -231,6 +231,7 @@ def assemble_result(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
         update={
             "inputs_used": state["inputs_used"],
             "evidence_ledger": state.get("evidence_ledger"),
+            "run_id": state.get("run_id"),
         }
     )
     return state
