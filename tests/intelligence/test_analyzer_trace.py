@@ -116,6 +116,27 @@ def test_run_id_is_written_into_cache(monkeypatch):
     assert cached.run_id == result.run_id
 
 
+def test_persist_step_reports_cache_write_failure(monkeypatch):
+    _install_fake(monkeypatch)
+    from swing_screener.intelligence import symbol_analyzer as mod
+
+    def _cache_boom(*_args, **_kwargs):
+        raise OSError("cache disk full")
+
+    monkeypatch.setattr(mod, "write_to_cache", _cache_boom)
+
+    result = SymbolAnalyzer().analyze("AAPL", _req())
+    assert result.run_id is not None
+    trace = tracing.read_run_trace(result.run_id)
+    assert trace is not None
+    persist_step = next(s for s in trace.steps if s.name == "persist")
+
+    assert persist_step.outputs_summary["cache_written"] is False
+    assert "cache disk full" in persist_step.outputs_summary["cache_error"]
+    assert persist_step.outputs_summary["history_appended"] is True
+    assert persist_step.outputs_summary["metrics_recorded"] is True
+
+
 def test_failed_search_records_error_trace_and_reraises(monkeypatch):
     _install_fake(monkeypatch, search_raises=True)
     with pytest.raises(RuntimeError, match="search boom"):

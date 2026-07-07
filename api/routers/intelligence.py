@@ -53,6 +53,10 @@ def _set_step_output(draft, **fields) -> None:
         draft.outputs_summary = {k: v for k, v in fields.items() if v is not None}
 
 
+def _brief_error(exc: BaseException) -> str:
+    return f"{type(exc).__name__}: {exc}"
+
+
 def _dividend_for(ticker: str) -> tuple[int | None, str | None, float | None]:
     try:
         from swing_screener.fundamentals.providers.degiro import _load_isin_map
@@ -175,15 +179,19 @@ def sweep(
                     )
                 with step(recorder, "enrich_technicals") as draft:
                     ohlcv_rows = 0
+                    skipped_reason = None
                     try:
                         ohlcv = portfolio_service.fetch_recent_ohlcv(upper)
                         item_req = enrich_with_technicals(upper, item_req, ohlcv)
                         ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
-                    except Exception:
+                    except Exception as exc:
+                        skipped_reason = _brief_error(exc)
                         logger.warning(
                             "Sweep technical enrichment skipped for %r", item.ticker, exc_info=True
                         )
-                    _set_step_output(draft, ohlcv_rows=ohlcv_rows)
+                    _set_step_output(
+                        draft, ohlcv_rows=ohlcv_rows, skipped_reason=skipped_reason
+                    )
                 with step(recorder, "enrich_polygon") as draft:
                     item_req = enrich_with_polygon_prices(upper, item_req)
                     _set_step_output(draft, close=item_req.close)
@@ -397,13 +405,17 @@ def analyze_position(
                 )
             with step(recorder, "enrich_technicals") as draft:
                 ohlcv_rows = 0
+                skipped_reason = None
                 try:
                     ohlcv = portfolio_service.fetch_recent_ohlcv(pos.ticker)
                     request = enrich_with_technicals(pos.ticker, request, ohlcv)
                     ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
-                except Exception:
+                except Exception as exc:
+                    skipped_reason = _brief_error(exc)
                     logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
-                _set_step_output(draft, ohlcv_rows=ohlcv_rows)
+                _set_step_output(
+                    draft, ohlcv_rows=ohlcv_rows, skipped_reason=skipped_reason
+                )
             with step(recorder, "enrich_polygon") as draft:
                 request = enrich_with_polygon_prices(pos.ticker, request)
                 _set_step_output(draft, close=request.close)
