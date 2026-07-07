@@ -35,6 +35,37 @@ export const mockConfig = {
   orders_file: 'data/orders.json',
 }
 
+export const mockVolumeAnalysis = {
+  symbol: 'AAPL',
+  provider: 'mock',
+  interval: '1d',
+  lookback: 120,
+  data_quality: { ok: true, bars: 160, warnings: [] },
+  profile_type: 'approximate_bar_based',
+  market_bias: 'bullish',
+  setup_type: 'hvn_support_retest',
+  action: 'Long',
+  confidence_score: 72.5,
+  rationale: ['Market bias is bullish.'],
+  key_levels: {
+    price: 100,
+    poc: 95,
+    vwap: 96,
+    sma20: 94,
+    sma50: 90,
+    sma200: 80,
+    atr14: 2.5,
+    swing_high: 105,
+    swing_low: 88,
+    rel_volume: 1.3,
+  },
+  volume_zones: [
+    { kind: 'poc', role: 'buyer_defense', price_low: 94, price_high: 96, center: 95, volume_share: 0.18 },
+  ],
+  trade_plan: { direction: 'long', entry: 100, stop: 93, target: 114, rr: 2.0 },
+  warnings: ['Approximate volume profile built from OHLCV bars, not tick-level trades.'],
+}
+
 export const mockStrategies = [
   {
     id: 'default',
@@ -979,6 +1010,10 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/api/screener/run`, () => {
     return HttpResponse.json(mockScreenerResults)
+  }),
+
+  http.get(`${API_BASE_URL}/api/market-data/:ticker/volume-analysis`, () => {
+    return HttpResponse.json(mockVolumeAnalysis)
   }),
 
   // Catalyst endpoints
