@@ -143,6 +143,21 @@ def _account_currency_from_strategy(strategy: dict) -> str:
     return str(raw_risk.get("account_currency") or "EUR").upper()
 
 
+def _last_close_for_ticker(ohlcv: pd.DataFrame, ticker: str) -> float | None:
+    if ohlcv is None or ohlcv.empty:
+        return None
+    if "Close" not in ohlcv.columns.get_level_values(0):
+        return None
+    close = ohlcv["Close"]
+    if ticker not in close.columns:
+        return None
+    series = close[ticker].dropna()
+    if series.empty:
+        return None
+    value = safe_optional_float(series.iloc[-1])
+    return value if value and value > 0 else None
+
+
 @dataclass
 class _RunContext:
     """Mutable state accumulated across run_screener pipeline steps.
@@ -700,12 +715,14 @@ class ScreenerService:
 
         ctx.ticker_info = ticker_info
         ctx.sector_rotation_by_name = sector_rotation_by_name
+        account_to_quote_rates = self._account_to_quote_rates(ctx, ticker_info)
 
         results = build_daily_report(
             ctx.ohlcv,
             cfg=ctx.report_cfg,
             exclude_tickers=sector_rotation.SECTOR_ETFS.keys(),
             sector_benchmark_returns=sector_benchmark_returns,
+            account_to_quote_rates=account_to_quote_rates,
             eval_cache=self._eval_cache,
             asof_date=ctx.asof_str,
             force_refresh=bool(getattr(ctx.request, "force_refresh", False)),
@@ -739,6 +756,62 @@ class ScreenerService:
             logger.warning(message)
 
         return results
+
+    def _account_to_quote_rates(
+        self, ctx: _RunContext, ticker_info: dict
+    ) -> dict[str, float]:
+        account_currency = _account_currency_from_strategy(ctx.strategy)
+        quote_currencies = set()
+        if getattr(ctx.request, "currencies", None):
+            quote_currencies.update(
+                str(currency).strip().upper()
+                for currency in (ctx.active_currencies or [])
+                if str(currency).strip()
+            )
+        quote_currencies.update(
+            str(info.get("currency") or "").strip().upper()
+            for info in (ticker_info or {}).values()
+            if str(info.get("currency") or "").strip()
+        )
+        quote_currencies.discard(account_currency)
+        quote_currencies.discard("UNKNOWN")
+        if not any({account_currency, quote} == {"EUR", "USD"} for quote in quote_currencies):
+            return {}
+
+        force_refresh = bool(getattr(ctx.request, "force_refresh", False))
+        try:
+            fx = self._provider.fetch_ohlcv(
+                ["EURUSD=X"],
+                start_date=ctx.start_date or ctx.asof_str,
+                end_date=ctx.end_date or ctx.asof_str,
+                force_refresh=force_refresh,
+            )
+            eurusd_rate = _last_close_for_ticker(fx, "EURUSD=X")
+        except Exception as exc:
+            logger.warning("Failed to fetch EURUSD rate for screener sizing: %s", exc)
+            ctx.warnings.append("EURUSD FX rate unavailable; cross-currency sizing may be omitted.")
+            return {}
+
+        if eurusd_rate is None or eurusd_rate <= 0:
+            ctx.warnings.append("EURUSD FX rate unavailable; cross-currency sizing may be omitted.")
+            return {}
+
+        rates: dict[str, float] = {}
+        for quote in quote_currencies:
+            if account_currency == "EUR" and quote == "USD":
+                rates["USD"] = eurusd_rate
+            elif account_currency == "USD" and quote == "EUR":
+                rates["EUR"] = 1.0 / eurusd_rate
+        unsupported = sorted(
+            quote
+            for quote in quote_currencies
+            if quote != account_currency and quote not in rates
+        )
+        if unsupported:
+            ctx.warnings.append(
+                "Unsupported FX conversion for quote currencies: " + ", ".join(unsupported)
+            )
+        return rates
 
     def _build_candidates(
         self, ctx: _RunContext, results: "pd.DataFrame"
@@ -816,11 +889,14 @@ class ScreenerService:
             shares_val = safe_optional_int(row.get("shares"))
             position_size = safe_optional_float(row.get("position_value"))
             risk_usd = safe_optional_float(row.get("realized_risk"))
-            risk_pct = (
-                (risk_usd / risk_cfg.account_size)
-                if risk_usd and risk_cfg.account_size
-                else None
-            )
+            risk_account = safe_optional_float(row.get("realized_risk_account"))
+            account_to_quote_rate = safe_float(row.get("account_to_quote_rate"), default=1.0)
+            risk_pct = None
+            if risk_cfg.account_size:
+                if risk_account is not None:
+                    risk_pct = risk_account / risk_cfg.account_size
+                elif risk_usd is not None:
+                    risk_pct = risk_usd / risk_cfg.account_size
 
             # Anchor the entry stop to the setup's structural invalidation when a
             # tighter pattern stop is available, so 1R reflects the real risk level
@@ -841,6 +917,7 @@ class ScreenerService:
                 stop_val = pattern_stop_val
                 position_size = None
                 risk_usd = None
+                risk_account = None
                 risk_pct = None
 
             rr_target = safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
@@ -874,6 +951,7 @@ class ScreenerService:
                 confidence=safe_float(row.get("confidence")),
                 currency=currency,
                 account_currency=account_currency,
+                account_to_quote_rate=account_to_quote_rate,
             )
             recommendation = Recommendation.model_validate(asdict(rec_payload))
             rec_risk = recommendation.risk

@@ -1,8 +1,10 @@
 import pandas as pd
+import json
 
 from swing_screener.reporting.report import build_daily_report, ReportConfig
 from swing_screener.selection.universe import UniverseConfig, UniverseFilterConfig
 from swing_screener.risk.position_sizing import RiskConfig
+from swing_screener.strategy.modules.momentum import build_momentum_report
 
 
 def _make_ohlcv_for_report():
@@ -93,6 +95,58 @@ def test_build_daily_report_returns_expected_structure():
     assert pd.notna(rep.loc["BBB", "confidence"])
     assert 0 <= float(rep.loc["AAA", "confidence"]) <= 100
     assert 0 <= float(rep.loc["BBB", "confidence"]) <= 100
+
+
+def test_build_momentum_report_passes_account_to_quote_rates_into_trade_plans():
+    records = pd.DataFrame(
+        {
+            "mom_6m": [0.30],
+            "mom_12m": [0.40],
+            "rs_6m": [0.20],
+            "atr14": [2.0],
+            "atr_pct": [2.0],
+            "last": [100.0],
+            "currency": ["USD"],
+            "dist_sma50_pct": [5.0],
+            "dist_sma200_pct": [10.0],
+            "trend_ok": [True],
+            "is_eligible": [True],
+            "signal": ["breakout"],
+            "__feature_cols__": [
+                json.dumps(["mom_6m", "mom_12m", "rs_6m", "atr14", "atr_pct", "last"])
+            ],
+        },
+        index=["AAPL"],
+    )
+    cfg = ReportConfig(
+        universe=UniverseConfig(
+            filt=UniverseFilterConfig(
+                min_price=10,
+                max_price=1000,
+                max_atr_pct=10.0,
+                require_trend_ok=False,
+            )
+        ),
+        risk=RiskConfig(
+            account_size=1000.0,
+            account_currency="EUR",
+            risk_pct=0.01,
+            k_atr=1.0,
+            max_position_pct=1.0,
+        ),
+    )
+
+    report = build_momentum_report(
+        pd.DataFrame(),
+        cfg,
+        records=records,
+        account_to_quote_rates={"USD": 1.25},
+    )
+
+    assert report.loc["AAPL", "shares"] == 6
+    assert report.loc["AAPL", "account_to_quote_rate"] == 1.25
+    assert report.loc["AAPL", "realized_risk"] == 12.0
+    assert report.loc["AAPL", "realized_risk_account"] == 9.6
 
 
 def test_build_daily_report_keeps_weekly_trend_column():

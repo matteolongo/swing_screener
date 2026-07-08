@@ -25,16 +25,18 @@
    - Outcome: pure risk sizing and recommendation logic now accept an explicit account-to-quote FX rate, convert account-currency budgets into quote-currency share sizing, and report account-currency realized risk/position value alongside legacy quote-currency fields.
    - Verification: `tests/test_position_sizing.py`, `tests/test_recommendation_engine.py`, and `tests/test_risk_engine.py`.
 
+5. Screener FX rate wiring
+   - Status: done.
+   - Outcome: screener runs source EURUSD when known/requested quote currencies cross EUR/USD, pass account-to-quote rates into report trade-plan sizing, and preserve account-currency risk through recommendation rebuilds.
+   - Verification: `tests/test_report.py`, `tests/test_screener_service.py`, and `tests/api/test_screener_currency_contract.py`.
+
 ## Next
 
-5. Screener FX rate wiring
+6. Liquidity filter correctness
    - Status: next.
-   - Source the needed account-to-quote FX rates for screener runs and pass them into trade-plan/recommendation sizing.
+   - Confirm average daily volume/liquidity thresholds use price and currency consistently.
 
 ## Backlog
-
-6. Liquidity filter correctness
-   - Confirm average daily volume/liquidity thresholds use price and currency consistently.
 
 7. Stop-hit detection uses daily low
    - Confirm stop-hit checks trigger on intraday low crossing the stop, not close-only behavior.

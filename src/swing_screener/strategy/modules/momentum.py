@@ -130,6 +130,7 @@ def build_momentum_report(
     cfg: ReportConfig,
     exclude_tickers: Iterable[str] | None = None,
     sector_benchmark_returns: dict[str, float] | None = None,
+    account_to_quote_rates: dict[str, float] | None = None,
     records: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Cross-sectional assembly over per-symbol records.
@@ -186,13 +187,24 @@ def build_momentum_report(
         board,
         cfg.risk,
         atr_col=atr_col,
+        account_to_quote_rates=account_to_quote_rates,
     )
 
     report = ranked
 
     if plans is not None and not plans.empty:
         # keep some plan cols
-        plan_cols = ["entry", "stop", "shares", "position_value", "realized_risk", "risk_amount_target"]
+        plan_cols = [
+            "entry",
+            "stop",
+            "shares",
+            "position_value",
+            "position_value_account",
+            "realized_risk",
+            "realized_risk_account",
+            "risk_amount_target",
+            "account_to_quote_rate",
+        ]
         plan_cols = [c for c in plan_cols if c in plans.columns]
         report = report.join(plans[plan_cols + ["signal"]], how="left", rsuffix="_plan")
 
@@ -219,7 +231,8 @@ def build_momentum_report(
         "above_breakout_extension", "breakout_volume_confirmation",
         "dist_52w_high_pct", "near_52w_high",
         "volume_ratio", "avg_daily_volume_eur",
-        "entry", "stop", "shares", "position_value", "realized_risk",
+        "entry", "stop", "shares", "position_value", "position_value_account",
+        "realized_risk", "realized_risk_account", "account_to_quote_rate",
     ]
     keep = [c for c in keep if c in report.columns]
     report = report[keep]
@@ -250,6 +263,7 @@ class MomentumStrategyModule:
         eval_cache=None,
         asof_date: str | None = None,
         force_refresh: bool = False,
+        account_to_quote_rates: dict[str, float] | None = None,
     ) -> pd.DataFrame:
         if eval_cache is None or asof_date is None:
             return build_momentum_report(
@@ -257,6 +271,7 @@ class MomentumStrategyModule:
                 cfg=cfg,
                 exclude_tickers=exclude_tickers,
                 sector_benchmark_returns=sector_benchmark_returns,
+                account_to_quote_rates=account_to_quote_rates,
             )
         sig = strategy_signature(cfg)
         level0 = ohlcv.columns.get_level_values(0)
@@ -283,5 +298,6 @@ class MomentumStrategyModule:
             cfg=cfg,
             exclude_tickers=exclude_tickers,
             sector_benchmark_returns=sector_benchmark_returns,
+            account_to_quote_rates=account_to_quote_rates,
             records=records,
         )

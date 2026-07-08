@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
 
 from api.dependencies import get_portfolio_service
@@ -72,7 +73,10 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
                 "stop": [34.0, 177.0],
                 "shares": [100, 3],
                 "position_value": [3542.0, 543.0],
+                "position_value_account": [3542.0, 434.4],
                 "realized_risk": [142.0, 12.0],
+                "realized_risk_account": [142.0, 9.6],
+                "account_to_quote_rate": [1.0, 1.25],
             },
             index=["ABN.AS", "AAPL"],
         )
@@ -118,5 +122,8 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
     assert usd["account_currency"] == "EUR"
     assert usd["position_size_quote"] == 543.0
     assert usd["risk_quote"] == 12.0
+    assert usd["risk_pct"] == pytest.approx(0.012, abs=1e-6)
     assert usd["recommendation"]["risk"]["currency"] == "USD"
     assert usd["recommendation"]["risk"]["account_currency"] == "EUR"
+    assert usd["recommendation"]["risk"]["account_to_quote_rate"] == 1.25
+    assert usd["recommendation"]["risk"]["risk_amount_account"] == 9.6
