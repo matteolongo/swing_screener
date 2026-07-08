@@ -177,6 +177,12 @@ https://github.com/matteolongo/swing_screener/compare/<base>...<head>?expand=1
 
 Use the branch the work was created from as `<base>`, not `main`, unless the work branches directly from `main`. If uncertain, state the assumed base explicitly.
 
+### UI screenshots in PR descriptions
+
+When a change affects the Web UI (`web-ui/` pages, components, styling, visible copy, or user flows), capture one or more screenshots that show the changed UI state before delivery. Attach or embed those screenshots in the PR description under a `Screenshots` section so reviewers can verify the visual impact without running the app locally.
+
+If the work is pushed directly to `main` and no GitHub PR will be opened, still include the screenshot links or file references in the delivery note or `prs.md` description. If a screenshot cannot be captured because of an environment limitation, document the exact limitation in the PR description instead of omitting the section.
+
 ### prs.md output — required after every implementation
 
 Whenever implementation work is complete (or the user asks to implement something), write a file called `prs.md` to the session scratchpad directory and paste its contents in the response. Format:
