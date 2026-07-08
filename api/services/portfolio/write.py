@@ -144,6 +144,7 @@ class PortfolioWriteService:
                     pos["exit_price"] = request.exit_price
                     pos["exit_date"] = get_today_str()
                     pos["exit_fee_eur"] = request.fee_eur
+                    pos["exit_fx_rate"] = request.exit_fx_rate
                     if request.reason:
                         current_notes = pos.get("notes", "")
                         pos["notes"] = f"{current_notes}\nClosed: {request.reason}".strip()
@@ -161,6 +162,7 @@ class PortfolioWriteService:
             "position_id": position_id,
             "exit_price": request.exit_price,
             "fee_eur": request.fee_eur,
+            "exit_fx_rate": request.exit_fx_rate,
         }
 
     def partial_close_position(self, position_id: str, request: PartialCloseRequest) -> dict:
@@ -195,6 +197,7 @@ class PortfolioWriteService:
                     "price": request.price,
                     "r_at_close": round(r_at_close, 4),
                     "fee_eur": request.fee_eur,
+                    "fx_rate": request.fx_rate,
                 }
 
                 if "partial_closes" not in pos or pos["partial_closes"] is None:
@@ -217,6 +220,7 @@ class PortfolioWriteService:
             "price": request.price,
             "r_at_close": result["r_at_close"],
             "shares_remaining": result["shares_remaining"],
+            "fx_rate": request.fx_rate,
         }
 
     def update_trail_method(self, position_id: str, request: UpdateTrailMethodRequest) -> dict:

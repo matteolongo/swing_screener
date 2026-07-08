@@ -2,12 +2,17 @@
 from __future__ import annotations
 
 import json
+import time
+from unittest.mock import MagicMock
 
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
 import api.dependencies as deps
 from api.main import app
+import api.services.portfolio_service as portfolio_service
+from swing_screener.data.providers import MarketDataProvider
 
 
 POSITIONS = [
@@ -52,12 +57,21 @@ POSITIONS = [
 
 @pytest.fixture
 def client_with_positions(tmp_path, monkeypatch):
+    portfolio_service._eurusd_cache.clear()
     positions_file = tmp_path / "positions.json"
     orders_file = tmp_path / "orders.json"
     positions_file.write_text(json.dumps({"asof": "2026-01-01", "positions": POSITIONS}))
     orders_file.write_text(json.dumps({"asof": "2026-01-01", "orders": []}))
     monkeypatch.setattr(deps, "_positions_path", positions_file)
     monkeypatch.setattr(deps, "_orders_path", orders_file)
+
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
+    mock_provider.fetch_ohlcv.return_value = pd.DataFrame()
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setitem(portfolio_service._eurusd_cache, "eurusd", (1.20, time.time()))
+
     return TestClient(app)
 
 
@@ -76,7 +90,7 @@ def test_concentration_correct_pct(client_with_positions):
     data = response.json()
     groups = {group["country"]: group for group in data["concentration"]}
     assert "NL" in groups
-    assert abs(groups["NL"]["risk_pct"] - 75.0) < 1.0
+    assert groups["NL"]["risk_pct"] == pytest.approx(78.26, abs=0.01)
 
 
 def test_concentration_warning_flag_when_above_threshold(client_with_positions):

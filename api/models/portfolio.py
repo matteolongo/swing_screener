@@ -38,6 +38,10 @@ class Position(BaseModel):
     exit_date: Optional[str] = None
     exit_price: Optional[float] = None
     exit_fee_eur: Optional[float] = None
+    exit_fx_rate: Optional[float] = Field(
+        default=None,
+        description="EURUSD rate at final exit execution (optional)",
+    )
     current_price: Optional[float] = None
     notes: str = ""
     exit_order_ids: Optional[list[str]] = None
@@ -113,6 +117,20 @@ class PartialCloseEvent(BaseModel):
     price: float = Field(..., gt=0, description="Exit price for this leg")
     r_at_close: float = Field(..., description="R-multiple at the time of this partial close")
     fee_eur: Optional[float] = Field(default=None, ge=0, description="Fee for this leg in EUR")
+    fx_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="EURUSD rate at partial-close execution (optional)",
+    )
+
+    @field_validator("fx_rate")
+    @classmethod
+    def validate_fx_rate(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
+        if not math.isfinite(v):
+            raise ValueError("FX rate must be finite")
+        return v
 
 
 class PartialCloseRequest(BaseModel):
@@ -120,6 +138,20 @@ class PartialCloseRequest(BaseModel):
     shares_closed: int = Field(..., gt=0, description="Number of shares to close")
     price: float = Field(..., gt=0, description="Exit price for this leg")
     fee_eur: Optional[float] = Field(default=None, ge=0, description="Fee in EUR (optional)")
+    fx_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="EURUSD rate at partial-close execution (optional)",
+    )
+
+    @field_validator("fx_rate")
+    @classmethod
+    def validate_fx_rate(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
+        if not math.isfinite(v):
+            raise ValueError("FX rate must be finite")
+        return v
 
 
 class ClosePositionRequest(BaseModel):
@@ -128,6 +160,11 @@ class ClosePositionRequest(BaseModel):
         default=None,
         ge=0,
         description="Execution fee in EUR (optional)",
+    )
+    exit_fx_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="EURUSD rate at exit execution (optional)",
     )
     reason: str = Field(default="", description="Reason for closing")
     lesson: Optional[str] = Field(default=None, description="Lesson / reflection (optional)")
@@ -155,6 +192,15 @@ class ClosePositionRequest(BaseModel):
             raise ValueError("Fee cannot be negative")
         if v > 100000:
             raise ValueError("Fee exceeds reasonable maximum (100,000)")
+        return v
+
+    @field_validator("exit_fx_rate")
+    @classmethod
+    def validate_exit_fx_rate(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
+        if not math.isfinite(v):
+            raise ValueError("Exit FX rate must be finite")
         return v
 
 
