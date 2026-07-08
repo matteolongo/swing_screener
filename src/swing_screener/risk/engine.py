@@ -41,6 +41,7 @@ def evaluate_recommendation(
     confidence: Optional[float] = None,
     currency: Optional[str] = None,
     account_currency: Optional[str] = None,
+    account_to_quote_rate: float = 1.0,
 ) -> RecommendationPayload:
     """
     Evaluate recommendation with optional Trade Thesis generation.
@@ -112,5 +113,6 @@ def evaluate_recommendation(
         max_position_pct=risk_cfg.max_position_pct,
         currency=currency,
         account_currency=account_currency,
+        account_to_quote_rate=account_to_quote_rate,
         thesis=thesis_dict,
     )

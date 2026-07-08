@@ -20,52 +20,57 @@
    - Outcome: screener candidates now expose canonical quote/account currency metadata for position value and risk fields while preserving legacy USD-named fields for compatibility.
    - Verification: `tests/api/test_screener_currency_contract.py` plus screener/risk/same-symbol regressions.
 
+4. Risk sizing FX contract
+   - Status: done.
+   - Outcome: pure risk sizing and recommendation logic now accept an explicit account-to-quote FX rate, convert account-currency budgets into quote-currency share sizing, and report account-currency realized risk/position value alongside legacy quote-currency fields.
+   - Verification: `tests/test_position_sizing.py`, `tests/test_recommendation_engine.py`, and `tests/test_risk_engine.py`.
+
 ## Next
 
-4. Risk sizing FX
+5. Screener FX rate wiring
    - Status: next.
-   - Confirm risk engine converts account-currency risk budgets into quote-currency share sizing correctly.
+   - Source the needed account-to-quote FX rates for screener runs and pass them into trade-plan/recommendation sizing.
 
 ## Backlog
 
-5. Liquidity filter correctness
+6. Liquidity filter correctness
    - Confirm average daily volume/liquidity thresholds use price and currency consistently.
 
-6. Stop-hit detection uses daily low
+7. Stop-hit detection uses daily low
    - Confirm stop-hit checks trigger on intraday low crossing the stop, not close-only behavior.
 
-7. Holding period semantics
+8. Holding period semantics
    - Decide and enforce calendar-day vs trading-day semantics for holding-period exits.
 
-8. Screener fallback stop uses strategy ATR multiplier
+9. Screener fallback stop uses strategy ATR multiplier
    - Ensure fallback stop generation respects configured `k_atr`.
 
-9. Reject invalid or negative stops
+10. Reject invalid or negative stops
    - Enforce long-position stop invariants across API, screener, and order flows.
 
-10. Provider interval/end-date contract
+11. Provider interval/end-date contract
    - Ensure market-data requests produce the intended final bar and do not silently omit the requested date.
 
-11. Align OHLCV in setup quality
+12. Align OHLCV in setup quality
    - Ensure setup-quality indicators calculate on aligned OHLCV bars.
 
-12. Missing SMA fields stay missing
+13. Missing SMA fields stay missing
    - Avoid fabricating technical values when source data is insufficient.
 
-13. Unknown currency policy
+14. Unknown currency policy
    - Define and enforce behavior for tickers whose quote currency cannot be detected.
 
-14. Finite float coercion
+15. Finite float coercion
    - Prevent NaN/Inf from entering API responses and persisted calculations.
 
-15. Intelligence position fallback
+16. Intelligence position fallback
    - Ensure intelligence flows do not silently substitute stale or incorrect position context.
 
-16. Intelligence cache locking
+17. Intelligence cache locking
    - Protect intelligence cache writes from concurrent corruption.
 
-17. `total_screened` semantics
+18. `total_screened` semantics
    - Clarify whether it means input universe size, fetched rows, candidates after filters, or displayed rows.
 
-18. Finnhub integration reliability
+19. Finnhub integration reliability
    - Make external Finnhub integration tests deterministic or gracefully skipped when vendor data is missing.

@@ -33,12 +33,15 @@ class RiskPayload:
     target: Optional[float]
     rr: Optional[float]
     risk_amount: float
+    risk_amount_account: float
     risk_pct: float
     position_size: float
+    position_size_account: float
     shares: int
     invalidation_level: Optional[float]
     currency: Optional[str] = None
     account_currency: Optional[str] = None
+    account_to_quote_rate: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -91,6 +94,13 @@ def _estimate_costs(
     )
 
 
+def _normalize_account_to_quote_rate(value: float) -> float:
+    rate = float(value)
+    if not math.isfinite(rate) or rate <= 0:
+        raise ValueError("account_to_quote_rate must be a positive finite number")
+    return rate
+
+
 def build_recommendation(
     *,
     signal: Optional[str],
@@ -109,6 +119,7 @@ def build_recommendation(
     max_position_pct: float = 1.0,
     currency: Optional[str] = None,
     account_currency: Optional[str] = None,
+    account_to_quote_rate: float = 1.0,
     thesis: Optional[dict] = None,  # Trade Thesis dictionary
 ) -> RecommendationPayload:
     if entry is None or not math.isfinite(entry) or entry <= 0:
@@ -119,14 +130,20 @@ def build_recommendation(
     # Accept both raw screener vocab ("breakout"/"pullback"/"both") and
     # unified decision-action vocab ("BUY_NOW"/"BUY_ON_PULLBACK"/"WAIT_FOR_BREAKOUT").
     signal_active = signal in {
-        "both", "breakout", "pullback",
-        "BUY_NOW", "BUY_ON_PULLBACK", "WAIT_FOR_BREAKOUT",
+        "both",
+        "breakout",
+        "pullback",
+        "BUY_NOW",
+        "BUY_ON_PULLBACK",
+        "WAIT_FOR_BREAKOUT",
     }
 
     stop_defined = stop is not None and stop < entry
     risk_per_share = (entry - stop) if stop_defined else None
 
-    risk_amount_target = account_size * risk_pct_target
+    account_to_quote_rate = _normalize_account_to_quote_rate(account_to_quote_rate)
+    risk_amount_target_account = account_size * risk_pct_target
+    risk_amount_target = risk_amount_target_account * account_to_quote_rate
     shares_final = shares if shares is not None else None
 
     if shares_final is None and risk_per_share and risk_per_share > 0:
@@ -135,7 +152,7 @@ def build_recommendation(
 
     # Cap shares by max position size (e.g. 50% of account)
     if entry > 0 and max_position_pct > 0:
-        max_position_value = account_size * max_position_pct
+        max_position_value = account_size * max_position_pct * account_to_quote_rate
         shares_by_cap = math.floor(max_position_value / entry)
         if shares_final is None:
             shares_final = shares_by_cap
@@ -149,7 +166,9 @@ def build_recommendation(
 
     position_size = entry * shares_final
     risk_amount = (risk_per_share * shares_final) if risk_per_share else 0.0
-    risk_pct = (risk_amount / account_size) if account_size > 0 else 0.0
+    position_size_account = position_size / account_to_quote_rate
+    risk_amount_account = risk_amount / account_to_quote_rate
+    risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
 
     target = None
     rr = None
@@ -171,7 +190,9 @@ def build_recommendation(
         fx_estimate=costs.fx_estimate,
         slippage_estimate=costs.slippage_estimate,
         total_cost=costs.total_cost,
-        fee_to_risk_pct=round(fee_to_risk_pct, 4) if fee_to_risk_pct is not None else None,
+        fee_to_risk_pct=(
+            round(fee_to_risk_pct, 4) if fee_to_risk_pct is not None else None
+        ),
     )
 
     rr_ok = rr is not None and rr >= min_rr
@@ -182,25 +203,41 @@ def build_recommendation(
         ChecklistGate(
             gate_name="signal_active",
             passed=signal_active,
-            explanation="Signal is active (breakout, pullback, or both)." if signal_active else "No active signal.",
+            explanation=(
+                "Signal is active (breakout, pullback, or both)."
+                if signal_active
+                else "No active signal."
+            ),
             rule="R5",
         ),
         ChecklistGate(
             gate_name="stop_defined",
             passed=stop_defined,
-            explanation="Stop defined below entry." if stop_defined else "Stop is missing or above entry.",
+            explanation=(
+                "Stop defined below entry."
+                if stop_defined
+                else "Stop is missing or above entry."
+            ),
             rule="R2",
         ),
         ChecklistGate(
             gate_name="tradable_size",
             passed=tradable_size,
-            explanation="Position size meets minimum shares." if tradable_size else "Position too small to trade.",
+            explanation=(
+                "Position size meets minimum shares."
+                if tradable_size
+                else "Position too small to trade."
+            ),
             rule="R4",
         ),
         ChecklistGate(
             gate_name="risk_budget",
             passed=risk_ok,
-            explanation="Risk within target budget." if risk_ok else "Risk exceeds target budget.",
+            explanation=(
+                "Risk within target budget."
+                if risk_ok
+                else "Risk exceeds target budget."
+            ),
             rule="R2",
         ),
         ChecklistGate(
@@ -212,9 +249,11 @@ def build_recommendation(
         ChecklistGate(
             gate_name="fee_to_risk",
             passed=fee_ok,
-            explanation=f"Fees <= {int(max_fee_risk_pct * 100)}% of risk."
-            if fee_ok
-            else f"Fees too high vs risk (>{int(max_fee_risk_pct * 100)}%).",
+            explanation=(
+                f"Fees <= {int(max_fee_risk_pct * 100)}% of risk."
+                if fee_ok
+                else f"Fees too high vs risk (>{int(max_fee_risk_pct * 100)}%)."
+            ),
             rule="R4",
         ),
     ]
@@ -253,7 +292,9 @@ def build_recommendation(
                 rule="R4",
             )
         )
-        suggestions.append("Increase account size per trade or avoid low-priced tickers.")
+        suggestions.append(
+            "Increase account size per trade or avoid low-priced tickers."
+        )
 
     if stop_defined and not risk_ok:
         reasons_detailed.append(
@@ -262,7 +303,10 @@ def build_recommendation(
                 message="Risk exceeds the configured risk budget.",
                 severity="block",
                 rule="R2",
-                metrics={"risk_pct": round(risk_pct, 4), "risk_pct_target": round(risk_pct_target, 4)},
+                metrics={
+                    "risk_pct": round(risk_pct, 4),
+                    "risk_pct_target": round(risk_pct_target, 4),
+                },
             )
         )
         suggestions.append("Reduce position size or widen account risk budget.")
@@ -274,7 +318,10 @@ def build_recommendation(
                 message="Reward-to-risk is below the minimum threshold.",
                 severity="block",
                 rule="R3",
-                metrics={"rr": round(rr, 4) if rr is not None else 0.0, "min_rr": min_rr},
+                metrics={
+                    "rr": round(rr, 4) if rr is not None else 0.0,
+                    "min_rr": min_rr,
+                },
             )
         )
         suggestions.append("Tighten the stop or aim for a higher target to reach RR.")
@@ -291,7 +338,9 @@ def build_recommendation(
         )
         suggestions.append("Avoid micro-sized trades where fees dominate risk.")
 
-    verdict: Verdict = "RECOMMENDED" if all(g.passed for g in checklist) else "NOT_RECOMMENDED"
+    verdict: Verdict = (
+        "RECOMMENDED" if all(g.passed for g in checklist) else "NOT_RECOMMENDED"
+    )
 
     if verdict == "RECOMMENDED":
         reasons_short = [
@@ -320,12 +369,15 @@ def build_recommendation(
         target=round(target, 4) if target is not None else None,
         rr=round(rr, 4) if rr is not None else None,
         risk_amount=round(risk_amount, 4),
+        risk_amount_account=round(risk_amount_account, 4),
         risk_pct=round(risk_pct, 6),
         position_size=round(position_size, 4),
+        position_size_account=round(position_size_account, 4),
         shares=int(shares_final),
         invalidation_level=round(stop, 4) if stop is not None else None,
         currency=str(currency).upper() if currency else None,
         account_currency=str(account_currency).upper() if account_currency else None,
+        account_to_quote_rate=round(account_to_quote_rate, 8),
     )
 
     education = EducationPayload(

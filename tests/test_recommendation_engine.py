@@ -19,6 +19,34 @@ def test_recommendation_happy_path():
     assert all(g.passed for g in rec.checklist)
 
 
+def test_recommendation_sizes_quote_currency_from_account_currency_budget():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=98.0,
+        shares=None,
+        account_size=1000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+        commission_pct=0.0,
+        slippage_bps=0.0,
+        min_rr=2.0,
+        max_position_pct=1.0,
+        currency="USD",
+        account_currency="EUR",
+        account_to_quote_rate=1.25,
+    )
+
+    assert rec.risk.shares == 6
+    assert rec.risk.currency == "USD"
+    assert rec.risk.account_currency == "EUR"
+    assert rec.risk.account_to_quote_rate == 1.25
+    assert rec.risk.risk_amount == 12.0
+    assert rec.risk.risk_amount_account == 9.6
+    assert rec.risk.risk_pct == 0.0096
+    assert rec.verdict == "RECOMMENDED"
+
+
 def test_recommendation_requires_stop():
     rec = build_recommendation(
         signal="breakout",

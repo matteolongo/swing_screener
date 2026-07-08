@@ -16,6 +16,7 @@ def _risk_defaults() -> dict:
 @dataclass(frozen=True)
 class RiskConfig:
     account_size: float = field(default_factory=lambda: float(_risk_defaults().get("account_size", 500.0)))
+    account_currency: str = field(default_factory=lambda: str(_risk_defaults().get("account_currency", "EUR")).upper())
     risk_pct: float = field(default_factory=lambda: float(_risk_defaults().get("risk_pct", 0.01)))
     k_atr: float = field(default_factory=lambda: float(_risk_defaults().get("k_atr", 2.0)))
     max_position_pct: float = field(default_factory=lambda: float(_risk_defaults().get("max_position_pct", 0.60)))
@@ -33,6 +34,41 @@ class RiskConfig:
     regime_vol_multiplier: float = field(default_factory=lambda: float(_risk_defaults().get("regime_vol_multiplier", 0.5)))
 
 
+def _normalize_currency(value: object, fallback: str = "EUR") -> str:
+    normalized = str(value or fallback or "").strip().upper()
+    return normalized or fallback.upper()
+
+
+def _normalize_account_to_quote_rate(value: float) -> float:
+    rate = float(value)
+    if not math.isfinite(rate) or rate <= 0:
+        raise ValueError("account_to_quote_rate must be a positive finite number")
+    return rate
+
+
+def _lookup_account_to_quote_rate(
+    *,
+    account_currency: str,
+    quote_currency: str,
+    account_to_quote_rates: Optional[Dict[str, float]],
+) -> float:
+    if quote_currency == account_currency or quote_currency in {"", "UNKNOWN"}:
+        return 1.0
+    if not account_to_quote_rates:
+        return 1.0
+
+    candidates = (
+        quote_currency,
+        f"{account_currency}{quote_currency}",
+        f"{account_currency}/{quote_currency}",
+        f"{account_currency}->{quote_currency}",
+    )
+    for key in candidates:
+        if key in account_to_quote_rates:
+            return _normalize_account_to_quote_rate(account_to_quote_rates[key])
+    return 1.0
+
+
 def compute_stop(entry: float, atr14: float, k_atr: float) -> float:
     if entry <= 0:
         raise ValueError("entry must be > 0")
@@ -44,7 +80,12 @@ def compute_stop(entry: float, atr14: float, k_atr: float) -> float:
 
 
 def position_plan(
-    entry: float, atr14: float, cfg: RiskConfig = RiskConfig()
+    entry: float,
+    atr14: float,
+    cfg: RiskConfig = RiskConfig(),
+    *,
+    quote_currency: Optional[str] = None,
+    account_to_quote_rate: float = 1.0,
 ) -> Optional[Dict[str, Any]]:
     """
     Build a position plan constrained by:
@@ -53,7 +94,12 @@ def position_plan(
 
     Returns dict with entry/stop/shares/etc or None if not tradable.
     """
-    risk_amount = cfg.account_size * cfg.risk_pct
+    account_currency = _normalize_currency(cfg.account_currency)
+    quote_currency = _normalize_currency(quote_currency, account_currency)
+    account_to_quote_rate = _normalize_account_to_quote_rate(account_to_quote_rate)
+
+    risk_amount_account = cfg.account_size * cfg.risk_pct
+    risk_amount = risk_amount_account * account_to_quote_rate
     stop = compute_stop(entry, atr14, cfg.k_atr)
 
     risk_per_share = entry - stop
@@ -64,7 +110,8 @@ def position_plan(
     if shares_by_risk < cfg.min_shares:
         return None
 
-    max_position_value = cfg.account_size * cfg.max_position_pct
+    max_position_value_account = cfg.account_size * cfg.max_position_pct
+    max_position_value = max_position_value_account * account_to_quote_rate
     shares_by_cap = math.floor(max_position_value / entry)
 
     shares = min(shares_by_risk, shares_by_cap)
@@ -73,6 +120,8 @@ def position_plan(
 
     position_value = shares * entry
     realized_risk = shares * risk_per_share
+    position_value_account = position_value / account_to_quote_rate
+    realized_risk_account = realized_risk / account_to_quote_rate
 
     return {
         "entry": round(entry, 2),
@@ -80,11 +129,22 @@ def position_plan(
         "atr14": round(atr14, 4),
         "k_atr": cfg.k_atr,
         "shares": int(shares),
+        "account_currency": account_currency,
+        "quote_currency": quote_currency,
+        "account_to_quote_rate": round(account_to_quote_rate, 8),
         "position_value": round(position_value, 2),
+        "position_value_quote": round(position_value, 2),
+        "position_value_account": round(position_value_account, 2),
         "risk_amount_target": round(risk_amount, 2),
+        "risk_amount_target_quote": round(risk_amount, 2),
+        "risk_amount_target_account": round(risk_amount_account, 2),
         "risk_per_share": round(risk_per_share, 4),
         "realized_risk": round(realized_risk, 2),
+        "realized_risk_quote": round(realized_risk, 2),
+        "realized_risk_account": round(realized_risk_account, 2),
         "max_position_value": round(max_position_value, 2),
+        "max_position_value_quote": round(max_position_value, 2),
+        "max_position_value_account": round(max_position_value_account, 2),
     }
 
 
@@ -95,6 +155,7 @@ def build_trade_plans(
     atr_col: Optional[str] = None,
     risk_multipliers: Optional[Dict[str, float]] = None,
     max_position_multipliers: Optional[Dict[str, float]] = None,
+    account_to_quote_rates: Optional[Dict[str, float]] = None,
     vetoes: Optional[set[str]] = None,
 ) -> pd.DataFrame:
     """
@@ -139,9 +200,25 @@ def build_trade_plans(
 
         entry = float(active.loc[t, "last"])
         atr14 = float(ranked_universe.loc[t, atr_col])
+        account_currency = _normalize_currency(cfg.account_currency)
+        quote_currency = _normalize_currency(
+            (
+                ranked_universe.loc[t, "currency"]
+                if "currency" in ranked_universe.columns
+                else None
+            ),
+            account_currency,
+        )
+        account_to_quote_rate = _lookup_account_to_quote_rate(
+            account_currency=account_currency,
+            quote_currency=quote_currency,
+            account_to_quote_rates=account_to_quote_rates,
+        )
 
         risk_mult = risk_multipliers.get(t, 1.0) if risk_multipliers else 1.0
-        max_mult = max_position_multipliers.get(t, 1.0) if max_position_multipliers else 1.0
+        max_mult = (
+            max_position_multipliers.get(t, 1.0) if max_position_multipliers else 1.0
+        )
         risk_mult = max(0.0, float(risk_mult))
         max_mult = max(0.0, float(max_mult))
 
@@ -153,7 +230,13 @@ def build_trade_plans(
                 max_position_pct=cfg.max_position_pct * max_mult,
             )
 
-        plan = position_plan(entry, atr14, cfg_for_t)
+        plan = position_plan(
+            entry,
+            atr14,
+            cfg_for_t,
+            quote_currency=quote_currency,
+            account_to_quote_rate=account_to_quote_rate,
+        )
         if plan is None:
             continue
 

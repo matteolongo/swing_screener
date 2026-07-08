@@ -17,6 +17,36 @@ def test_position_plan_returns_plan():
     assert plan["position_value"] <= cfg.account_size * cfg.max_position_pct + 1e-9
 
 
+def test_position_plan_converts_account_budget_to_quote_currency():
+    cfg = RiskConfig(
+        account_size=1000,
+        risk_pct=0.01,
+        k_atr=1.0,
+        max_position_pct=1.0,
+        account_currency="EUR",
+    )
+
+    plan = position_plan(
+        entry=100.0,
+        atr14=2.0,
+        cfg=cfg,
+        quote_currency="USD",
+        account_to_quote_rate=1.25,
+    )
+
+    assert plan is not None
+    assert plan["shares"] == 6
+    assert plan["account_currency"] == "EUR"
+    assert plan["quote_currency"] == "USD"
+    assert plan["account_to_quote_rate"] == 1.25
+    assert plan["risk_amount_target_account"] == 10.0
+    assert plan["risk_amount_target"] == 12.5
+    assert plan["realized_risk"] == 12.0
+    assert plan["realized_risk_account"] == 9.6
+    assert plan["position_value"] == 600.0
+    assert plan["position_value_account"] == 480.0
+
+
 def test_position_plan_none_when_too_volatile():
     cfg = RiskConfig(account_size=500, risk_pct=0.01, k_atr=2.0, max_position_pct=0.60)
     # ATR huge -> risk/share too high for 5€ risk budget
@@ -59,3 +89,34 @@ def test_build_trade_plans_infers_atr_column():
 
     assert "AAA" in plans.index
     assert plans.loc["AAA", "shares"] >= 1
+
+
+def test_build_trade_plans_uses_row_currency_conversion_rates():
+    ranked = pd.DataFrame(
+        {"atr14": [2.0], "last": [100.0], "currency": ["USD"]},
+        index=["AAPL"],
+    )
+    signals = pd.DataFrame(
+        {"last": [100.0], "signal": ["breakout"]},
+        index=["AAPL"],
+    )
+    cfg = RiskConfig(
+        account_size=1000,
+        risk_pct=0.01,
+        k_atr=1.0,
+        max_position_pct=1.0,
+        account_currency="EUR",
+    )
+
+    plans = build_trade_plans(
+        ranked,
+        signals,
+        cfg,
+        account_to_quote_rates={"USD": 1.25},
+    )
+
+    assert plans.loc["AAPL", "shares"] == 6
+    assert plans.loc["AAPL", "quote_currency"] == "USD"
+    assert plans.loc["AAPL", "account_currency"] == "EUR"
+    assert plans.loc["AAPL", "account_to_quote_rate"] == 1.25
+    assert plans.loc["AAPL", "realized_risk_account"] == 9.6

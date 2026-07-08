@@ -23,8 +23,16 @@ class RecommendationRisk(BaseModel):
     target: Optional[float] = None
     rr: Optional[float] = None
     risk_amount: float
+    risk_amount_account: Optional[float] = Field(
+        default=None,
+        description="Realized risk converted to account currency",
+    )
     risk_pct: float
     position_size: float
+    position_size_account: Optional[float] = Field(
+        default=None,
+        description="Position notional converted to account currency",
+    )
     shares: int
     invalidation_level: Optional[float] = None
     currency: Optional[str] = Field(
@@ -34,6 +42,10 @@ class RecommendationRisk(BaseModel):
     account_currency: Optional[str] = Field(
         default=None,
         description="Configured account base currency used for risk_pct denominator",
+    )
+    account_to_quote_rate: Optional[float] = Field(
+        default=None,
+        description="Quote currency units per one account currency unit",
     )
 
 

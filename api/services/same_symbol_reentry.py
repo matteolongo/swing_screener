@@ -85,21 +85,32 @@ def _copy_recommendation_with_adjusted_risk(
     rr = risk.rr
     if target is not None and risk_per_share > 0:
         rr = (float(target) - float(risk.entry)) / risk_per_share
+    try:
+        account_to_quote_rate = float(risk.account_to_quote_rate or 1.0)
+    except (TypeError, ValueError):
+        account_to_quote_rate = 1.0
+    if not math.isfinite(account_to_quote_rate) or account_to_quote_rate <= 0:
+        account_to_quote_rate = 1.0
     risk_amount = risk_per_share * shares
-    risk_pct = (risk_amount / account_size) if account_size > 0 else 0.0
+    risk_amount_account = risk_amount / account_to_quote_rate
+    risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
     position_size = float(risk.entry) * shares
+    position_size_account = position_size / account_to_quote_rate
     adjusted_risk = RecommendationRisk(
         entry=risk.entry,
         stop=execution_stop,
         target=target,
         rr=_safe_round(rr),
         risk_amount=_safe_round(risk_amount) or 0.0,
+        risk_amount_account=_safe_round(risk_amount_account),
         risk_pct=_safe_round(risk_pct, 6) or 0.0,
         position_size=_safe_round(position_size) or 0.0,
+        position_size_account=_safe_round(position_size_account),
         shares=int(shares),
         invalidation_level=execution_stop,
         currency=risk.currency,
         account_currency=risk.account_currency,
+        account_to_quote_rate=account_to_quote_rate,
     )
     payload = recommendation.model_dump()
     payload["risk"] = adjusted_risk.model_dump()
