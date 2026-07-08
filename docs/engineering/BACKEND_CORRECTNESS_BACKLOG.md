@@ -15,17 +15,18 @@
    - Outcome: realized P&L deducts entry fees once, allocates entry fees pro-rata across partial/final closes, deducts exit fees, and supports optional execution EURUSD rates on partial/final exits.
    - Verification: `tests/api/test_portfolio_realized_pnl_accounting.py` plus portfolio fee/equity regressions.
 
+3. Screener/risk currency contract
+   - Status: done.
+   - Outcome: screener candidates now expose canonical quote/account currency metadata for position value and risk fields while preserving legacy USD-named fields for compatibility.
+   - Verification: `tests/api/test_screener_currency_contract.py` plus screener/risk/same-symbol regressions.
+
 ## Next
 
-3. Screener/risk currency contract
+4. Risk sizing FX
    - Status: next.
-   - Goal: ensure screener output fields that represent risk, position value, and liquidity use a documented currency contract so downstream order sizing and portfolio accounting cannot mix quote currency with account currency.
-   - First verifier: add focused tests that prove a USD candidate and a EUR candidate produce explicit, non-ambiguous money fields.
+   - Confirm risk engine converts account-currency risk budgets into quote-currency share sizing correctly.
 
 ## Backlog
-
-4. Risk sizing FX
-   - Confirm risk engine converts account-currency risk budgets into quote-currency share sizing correctly.
 
 5. Liquidity filter correctness
    - Confirm average daily volume/liquidity thresholds use price and currency consistently.

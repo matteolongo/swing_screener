@@ -27,6 +27,14 @@ class RecommendationRisk(BaseModel):
     position_size: float
     shares: int
     invalidation_level: Optional[float] = None
+    currency: Optional[str] = Field(
+        default=None,
+        description="Currency of risk_amount and position_size",
+    )
+    account_currency: Optional[str] = Field(
+        default=None,
+        description="Configured account base currency used for risk_pct denominator",
+    )
 
 
 class RecommendationCosts(BaseModel):

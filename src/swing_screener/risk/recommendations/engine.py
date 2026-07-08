@@ -37,6 +37,8 @@ class RiskPayload:
     position_size: float
     shares: int
     invalidation_level: Optional[float]
+    currency: Optional[str] = None
+    account_currency: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +107,8 @@ def build_recommendation(
     fx_estimate_pct: float = 0.0,
     min_shares: int = 1,
     max_position_pct: float = 1.0,
+    currency: Optional[str] = None,
+    account_currency: Optional[str] = None,
     thesis: Optional[dict] = None,  # Trade Thesis dictionary
 ) -> RecommendationPayload:
     if entry is None or not math.isfinite(entry) or entry <= 0:
@@ -320,6 +324,8 @@ def build_recommendation(
         position_size=round(position_size, 4),
         shares=int(shares_final),
         invalidation_level=round(stop, 4) if stop is not None else None,
+        currency=str(currency).upper() if currency else None,
+        account_currency=str(account_currency).upper() if account_currency else None,
     )
 
     education = EducationPayload(

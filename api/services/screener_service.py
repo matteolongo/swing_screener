@@ -136,6 +136,13 @@ def _fetch_ohlcv_chunked(
     return out
 
 
+def _account_currency_from_strategy(strategy: dict) -> str:
+    raw_risk = strategy.get("risk") if isinstance(strategy, dict) else None
+    if not isinstance(raw_risk, dict):
+        return "EUR"
+    return str(raw_risk.get("account_currency") or "EUR").upper()
+
+
 @dataclass
 class _RunContext:
     """Mutable state accumulated across run_screener pipeline steps.
@@ -752,6 +759,7 @@ class ScreenerService:
         universe_cfg = ctx.universe_cfg
         signals_cfg = ctx.signals_cfg
         sector_rotation_by_name = ctx.sector_rotation_by_name
+        account_currency = _account_currency_from_strategy(ctx.strategy)
 
         ticker_list = [str(idx) for idx in results.index]
 
@@ -864,6 +872,8 @@ class ScreenerService:
                 momentum_12m=safe_float(row.get("mom_12m")),
                 rel_strength=safe_float(row.get("rs_6m")),
                 confidence=safe_float(row.get("confidence")),
+                currency=currency,
+                account_currency=account_currency,
             )
             recommendation = Recommendation.model_validate(asdict(rec_payload))
             rec_risk = recommendation.risk
@@ -959,6 +969,14 @@ class ScreenerService:
                     target=rec_risk.target,
                     rr=rec_risk.rr,
                     shares=shares_val if shares_val is not None else rec_risk.shares,
+                    quote_currency=currency,
+                    account_currency=account_currency,
+                    position_size_quote=(
+                        position_size
+                        if position_size is not None
+                        else rec_risk.position_size
+                    ),
+                    risk_quote=risk_usd if risk_usd is not None else rec_risk.risk_amount,
                     position_size_usd=(
                         position_size
                         if position_size is not None

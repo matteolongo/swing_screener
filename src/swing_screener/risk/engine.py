@@ -39,6 +39,8 @@ def evaluate_recommendation(
     momentum_12m: Optional[float] = None,
     rel_strength: Optional[float] = None,
     confidence: Optional[float] = None,
+    currency: Optional[str] = None,
+    account_currency: Optional[str] = None,
 ) -> RecommendationPayload:
     """
     Evaluate recommendation with optional Trade Thesis generation.
@@ -108,5 +110,7 @@ def evaluate_recommendation(
         fx_estimate_pct=costs.fx_estimate_pct,
         min_shares=risk_cfg.min_shares,
         max_position_pct=risk_cfg.max_position_pct,
+        currency=currency,
+        account_currency=account_currency,
         thesis=thesis_dict,
     )

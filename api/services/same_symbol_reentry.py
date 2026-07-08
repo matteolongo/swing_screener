@@ -98,6 +98,8 @@ def _copy_recommendation_with_adjusted_risk(
         position_size=_safe_round(position_size) or 0.0,
         shares=int(shares),
         invalidation_level=execution_stop,
+        currency=risk.currency,
+        account_currency=risk.account_currency,
     )
     payload = recommendation.model_dump()
     payload["risk"] = adjusted_risk.model_dump()
@@ -244,8 +246,10 @@ class SameSymbolReentryEvaluator:
         candidate.recommendation = adjusted_recommendation
         candidate.stop = _safe_round(current_stop)
         candidate.rr = adjusted_recommendation.risk.rr
+        candidate.risk_quote = adjusted_recommendation.risk.risk_amount
         candidate.risk_usd = adjusted_recommendation.risk.risk_amount
         candidate.risk_pct = adjusted_recommendation.risk.risk_pct
+        candidate.position_size_quote = adjusted_recommendation.risk.position_size
         candidate.position_size_usd = adjusted_recommendation.risk.position_size
         candidate.shares = adjusted_recommendation.risk.shares
         context.mode = "SCALE_BACK" if has_partial_closes else "ADD_ON"

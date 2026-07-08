@@ -82,6 +82,16 @@ class ScreenerCandidate(BaseModel):
     target: Optional[float] = None
     rr: Optional[float] = None
     shares: Optional[int] = None
+    quote_currency: str = Field(
+        default="USD",
+        description="Currency of entry/stop/target/share-derived money fields",
+    )
+    account_currency: str = Field(
+        default="EUR",
+        description="Configured account base currency",
+    )
+    position_size_quote: Optional[float] = None
+    risk_quote: Optional[float] = None
     position_size_usd: Optional[float] = None
     risk_usd: Optional[float] = None
     risk_pct: Optional[float] = None
