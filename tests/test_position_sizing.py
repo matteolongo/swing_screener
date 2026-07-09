@@ -47,6 +47,25 @@ def test_position_plan_converts_account_budget_to_quote_currency():
     assert plan["position_value_account"] == 480.0
 
 
+def test_position_plan_returns_none_for_unknown_quote_currency():
+    cfg = RiskConfig(
+        account_size=1000,
+        risk_pct=0.01,
+        k_atr=1.0,
+        max_position_pct=1.0,
+        account_currency="EUR",
+    )
+
+    plan = position_plan(
+        entry=100.0,
+        atr14=2.0,
+        cfg=cfg,
+        quote_currency="UNKNOWN",
+    )
+
+    assert plan is None
+
+
 def test_position_plan_none_when_too_volatile():
     cfg = RiskConfig(account_size=500, risk_pct=0.01, k_atr=2.0, max_position_pct=0.60)
     # ATR huge -> risk/share too high for 5€ risk budget
@@ -72,6 +91,50 @@ def test_build_trade_plans_filters_none_and_requires_signal():
     assert "AAA" in plans.index
     assert "BBB" not in plans.index  # too volatile -> None
     assert plans.loc["AAA", "shares"] >= 1
+
+
+def test_build_trade_plans_skips_unknown_quote_currency():
+    ranked = pd.DataFrame(
+        {"atr14": [2.0], "last": [100.0], "currency": ["UNKNOWN"]},
+        index=["AAA"],
+    )
+    signals = pd.DataFrame(
+        {"last": [100.0], "signal": ["breakout"]},
+        index=["AAA"],
+    )
+    cfg = RiskConfig(
+        account_size=1000,
+        risk_pct=0.01,
+        k_atr=1.0,
+        max_position_pct=1.0,
+        account_currency="EUR",
+    )
+
+    plans = build_trade_plans(ranked, signals, cfg)
+
+    assert plans.empty
+
+
+def test_build_trade_plans_skips_cross_currency_when_rate_missing():
+    ranked = pd.DataFrame(
+        {"atr14": [2.0], "last": [100.0], "currency": ["USD"]},
+        index=["AAPL"],
+    )
+    signals = pd.DataFrame(
+        {"last": [100.0], "signal": ["breakout"]},
+        index=["AAPL"],
+    )
+    cfg = RiskConfig(
+        account_size=1000,
+        risk_pct=0.01,
+        k_atr=1.0,
+        max_position_pct=1.0,
+        account_currency="EUR",
+    )
+
+    plans = build_trade_plans(ranked, signals, cfg)
+
+    assert plans.empty
 
 
 def test_build_trade_plans_infers_atr_column():

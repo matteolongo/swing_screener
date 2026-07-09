@@ -71,15 +71,18 @@
    - Outcome: screener candidates now preserve missing SMA source fields as `null`, and recommendation thesis generation is skipped when the technical SMA context is incomplete.
    - Verification: `tests/api/test_screener_endpoints.py::test_screener_keeps_missing_sma_fields_null`, plus focused screener/daily-review/recommendation/thesis suites.
 
-## Next
-
 14. Unknown currency policy
+   - Status: done.
    - Define and enforce behavior for tickers whose quote currency cannot be detected.
+   - Outcome: unknown quote currencies and missing cross-currency FX rates no longer receive execution sizing or fabricated 1:1 account conversion; recommendations block with explicit `CURRENCY_UNKNOWN` or `FX_RATE_MISSING` reasons.
+   - Verification: `tests/test_position_sizing.py`, `tests/test_recommendation_engine.py`, `tests/test_report.py`, and API screener currency regressions.
 
-## Backlog
+## Next
 
 15. Finite float coercion
    - Prevent NaN/Inf from entering API responses and persisted calculations.
+
+## Backlog
 
 16. Intelligence position fallback
    - Ensure intelligence flows do not silently substitute stale or incorrect position context.

@@ -41,7 +41,7 @@ class RiskPayload:
     invalidation_level: Optional[float]
     currency: Optional[str] = None
     account_currency: Optional[str] = None
-    account_to_quote_rate: float = 1.0
+    account_to_quote_rate: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -101,6 +101,11 @@ def _normalize_account_to_quote_rate(value: float) -> float:
     return rate
 
 
+def _normalize_currency_code(value: object) -> Optional[str]:
+    normalized = str(value or "").strip().upper()
+    return normalized or None
+
+
 def build_recommendation(
     *,
     signal: Optional[str],
@@ -119,7 +124,7 @@ def build_recommendation(
     max_position_pct: float = 1.0,
     currency: Optional[str] = None,
     account_currency: Optional[str] = None,
-    account_to_quote_rate: float = 1.0,
+    account_to_quote_rate: Optional[float] = None,
     thesis: Optional[dict] = None,  # Trade Thesis dictionary
 ) -> RecommendationPayload:
     if entry is None or not math.isfinite(entry) or entry <= 0:
@@ -149,18 +154,38 @@ def build_recommendation(
     stop_defined = stop is not None and entry > 0 and stop < entry
     risk_per_share = (entry - stop) if stop_defined else None
 
-    account_to_quote_rate = _normalize_account_to_quote_rate(account_to_quote_rate)
-    risk_amount_target_account = account_size * risk_pct_target
-    risk_amount_target = risk_amount_target_account * account_to_quote_rate
-    shares_final = shares if shares is not None else None
+    quote_currency = _normalize_currency_code(currency)
+    account_currency_code = _normalize_currency_code(account_currency)
+    currency_unknown = quote_currency == "UNKNOWN"
+    fx_rate_missing = (
+        quote_currency is not None
+        and account_currency_code is not None
+        and quote_currency != account_currency_code
+        and account_to_quote_rate is None
+    )
+    sizing_blocked = currency_unknown or fx_rate_missing
 
-    if shares_final is None and risk_per_share and risk_per_share > 0:
+    normalized_rate = (
+        1.0
+        if account_to_quote_rate is None
+        else _normalize_account_to_quote_rate(account_to_quote_rate)
+    )
+    risk_amount_target_account = account_size * risk_pct_target
+    risk_amount_target = risk_amount_target_account * normalized_rate
+    shares_final = 0 if sizing_blocked else shares if shares is not None else None
+
+    if (
+        not sizing_blocked
+        and shares_final is None
+        and risk_per_share
+        and risk_per_share > 0
+    ):
         shares_by_risk = math.floor(risk_amount_target / risk_per_share)
         shares_final = max(0, int(shares_by_risk))
 
     # Cap shares by max position size (e.g. 50% of account)
-    if entry > 0 and max_position_pct > 0:
-        max_position_value = account_size * max_position_pct * account_to_quote_rate
+    if not sizing_blocked and entry > 0 and max_position_pct > 0:
+        max_position_value = account_size * max_position_pct * normalized_rate
         shares_by_cap = math.floor(max_position_value / entry)
         if shares_final is None:
             shares_final = shares_by_cap
@@ -170,12 +195,12 @@ def build_recommendation(
     if shares_final is None:
         shares_final = 0
 
-    tradable_size = shares_final >= min_shares
+    tradable_size = False if sizing_blocked else shares_final >= min_shares
 
     position_size = entry * shares_final
     risk_amount = (risk_per_share * shares_final) if risk_per_share else 0.0
-    position_size_account = position_size / account_to_quote_rate
-    risk_amount_account = risk_amount / account_to_quote_rate
+    position_size_account = position_size / normalized_rate
+    risk_amount_account = risk_amount / normalized_rate
     risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
 
     target = None
@@ -205,7 +230,10 @@ def build_recommendation(
 
     rr_ok = rr is not None and rr >= min_rr
     fee_ok = fee_to_risk_pct is not None and fee_to_risk_pct <= max_fee_risk_pct
-    risk_ok = risk_pct <= risk_pct_target + 1e-9 if risk_pct_target > 0 else False
+    risk_ok = (
+        not sizing_blocked
+        and (risk_pct <= risk_pct_target + 1e-9 if risk_pct_target > 0 else False)
+    )
 
     checklist = [
         ChecklistGate(
@@ -284,6 +312,28 @@ def build_recommendation(
         )
         suggestions.append("Wait for a breakout or pullback signal.")
 
+    if currency_unknown:
+        reasons_detailed.append(
+            Reason(
+                code="CURRENCY_UNKNOWN",
+                message="Quote currency is unknown, so execution sizing is blocked.",
+                severity="block",
+                rule="R2",
+            )
+        )
+        suggestions.append("Resolve the instrument quote currency before sizing.")
+
+    if fx_rate_missing:
+        reasons_detailed.append(
+            Reason(
+                code="FX_RATE_MISSING",
+                message="FX conversion rate is required before cross-currency sizing.",
+                severity="block",
+                rule="R2",
+            )
+        )
+        suggestions.append("Fetch or provide the account-to-quote FX rate.")
+
     if not stop_defined and stop_invalid:
         reasons_detailed.append(
             Reason(
@@ -305,7 +355,7 @@ def build_recommendation(
         )
         suggestions.append("Define a stop below entry using ATR or structure.")
 
-    if stop_defined and not tradable_size:
+    if stop_defined and not tradable_size and not sizing_blocked:
         reasons_detailed.append(
             Reason(
                 code="POSITION_TOO_SMALL",
@@ -397,9 +447,11 @@ def build_recommendation(
         position_size_account=round(position_size_account, 4),
         shares=int(shares_final),
         invalidation_level=round(stop, 4) if stop is not None else None,
-        currency=str(currency).upper() if currency else None,
-        account_currency=str(account_currency).upper() if account_currency else None,
-        account_to_quote_rate=round(account_to_quote_rate, 8),
+        currency=quote_currency,
+        account_currency=account_currency_code,
+        account_to_quote_rate=(
+            None if sizing_blocked else round(normalized_rate, 8)
+        ),
     )
 
     education = EducationPayload(

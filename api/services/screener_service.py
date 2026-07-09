@@ -910,7 +910,7 @@ class ScreenerService:
             position_size = safe_optional_float(row.get("position_value"))
             risk_usd = safe_optional_float(row.get("realized_risk"))
             risk_account = safe_optional_float(row.get("realized_risk_account"))
-            account_to_quote_rate = safe_float(row.get("account_to_quote_rate"), default=1.0)
+            account_to_quote_rate = safe_optional_float(row.get("account_to_quote_rate"))
             risk_pct = None
             if risk_cfg.account_size:
                 if risk_account is not None:

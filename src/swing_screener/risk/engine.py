@@ -42,7 +42,7 @@ def evaluate_recommendation(
     confidence: Optional[float] = None,
     currency: Optional[str] = None,
     account_currency: Optional[str] = None,
-    account_to_quote_rate: float = 1.0,
+    account_to_quote_rate: Optional[float] = None,
 ) -> RecommendationPayload:
     """
     Evaluate recommendation with optional Trade Thesis generation.

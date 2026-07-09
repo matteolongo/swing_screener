@@ -39,6 +39,15 @@ def _normalize_currency(value: object, fallback: str = "EUR") -> str:
     return normalized or fallback.upper()
 
 
+def _normalize_quote_currency(value: object, account_currency: str) -> Optional[str]:
+    if value is None:
+        return account_currency
+    normalized = str(value).strip().upper()
+    if normalized in {"", "UNKNOWN"}:
+        return None
+    return normalized
+
+
 def _normalize_account_to_quote_rate(value: float) -> float:
     rate = float(value)
     if not math.isfinite(rate) or rate <= 0:
@@ -51,11 +60,11 @@ def _lookup_account_to_quote_rate(
     account_currency: str,
     quote_currency: str,
     account_to_quote_rates: Optional[Dict[str, float]],
-) -> float:
-    if quote_currency == account_currency or quote_currency in {"", "UNKNOWN"}:
+) -> Optional[float]:
+    if quote_currency == account_currency:
         return 1.0
     if not account_to_quote_rates:
-        return 1.0
+        return None
 
     candidates = (
         quote_currency,
@@ -66,7 +75,7 @@ def _lookup_account_to_quote_rate(
     for key in candidates:
         if key in account_to_quote_rates:
             return _normalize_account_to_quote_rate(account_to_quote_rates[key])
-    return 1.0
+    return None
 
 
 def compute_stop(entry: float, atr14: float, k_atr: float) -> float:
@@ -85,7 +94,7 @@ def position_plan(
     cfg: RiskConfig = RiskConfig(),
     *,
     quote_currency: Optional[str] = None,
-    account_to_quote_rate: float = 1.0,
+    account_to_quote_rate: Optional[float] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Build a position plan constrained by:
@@ -95,8 +104,19 @@ def position_plan(
     Returns dict with entry/stop/shares/etc or None if not tradable.
     """
     account_currency = _normalize_currency(cfg.account_currency)
-    quote_currency = _normalize_currency(quote_currency, account_currency)
-    account_to_quote_rate = _normalize_account_to_quote_rate(account_to_quote_rate)
+    quote_currency = _normalize_quote_currency(quote_currency, account_currency)
+    if quote_currency is None:
+        return None
+    if quote_currency == account_currency:
+        account_to_quote_rate = (
+            1.0
+            if account_to_quote_rate is None
+            else _normalize_account_to_quote_rate(account_to_quote_rate)
+        )
+    elif account_to_quote_rate is None:
+        return None
+    else:
+        account_to_quote_rate = _normalize_account_to_quote_rate(account_to_quote_rate)
 
     risk_amount_account = cfg.account_size * cfg.risk_pct
     risk_amount = risk_amount_account * account_to_quote_rate
@@ -201,19 +221,21 @@ def build_trade_plans(
         entry = float(active.loc[t, "last"])
         atr14 = float(ranked_universe.loc[t, atr_col])
         account_currency = _normalize_currency(cfg.account_currency)
-        quote_currency = _normalize_currency(
-            (
-                ranked_universe.loc[t, "currency"]
-                if "currency" in ranked_universe.columns
-                else None
-            ),
+        quote_currency = _normalize_quote_currency(
+            ranked_universe.loc[t, "currency"]
+            if "currency" in ranked_universe.columns
+            else None,
             account_currency,
         )
+        if quote_currency is None:
+            continue
         account_to_quote_rate = _lookup_account_to_quote_rate(
             account_currency=account_currency,
             quote_currency=quote_currency,
             account_to_quote_rates=account_to_quote_rates,
         )
+        if account_to_quote_rate is None:
+            continue
 
         risk_mult = risk_multipliers.get(t, 1.0) if risk_multipliers else 1.0
         max_mult = (
