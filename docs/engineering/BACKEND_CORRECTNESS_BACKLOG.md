@@ -35,15 +35,17 @@
    - Outcome: average daily volume liquidity thresholds now use EUR-denominated turnover, USD quotes require an explicit USD-to-EUR rate, the liquidity field is available before universe filtering, and active liquidity thresholds fail closed when liquidity cannot be computed.
    - Verification: `tests/test_setup_quality.py`, `tests/test_universe_filter.py`, `tests/test_report.py`, and `tests/test_screener_service.py`.
 
-## Next
-
 7. Stop-hit detection uses daily low
-   - Confirm stop-hit checks trigger on intraday low crossing the stop, not close-only behavior.
+   - Status: done.
+   - Outcome: live portfolio management and event-study backtests now trigger stop-hit exits when the latest daily low crosses the stop, even if the close recovers above it.
+   - Verification: `tests/test_portfolio_manage.py`, `tests/test_backtest_event_study.py`, and `tests/api/test_backtest_endpoints.py`.
 
-## Backlog
+## Next
 
 8. Holding period semantics
    - Decide and enforce calendar-day vs trading-day semantics for holding-period exits.
+
+## Backlog
 
 9. Screener fallback stop uses strategy ATR multiplier
    - Ensure fallback stop generation respects configured `k_atr`.

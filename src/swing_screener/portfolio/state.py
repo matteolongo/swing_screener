@@ -306,11 +306,24 @@ def evaluate_positions(
 
         s = _get_close_series(ohlcv, pos.ticker)
         last = float(s.iloc[-1])
+        asof = s.index[-1]
+        low_s = _get_series(ohlcv, "Low", pos.ticker)
+        latest_low = last
+        if not low_s.empty:
+            try:
+                low_value = low_s.loc[asof]
+                if isinstance(low_value, pd.Series):
+                    low_value = low_value.iloc[-1]
+                low_float = float(low_value)
+                if math.isfinite(low_float):
+                    latest_low = low_float
+            except (KeyError, TypeError, ValueError):
+                latest_low = last
 
         exhaustion = compute_exhaustion_score(
             close=s,
             high=_get_series(ohlcv, "High", pos.ticker),
-            low=_get_series(ohlcv, "Low", pos.ticker),
+            low=low_s,
             volume=_get_series(ohlcv, "Volume", pos.ticker),
         )
 
@@ -333,8 +346,8 @@ def evaluate_positions(
             )
         r_now = (last - pos.entry_price) / risk_per_share
 
-        # stop hit?
-        if last <= pos.stop_price:
+        # Stop orders can be hit intraday even when the close recovers.
+        if latest_low <= pos.stop_price:
             upd = PositionUpdate(
                 ticker=pos.ticker,
                 status=pos.status,
@@ -345,7 +358,7 @@ def evaluate_positions(
                 shares=pos.shares,
                 r_now=r_now,
                 action="CLOSE_STOP_HIT",
-                reason="Price <= stop (stop hit)",
+                reason="Low <= stop (stop hit)",
                 exhaustion_score=exhaustion.score,
                 exhaustion_label=exhaustion.label,
             )

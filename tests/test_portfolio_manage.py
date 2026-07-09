@@ -3,18 +3,22 @@ import pytest
 from swing_screener.portfolio.state import Position, evaluate_positions, ManageConfig
 
 
-def _make_ohlcv(close_by_ticker: dict[str, list[float]]) -> pd.DataFrame:
+def _make_ohlcv(
+    close_by_ticker: dict[str, list[float]],
+    low_by_ticker: dict[str, list[float]] | None = None,
+) -> pd.DataFrame:
     idx = pd.date_range(
         "2026-01-01", periods=len(next(iter(close_by_ticker.values()))), freq="B"
     )
     cols = []
     data = {}
     for t, closes in close_by_ticker.items():
+        lows = (low_by_ticker or {}).get(t, closes)
         data[("Close", t)] = closes
         # dummy other fields not needed
         data[("Open", t)] = closes
         data[("High", t)] = closes
-        data[("Low", t)] = closes
+        data[("Low", t)] = lows
         data[("Volume", t)] = [100] * len(closes)
         cols.extend([("Close", t), ("Open", t), ("High", t), ("Low", t), ("Volume", t)])
     df = pd.DataFrame(data, index=idx)
@@ -53,6 +57,26 @@ def test_stop_hit_triggers_close():
     )
     updates, _ = evaluate_positions(ohlcv, [pos], ManageConfig())
     assert updates[-1].action == "CLOSE_STOP_HIT"
+
+
+def test_stop_hit_uses_daily_low_when_close_recovers_above_stop():
+    ohlcv = _make_ohlcv(
+        {"AAA": [100, 95, 92]},
+        low_by_ticker={"AAA": [99, 94, 89]},
+    )
+    pos = Position(
+        ticker="AAA",
+        status="open",
+        entry_date="2026-01-01",
+        entry_price=100.0,
+        stop_price=90.0,
+        shares=1,
+    )
+
+    updates, _ = evaluate_positions(ohlcv, [pos], ManageConfig())
+
+    assert updates[-1].action == "CLOSE_STOP_HIT"
+    assert updates[-1].last == 92.0
 
 
 def test_trailing_stop_above_entry_uses_initial_risk():
