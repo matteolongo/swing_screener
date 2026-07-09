@@ -50,15 +50,17 @@
    - Outcome: fallback stop generation now derives missing stops from the active strategy `risk.k_atr` multiplier instead of a hard-coded 2 ATR distance.
    - Verification: `tests/api/test_screener_endpoints.py::test_screener_fallback_stop_uses_strategy_atr_multiplier`.
 
-## Next
-
 10. Reject invalid or negative stops
-   - Enforce long-position stop invariants across API, screener, and order flows.
+   - Status: done.
+   - Outcome: long-trade stops are valid only when finite, positive, and below entry. Invalid recommendation/screener stops now block with `STOP_INVALID` and are not echoed as plan stops; pending orders reject provided zero stops and stops at or above the provided limit entry; add-on fills reject live stops at or above the blended entry.
+   - Verification: `tests/test_recommendation_engine.py`, `tests/api/test_screener_endpoints.py`, and `tests/api/test_order_fill.py`.
 
-## Backlog
+## Next
 
 11. Provider interval/end-date contract
    - Ensure market-data requests produce the intended final bar and do not silently omit the requested date.
+
+## Backlog
 
 12. Align OHLCV in setup quality
    - Ensure setup-quality indicators calculate on aligned OHLCV bars.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import Optional
 
@@ -50,6 +51,17 @@ def evaluate_recommendation(
     Otherwise, falls back to basic recommendation without thesis.
     """
     thesis_dict = None
+    thesis_stop = None
+    if (
+        entry is not None
+        and stop is not None
+        and math.isfinite(entry)
+        and math.isfinite(stop)
+        and entry > 0
+        and stop > 0
+        and entry > stop
+    ):
+        thesis_stop = stop
     
     # Build Trade Thesis if we have the required data
     if all([
@@ -67,8 +79,8 @@ def evaluate_recommendation(
         try:
             # Calculate RR for thesis (will be recalculated in build_recommendation)
             rr = 0.0
-            if stop is not None and entry is not None and entry > stop:
-                risk_per_share = entry - stop
+            if thesis_stop is not None:
+                risk_per_share = entry - thesis_stop
                 target = entry + (rr_target * risk_per_share)
                 rr = (target - entry) / risk_per_share
             
@@ -77,7 +89,7 @@ def evaluate_recommendation(
                 strategy=strategy,
                 signal=signal,
                 entry=entry,
-                stop=stop,
+                stop=thesis_stop,
                 rr=rr,
                 close=close,
                 sma_20=sma_20,

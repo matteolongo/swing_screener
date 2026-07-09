@@ -62,6 +62,42 @@ def test_recommendation_requires_stop():
     assert any(r.code == "STOP_MISSING" for r in rec.reasons_detailed)
 
 
+def test_recommendation_rejects_stop_at_or_above_entry():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=105.0,
+        shares=100,
+        account_size=100000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+    )
+
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert any(r.code == "STOP_INVALID" for r in rec.reasons_detailed)
+    assert not any(r.code == "STOP_MISSING" for r in rec.reasons_detailed)
+    assert rec.risk.stop is None
+    assert rec.risk.invalidation_level is None
+    assert rec.risk.risk_amount == 0.0
+
+
+def test_recommendation_rejects_non_positive_stop():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=0.0,
+        shares=100,
+        account_size=100000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+    )
+
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert any(r.code == "STOP_INVALID" for r in rec.reasons_detailed)
+    assert rec.risk.stop is None
+    assert rec.risk.invalidation_level is None
+
+
 def test_recommendation_rejects_low_rr():
     rec = build_recommendation(
         signal="pullback",

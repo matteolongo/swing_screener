@@ -263,7 +263,7 @@ class CreateOrderRequest(BaseModel):
     order_type: str
     quantity: int = Field(gt=0, description="Number of shares")
     limit_price: Optional[float] = Field(default=None, ge=0)
-    stop_price: Optional[float] = Field(default=None, ge=0)
+    stop_price: Optional[float] = Field(default=None, gt=0)
     target_price: Optional[float] = Field(default=None, gt=0, description="Planned price target (optional)")
     notes: str = ""
     order_kind: str = "entry"
@@ -286,6 +286,16 @@ class CreateOrderRequest(BaseModel):
     @classmethod
     def validate_order_type(cls, v: str) -> str:
         return v.strip().upper()
+
+    @model_validator(mode="after")
+    def validate_stop_below_limit(self):
+        if (
+            self.stop_price is not None
+            and self.limit_price is not None
+            and self.stop_price >= self.limit_price
+        ):
+            raise ValueError("stop_price must be below limit_price for a long entry order")
+        return self
 
 
 class FillOrderRequest(BaseModel):

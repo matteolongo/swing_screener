@@ -124,8 +124,16 @@ def build_recommendation(
 ) -> RecommendationPayload:
     if entry is None or not math.isfinite(entry) or entry <= 0:
         entry = 0.0
-    if stop is None or not math.isfinite(stop):
+
+    stop_invalid = False
+    if stop is None:
         stop = None
+    elif not math.isfinite(stop) or stop <= 0:
+        stop = None
+        stop_invalid = True
+    elif entry > 0 and stop >= entry:
+        stop = None
+        stop_invalid = True
 
     # Accept both raw screener vocab ("breakout"/"pullback"/"both") and
     # unified decision-action vocab ("BUY_NOW"/"BUY_ON_PULLBACK"/"WAIT_FOR_BREAKOUT").
@@ -138,7 +146,7 @@ def build_recommendation(
         "WAIT_FOR_BREAKOUT",
     }
 
-    stop_defined = stop is not None and stop < entry
+    stop_defined = stop is not None and entry > 0 and stop < entry
     risk_per_share = (entry - stop) if stop_defined else None
 
     account_to_quote_rate = _normalize_account_to_quote_rate(account_to_quote_rate)
@@ -216,7 +224,11 @@ def build_recommendation(
             explanation=(
                 "Stop defined below entry."
                 if stop_defined
-                else "Stop is missing or above entry."
+                else (
+                    "Stop must be positive and below entry."
+                    if stop_invalid
+                    else "Stop is missing."
+                )
             ),
             rule="R2",
         ),
@@ -272,7 +284,17 @@ def build_recommendation(
         )
         suggestions.append("Wait for a breakout or pullback signal.")
 
-    if not stop_defined:
+    if not stop_defined and stop_invalid:
+        reasons_detailed.append(
+            Reason(
+                code="STOP_INVALID",
+                message="Stop must be a positive value below entry for a long trade.",
+                severity="block",
+                rule="R2",
+            )
+        )
+        suggestions.append("Use a positive stop below the planned long entry.")
+    elif not stop_defined:
         reasons_detailed.append(
             Reason(
                 code="STOP_MISSING",
