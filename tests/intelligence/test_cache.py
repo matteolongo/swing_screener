@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
 from swing_screener.intelligence.cache import (
@@ -105,3 +107,31 @@ def test_multiple_tickers_in_same_file(tmp_path, monkeypatch):
     data = json.loads(cache_file.read_text())
     assert "AAPL" in data
     assert "MSFT" in data
+
+
+def test_concurrent_writes_preserve_distinct_tickers(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    d = date(2026, 5, 24)
+    cache_file = tmp_path / "intelligence" / "sweep_2026-05-24.json"
+    cache_file.parent.mkdir(parents=True)
+    cache_file.write_text("{}")
+
+    original_dump = SymbolIntelligence.model_dump_json
+    barrier = threading.Barrier(2)
+
+    def delayed_dump(self, *args, **kwargs):
+        barrier.wait(timeout=3)
+        return original_dump(self, *args, **kwargs)
+
+    monkeypatch.setattr(SymbolIntelligence, "model_dump_json", delayed_dump)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(write_to_cache, "AAPL", _make_intel("AAPL"), d),
+            executor.submit(write_to_cache, "MSFT", _make_intel("MSFT"), d),
+        ]
+        for future in futures:
+            future.result()
+
+    data = json.loads(cache_file.read_text())
+    assert set(data) == {"AAPL", "MSFT"}

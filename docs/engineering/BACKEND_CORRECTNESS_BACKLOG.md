@@ -89,15 +89,18 @@
    - Outcome: position intelligence cache hits now require matching persisted `position_context`; unqualified ticker caches are bypassed for position requests, and new position analyses persist ticker, position id, shares, entry, stop, R, and holding-period context in `inputs_used`.
    - Verification: `tests/api/test_position_intelligence.py`, `tests/intelligence/test_symbol_analyzer.py`, and broader intelligence API/module suites.
 
-## Next
-
 17. Intelligence cache locking
+   - Status: done.
    - Protect intelligence cache writes from concurrent corruption.
+   - Outcome: intelligence cache writes now update each sweep file under one exclusive file lock, preserving concurrent ticker writes instead of losing one writer's read-modify-write update. Reads use the same lock utility with shared locks so callers do not observe partial writes.
+   - Verification: `tests/intelligence/test_cache.py`, broader intelligence tests, and full backend regression.
 
-## Backlog
+## Next
 
 18. `total_screened` semantics
    - Clarify whether it means input universe size, fetched rows, candidates after filters, or displayed rows.
+
+## Backlog
 
 19. Finnhub integration reliability
    - Make external Finnhub integration tests deterministic or gracefully skipped when vendor data is missing.
