@@ -57,9 +57,9 @@ class ScreenerCandidate(BaseModel):
     sector: Optional[str] = None
     last_bar: Optional[str] = None
     close: float
-    sma_20: float
-    sma_50: float
-    sma_200: float
+    sma_20: Optional[float] = None
+    sma_50: Optional[float] = None
+    sma_200: Optional[float] = None
     atr: float
     momentum_6m: float
     momentum_12m: float

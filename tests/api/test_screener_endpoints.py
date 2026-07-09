@@ -1005,6 +1005,74 @@ def test_screener_fallback_stop_uses_strategy_atr_multiplier(monkeypatch):
         app.dependency_overrides.pop(get_portfolio_service, None)
 
 
+def test_screener_keeps_missing_sma_fields_null(monkeypatch):
+    """Missing SMA inputs remain absent instead of becoming fabricated values."""
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
+        idx = ["AAA"]
+        data = {
+            "atr14": [2.0],
+            "mom_6m": [0.15],
+            "mom_12m": [0.25],
+            "rs_6m": [0.05],
+            "score": [0.994],
+            "confidence": [92.7],
+            "last": [50.0],
+            "rank": [1],
+            "signal": ["breakout"],
+            "entry": [50.0],
+            "stop": [48.0],
+            "shares": [5],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    class StubPortfolioService:
+        def list_positions(self, status=None):
+            del status
+            return SimpleNamespace(positions=[])
+
+        def list_orders(self, status=None, ticker=None):
+            del status, ticker
+            return SimpleNamespace(orders=[])
+
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_service,
+        "get_multiple_ticker_info",
+        lambda tickers: {
+            "AAA": {"name": "AAA Corp", "sector": "Technology", "currency": "USD"}
+        },
+    )
+    monkeypatch.setattr(
+        screener_service,
+        "apply_pattern_stop",
+        lambda **kwargs: (None, None),
+    )
+
+    app.dependency_overrides[get_portfolio_service] = lambda: StubPortfolioService()
+    try:
+        client = TestClient(app)
+        res = client.post(
+            "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+        )
+        assert res.status_code == 200
+
+        candidate = res.json()["candidates"][0]
+        assert candidate["sma_20"] is None
+        assert candidate["sma_50"] is None
+        assert candidate["sma_200"] is None
+        assert candidate["recommendation"]["thesis"] is None
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+
+
 def test_screener_does_not_publish_invalid_explicit_stop(monkeypatch):
     """Invalid explicit stops block the recommendation instead of becoming output."""
     ohlcv = _ohlcv_with_spy()

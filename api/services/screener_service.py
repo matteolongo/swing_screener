@@ -865,21 +865,22 @@ class ScreenerService:
         ma_col = f"ma{signals_cfg.pullback_ma}_level"
         candidates = []
         for idx, row in results.iterrows():
-            sma20 = safe_float(row.get(ma_col))
-            sma50_dist = safe_float(row.get("dist_sma50_pct"))
-            sma200_dist = safe_float(row.get("dist_sma200_pct"))
+            sma20 = safe_optional_float(row.get(ma_col))
+            sma50_dist = safe_optional_float(row.get("dist_sma50_pct"))
+            sma200_dist = safe_optional_float(row.get("dist_sma200_pct"))
             last_price = safe_float(row.get("last"))
 
-            sma50 = (
-                last_price / (1 + sma50_dist / 100)
-                if last_price and sma50_dist
-                else last_price
-            )
-            sma200 = (
-                last_price / (1 + sma200_dist / 100)
-                if last_price and sma200_dist
-                else last_price
-            )
+            sma50 = None
+            if last_price and sma50_dist is not None:
+                denominator = 1 + sma50_dist / 100
+                if denominator != 0:
+                    sma50 = last_price / denominator
+
+            sma200 = None
+            if last_price and sma200_dist is not None:
+                denominator = 1 + sma200_dist / 100
+                if denominator != 0:
+                    sma200 = last_price / denominator
 
             ticker_str = str(idx)
             info = ticker_info.get(ticker_str, {})

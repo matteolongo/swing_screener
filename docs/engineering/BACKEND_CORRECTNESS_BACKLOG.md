@@ -65,15 +65,18 @@
    - Outcome: setup-quality OHLC and Close/Volume features now calculate from timestamp-aligned bars instead of independently dropped field arrays, preventing stale high/low/volume from pairing with a newer close.
    - Verification: `tests/test_setup_quality.py`, `tests/test_report.py`, `tests/test_selection_pipeline.py`, and `tests/test_screener_service.py`.
 
-## Next
-
 13. Missing SMA fields stay missing
+   - Status: done.
    - Avoid fabricating technical values when source data is insufficient.
+   - Outcome: screener candidates now preserve missing SMA source fields as `null`, and recommendation thesis generation is skipped when the technical SMA context is incomplete.
+   - Verification: `tests/api/test_screener_endpoints.py::test_screener_keeps_missing_sma_fields_null`, plus focused screener/daily-review/recommendation/thesis suites.
 
-## Backlog
+## Next
 
 14. Unknown currency policy
    - Define and enforce behavior for tickers whose quote currency cannot be detected.
+
+## Backlog
 
 15. Finite float coercion
    - Prevent NaN/Inf from entering API responses and persisted calculations.
