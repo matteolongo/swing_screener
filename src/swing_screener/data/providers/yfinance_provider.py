@@ -580,6 +580,7 @@ class YfinanceProvider(MarketDataProvider):
         out = df
         for frame in cached_frames:
             out = self._merge_ohlcv_frames(out, frame)
+        out = self._slice_window(out, start_date, end_for_coverage)
         if out is None or out.empty:
             raise RuntimeError("Download empty. Check tickers or connection.")
 

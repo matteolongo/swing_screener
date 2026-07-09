@@ -58,14 +58,16 @@
 ## Next
 
 11. Provider interval/end-date contract
-   - Status: in progress.
-   - Completed: yfinance requests now forward the requested `interval` to Yahoo download paths and partition per-ticker cache coverage by interval, so intraday requests cannot silently reuse daily bars.
-   - Remaining: add/verify explicit final-bar end-date regressions across provider adapters.
+   - Status: done.
+   - Outcome: yfinance requests now forward the requested `interval` to Yahoo download paths, partition per-ticker cache coverage by interval, call Yahoo with an exclusive `end_date + 1 day`, and trim returned bars to the requested inclusive window.
+   - Verification: `tests/data/test_providers.py`.
 
-## Backlog
+## Next
 
 12. Align OHLCV in setup quality
    - Ensure setup-quality indicators calculate on aligned OHLCV bars.
+
+## Backlog
 
 13. Missing SMA fields stay missing
    - Avoid fabricating technical values when source data is insufficient.
