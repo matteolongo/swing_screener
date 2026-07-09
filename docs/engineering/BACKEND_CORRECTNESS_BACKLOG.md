@@ -101,7 +101,12 @@
    - Outcome: `total_screened` is now explicitly the resolved candidate ticker count after request/taxonomy filters, excluding benchmark/context symbols. The screener response also exposes `total_with_market_data`, `total_ranked_candidates`, and `total_returned_candidates` so consumers can distinguish input, fetch, ranking, and final display counts.
    - Verification: `tests/test_screener_service.py::test_run_screener_response_counts_distinct_pipeline_stages` plus screener API/service regressions.
 
+19. Finnhub integration reliability
+   - Status: done.
+   - Make external Finnhub integration tests deterministic or gracefully skipped when vendor data is missing.
+   - Outcome: live Finnhub tests now guard vendor-empty/unavailable payloads with explicit skips and validate client parsing against a single raw vendor payload rather than hard-coded, time-sensitive AAPL values.
+   - Verification: `tests/test_finnhub_integration.py` plus related Finnhub/fundamentals tests.
+
 ## Next
 
-19. Finnhub integration reliability
-   - Make external Finnhub integration tests deterministic or gracefully skipped when vendor data is missing.
+- No open backend correctness backlog items.
