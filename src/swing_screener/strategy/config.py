@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from dataclasses import fields
+from typing import Optional
 
 from swing_screener.selection.universe import UniverseConfig, UniverseFilterConfig
 from swing_screener.indicators.trend import TrendConfig
@@ -12,6 +13,12 @@ from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.portfolio.state import ManageConfig
 from swing_screener.utils import get_nested_dict
+
+
+_RISK_CONFIG_FIELDS = {field.name for field in fields(RiskConfig)}
+# Persisted/API strategies carry this for portfolio summary sizing mode; it is
+# not an input to per-trade risk sizing.
+_RISK_CONFIG_IGNORED_KEYS = {"account_size_mode"}
 
 
 def build_universe_config(strategy: dict) -> UniverseConfig:
@@ -31,7 +38,13 @@ def build_entry_config(strategy: dict) -> EntrySignalConfig:
 
 
 def build_risk_config(strategy: dict) -> RiskConfig:
-    return RiskConfig(**get_nested_dict(strategy, "risk"))
+    raw = get_nested_dict(strategy, "risk")
+    unsupported = sorted(set(raw) - _RISK_CONFIG_FIELDS - _RISK_CONFIG_IGNORED_KEYS)
+    if unsupported:
+        raise TypeError("Unsupported risk config field(s): " + ", ".join(unsupported))
+    return RiskConfig(
+        **{key: value for key, value in raw.items() if key in _RISK_CONFIG_FIELDS}
+    )
 
 
 def build_manage_config(strategy: dict) -> ManageConfig:
