@@ -155,6 +155,8 @@ class SymbolIntelligenceRequest(BaseModel):
     momentum_12m: float | None = None
     sector: str | None = None
     currency: str = "USD"
+    position_id: str | None = None
+    shares: int | None = None
     entry_price: float | None = None
     entry_date: str | None = None
     r_now: float | None = None

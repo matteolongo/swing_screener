@@ -80,6 +80,18 @@ def assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
     _put(decision, "fair_value_high", req.fair_value_high)
     _put_truthy(inputs_used, "decision_context", decision)
 
+    if state["has_position"]:
+        position_context: dict = {"ticker": state["ticker"]}
+        _put_truthy(position_context, "position_id", req.position_id)
+        _put(position_context, "shares", req.shares)
+        _put(position_context, "entry_price", req.entry_price)
+        _put_truthy(position_context, "entry_date", req.entry_date)
+        _put(position_context, "stop", req.stop)
+        _put(position_context, "current_price", req.close)
+        _put(position_context, "r_now", req.r_now)
+        _put(position_context, "days_open", req.days_open)
+        _put_truthy(inputs_used, "position_context", position_context)
+
     if req.catalyst_evidence:
         inputs_used["catalyst_evidence"] = {
             "count": len(req.catalyst_evidence),

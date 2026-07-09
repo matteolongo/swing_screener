@@ -83,15 +83,18 @@
    - Outcome: shared float coercion now rejects non-finite values, locked JSON reads normalize `NaN`/`Infinity` constants to `null`, and locked JSON writes recursively persist non-finite numbers as `null` with strict JSON dumping.
    - Verification: `tests/test_coerce.py`, `tests/test_file_lock.py`, `tests/api/test_screener_endpoints.py`, and fundamentals persistence regressions.
 
-## Next
-
 16. Intelligence position fallback
+   - Status: done.
    - Ensure intelligence flows do not silently substitute stale or incorrect position context.
+   - Outcome: position intelligence cache hits now require matching persisted `position_context`; unqualified ticker caches are bypassed for position requests, and new position analyses persist ticker, position id, shares, entry, stop, R, and holding-period context in `inputs_used`.
+   - Verification: `tests/api/test_position_intelligence.py`, `tests/intelligence/test_symbol_analyzer.py`, and broader intelligence API/module suites.
 
-## Backlog
+## Next
 
 17. Intelligence cache locking
    - Protect intelligence cache writes from concurrent corruption.
+
+## Backlog
 
 18. `total_screened` semantics
    - Clarify whether it means input universe size, fetched rows, candidates after filters, or displayed rows.

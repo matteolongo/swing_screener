@@ -314,6 +314,60 @@ def test_symbol_analyzer_maps_position_outlook():
     assert result.position_outlook.profit_management == "trail_stop"
 
 
+def test_position_inputs_used_include_position_context():
+    fake_json = {
+        "action": "MANAGE_ONLY",
+        "conviction": "medium",
+        "catalyst_urgency": "low",
+        "summary_line": "Manage the open position.",
+        "narrative": "Text.",
+        "upcoming_events": [],
+        "position_signal": {"action": "HOLD", "reason": "Thesis remains intact."},
+        "position_outlook": {
+            "expected_holding_period": "2-6_weeks",
+            "hold_until": "Hold while price remains above the stop.",
+            "next_review_trigger": "Reassess on a close below the stop.",
+            "thesis_status": "intact",
+            "invalidation_signals": ["Close below stop"],
+            "profit_management": "trail_stop",
+            "opportunity_cost": "low",
+            "confidence_decay": "Confidence decays if the trade stalls.",
+        },
+        "sources": [],
+    }
+    request = SymbolIntelligenceRequest(
+        close=50.0,
+        signal="position",
+        position_id="pos-1",
+        shares=5,
+        entry_price=48.0,
+        entry_date="2026-06-01",
+        stop=45.0,
+        r_now=1.5,
+        days_open=7,
+    )
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, fake_json)
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", request)
+
+    assert result.inputs_used["position_context"] == {
+        "ticker": "AAPL",
+        "position_id": "pos-1",
+        "shares": 5,
+        "entry_price": 48.0,
+        "entry_date": "2026-06-01",
+        "stop": 45.0,
+        "current_price": 50.0,
+        "r_now": 1.5,
+        "days_open": 7,
+    }
+
+
 def test_format_past_trades_empty():
     from swing_screener.intelligence.symbol_analyzer import _format_past_trades
     assert _format_past_trades("AAPL", []) is None

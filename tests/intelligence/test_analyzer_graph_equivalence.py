@@ -345,6 +345,15 @@ _EXPECTED_STABLE_BY_CASE = {
                 "momentum_6m": 10.0,
                 "signal": "MANAGE",
             },
+            "position_context": {
+                "ticker": "AAPL",
+                "entry_price": 98.0,
+                "entry_date": "2026-06-01",
+                "stop": 96.0,
+                "current_price": 105.0,
+                "r_now": 1.75,
+                "days_open": 20,
+            },
             "sources": {
                 "attempted": [
                     "degiro_news",

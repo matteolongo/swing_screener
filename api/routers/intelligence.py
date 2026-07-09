@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -108,6 +109,45 @@ def _require_analyzer_enabled() -> None:
     cfg = intelligence_config_section("llm")
     if not bool(cfg.get("analyzer_enabled", True)):
         raise HTTPException(status_code=503, detail="Symbol intelligence analyzer is disabled")
+
+
+def _finite_position_number(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        return None
+    return round(numeric, 6)
+
+
+def _position_cache_context(pos: object) -> dict[str, object]:
+    context: dict[str, object] = {
+        "position_id": str(getattr(pos, "position_id", "")),
+        "ticker": str(getattr(pos, "ticker", "")).upper(),
+    }
+    for attr, key in (
+        ("shares", "shares"),
+        ("entry_price", "entry_price"),
+        ("stop_price", "stop"),
+    ):
+        numeric = _finite_position_number(getattr(pos, attr, None))
+        if numeric is not None:
+            context[key] = numeric
+    entry_date = getattr(pos, "entry_date", None)
+    if isinstance(entry_date, str) and entry_date:
+        context["entry_date"] = entry_date
+    return context
+
+
+def _cached_position_context_matches(
+    cached: SymbolIntelligence,
+    expected: dict[str, object],
+) -> bool:
+    inputs = cached.inputs_used if isinstance(cached.inputs_used, dict) else {}
+    context = inputs.get("position_context")
+    if not isinstance(context, dict):
+        return False
+    return all(context.get(key) == value for key, value in expected.items())
 
 
 class SweepSymbol(BaseModel):
@@ -367,14 +407,17 @@ def analyze_position(
     pos = next((p for p in result.positions if p.position_id == position_id), None)
     if pos is None:
         raise HTTPException(status_code=404, detail=f"No open position with id {position_id!r}")
+    position_context = _position_cache_context(pos)
     if not force:
         cached = read_from_cache(pos.ticker.upper())
-        if cached is not None:
+        if cached is not None and _cached_position_context_matches(cached, position_context):
             return cached
     stop = portfolio_service.suggest_position_stop(position_id)
     request = SymbolIntelligenceRequest(
         close=float(pos.current_price if pos.current_price is not None else pos.entry_price),
         signal=stop.action,
+        position_id=position_id,
+        shares=int(pos.shares),
         entry_price=float(pos.entry_price),
         entry=float(pos.entry_price),
         entry_date=str(pos.entry_date) if pos.entry_date is not None else None,
