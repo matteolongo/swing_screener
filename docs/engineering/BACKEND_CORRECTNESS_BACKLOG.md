@@ -58,7 +58,9 @@
 ## Next
 
 11. Provider interval/end-date contract
-   - Ensure market-data requests produce the intended final bar and do not silently omit the requested date.
+   - Status: in progress.
+   - Completed: yfinance requests now forward the requested `interval` to Yahoo download paths and partition per-ticker cache coverage by interval, so intraday requests cannot silently reuse daily bars.
+   - Remaining: add/verify explicit final-bar end-date regressions across provider adapters.
 
 ## Backlog
 
