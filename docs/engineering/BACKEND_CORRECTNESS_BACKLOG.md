@@ -95,12 +95,13 @@
    - Outcome: intelligence cache writes now update each sweep file under one exclusive file lock, preserving concurrent ticker writes instead of losing one writer's read-modify-write update. Reads use the same lock utility with shared locks so callers do not observe partial writes.
    - Verification: `tests/intelligence/test_cache.py`, broader intelligence tests, and full backend regression.
 
-## Next
-
 18. `total_screened` semantics
+   - Status: done.
    - Clarify whether it means input universe size, fetched rows, candidates after filters, or displayed rows.
+   - Outcome: `total_screened` is now explicitly the resolved candidate ticker count after request/taxonomy filters, excluding benchmark/context symbols. The screener response also exposes `total_with_market_data`, `total_ranked_candidates`, and `total_returned_candidates` so consumers can distinguish input, fetch, ranking, and final display counts.
+   - Verification: `tests/test_screener_service.py::test_run_screener_response_counts_distinct_pipeline_stages` plus screener API/service regressions.
 
-## Backlog
+## Next
 
 19. Finnhub integration reliability
    - Make external Finnhub integration tests deterministic or gracefully skipped when vendor data is missing.

@@ -117,6 +117,89 @@ def _make_screener_service(tmp_path):
     return svc, eval_cache, mock_provider
 
 
+def test_run_screener_response_counts_distinct_pipeline_stages(tmp_path, monkeypatch):
+    import api.services.screener_service as screener_svc_mod
+
+    from api.models.screener import ScreenerRequest
+
+    svc, _eval_cache, mock_provider = _make_screener_service(tmp_path)
+    mock_provider.fetch_ohlcv.return_value = _make_ohlcv(["AAA", "BBB", "SPY"])
+
+    def fake_build_daily_report(*args, **kwargs):
+        idx = ["AAA", "BBB"]
+        return pd.DataFrame(
+            {
+                "atr14": [1.2, 1.1],
+                "mom_6m": [0.1, 0.08],
+                "mom_12m": [0.2, 0.18],
+                "rs_6m": [0.05, 0.04],
+                "score": [0.9, 0.8],
+                "confidence": [80.0, 70.0],
+                "last": [50.0, 40.0],
+                "ma20_level": [48.0, 38.0],
+                "dist_sma50_pct": [5.0, 4.0],
+                "dist_sma200_pct": [10.0, 9.0],
+                "rank": [1, 2],
+                "signal": ["breakout", "breakout"],
+            },
+            index=idx,
+        )
+
+    monkeypatch.setattr(screener_svc_mod, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {}
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "compute_sector_benchmark_returns",
+        lambda ohlcv: {},
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "compute_sector_rotation_scores",
+        lambda ohlcv: {},
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "build_ticker_sector_returns",
+        lambda ticker_sectors, etf_returns: {},
+    )
+    monkeypatch.setattr(
+        screener_svc_mod, "load_fundamentals_snapshots", lambda candidates: {}
+    )
+    monkeypatch.setattr(
+        screener_svc_mod,
+        "apply_cached_fundamentals_context",
+        lambda candidates, snapshots: candidates,
+    )
+    monkeypatch.setattr(
+        screener_svc_mod,
+        "apply_decision_summary_context",
+        lambda candidates, snapshots: candidates,
+    )
+    monkeypatch.setattr(
+        screener_svc_mod,
+        "fetch_next_earnings_days",
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {
+            ticker: None for ticker in tickers
+        },
+    )
+
+    result = svc.run_screener(
+        ScreenerRequest(
+            tickers=["AAA", "BBB", "MISS"],
+            top=1,
+            asof_date="2024-01-03",
+        )
+    )
+
+    assert result.total_screened == 3
+    assert result.total_with_market_data == 2
+    assert result.total_ranked_candidates == 2
+    assert result.total_returned_candidates == 1
+    assert [candidate.ticker for candidate in result.candidates] == ["AAA"]
+
+
 def test_run_daily_report_passes_eurusd_rate_for_usd_quotes(tmp_path, monkeypatch):
     import api.services.screener_service as screener_svc_mod
 

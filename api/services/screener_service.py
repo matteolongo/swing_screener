@@ -189,6 +189,8 @@ class _RunContext:
     data_freshness: str = ""
     ticker_info: dict = field(default_factory=dict)
     sector_rotation_by_name: dict = field(default_factory=dict)
+    market_data_ticker_count: int = 0
+    ranked_candidate_count: int = 0
     combined_priority_cfg: CombinedPriorityConfig | None = None
     now_utc: datetime | None = None
     benchmark_change_pct: float | None = None
@@ -544,6 +546,7 @@ class ScreenerService:
         if "Close" in ctx.ohlcv.columns.get_level_values(0):
             present = set(ctx.ohlcv["Close"].columns.tolist())
             requested_set = set(ctx.tickers) - {ctx.benchmark}
+            ctx.market_data_ticker_count = len(requested_set & present)
             missing = sorted(requested_set - present)
             if missing:
                 ctx.warnings.append(
@@ -735,6 +738,7 @@ class ScreenerService:
         except Exception as exc:
             logger.debug("Eval cache prune failed (non-fatal): %s", exc)
         if results is None or results.empty:
+            ctx.ranked_candidate_count = 0
             logger.warning(
                 "Screener returned no candidates (top=%s, tickers=%s).",
                 requested_top,
@@ -758,6 +762,7 @@ class ScreenerService:
             ctx.warnings.append(message)
             logger.warning(message)
 
+        ctx.ranked_candidate_count = len(results)
         return results
 
     def _screener_fx_rate_maps(
@@ -1271,7 +1276,10 @@ class ScreenerService:
                 return ScreenerResponse(
                     candidates=[],
                     asof_date=ctx.asof_str,
-                    total_screened=len(ctx.tickers),
+                    total_screened=len(ctx.screening_tickers),
+                    total_with_market_data=ctx.market_data_ticker_count,
+                    total_ranked_candidates=ctx.ranked_candidate_count,
+                    total_returned_candidates=0,
                     data_freshness=ctx.data_freshness,
                     warnings=ctx.warnings,
                     same_symbol_suppressed_count=0,
@@ -1290,7 +1298,10 @@ class ScreenerService:
             response = ScreenerResponse(
                 candidates=candidates,
                 asof_date=ctx.asof_str,
-                total_screened=len(ctx.tickers),
+                total_screened=len(ctx.screening_tickers),
+                total_with_market_data=ctx.market_data_ticker_count,
+                total_ranked_candidates=ctx.ranked_candidate_count,
+                total_returned_candidates=len(candidates),
                 benchmark_ticker=ctx.benchmark,
                 benchmark_change_pct=ctx.benchmark_change_pct,
                 benchmark_last_bar=ctx.benchmark_last_bar,
