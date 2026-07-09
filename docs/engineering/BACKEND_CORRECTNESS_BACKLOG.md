@@ -30,16 +30,17 @@
    - Outcome: screener runs source EURUSD when known/requested quote currencies cross EUR/USD, pass account-to-quote rates into report trade-plan sizing, and preserve account-currency risk through recommendation rebuilds.
    - Verification: `tests/test_report.py`, `tests/test_screener_service.py`, and `tests/api/test_screener_currency_contract.py`.
 
-## Next
-
 6. Liquidity filter correctness
-   - Status: next.
-   - Confirm average daily volume/liquidity thresholds use price and currency consistently.
+   - Status: done.
+   - Outcome: average daily volume liquidity thresholds now use EUR-denominated turnover, USD quotes require an explicit USD-to-EUR rate, the liquidity field is available before universe filtering, and active liquidity thresholds fail closed when liquidity cannot be computed.
+   - Verification: `tests/test_setup_quality.py`, `tests/test_universe_filter.py`, `tests/test_report.py`, and `tests/test_screener_service.py`.
 
-## Backlog
+## Next
 
 7. Stop-hit detection uses daily low
    - Confirm stop-hit checks trigger on intraday low crossing the stop, not close-only behavior.
+
+## Backlog
 
 8. Holding period semantics
    - Decide and enforce calendar-day vs trading-day semantics for holding-period exits.

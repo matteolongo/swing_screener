@@ -10,6 +10,7 @@ from typing import Iterable
 
 import pandas as pd
 
+from swing_screener.data.currency import detect_currency
 from swing_screener.indicators.volume_pressure import windowed_buy_pressure_ratio
 
 
@@ -26,9 +27,40 @@ def _get_field(ohlcv: pd.DataFrame, field: str) -> pd.DataFrame | None:
     return None
 
 
+def _positive_rate(value) -> float | None:
+    try:
+        rate = float(value)
+    except (TypeError, ValueError):
+        return None
+    return rate if pd.notna(rate) and rate > 0 else None
+
+
+def _quote_to_eur_rate(
+    ticker: str,
+    quote_to_eur_rates: dict[str, float] | None,
+) -> float | None:
+    currency = str(detect_currency(str(ticker)) or "").strip().upper()
+    if currency == "EUR":
+        return 1.0
+    if not quote_to_eur_rates:
+        return None
+
+    normalized = {
+        str(key).strip().upper(): value
+        for key, value in quote_to_eur_rates.items()
+        if str(key).strip()
+    }
+    for key in (str(ticker).strip().upper(), currency):
+        if key in normalized:
+            return _positive_rate(normalized[key])
+    return None
+
+
 def compute_setup_quality(
     ohlcv: pd.DataFrame,
     tickers: Iterable[str] | None = None,
+    *,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """Compute setup quality features per ticker.
 
@@ -145,7 +177,10 @@ def compute_setup_quality(
                 row["breakout_volume_confirmation"] = bool(today_vol > 1.5 * avg_vol_20)
                 if avg_vol_20 > 0:
                     row["volume_ratio"] = today_vol / avg_vol_20
-                row["avg_daily_volume_eur"] = last_close * avg_vol_20
+                quote_turnover = last_close * avg_vol_20
+                quote_to_eur_rate = _quote_to_eur_rate(ticker, quote_to_eur_rates)
+                if quote_to_eur_rate is not None:
+                    row["avg_daily_volume_eur"] = quote_turnover * quote_to_eur_rate
 
             # ── buy_pressure_ratio: volume-weighted close-location over 20 bars ──
             # >0.5 = recent range accumulated (buy-dominated), <0.5 = distributed.

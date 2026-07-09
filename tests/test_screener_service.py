@@ -185,6 +185,7 @@ def test_run_daily_report_passes_eurusd_rate_for_usd_quotes(tmp_path, monkeypatc
     svc._run_daily_report(ctx, requested_top=1)
 
     assert captured["account_to_quote_rates"] == {"USD": 1.25}
+    assert captured["quote_to_eur_rates"] == {"USD": 0.8}
 
 
 def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):

@@ -715,7 +715,9 @@ class ScreenerService:
 
         ctx.ticker_info = ticker_info
         ctx.sector_rotation_by_name = sector_rotation_by_name
-        account_to_quote_rates = self._account_to_quote_rates(ctx, ticker_info)
+        account_to_quote_rates, quote_to_eur_rates = self._screener_fx_rate_maps(
+            ctx, ticker_info
+        )
 
         results = build_daily_report(
             ctx.ohlcv,
@@ -723,6 +725,7 @@ class ScreenerService:
             exclude_tickers=sector_rotation.SECTOR_ETFS.keys(),
             sector_benchmark_returns=sector_benchmark_returns,
             account_to_quote_rates=account_to_quote_rates,
+            quote_to_eur_rates=quote_to_eur_rates,
             eval_cache=self._eval_cache,
             asof_date=ctx.asof_str,
             force_refresh=bool(getattr(ctx.request, "force_refresh", False)),
@@ -757,9 +760,9 @@ class ScreenerService:
 
         return results
 
-    def _account_to_quote_rates(
+    def _screener_fx_rate_maps(
         self, ctx: _RunContext, ticker_info: dict
-    ) -> dict[str, float]:
+    ) -> tuple[dict[str, float], dict[str, float]]:
         account_currency = _account_currency_from_strategy(ctx.strategy)
         quote_currencies = set()
         if getattr(ctx.request, "currencies", None):
@@ -773,10 +776,15 @@ class ScreenerService:
             for info in (ticker_info or {}).values()
             if str(info.get("currency") or "").strip()
         )
-        quote_currencies.discard(account_currency)
         quote_currencies.discard("UNKNOWN")
-        if not any({account_currency, quote} == {"EUR", "USD"} for quote in quote_currencies):
-            return {}
+        account_quote_currencies = set(quote_currencies)
+        account_quote_currencies.discard(account_currency)
+        needs_eurusd = "USD" in quote_currencies or any(
+            {account_currency, quote} == {"EUR", "USD"}
+            for quote in account_quote_currencies
+        )
+        if not needs_eurusd:
+            return {}, {}
 
         force_refresh = bool(getattr(ctx.request, "force_refresh", False))
         try:
@@ -790,28 +798,35 @@ class ScreenerService:
         except Exception as exc:
             logger.warning("Failed to fetch EURUSD rate for screener sizing: %s", exc)
             ctx.warnings.append("EURUSD FX rate unavailable; cross-currency sizing may be omitted.")
-            return {}
+            return {}, {}
 
         if eurusd_rate is None or eurusd_rate <= 0:
             ctx.warnings.append("EURUSD FX rate unavailable; cross-currency sizing may be omitted.")
-            return {}
+            return {}, {}
 
-        rates: dict[str, float] = {}
+        account_to_quote_rates: dict[str, float] = {}
+        quote_to_eur_rates: dict[str, float] = {}
         for quote in quote_currencies:
+            if quote == "EUR":
+                quote_to_eur_rates["EUR"] = 1.0
+            elif quote == "USD":
+                quote_to_eur_rates["USD"] = 1.0 / eurusd_rate
+
+        for quote in account_quote_currencies:
             if account_currency == "EUR" and quote == "USD":
-                rates["USD"] = eurusd_rate
+                account_to_quote_rates["USD"] = eurusd_rate
             elif account_currency == "USD" and quote == "EUR":
-                rates["EUR"] = 1.0 / eurusd_rate
+                account_to_quote_rates["EUR"] = 1.0 / eurusd_rate
         unsupported = sorted(
             quote
-            for quote in quote_currencies
-            if quote != account_currency and quote not in rates
+            for quote in account_quote_currencies
+            if quote != account_currency and quote not in account_to_quote_rates
         )
         if unsupported:
             ctx.warnings.append(
                 "Unsupported FX conversion for quote currencies: " + ", ".join(unsupported)
             )
-        return rates
+        return account_to_quote_rates, quote_to_eur_rates
 
     def _build_candidates(
         self, ctx: _RunContext, results: "pd.DataFrame"

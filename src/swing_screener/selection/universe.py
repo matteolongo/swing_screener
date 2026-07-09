@@ -46,6 +46,7 @@ def build_feature_table(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
     sector_benchmark_returns: dict[str, float] | None = None,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Join trend + volatility + momentum into a single per-ticker feature table.
@@ -72,10 +73,15 @@ def build_feature_table(
 
     # Setup-quality features so the w_setup_quality / extension_penalty ranking
     # weights actually apply (they were inert while these columns were missing).
-    setup_df = compute_setup_quality(ohlcv)
+    setup_df = compute_setup_quality(ohlcv, quote_to_eur_rates=quote_to_eur_rates)
     setup_cols = [
         c
-        for c in ("consolidation_tightness", "close_location_in_range", "above_breakout_extension")
+        for c in (
+            "consolidation_tightness",
+            "close_location_in_range",
+            "above_breakout_extension",
+            "avg_daily_volume_eur",
+        )
         if c in setup_df.columns
     ]
     if setup_cols:
@@ -121,11 +127,13 @@ def apply_universe_filters(
         else pd.Series(True, index=df.index)
     )
 
-    # liquidity filter — skipped when column absent or threshold is 0
-    if cfg.min_avg_daily_volume_eur > 0 and "avg_daily_volume_eur" in df.columns:
+    # liquidity filter: threshold 0 disables it; active thresholds require data.
+    if cfg.min_avg_daily_volume_eur <= 0:
+        cond_liquidity = pd.Series(True, index=df.index)
+    elif "avg_daily_volume_eur" in df.columns:
         cond_liquidity = df["avg_daily_volume_eur"] >= cfg.min_avg_daily_volume_eur
     else:
-        cond_liquidity = pd.Series(True, index=df.index)
+        cond_liquidity = pd.Series(False, index=df.index)
 
     # weekly trend filter — skipped when column absent or flag is False
     if cfg.require_weekly_uptrend:
@@ -167,6 +175,7 @@ def build_universe(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
     sector_benchmark_returns: dict[str, float] | None = None,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Shortcut: build features + apply filters.
@@ -175,6 +184,7 @@ def build_universe(
         ohlcv,
         cfg,
         sector_benchmark_returns=sector_benchmark_returns,
+        quote_to_eur_rates=quote_to_eur_rates,
     )
     return apply_universe_filters(feats, cfg.filt)
 
@@ -183,6 +193,7 @@ def eligible_universe(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
     sector_benchmark_returns: dict[str, float] | None = None,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Returns only eligible tickers (filtered).
@@ -192,6 +203,7 @@ def eligible_universe(
         ohlcv,
         cfg,
         sector_benchmark_returns=sector_benchmark_returns,
+        quote_to_eur_rates=quote_to_eur_rates,
     )
     df = df[df["is_eligible"]]
     if df.empty:

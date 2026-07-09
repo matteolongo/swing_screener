@@ -49,6 +49,7 @@ def test_ui_smoke_pipeline():
                 max_price=1000,
                 max_atr_pct=10.0,
                 require_trend_ok=False,
+                min_avg_daily_volume_eur=0.0,
             )
         ),
         risk=RiskConfig(

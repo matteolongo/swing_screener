@@ -145,6 +145,7 @@ def test_build_universe_filters_expected_fail_reasons():
             max_atr_pct=10.0,  # CCC should fail due to huge ATR%
             require_trend_ok=True,  # BBB should fail due to downtrend
             require_rs_positive=False,
+            min_avg_daily_volume_eur=0.0,
         )
     )
 
@@ -173,6 +174,7 @@ def test_eligible_universe_returns_only_eligible():
             max_price=1000,
             max_atr_pct=10.0,
             require_trend_ok=True,
+            min_avg_daily_volume_eur=0.0,
         )
     )
 
@@ -199,6 +201,7 @@ def test_apply_universe_filters_currency_filter():
         require_trend_ok=True,
         require_rs_positive=False,
         currencies=["USD"],
+        min_avg_daily_volume_eur=0.0,
     )
 
     filtered = apply_universe_filters(feats, cfg)

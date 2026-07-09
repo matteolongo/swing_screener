@@ -48,11 +48,11 @@ def test_liquidity_filter_zero_means_no_filter():
     assert result.loc["LOW_VOL", "is_eligible"] == True
 
 
-def test_liquidity_filter_absent_column_passes():
-    """When avg_daily_volume_eur column is absent, filter is skipped — no KeyError."""
+def test_liquidity_filter_absent_column_fails_when_threshold_is_required():
+    """Missing liquidity data cannot satisfy an active liquidity threshold."""
     cfg = UniverseFilterConfig(min_avg_daily_volume_eur=100_000.0)
-    # Build df without avg_daily_volume_eur column
     df = _minimal_feature_df(["NOVOLDATA"], adv_eur=None)
     result = apply_universe_filters(df, cfg)
-    # Should not raise; ticker passes (filter skipped when column absent)
-    assert result.loc["NOVOLDATA", "is_eligible"] == True
+
+    assert result.loc["NOVOLDATA", "is_eligible"] == False
+    assert "liquidity" in result.loc["NOVOLDATA", "reason"]

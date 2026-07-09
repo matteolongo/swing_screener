@@ -57,6 +57,40 @@ def _make_ohlcv_for_report():
     return df
 
 
+def _make_liquidity_ohlcv_for_report():
+    idx = pd.bdate_range("2023-01-02", periods=260)
+    close_spy = pd.Series(range(100, 360), index=idx, dtype=float)
+    close_liquid = pd.Series(20.0, index=idx, dtype=float)
+    close_illiquid = pd.Series(20.0, index=idx, dtype=float)
+
+    def mk(close: pd.Series, volume: float):
+        open_ = close
+        high = close + 1.0
+        low = close - 1.0
+        vol = pd.Series(volume, index=close.index, dtype=float)
+        return open_, high, low, close, vol
+
+    o_s, h_s, l_s, c_s, v_s = mk(close_spy, 1_000_000)
+    o_l, h_l, l_l, c_l, v_l = mk(close_liquid, 100_000)
+    o_i, h_i, l_i, c_i, v_i = mk(close_illiquid, 1_000)
+
+    data = {}
+    for field, s_s, s_l, s_i in [
+        ("Open", o_s, o_l, o_i),
+        ("High", h_s, h_l, h_i),
+        ("Low", l_s, l_l, l_i),
+        ("Close", c_s, c_l, c_i),
+        ("Volume", v_s, v_l, v_i),
+    ]:
+        data[(field, "SPY")] = s_s
+        data[(field, "LIQUID.AS")] = s_l
+        data[(field, "ILLIQUID.AS")] = s_i
+
+    df = pd.DataFrame(data, index=idx)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    return df
+
+
 def test_build_daily_report_returns_expected_structure():
     ohlcv = _make_ohlcv_for_report()
 
@@ -67,6 +101,7 @@ def test_build_daily_report_returns_expected_structure():
                 max_price=1000,
                 max_atr_pct=10.0,  # CCC should be filtered out
                 require_trend_ok=False,  # keep simple for this test
+                min_avg_daily_volume_eur=0.0,
             )
         ),
         risk=RiskConfig(
@@ -97,6 +132,26 @@ def test_build_daily_report_returns_expected_structure():
     assert 0 <= float(rep.loc["BBB", "confidence"]) <= 100
 
 
+def test_build_daily_report_applies_liquidity_filter_before_ranking():
+    ohlcv = _make_liquidity_ohlcv_for_report()
+    cfg = ReportConfig(
+        universe=UniverseConfig(
+            filt=UniverseFilterConfig(
+                min_price=1,
+                max_price=1000,
+                max_atr_pct=100.0,
+                require_trend_ok=False,
+                min_avg_daily_volume_eur=1_000_000.0,
+            )
+        )
+    )
+
+    rep = build_daily_report(ohlcv, cfg)
+
+    assert "LIQUID.AS" in rep.index
+    assert "ILLIQUID.AS" not in rep.index
+
+
 def test_build_momentum_report_passes_account_to_quote_rates_into_trade_plans():
     records = pd.DataFrame(
         {
@@ -125,6 +180,7 @@ def test_build_momentum_report_passes_account_to_quote_rates_into_trade_plans():
                 max_price=1000,
                 max_atr_pct=10.0,
                 require_trend_ok=False,
+                min_avg_daily_volume_eur=0.0,
             )
         ),
         risk=RiskConfig(
@@ -159,6 +215,7 @@ def test_build_daily_report_keeps_weekly_trend_column():
                 max_price=1000,
                 max_atr_pct=10.0,
                 require_trend_ok=False,
+                min_avg_daily_volume_eur=0.0,
             )
         )
     )
@@ -179,6 +236,7 @@ def test_build_daily_report_excludes_open_positions():
                 max_price=1000,
                 max_atr_pct=10.0,
                 require_trend_ok=False,
+                min_avg_daily_volume_eur=0.0,
             )
         )
     )
@@ -208,7 +266,11 @@ def test_ranking_input_is_subset_of_feature_columns():
     cfg = ReportConfig(
         universe=UniverseConfig(
             filt=UniverseFilterConfig(
-                min_price=10, max_price=1000, max_atr_pct=10.0, require_trend_ok=False
+                min_price=10,
+                max_price=1000,
+                max_atr_pct=10.0,
+                require_trend_ok=False,
+                min_avg_daily_volume_eur=0.0,
             )
         )
     )
