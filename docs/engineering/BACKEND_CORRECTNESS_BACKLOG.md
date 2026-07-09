@@ -55,22 +55,22 @@
    - Outcome: long-trade stops are valid only when finite, positive, and below entry. Invalid recommendation/screener stops now block with `STOP_INVALID` and are not echoed as plan stops; pending orders reject provided zero stops and stops at or above the provided limit entry; add-on fills reject live stops at or above the blended entry.
    - Verification: `tests/test_recommendation_engine.py`, `tests/api/test_screener_endpoints.py`, and `tests/api/test_order_fill.py`.
 
-## Next
-
 11. Provider interval/end-date contract
    - Status: done.
    - Outcome: yfinance requests now forward the requested `interval` to Yahoo download paths, partition per-ticker cache coverage by interval, call Yahoo with an exclusive `end_date + 1 day`, and trim returned bars to the requested inclusive window.
    - Verification: `tests/data/test_providers.py`.
 
-## Next
-
 12. Align OHLCV in setup quality
-   - Ensure setup-quality indicators calculate on aligned OHLCV bars.
+   - Status: done.
+   - Outcome: setup-quality OHLC and Close/Volume features now calculate from timestamp-aligned bars instead of independently dropped field arrays, preventing stale high/low/volume from pairing with a newer close.
+   - Verification: `tests/test_setup_quality.py`, `tests/test_report.py`, `tests/test_selection_pipeline.py`, and `tests/test_screener_service.py`.
 
-## Backlog
+## Next
 
 13. Missing SMA fields stay missing
    - Avoid fabricating technical values when source data is insufficient.
+
+## Backlog
 
 14. Unknown currency policy
    - Define and enforce behavior for tickers whose quote currency cannot be detected.
