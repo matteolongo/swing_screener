@@ -70,10 +70,12 @@ def test_evaluate_max_holding_days() -> None:
     warning = evaluate_max_holding_days(4)
     assert warning is not None
     assert warning.level == "warning"
+    assert "trading-bar" in warning.message
 
     warning = evaluate_max_holding_days(35)
     assert warning is not None
     assert warning.level == "info"
+    assert "trading-bar" in warning.message
 
     assert evaluate_max_holding_days(20) is None
 

@@ -22,7 +22,10 @@ class BacktestConfigOverrides(BaseModel):
     breakeven_at_r: Optional[float] = None
     trail_after_r: Optional[float] = None
     trail_sma: Optional[int] = None
-    max_holding_days: Optional[int] = None
+    max_holding_days: Optional[int] = Field(
+        default=None,
+        description="Max trading bars to hold before the hard time-exit rule",
+    )
     exit_signal_days: Optional[int] = None
     k_atr: Optional[float] = None
     rr_target: Optional[float] = None

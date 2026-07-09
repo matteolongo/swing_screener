@@ -40,15 +40,17 @@
    - Outcome: live portfolio management and event-study backtests now trigger stop-hit exits when the latest daily low crosses the stop, even if the close recovers above it.
    - Verification: `tests/test_portfolio_manage.py`, `tests/test_backtest_event_study.py`, and `tests/api/test_backtest_endpoints.py`.
 
-## Next
-
 8. Holding period semantics
-   - Decide and enforce calendar-day vs trading-day semantics for holding-period exits.
+   - Status: done.
+   - Outcome: hard max-holding exits are defined as trading-bar based. Runtime reasons, API descriptions, strategy validation, and backend docs now use trading-bar language; stale-position `time_stop_days` remains calendar-day based.
+   - Verification: `tests/test_portfolio_manage.py` and `tests/unit/strategies/test_validation.py`.
 
-## Backlog
+## Next
 
 9. Screener fallback stop uses strategy ATR multiplier
    - Ensure fallback stop generation respects configured `k_atr`.
+
+## Backlog
 
 10. Reject invalid or negative stops
    - Enforce long-position stop invariants across API, screener, and order flows.

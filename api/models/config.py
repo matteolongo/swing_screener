@@ -48,7 +48,10 @@ class ManageConfig(BaseModel):
     trail_after_r: float = Field(ge=0, description="Start trailing when R >= this")
     trail_sma: int = Field(gt=0, description="SMA to trail under")
     sma_buffer_pct: float = Field(ge=0, description="Buffer below SMA (e.g., 0.005 = 0.5%)")
-    max_holding_days: int = Field(gt=0, description="Max days to hold position")
+    max_holding_days: int = Field(
+        gt=0,
+        description="Max trading bars to hold before the hard time-exit rule",
+    )
     time_stop_days: int = Field(default=15, gt=0, description="Days open before stale-trade nudge appears")
     time_stop_min_r: float = Field(default=0.5, ge=0, description="Minimum R that suppresses stale-trade nudge")
     exit_signal_days: int = Field(default=2, ge=0, description="N consecutive closes below SMA triggers advisory exit (0 = disabled)")

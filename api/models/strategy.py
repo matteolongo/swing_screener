@@ -83,7 +83,11 @@ class StrategyManage(BaseModel):
     trail_after_r: float = Field(default=2.0, ge=0)
     trail_sma: int = Field(default=20, gt=0)
     sma_buffer_pct: float = Field(default=0.005, ge=0)
-    max_holding_days: int = Field(default=20, gt=0)
+    max_holding_days: int = Field(
+        default=20,
+        gt=0,
+        description="Max trading bars to hold before the hard time-exit rule",
+    )
     time_stop_days: int = Field(default=15, gt=0)
     time_stop_min_r: float = Field(default=0.5, ge=0)
     benchmark: str = "SPY"

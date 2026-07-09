@@ -93,13 +93,13 @@ def evaluate_max_holding_days(value: int) -> ValidationWarning | None:
         return ValidationWarning(
             parameter="maxHoldingDays",
             level="warning",
-            message="Very short holding periods may not give momentum enough time to develop.",
+            message="Very short trading-bar holding periods may not give momentum enough time to develop.",
         )
     if value > 30:
         return ValidationWarning(
             parameter="maxHoldingDays",
             level="info",
-            message="Longer holding periods can tie up capital in stagnant trades. Monitor performance closely.",
+            message="Longer trading-bar holding periods can tie up capital in stagnant trades. Monitor performance closely.",
         )
     return None
 

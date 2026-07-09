@@ -52,7 +52,7 @@ class ManageConfig:
     trail_sma: int = 20  # after R >= trail_after_R, trail under SMA
     trail_after_R: float = 2.0
     sma_buffer_pct: float = 0.005  # buffer under SMA (0.5%)
-    max_holding_days: int = 20  # time exit
+    max_holding_days: int = 20  # hard time exit after N trading bars
     time_stop_days: int = 15  # soft stale-trade nudge threshold
     time_stop_min_r: float = 0.5  # suppress nudge once trade has made this much progress
     benchmark: str = "SPY"
@@ -416,9 +416,9 @@ def evaluate_positions(
                 pct_below = (sma20_val - last) / sma20_val * 100
                 stop_dist = (last - pos.stop_price) / last * 100
                 reason = (
-                    f"{pos.ticker} below SMA{cfg.trail_sma} for {cfg.exit_signal_days}d "
+                    f"{pos.ticker} below SMA{cfg.trail_sma} for {cfg.exit_signal_days} bars "
                     f"({pct_below:.1f}% below). "
-                    f"{r_now:+.2f}R, {bars_since}d held. "
+                    f"{r_now:+.2f}R, {bars_since} bars held. "
                     f"Stop {stop_dist:.1f}% away."
                 )
                 updates.append(PositionUpdate(
