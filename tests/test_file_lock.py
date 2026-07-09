@@ -78,6 +78,14 @@ class TestBasicLocking:
         result = locked_read_json(test_file)
         assert result == {"value": None, "count": 42}
 
+    def test_locked_read_handles_infinity(self, tmp_path):
+        """Test that Infinity values are converted to null."""
+        test_file = tmp_path / "infinity.json"
+        test_file.write_text('{"pos": Infinity, "neg": -Infinity, "count": 42}')
+
+        result = locked_read_json(test_file)
+        assert result == {"pos": None, "neg": None, "count": 42}
+
     def test_locked_write_creates_parent_dir(self, tmp_path):
         """Test that write creates parent directories."""
         test_file = tmp_path / "subdir" / "deep" / "test.json"
@@ -87,6 +95,25 @@ class TestBasicLocking:
 
         assert test_file.exists()
         assert test_file.parent.exists()
+
+    def test_locked_write_sanitizes_nonfinite_numbers(self, tmp_path):
+        """Test that non-finite numbers are persisted as null."""
+        test_file = tmp_path / "finite.json"
+
+        locked_write_json(
+            test_file,
+            {
+                "pos": float("inf"),
+                "neg": float("-inf"),
+                "nested": {"missing": float("nan")},
+            },
+        )
+
+        assert json.loads(test_file.read_text()) == {
+            "pos": None,
+            "neg": None,
+            "nested": {"missing": None},
+        }
 
 
 class TestConcurrentAccess:

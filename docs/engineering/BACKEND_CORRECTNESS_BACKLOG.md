@@ -77,15 +77,18 @@
    - Outcome: unknown quote currencies and missing cross-currency FX rates no longer receive execution sizing or fabricated 1:1 account conversion; recommendations block with explicit `CURRENCY_UNKNOWN` or `FX_RATE_MISSING` reasons.
    - Verification: `tests/test_position_sizing.py`, `tests/test_recommendation_engine.py`, `tests/test_report.py`, and API screener currency regressions.
 
-## Next
-
 15. Finite float coercion
+   - Status: done.
    - Prevent NaN/Inf from entering API responses and persisted calculations.
+   - Outcome: shared float coercion now rejects non-finite values, locked JSON reads normalize `NaN`/`Infinity` constants to `null`, and locked JSON writes recursively persist non-finite numbers as `null` with strict JSON dumping.
+   - Verification: `tests/test_coerce.py`, `tests/test_file_lock.py`, `tests/api/test_screener_endpoints.py`, and fundamentals persistence regressions.
 
-## Backlog
+## Next
 
 16. Intelligence position fallback
    - Ensure intelligence flows do not silently substitute stale or incorrect position context.
+
+## Backlog
 
 17. Intelligence cache locking
    - Protect intelligence cache writes from concurrent corruption.
