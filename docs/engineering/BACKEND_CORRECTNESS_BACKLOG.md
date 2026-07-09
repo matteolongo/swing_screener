@@ -45,15 +45,17 @@
    - Outcome: hard max-holding exits are defined as trading-bar based. Runtime reasons, API descriptions, strategy validation, and backend docs now use trading-bar language; stale-position `time_stop_days` remains calendar-day based.
    - Verification: `tests/test_portfolio_manage.py` and `tests/unit/strategies/test_validation.py`.
 
-## Next
-
 9. Screener fallback stop uses strategy ATR multiplier
-   - Ensure fallback stop generation respects configured `k_atr`.
+   - Status: done.
+   - Outcome: fallback stop generation now derives missing stops from the active strategy `risk.k_atr` multiplier instead of a hard-coded 2 ATR distance.
+   - Verification: `tests/api/test_screener_endpoints.py::test_screener_fallback_stop_uses_strategy_atr_multiplier`.
 
-## Backlog
+## Next
 
 10. Reject invalid or negative stops
    - Enforce long-position stop invariants across API, screener, and order flows.
+
+## Backlog
 
 11. Provider interval/end-date contract
    - Ensure market-data requests produce the intended final bar and do not silently omit the requested date.
