@@ -24,9 +24,9 @@ export interface SymbolAnalysisCandidate {
   confidence?: number;
   rank?: number;
   atr?: number;
-  sma20?: number;
-  sma50?: number;
-  sma200?: number;
+  sma20?: number | null;
+  sma50?: number | null;
+  sma200?: number | null;
   momentum6m?: number;
   momentum12m?: number;
   relStrength?: number;

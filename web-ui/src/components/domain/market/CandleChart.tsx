@@ -274,7 +274,7 @@ export function CandleChart({
             lineWidth: 2,
             lineStyle: LineStyle.Solid,
             axisLabelVisible: true,
-            title: 'POC',
+            title: t('workspacePage.panels.analysis.volumeZones.poc'),
             lineVisible: showVolumeZones,
           }),
         );

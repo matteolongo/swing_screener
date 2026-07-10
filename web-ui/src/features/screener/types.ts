@@ -158,9 +158,9 @@ export interface ScreenerCandidate {
   sector?: string;
   lastBar?: string;
   close: number;
-  sma20: number;
-  sma50: number;
-  sma200: number;
+  sma20: number | null;
+  sma50: number | null;
+  sma200: number | null;
   atr: number;
   momentum6m: number;
   momentum12m: number;
@@ -274,9 +274,9 @@ export interface ScreenerCandidateAPI {
   sector?: string;
   last_bar?: string;
   close: number;
-  sma_20: number;
-  sma_50: number;
-  sma_200: number;
+  sma_20: number | null;
+  sma_50: number | null;
+  sma_200: number | null;
   atr: number;
   momentum_6m: number;
   momentum_12m: number;
