@@ -131,6 +131,12 @@
    - Outcome: candidate assembly now derives `risk_pct` only from `realized_risk_account`; otherwise it falls back to the recommendation engine result, preserving missing-FX blocks for cross-currency rows.
    - Verification: `tests/api/test_screener_currency_contract.py::test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx`, plus screener currency/service/recommendation regressions.
 
+24. Portfolio EUR/USD rate selection symmetry
+   - Status: done.
+   - Ensure open-position portfolio metrics fetch EURUSD whenever position and account currencies differ across EUR/USD, regardless of whether the position itself is USD or EUR.
+   - Outcome: portfolio summaries for USD accounts holding EUR instruments now convert value, cost basis, P&L, open risk, available capital, and concentration risk into USD instead of leaving EUR amounts unconverted.
+   - Verification: `tests/api/test_portfolio_summary_currency.py::test_portfolio_summary_converts_eur_positions_for_usd_account`, plus portfolio summary/accounting regressions.
+
 ## Next
 
 - No open backend correctness backlog items.

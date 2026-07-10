@@ -337,12 +337,15 @@ class PortfolioReadService:
     ) -> PositionsWithMetricsResponse:
         positions, asof = self._positions_repo.list_positions(status=status)
         current_prices, live_tickers = self._pricing._attach_live_prices(positions)
-        has_usd_positions = any(
-            detect_currency(str(position.get("ticker", "")).upper()) == "USD"
+        account_currency = getattr(self._config_repo.get().risk, "account_currency", "EUR")
+        needs_eurusd = any(
+            _needs_eurusd_rate(
+                detect_currency(str(position.get("ticker", "")).upper()),
+                account_currency,
+            )
             for position in positions
         )
-        eurusd_rate = self._pricing._eurusd_rate() if has_usd_positions else 1.0
-        account_currency = getattr(self._config_repo.get().risk, "account_currency", "EUR")
+        eurusd_rate = self._pricing._eurusd_rate() if needs_eurusd else 1.0
 
         positions_with_metrics = [
             self._build_position_with_metrics(
@@ -556,12 +559,11 @@ class PortfolioReadService:
         effective_account_size = account_size + realized_pnl if account_size_mode == "equity" else account_size
         positions_response = self.list_positions(status="open")
         positions = positions_response.positions
-        has_usd_positions = any(
-            detect_currency(position.ticker.upper()) == "USD" for position in positions
+        needs_open_eurusd = any(
+            _needs_eurusd_rate(detect_currency(position.ticker.upper()), account_currency)
+            for position in positions
         )
-        eurusd_rate = self._pricing._eurusd_rate() if (
-            has_usd_positions and account_currency in {"EUR", "USD"}
-        ) else 1.0
+        eurusd_rate = self._pricing._eurusd_rate() if needs_open_eurusd else 1.0
         if not positions:
             return PortfolioSummary(
                 total_positions=0,
