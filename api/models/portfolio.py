@@ -289,8 +289,12 @@ class CreateOrderRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_stop_below_limit(self):
+        # Long entry orders require stop below the limit entry. A protective SELL
+        # stop-limit legitimately has stop_price >= limit_price, so skip sells.
+        is_sell = self.order_type.upper().startswith("SELL")
         if (
-            self.stop_price is not None
+            not is_sell
+            and self.stop_price is not None
             and self.limit_price is not None
             and self.stop_price >= self.limit_price
         ):
