@@ -5,10 +5,15 @@ from api.services.decision_context import (
     apply_cached_fundamentals_context,
     apply_decision_priority_ranking,
     apply_decision_summary_context,
+    rebuild_recommendations_with_decision_action,
 )
+from api.models.recommendation import Recommendation
+from dataclasses import asdict
 from swing_screener.fundamentals.models import FundamentalPillarScore
 from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.fundamentals.storage import FundamentalsStorage
+from swing_screener.risk.position_sizing import RiskConfig
+from swing_screener.risk.recommendations.engine import build_recommendation
 from swing_screener.recommendation.models import DecisionSummary
 
 
@@ -149,3 +154,58 @@ def test_apply_decision_priority_ranking_uses_action_then_conviction_then_raw_ra
     assert [candidate.ticker for candidate in prioritized] == ["HIGH", "MEDIUM", "WATCH"]
     assert [candidate.priority_rank for candidate in prioritized] == [1, 2, 3]
     assert [candidate.rank for candidate in prioritized] == [4, 3, 1]
+
+
+def test_decision_rebuild_preserves_missing_cross_currency_fx_block() -> None:
+    original = build_recommendation(
+        signal=None,
+        entry=100.0,
+        stop=98.0,
+        shares=None,
+        account_size=1000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+        commission_pct=0.0,
+        slippage_bps=0.0,
+        min_rr=2.0,
+        max_position_pct=1.0,
+        currency="USD",
+        account_currency="EUR",
+        account_to_quote_rate=None,
+    )
+    candidate = _candidate().model_copy(
+        update={
+            "recommendation": Recommendation.model_validate(asdict(original)),
+            "decision_summary": DecisionSummary(
+                symbol="AAPL",
+                action="BUY_NOW",
+                conviction="high",
+                technical_label="strong",
+                fundamentals_label="strong",
+                valuation_label="fair",
+                catalyst_label="active",
+                why_now="Decision summary says buy.",
+                what_to_do="Buy now.",
+                main_risk="FX missing.",
+            ),
+        }
+    )
+
+    rebuilt = rebuild_recommendations_with_decision_action(
+        [candidate],
+        risk_cfg=RiskConfig(
+            account_size=1000.0,
+            account_currency="EUR",
+            risk_pct=0.01,
+            max_position_pct=1.0,
+            min_rr=2.0,
+        ),
+        rr_target=2.0,
+        commission_pct=0.0,
+    )[0]
+
+    assert rebuilt.recommendation is not None
+    assert rebuilt.recommendation.verdict == "NOT_RECOMMENDED"
+    assert rebuilt.recommendation.risk.account_to_quote_rate is None
+    reason_codes = {reason.code for reason in rebuilt.recommendation.reasons_detailed}
+    assert "FX_RATE_MISSING" in reason_codes

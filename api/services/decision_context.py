@@ -198,7 +198,7 @@ def rebuild_recommendations_with_decision_action(
             confidence=candidate.confidence,
             currency=rec.risk.currency if rec.risk else None,
             account_currency=rec.risk.account_currency if rec.risk else None,
-            account_to_quote_rate=(rec.risk.account_to_quote_rate or 1.0) if rec.risk else 1.0,
+            account_to_quote_rate=rec.risk.account_to_quote_rate if rec.risk else None,
         )
         rebuilt.append(
             candidate.model_copy(

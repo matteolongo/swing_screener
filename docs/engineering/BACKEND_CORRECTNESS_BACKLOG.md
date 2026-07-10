@@ -113,6 +113,12 @@
    - Outcome: `apply_universe_filters` now treats `UNKNOWN` quote currency as failing the active currency filter instead of passing it through to ranking/sizing. Filter diagnostics report `currency` as the exclusion reason.
    - Verification: `tests/test_universe_filter.py`, plus report/selection/screener regressions.
 
+21. Decision rebuild FX preservation
+   - Status: done.
+   - Ensure decision-summary recommendation rebuilds do not fabricate a 1:1 FX rate when the original recommendation lacked a required cross-currency rate.
+   - Outcome: `rebuild_recommendations_with_decision_action` now passes through the original `account_to_quote_rate` exactly, preserving `None` so USD/EUR recommendations remain blocked with `FX_RATE_MISSING` until a real rate is available.
+   - Verification: `tests/api/test_screener_fundamentals_context.py::test_decision_rebuild_preserves_missing_cross_currency_fx_block`, plus screener currency/recommendation regressions.
+
 ## Next
 
 - No open backend correctness backlog items.
