@@ -14,6 +14,7 @@ from api.services.regime_analytics import (
     REGIME_CHOPPY,
     REGIME_TRENDING_DOWN,
     REGIME_TRENDING_UP,
+    _r_at_close,
     label_regime_at_date,
 )
 
@@ -97,6 +98,17 @@ def test_label_too_few_for_fast_sma_returns_choppy():
     assert label_regime_at_date(close, target) == REGIME_CHOPPY
 
 
+def test_r_at_close_uses_per_share_initial_risk():
+    assert _r_at_close(
+        {
+            "entry_price": 100.0,
+            "exit_price": 120.0,
+            "shares": 10,
+            "initial_risk": 10.0,
+        }
+    ) == pytest.approx(2.0, abs=0.01)
+
+
 # ─── endpoint tests ──────────────────────────────────────────────────────────
 
 
@@ -118,14 +130,14 @@ def test_endpoint_returns_regime_stats(tmp_path, monkeypatch):
             "id": "a", "ticker": "AAPL", "status": "closed",
             "entry_date": "2024-06-15", "exit_date": "2024-07-01",
             "entry_price": 100.0, "exit_price": 120.0,
-            "shares": 10, "initial_risk": 100.0,
+            "shares": 10, "initial_risk": 10.0,
             "stop_price": 90.0,
         },
         {
             "id": "b", "ticker": "MSFT", "status": "closed",
             "entry_date": "2024-06-15", "exit_date": "2024-07-10",
             "entry_price": 200.0, "exit_price": 180.0,
-            "shares": 5, "initial_risk": 50.0,
+            "shares": 5, "initial_risk": 10.0,
             "stop_price": 190.0,
         },
     ]
@@ -147,7 +159,7 @@ def test_endpoint_returns_regime_stats(tmp_path, monkeypatch):
     assert "trending_up" in regimes
     tu = regimes["trending_up"]
     assert tu["count"] == 2
-    # pos a: r = (120-100)*10/100 = +2.0; pos b: r = (180-200)*5/50 = -2.0
+    # pos a: r = (120-100)/10 = +2.0; pos b: r = (180-200)/10 = -2.0
     assert tu["win_rate"] == 50.0
     assert abs(tu["avg_r"]) < 0.01
 
@@ -158,7 +170,7 @@ def test_endpoint_yfinance_failure_returns_empty(tmp_path, monkeypatch):
             "id": "c", "ticker": "AAPL", "status": "closed",
             "entry_date": "2024-06-15", "exit_date": "2024-07-01",
             "entry_price": 100.0, "exit_price": 120.0,
-            "shares": 10, "initial_risk": 100.0,
+            "shares": 10, "initial_risk": 10.0,
             "stop_price": 90.0,
         },
     ]

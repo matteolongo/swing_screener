@@ -137,6 +137,12 @@
    - Outcome: portfolio summaries for USD accounts holding EUR instruments now convert value, cost basis, P&L, open risk, available capital, and concentration risk into USD instead of leaving EUR amounts unconverted.
    - Verification: `tests/api/test_portfolio_summary_currency.py::test_portfolio_summary_converts_eur_positions_for_usd_account`, plus portfolio summary/accounting regressions.
 
+25. Regime analytics R-multiple contract
+   - Status: done.
+   - Ensure closed-trade regime analytics use the app-wide per-share `initial_risk` contract when calculating R at close.
+   - Outcome: regime breakdown R stats now calculate `(exit_price - entry_price) / initial_risk` instead of multiplying by shares and overstating results by position size.
+   - Verification: `tests/api/test_regime_breakdown.py::test_r_at_close_uses_per_share_initial_risk`, plus regime endpoint and R-related portfolio/backtest regressions.
+
 ## Next
 
 - No open backend correctness backlog items.
