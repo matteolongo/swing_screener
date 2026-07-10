@@ -173,7 +173,7 @@ def _f(x) -> float | None:
         xf = float(x)
     except (TypeError, ValueError):
         return None
-    return None if math.isnan(xf) else xf
+    return xf if math.isfinite(xf) else None
 
 
 def _market_bias(close: float, sma20: float, sma50: float, sma200: float) -> MarketBias:
@@ -228,7 +228,8 @@ def _confidence(
         score += 25.0
     elif bias == "neutral":
         score += 10.0
-    score += 20.0 * max(0.0, 1.0 - min(proximity_ratio, 2.0) / 2.0)
+    clamped_proximity = min(max(proximity_ratio, 0.0), 2.0)
+    score += 20.0 * (1.0 - clamped_proximity / 2.0)
     if rr is not None and rr > 0:
         score += 20.0 * min(rr, 3.0) / 3.0
     score += 15.0 * min(retest_count, 3) / 3.0
@@ -301,11 +302,14 @@ def analyze_volume_zones(
     sma50 = sma_per_ticker(close_series, 50)
     sma200 = sma_per_ticker(close_series, 200)
     atr14 = compute_atr_per_ticker(high, low, close_series, window=14)
-    vwap = anchored_vwap(high, low, close_series, volume)
+    # VWAP and swings describe the analysis window, so anchor them to the same
+    # lookback slice the volume profile uses (not the full downloaded history,
+    # which is longer because SMA200 needs >= 200 bars).
+    vwap = anchored_vwap(pf["h"], pf["l"], pf["c"], pf["v"])
     rel_volume = trailing_volume_ratio(
         volume.to_numpy(dtype=float), len(volume) - 1, 20
     )
-    swings = swing_points(high, low, window=cfg.swing_window)
+    swings = swing_points(pf["h"], pf["l"], window=cfg.swing_window)
 
     profile = build_volume_profile(
         pf["h"], pf["l"], pf["c"], pf["v"], cfg.profile_config()

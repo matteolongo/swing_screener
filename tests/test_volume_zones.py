@@ -153,3 +153,46 @@ def test_deterministic():
     a = vz.analyze_volume_zones("TEST", ohlcv)
     b = vz.analyze_volume_zones("TEST", ohlcv)
     assert a == b
+
+
+def test_f_rejects_non_finite_values():
+    """_f nulls NaN and +/-inf instead of leaking non-finite floats into output."""
+    assert vz._f(float("nan")) is None
+    assert vz._f(float("inf")) is None
+    assert vz._f(float("-inf")) is None
+    assert vz._f(1.5) == 1.5
+    assert vz._f(None) is None
+
+
+def test_confidence_proximity_term_is_capped_for_negative_ratio():
+    """A zone straddling the close yields a negative proximity_ratio; the proximity
+    term must not push the score above what ratio=0 (best case) produces."""
+    kwargs = dict(
+        bias="neutral",
+        direction="long",
+        rr=None,
+        retest_count=0,
+        rel_volume=None,
+        close=None,
+        vwap=None,
+    )
+    best = vz._confidence(proximity_ratio=0.0, **kwargs)
+    straddle = vz._confidence(proximity_ratio=-0.5, **kwargs)
+    assert straddle == best
+    assert straddle <= 100.0
+
+
+def test_vwap_and_swings_use_lookback_window_not_full_history():
+    """VWAP and swings must reflect the lookback window, not the longer download
+    (which exists because SMA200 needs >= 200 bars)."""
+    early = [200.0 + (i % 3) for i in range(130)]  # older, far above recent prices
+    recent = [100.0 + (i % 3) for i in range(120)]
+    closes = early + recent
+    ohlcv = _ohlcv(closes)
+    result = vz.analyze_volume_zones("TEST", ohlcv, lookback=120)
+    assert result.key_levels.vwap is not None
+    # Full-history VWAP would be ~152 (pulled up by the 200-priced early bars).
+    assert result.key_levels.vwap < 130
+    assert result.key_levels.swing_high is not None
+    # Full-history swing high would be ~200; the lookback window tops out near 101.
+    assert result.key_levels.swing_high < 150
