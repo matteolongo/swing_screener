@@ -161,6 +161,12 @@
    - Outcome: screener FX-map collection and candidate assembly now normalize null/blank currency values, fall back to ticker detection, and emit `UNKNOWN` when unresolved so recommendation sizing blocks with `CURRENCY_UNKNOWN`.
    - Verification: `tests/api/test_screener_endpoints.py::test_screener_normalizes_null_currency_to_unknown`, plus unknown-currency and screener currency regressions.
 
+29. Same-symbol cross-currency capacity
+   - Status: done.
+   - Ensure same-symbol add-on/scale-back capacity compares quote-currency exposure against quote-currency budgets.
+   - Outcome: same-symbol evaluator now converts account risk and max-position budgets into the candidate quote currency before subtracting existing same-symbol risk/value, and blocks add-on sizing when required FX is missing.
+   - Verification: `tests/api/test_same_symbol_reentry.py::test_same_symbol_reentry_converts_account_budget_for_cross_currency_add_on`, plus same-symbol and screener risk regressions.
+
 ## Next
 
 - No open backend correctness backlog items.

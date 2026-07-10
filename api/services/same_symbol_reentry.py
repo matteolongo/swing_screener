@@ -264,10 +264,20 @@ class SameSymbolReentryEvaluator:
             candidate.same_symbol = context
             return candidate, context
 
+        account_to_quote_rate = _adjusted_account_to_quote_rate(recommendation.risk)
+        if account_to_quote_rate is None:
+            context.reason = "A valid FX rate is required before same-symbol add-on sizing."
+            candidate.same_symbol = context
+            return candidate, context
+
         risk_per_share = float(entry_price) - current_stop
-        remaining_risk_budget = (account_size * risk_pct_target) - _current_position_risk(matching_position)
+        # Risk and max-position budgets are configured in account currency;
+        # same-symbol sizing below compares them to quote-currency exposure.
+        risk_budget_quote = account_size * risk_pct_target * account_to_quote_rate
+        max_position_value_quote = account_size * max_position_pct * account_to_quote_rate
+        remaining_risk_budget = risk_budget_quote - _current_position_risk(matching_position)
         current_position_value = _position_market_value(matching_position, candidate.close)
-        remaining_value_capacity = (account_size * max_position_pct) - current_position_value
+        remaining_value_capacity = max_position_value_quote - current_position_value
         shares_by_risk = math.floor(remaining_risk_budget / risk_per_share) if risk_per_share > 0 else 0
         shares_by_value = math.floor(remaining_value_capacity / float(entry_price)) if entry_price > 0 else 0
         candidate_share_cap = candidate.shares or recommendation.risk.shares
