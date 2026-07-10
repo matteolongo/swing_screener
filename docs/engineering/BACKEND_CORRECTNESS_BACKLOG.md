@@ -149,6 +149,12 @@
    - Outcome: `build_trade_plans` now skips rows without an explicit, finite quote currency and continues to fail closed for `UNKNOWN`, preventing execution sizing under a false same-currency assumption.
    - Verification: `tests/test_position_sizing.py::test_build_trade_plans_skips_missing_quote_currency`, plus position sizing/report/screener regressions.
 
+27. Same-currency FX identity
+   - Status: done.
+   - Ensure risk sizing and recommendation sizing always use identity conversion when quote currency equals account currency.
+   - Outcome: stale or miswired `account_to_quote_rate` values no longer alter shares, risk, position value, or payload conversion rate for same-currency plans/recommendations.
+   - Verification: `tests/test_position_sizing.py::test_position_plan_uses_identity_rate_for_same_currency` and `tests/test_recommendation_engine.py::test_recommendation_uses_identity_rate_for_same_currency`, plus risk/report/screener regressions.
+
 ## Next
 
 - No open backend correctness backlog items.

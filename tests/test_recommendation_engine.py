@@ -47,6 +47,34 @@ def test_recommendation_sizes_quote_currency_from_account_currency_budget():
     assert rec.verdict == "RECOMMENDED"
 
 
+def test_recommendation_uses_identity_rate_for_same_currency():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=98.0,
+        shares=None,
+        account_size=1000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+        commission_pct=0.0,
+        slippage_bps=0.0,
+        min_rr=2.0,
+        max_position_pct=1.0,
+        currency="EUR",
+        account_currency="EUR",
+        account_to_quote_rate=1.25,
+    )
+
+    assert rec.risk.shares == 5
+    assert rec.risk.currency == "EUR"
+    assert rec.risk.account_currency == "EUR"
+    assert rec.risk.account_to_quote_rate == 1.0
+    assert rec.risk.risk_amount == 10.0
+    assert rec.risk.risk_amount_account == 10.0
+    assert rec.risk.risk_pct == 0.01
+    assert rec.verdict == "RECOMMENDED"
+
+
 def test_recommendation_blocks_unknown_quote_currency():
     rec = build_recommendation(
         signal="breakout",

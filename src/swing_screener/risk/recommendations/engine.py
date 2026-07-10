@@ -157,17 +157,22 @@ def build_recommendation(
     quote_currency = _normalize_currency_code(currency)
     account_currency_code = _normalize_currency_code(account_currency)
     currency_unknown = quote_currency == "UNKNOWN"
+    same_currency = (
+        quote_currency is not None
+        and account_currency_code is not None
+        and quote_currency == account_currency_code
+    )
     fx_rate_missing = (
         quote_currency is not None
         and account_currency_code is not None
-        and quote_currency != account_currency_code
+        and not same_currency
         and account_to_quote_rate is None
     )
     sizing_blocked = currency_unknown or fx_rate_missing
 
     normalized_rate = (
         1.0
-        if account_to_quote_rate is None
+        if account_to_quote_rate is None or same_currency
         else _normalize_account_to_quote_rate(account_to_quote_rate)
     )
     risk_amount_target_account = account_size * risk_pct_target

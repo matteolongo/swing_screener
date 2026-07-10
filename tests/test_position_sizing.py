@@ -47,6 +47,31 @@ def test_position_plan_converts_account_budget_to_quote_currency():
     assert plan["position_value_account"] == 480.0
 
 
+def test_position_plan_uses_identity_rate_for_same_currency():
+    cfg = RiskConfig(
+        account_size=1000,
+        risk_pct=0.01,
+        k_atr=1.0,
+        max_position_pct=1.0,
+        account_currency="EUR",
+    )
+
+    plan = position_plan(
+        entry=100.0,
+        atr14=2.0,
+        cfg=cfg,
+        quote_currency="EUR",
+        account_to_quote_rate=1.25,
+    )
+
+    assert plan is not None
+    assert plan["shares"] == 5
+    assert plan["account_to_quote_rate"] == 1.0
+    assert plan["realized_risk"] == 10.0
+    assert plan["realized_risk_account"] == 10.0
+    assert plan["position_value_account"] == 500.0
+
+
 def test_position_plan_returns_none_for_unknown_quote_currency():
     cfg = RiskConfig(
         account_size=1000,

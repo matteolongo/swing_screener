@@ -113,11 +113,7 @@ def position_plan(
     if quote_currency is None:
         return None
     if quote_currency == account_currency:
-        account_to_quote_rate = (
-            1.0
-            if account_to_quote_rate is None
-            else _normalize_account_to_quote_rate(account_to_quote_rate)
-        )
+        account_to_quote_rate = 1.0
     elif account_to_quote_rate is None:
         return None
     else:
