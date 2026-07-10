@@ -475,7 +475,12 @@ describe('NarrativeAnalysisCard — status-aware skeleton', () => {
   const positionIntelligence: SymbolIntelligence = {
     ...baseIntelligence,
     action: 'MANAGE_ONLY',
-    positionSignal: { action: 'TRIM', reason: 'Up 1.9R, momentum cooling.' },
+    positionSignal: {
+      action: 'TRIM',
+      reason: 'Up 1.9R, momentum cooling.',
+      trimPct: null,
+      trimPrice: null,
+    },
     positionOutlook: {
       expectedHoldingPeriod: '2-6_weeks',
       holdUntil: 'Hold until the 50-day SMA breaks.',

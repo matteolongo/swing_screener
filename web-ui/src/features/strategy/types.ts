@@ -22,6 +22,7 @@ export interface StrategyFilt {
   maxAtrPct: number;
   requireTrendOk: boolean;
   requireRsPositive: boolean;
+  requireWeeklyUptrend: boolean;
   currencies: StrategyCurrency[];
 }
 
@@ -158,6 +159,7 @@ export interface StrategyFiltAPI {
   max_atr_pct: number;
   require_trend_ok: boolean;
   require_rs_positive: boolean;
+  require_weekly_uptrend?: boolean;
   currencies?: string[];
 }
 
@@ -330,6 +332,7 @@ export function transformStrategy(api: StrategyAPI): Strategy {
         maxAtrPct: api.universe.filt.max_atr_pct,
         requireTrendOk: api.universe.filt.require_trend_ok,
         requireRsPositive: api.universe.filt.require_rs_positive,
+        requireWeeklyUptrend: api.universe.filt.require_weekly_uptrend ?? false,
         currencies: normalizedCurrencies,
       },
     },
@@ -446,6 +449,7 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
         max_atr_pct: strategy.universe.filt.maxAtrPct,
         require_trend_ok: strategy.universe.filt.requireTrendOk,
         require_rs_positive: strategy.universe.filt.requireRsPositive,
+        require_weekly_uptrend: strategy.universe.filt.requireWeeklyUptrend,
         currencies: currencies.length ? currencies : ['USD', 'EUR'],
       },
     },

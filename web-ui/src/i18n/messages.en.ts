@@ -2430,6 +2430,7 @@ export const messagesEn = {
       position: 'Position',
       screener: 'Screener hit',
       economic: 'Economic event',
+      ipo: 'IPO',
     },
     loadingText: 'Fetching events…',
     errorText: 'Could not load events. Check the API server.',

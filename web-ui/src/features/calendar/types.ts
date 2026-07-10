@@ -1,5 +1,5 @@
-export type EventSourceTag = 'position' | 'screener' | 'economic';
-export type EventType = 'earnings' | 'economic';
+export type EventSourceTag = 'position' | 'screener' | 'economic' | 'ipo';
+export type EventType = 'earnings' | 'economic' | 'ipo' | 'dividend';
 
 export interface CalendarEventAPI {
   date: string;
@@ -7,6 +7,11 @@ export interface CalendarEventAPI {
   event_type: EventType;
   title: string;
   source_tag: EventSourceTag;
+  provider?: string | null;
+  confidence?: number | null;
+  source_url?: string | null;
+  eps_estimate?: number | null;
+  eps_actual?: number | null;
 }
 
 export interface CalendarEventsResponseAPI {
@@ -20,6 +25,11 @@ export interface CalendarEvent {
   eventType: EventType;
   title: string;
   sourceTag: EventSourceTag;
+  provider: string | null;
+  confidence: number | null;
+  sourceUrl: string | null;
+  epsEstimate: number | null;
+  epsActual: number | null;
 }
 
 export interface CalendarEventsResponse {
@@ -34,6 +44,11 @@ export function transformCalendarEvent(api: CalendarEventAPI): CalendarEvent {
     eventType: api.event_type,
     title: api.title,
     sourceTag: api.source_tag,
+    provider: api.provider ?? null,
+    confidence: api.confidence ?? null,
+    sourceUrl: api.source_url ?? null,
+    epsEstimate: api.eps_estimate ?? null,
+    epsActual: api.eps_actual ?? null,
   };
 }
 

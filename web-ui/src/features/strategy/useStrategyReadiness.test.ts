@@ -32,6 +32,7 @@ const createMockStrategy = (overrides?: Partial<Strategy>): Strategy => ({
       maxAtrPct: 10,
       requireTrendOk: true,
       requireRsPositive: true,
+      requireWeeklyUptrend: false,
       currencies: ['USD'],
     },
   },

@@ -361,6 +361,9 @@ export interface ScreenerResponse {
   candidates: ScreenerCandidate[];
   asofDate: string;
   totalScreened: number;
+  totalWithMarketData?: number;
+  totalRankedCandidates?: number;
+  totalReturnedCandidates?: number;
   benchmarkTicker?: string;
   benchmarkChangePct?: number;
   benchmarkLastBar?: string;
@@ -375,6 +378,9 @@ export interface ScreenerResponseAPI {
   candidates: ScreenerCandidateAPI[];
   asof_date: string;
   total_screened: number;
+  total_with_market_data?: number;
+  total_ranked_candidates?: number;
+  total_returned_candidates?: number;
   benchmark_ticker?: string;
   benchmark_change_pct?: number;
   benchmark_last_bar?: string;
@@ -595,6 +601,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
+    totalWithMarketData: apiResponse.total_with_market_data,
+    totalRankedCandidates: apiResponse.total_ranked_candidates,
+    totalReturnedCandidates: apiResponse.total_returned_candidates,
     benchmarkTicker: apiResponse.benchmark_ticker,
     benchmarkChangePct: apiResponse.benchmark_change_pct,
     benchmarkLastBar: apiResponse.benchmark_last_bar,

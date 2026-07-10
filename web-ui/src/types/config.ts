@@ -6,6 +6,9 @@ export interface RiskConfig {
   kAtr: number;
   minRr: number;
   maxFeeRiskPct: number;
+  maxConcentrationPct: number;
+  accountSizeMode: 'base' | 'equity';
+  accountCurrency: 'EUR' | 'USD' | 'GBP' | 'CHF' | 'SEK' | 'DKK' | 'NOK';
 }
 
 export interface IndicatorConfig {
@@ -29,6 +32,7 @@ export interface ManageConfig {
   maxHoldingDays: number;
   timeStopDays: number;
   timeStopMinR: number;
+  exitSignalDays: number;
 }
 
 export interface AppConfig {
@@ -47,6 +51,9 @@ export interface RiskConfigAPI {
   k_atr: number;
   min_rr: number;
   max_fee_risk_pct: number;
+  max_concentration_pct: number;
+  account_size_mode: 'base' | 'equity';
+  account_currency: 'EUR' | 'USD' | 'GBP' | 'CHF' | 'SEK' | 'DKK' | 'NOK';
 }
 
 export interface IndicatorConfigAPI {
@@ -70,6 +77,7 @@ export interface ManageConfigAPI {
   max_holding_days: number;
   time_stop_days?: number;
   time_stop_min_r?: number;
+  exit_signal_days?: number;
 }
 
 export interface AppConfigAPI {
@@ -90,6 +98,9 @@ export function transformAppConfig(api: AppConfigAPI): AppConfig {
       kAtr: api.risk.k_atr,
       minRr: api.risk.min_rr,
       maxFeeRiskPct: api.risk.max_fee_risk_pct,
+      maxConcentrationPct: api.risk.max_concentration_pct,
+      accountSizeMode: api.risk.account_size_mode,
+      accountCurrency: api.risk.account_currency,
     },
     indicators: {
       smaFast: api.indicators.sma_fast,
@@ -111,6 +122,7 @@ export function transformAppConfig(api: AppConfigAPI): AppConfig {
       maxHoldingDays: api.manage.max_holding_days,
       timeStopDays: api.manage.time_stop_days ?? 15,
       timeStopMinR: api.manage.time_stop_min_r ?? 0.5,
+      exitSignalDays: api.manage.exit_signal_days ?? 2,
     },
     positionsFile: api.positions_file,
     ordersFile: api.orders_file,
@@ -127,6 +139,9 @@ export function toAppConfigAPI(config: AppConfig): AppConfigAPI {
       k_atr: config.risk.kAtr,
       min_rr: config.risk.minRr,
       max_fee_risk_pct: config.risk.maxFeeRiskPct,
+      max_concentration_pct: config.risk.maxConcentrationPct,
+      account_size_mode: config.risk.accountSizeMode,
+      account_currency: config.risk.accountCurrency,
     },
     indicators: {
       sma_fast: config.indicators.smaFast,
@@ -148,6 +163,7 @@ export function toAppConfigAPI(config: AppConfig): AppConfigAPI {
       max_holding_days: config.manage.maxHoldingDays,
       time_stop_days: config.manage.timeStopDays,
       time_stop_min_r: config.manage.timeStopMinR,
+      exit_signal_days: config.manage.exitSignalDays,
     },
     positions_file: config.positionsFile,
     orders_file: config.ordersFile,

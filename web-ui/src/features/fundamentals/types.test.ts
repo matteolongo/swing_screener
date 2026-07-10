@@ -18,11 +18,16 @@ describe('fundamentals transforms', () => {
       currency: 'USD',
       revenue_growth_yoy: 0.18,
       earnings_growth_yoy: 0.24,
+      net_margin: 0.22,
       shares_outstanding: 14900000000,
       total_equity: 74500000000,
       book_value_per_share: 5,
       price_to_book: 5.6,
       book_to_price: 0.1786,
+      insider_net_shares_90d: 125000,
+      insider_transaction_count_90d: 4,
+      forward_eps_estimate: 2.14,
+      analyst_upgrade_downgrade_net_30d: 2,
       pillars: {
         growth: {
           score: 0.9,
@@ -74,6 +79,11 @@ describe('fundamentals transforms', () => {
     expect(snapshot.bookValuePerShare).toBe(5);
     expect(snapshot.priceToBook).toBe(5.6);
     expect(snapshot.bookToPrice).toBe(0.1786);
+    expect(snapshot.netMargin).toBe(0.22);
+    expect(snapshot.insiderNetShares90d).toBe(125000);
+    expect(snapshot.insiderTransactionCount90d).toBe(4);
+    expect(snapshot.forwardEpsEstimate).toBe(2.14);
+    expect(snapshot.analystUpgradeDowngradeNet30d).toBe(2);
     expect(snapshot.dataQualityStatus).toBe('low');
     expect(snapshot.dataQualityFlags).toEqual([
       'Revenue YoY mixes snapshot metric data with quarterly history.',

@@ -118,6 +118,15 @@ export interface EvidenceLedger {
 export interface PositionSignal {
   action: PositionSignalAction;
   reason: string;
+  trimPct: number | null;
+  trimPrice: number | null;
+}
+
+export interface PositionSignalAPI {
+  action: PositionSignalAction;
+  reason: string;
+  trim_pct?: number | null;
+  trim_price?: number | null;
 }
 
 export interface PositionOutlookAPI {
@@ -210,7 +219,7 @@ export interface SymbolIntelligenceAPI {
   summary_line: string;
   narrative: string;
   upcoming_events: IntelligenceEvent[];
-  position_signal: PositionSignal | null;
+  position_signal: PositionSignalAPI | null;
   position_outlook?: PositionOutlookAPI | null;
   position_move_explanation?: PositionMoveExplanation | null;
   sources: string[];
@@ -306,6 +315,16 @@ export function transformEvidenceLedger(api: EvidenceLedgerAPI | null | undefine
   };
 }
 
+function transformPositionSignal(api: PositionSignalAPI | null | undefined): PositionSignal | null {
+  if (!api) return null;
+  return {
+    action: api.action,
+    reason: api.reason,
+    trimPct: api.trim_pct ?? null,
+    trimPrice: api.trim_price ?? null,
+  };
+}
+
 function transformClassifiedCatalyst(api: ClassifiedCatalystAPI): ClassifiedCatalyst {
   return {
     type: api.type,
@@ -327,7 +346,7 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     summaryLine: api.summary_line,
     narrative: api.narrative,
     upcomingEvents: api.upcoming_events ?? [],
-    positionSignal: api.position_signal ?? null,
+    positionSignal: transformPositionSignal(api.position_signal),
     positionOutlook: transformPositionOutlook(api.position_outlook),
     positionMoveExplanation: api.position_move_explanation ?? null,
     sources: api.sources ?? [],

@@ -59,10 +59,13 @@ describe('transformCandlePattern', () => {
 
 describe('transformScreenerResponse', () => {
   it('maps execution guidance and fundamentals fields from API to UI shape', () => {
-    const apiResponse: ScreenerResponseAPI = {
-      asof_date: '2026-03-02',
-      total_screened: 1,
-      data_freshness: 'final_close',
+      const apiResponse: ScreenerResponseAPI = {
+        asof_date: '2026-03-02',
+        total_screened: 1,
+        total_with_market_data: 12,
+        total_ranked_candidates: 7,
+        total_returned_candidates: 1,
+        data_freshness: 'final_close',
       candidates: [
         {
           ticker: 'AAPL',
@@ -132,6 +135,9 @@ describe('transformScreenerResponse', () => {
     };
 
     const result = transformScreenerResponse(apiResponse);
+    expect(result.totalWithMarketData).toBe(12);
+    expect(result.totalRankedCandidates).toBe(7);
+    expect(result.totalReturnedCandidates).toBe(1);
     expect(result.candidates[0].suggestedOrderType).toBe('BUY_STOP');
     expect(result.candidates[0].suggestedOrderPrice).toBe(101.2);
     expect(result.candidates[0].executionNote).toContain('BUY STOP');

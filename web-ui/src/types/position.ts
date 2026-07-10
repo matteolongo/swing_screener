@@ -15,12 +15,14 @@ export interface PartialCloseEvent {
   price: number;
   rAtClose: number;
   feeEur?: number | null;
+  fxRate?: number | null;
 }
 
 export interface PartialCloseRequest {
   sharesClosed: number;
   price: number;
   feeEur?: number;
+  fxRate?: number;
 }
 
 export interface Position {
@@ -38,9 +40,16 @@ export interface Position {
   exitDate?: string;
   exitPrice?: number;
   exitFeeEur?: number;
+  entryFeeEur?: number | null;
+  entryFxRate?: number | null;
+  exitFxRate?: number | null;
   currentPrice?: number;  // Live price for open positions
   notes?: string;
   exitOrderIds?: string[];
+  broker?: string | null;
+  brokerProductId?: string | null;
+  isin?: string | null;
+  brokerSyncedAt?: string | null;
   thesis?: string | null;
   lesson?: string | null;
   tags?: string[];
@@ -89,6 +98,7 @@ export interface UpdateStopRequest {
 export interface ClosePositionRequest {
   exitPrice: number;
   feeEur?: number;
+  exitFxRate?: number;
   reason?: string;
   lesson?: string;
   tags?: string[];
@@ -107,12 +117,19 @@ export interface PositionApiResponse {
   source_order_id: string | null;
   initial_risk: number | null;
   max_favorable_price: number | null;
+  entry_fee_eur?: number | null;
   exit_date: string | null;
   exit_price: number | null;
   exit_fee_eur?: number | null;
+  exit_fx_rate?: number | null;
   current_price: number | null;  // Live price for open positions
   notes: string;
   exit_order_ids: string[] | null;
+  broker?: string | null;
+  broker_product_id?: string | null;
+  isin?: string | null;
+  broker_synced_at?: string | null;
+  entry_fx_rate?: number | null;
   thesis?: string | null;
   lesson?: string | null;
   tags?: string[] | null;
@@ -124,6 +141,7 @@ export interface PositionApiResponse {
     price: number;
     r_at_close: number;
     fee_eur?: number | null;
+    fx_rate?: number | null;
   }> | null;
 }
 
@@ -140,12 +158,19 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     sourceOrderId: apiPosition.source_order_id ?? undefined,
     initialRisk: apiPosition.initial_risk ?? undefined,
     maxFavorablePrice: apiPosition.max_favorable_price ?? undefined,
+    entryFeeEur: apiPosition.entry_fee_eur ?? null,
     exitDate: apiPosition.exit_date ?? undefined,
     exitPrice: apiPosition.exit_price ?? undefined,
     exitFeeEur: apiPosition.exit_fee_eur ?? undefined,
+    exitFxRate: apiPosition.exit_fx_rate ?? null,
+    entryFxRate: apiPosition.entry_fx_rate ?? null,
     currentPrice: apiPosition.current_price ?? undefined,
     notes: apiPosition.notes || '',
     exitOrderIds: apiPosition.exit_order_ids ?? undefined,
+    broker: apiPosition.broker ?? null,
+    brokerProductId: apiPosition.broker_product_id ?? null,
+    isin: apiPosition.isin ?? null,
+    brokerSyncedAt: apiPosition.broker_synced_at ?? null,
     thesis: apiPosition.thesis ?? null,
     lesson: apiPosition.lesson ?? null,
     tags: apiPosition.tags ?? [],
@@ -159,6 +184,7 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
       price: e.price,
       rAtClose: e.r_at_close,
       feeEur: e.fee_eur ?? null,
+      fxRate: e.fx_rate ?? null,
     })),
   };
 }

@@ -28,6 +28,11 @@ import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 
+export type OrderReviewRiskConfig = Pick<
+  RiskConfig,
+  'accountSize' | 'riskPct' | 'maxPositionPct' | 'minShares'
+>;
+
 export interface OrderReviewContext {
   ticker: string;
   signal?: string;
@@ -52,7 +57,7 @@ export interface OrderReviewContext {
 
 interface OrderReviewExperienceProps {
   context: OrderReviewContext;
-  risk: RiskConfig;
+  risk: OrderReviewRiskConfig;
   defaultNotes: string;
   onSubmitOrder: (request: CreateOrderRequest) => Promise<unknown>;
   onSuccess?: () => void;

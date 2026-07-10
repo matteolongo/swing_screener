@@ -1,11 +1,13 @@
-import OrderReviewExperience, { type OrderReviewContext } from '@/components/domain/orders/OrderReviewExperience';
-import type { RiskConfig } from '@/types/config';
+import OrderReviewExperience, {
+  type OrderReviewContext,
+  type OrderReviewRiskConfig,
+} from '@/components/domain/orders/OrderReviewExperience';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
 import { t } from '@/i18n/t';
 
 interface OrderActionPanelProps {
   context: OrderReviewContext;
-  risk: RiskConfig;
+  risk: OrderReviewRiskConfig;
   defaultNotes: string;
   onSubmitOrder: (request: CreateOrderRequest) => Promise<unknown>;
   onSuccess?: () => void;
