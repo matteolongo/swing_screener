@@ -7,6 +7,7 @@ from typing import Optional
 
 from swing_screener.errors import NotFoundError
 from swing_screener.data.currency import detect_currency
+from swing_screener.risk.currency import convert_via_eurusd
 from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 from swing_screener.portfolio.metrics import (
     calculate_current_position_value,
@@ -95,16 +96,15 @@ def _to_account_currency(
             quote,
         )
         return amount
-    if quote == "USD" and account == "EUR":
-        return amount / eurusd_rate
-    if quote == "EUR" and account == "USD":
-        return amount * eurusd_rate
-    logger.warning(
-        "No FX conversion path for %s -> %s; leaving amount unconverted",
-        quote,
-        account,
-    )
-    return amount
+    converted, ok = convert_via_eurusd(amount, quote, account, eurusd_rate)
+    if not ok:
+        logger.warning(
+            "No FX conversion path for %s -> %s; leaving amount unconverted",
+            quote,
+            account,
+        )
+        return amount
+    return converted
 
 
 def _needs_eurusd_rate(position_currency: str, account_currency: str) -> bool:
@@ -156,19 +156,20 @@ def _fee_eur_to_account_currency(
     account = str(account_currency or "EUR").strip().upper()
     if account == "EUR":
         return fee_eur
-    if account == "USD":
-        if eurusd_rate <= 0:
-            logger.warning(
-                "Invalid EURUSD rate %s; leaving EUR fee unconverted",
-                eurusd_rate,
-            )
-            return fee_eur
-        return fee_eur * eurusd_rate
-    logger.warning(
-        "No FX conversion path for EUR fee -> %s; leaving amount unconverted",
-        account,
-    )
-    return fee_eur
+    if eurusd_rate <= 0:
+        logger.warning(
+            "Invalid EURUSD rate %s; leaving EUR fee unconverted",
+            eurusd_rate,
+        )
+        return fee_eur
+    converted, ok = convert_via_eurusd(fee_eur, "EUR", account, eurusd_rate)
+    if not ok:
+        logger.warning(
+            "No FX conversion path for EUR fee -> %s; leaving amount unconverted",
+            account,
+        )
+        return fee_eur
+    return converted
 
 
 def _fee_eur_to_position_currency(
@@ -178,9 +179,8 @@ def _fee_eur_to_position_currency(
     eurusd_rate: float,
 ) -> float:
     quote = str(position_currency or "").strip().upper()
-    if quote == "USD":
-        return fee_eur * eurusd_rate if eurusd_rate > 0 else fee_eur
-    return fee_eur
+    converted, ok = convert_via_eurusd(fee_eur, "EUR", quote, eurusd_rate)
+    return converted if ok else fee_eur
 
 
 def _rate_for_conversion(raw_rate, fallback_rate: float) -> float:
