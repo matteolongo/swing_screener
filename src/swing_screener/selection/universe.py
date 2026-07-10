@@ -141,13 +141,22 @@ def apply_universe_filters(
         else pd.Series(True, index=df.index)
     )
 
-    # liquidity filter: threshold 0 disables it; active thresholds require data.
+    # liquidity filter: threshold 0 disables it; active thresholds require data and
+    # fail closed when it is missing. ``liquidity_available`` tracks whether the
+    # exclusion is "below threshold" vs "could not be computed" (e.g. FX missing),
+    # so an emptied universe is diagnosable instead of silent.
     if cfg.min_avg_daily_volume_eur <= 0:
         cond_liquidity = pd.Series(True, index=df.index)
+        liquidity_available = pd.Series(True, index=df.index)
     elif "avg_daily_volume_eur" in df.columns:
-        cond_liquidity = df["avg_daily_volume_eur"] >= cfg.min_avg_daily_volume_eur
+        liquidity_values = pd.to_numeric(df["avg_daily_volume_eur"], errors="coerce")
+        liquidity_available = liquidity_values.notna()
+        cond_liquidity = liquidity_available & (
+            liquidity_values >= cfg.min_avg_daily_volume_eur
+        )
     else:
         cond_liquidity = pd.Series(False, index=df.index)
+        liquidity_available = pd.Series(False, index=df.index)
 
     # weekly trend filter — skipped when column absent or flag is False
     if cfg.require_weekly_uptrend:
@@ -176,7 +185,11 @@ def apply_universe_filters(
         if not bool(cond_currency.loc[t]):
             r.append("currency")
         if not bool(cond_liquidity.loc[t]):
-            r.append("liquidity")
+            r.append(
+                "liquidity"
+                if bool(liquidity_available.loc[t])
+                else "liquidity_unavailable"
+            )
         if not bool(cond_weekly.loc[t]):
             r.append("weekly_trend")
         reasons.append(",".join(r) if r else "ok")

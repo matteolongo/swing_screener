@@ -58,6 +58,30 @@ def test_liquidity_filter_absent_column_fails_when_threshold_is_required():
     assert "liquidity" in result.loc["AAPL", "reason"]
 
 
+def test_liquidity_reason_distinguishes_below_threshold_from_unavailable():
+    """Below-threshold reads 'liquidity'; missing data reads 'liquidity_unavailable'
+    so an emptied universe is diagnosable, not silent."""
+    cfg = UniverseFilterConfig(min_avg_daily_volume_eur=100_000.0)
+    df = _minimal_feature_df(
+        ["LOWVOL", "NODATA"],
+        adv_eur={"LOWVOL": 40_000.0, "NODATA": 0.0},
+    )
+    df.loc["NODATA", "avg_daily_volume_eur"] = float("nan")  # liquidity uncomputable
+    result = apply_universe_filters(df, cfg)
+
+    low = result.loc["LOWVOL", "reason"]
+    missing = result.loc["NODATA", "reason"]
+    assert "liquidity" in low and "liquidity_unavailable" not in low
+    assert "liquidity_unavailable" in missing
+
+
+def test_liquidity_reason_unavailable_when_column_absent():
+    cfg = UniverseFilterConfig(min_avg_daily_volume_eur=100_000.0)
+    df = _minimal_feature_df(["AAPL"], adv_eur=None)
+    result = apply_universe_filters(df, cfg)
+    assert "liquidity_unavailable" in result.loc["AAPL", "reason"]
+
+
 def test_unknown_currency_fails_active_currency_filter():
     """Unknown quote currency cannot satisfy a USD/EUR universe filter."""
     cfg = UniverseFilterConfig(currencies=["USD", "EUR"], min_avg_daily_volume_eur=0.0)
