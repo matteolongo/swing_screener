@@ -148,6 +148,42 @@ def test_same_symbol_reentry_uses_live_stop_for_add_on():
     assert "Live stop 19.63 is used for execution" in (enriched.execution_note or "")
 
 
+def test_same_symbol_reentry_preserves_missing_cross_currency_fx_for_add_on():
+    evaluator = SameSymbolReentryEvaluator(_FakePortfolioService(action="NO_ACTION"))
+    candidate = _make_candidate()
+    candidate.currency = "USD"
+    candidate.recommendation.risk.currency = "USD"
+    candidate.recommendation.risk.account_currency = "EUR"
+    candidate.recommendation.risk.account_to_quote_rate = None
+    position = make_position(
+        ticker="REP.MC",
+        position_id="POS-REP-1",
+        entry_price=19.63,
+        current_price=23.0,
+        stop_price=19.63,
+        shares=5,
+    )
+
+    enriched, context = evaluator.evaluate(
+        candidate,
+        positions=[position],
+        orders=[],
+        account_size=1000.0,
+        risk_pct_target=0.03,
+        max_position_pct=0.6,
+        min_shares=1,
+    )
+
+    assert enriched is not None
+    assert context.mode == "ADD_ON"
+    assert enriched.recommendation is not None
+    assert enriched.recommendation.risk.account_to_quote_rate is None
+    assert enriched.recommendation.risk.risk_amount == 16.85
+    assert enriched.recommendation.risk.risk_amount_account is None
+    assert enriched.recommendation.risk.position_size_account is None
+    assert enriched.recommendation.risk.risk_pct == 0.0
+
+
 def test_same_symbol_reentry_suppresses_when_pending_entry_exists():
     evaluator = SameSymbolReentryEvaluator(_FakePortfolioService())
     candidate = _make_candidate()

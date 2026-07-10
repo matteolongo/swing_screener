@@ -23,6 +23,36 @@ def _safe_round(value: Optional[float], digits: int = 4) -> Optional[float]:
     return round(float(value), digits)
 
 
+def _normalize_currency_code(value: object) -> Optional[str]:
+    normalized = str(value or "").strip().upper()
+    return normalized or None
+
+
+def _adjusted_account_to_quote_rate(risk: RecommendationRisk) -> Optional[float]:
+    """Return a usable conversion rate without inventing cross-currency FX."""
+    quote_currency = _normalize_currency_code(risk.currency)
+    account_currency = _normalize_currency_code(risk.account_currency)
+    same_currency = (
+        quote_currency is not None
+        and account_currency is not None
+        and quote_currency == account_currency
+    )
+
+    if risk.account_to_quote_rate is None:
+        if same_currency or (quote_currency is None and account_currency is None):
+            return 1.0
+        return None
+
+    try:
+        parsed = float(risk.account_to_quote_rate)
+    except (TypeError, ValueError):
+        return 1.0 if same_currency else None
+
+    if math.isfinite(parsed) and parsed > 0:
+        return parsed
+    return 1.0 if same_currency else None
+
+
 def _order_field(order: object, key: str, default=None):
     """Read an order attribute from either a model object or a raw dict."""
     if isinstance(order, dict):
@@ -85,17 +115,17 @@ def _copy_recommendation_with_adjusted_risk(
     rr = risk.rr
     if target is not None and risk_per_share > 0:
         rr = (float(target) - float(risk.entry)) / risk_per_share
-    try:
-        account_to_quote_rate = float(risk.account_to_quote_rate or 1.0)
-    except (TypeError, ValueError):
-        account_to_quote_rate = 1.0
-    if not math.isfinite(account_to_quote_rate) or account_to_quote_rate <= 0:
-        account_to_quote_rate = 1.0
+    account_to_quote_rate = _adjusted_account_to_quote_rate(risk)
     risk_amount = risk_per_share * shares
-    risk_amount_account = risk_amount / account_to_quote_rate
-    risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
     position_size = float(risk.entry) * shares
-    position_size_account = position_size / account_to_quote_rate
+    if account_to_quote_rate is None:
+        risk_amount_account = None
+        risk_pct = 0.0
+        position_size_account = None
+    else:
+        risk_amount_account = risk_amount / account_to_quote_rate
+        risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
+        position_size_account = position_size / account_to_quote_rate
     adjusted_risk = RecommendationRisk(
         entry=risk.entry,
         stop=execution_stop,

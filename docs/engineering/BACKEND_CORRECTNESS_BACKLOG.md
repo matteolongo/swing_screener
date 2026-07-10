@@ -119,6 +119,12 @@
    - Outcome: `rebuild_recommendations_with_decision_action` now passes through the original `account_to_quote_rate` exactly, preserving `None` so USD/EUR recommendations remain blocked with `FX_RATE_MISSING` until a real rate is available.
    - Verification: `tests/api/test_screener_fundamentals_context.py::test_decision_rebuild_preserves_missing_cross_currency_fx_block`, plus screener currency/recommendation regressions.
 
+22. Same-symbol adjusted risk FX preservation
+   - Status: done.
+   - Ensure same-symbol add-on/scale-back recommendation risk adjustment does not fabricate a 1:1 FX rate when the original recommendation lacks a required cross-currency rate.
+   - Outcome: same-symbol adjusted recommendations now preserve missing cross-currency FX by leaving `account_to_quote_rate`, account risk, and account position size unavailable instead of deriving them from a false identity conversion.
+   - Verification: `tests/api/test_same_symbol_reentry.py::test_same_symbol_reentry_preserves_missing_cross_currency_fx_for_add_on`, plus same-symbol, screener currency, recommendation, and screener service regressions.
+
 ## Next
 
 - No open backend correctness backlog items.
