@@ -143,6 +143,12 @@
    - Outcome: regime breakdown R stats now calculate `(exit_price - entry_price) / initial_risk` instead of multiplying by shares and overstating results by position size.
    - Verification: `tests/api/test_regime_breakdown.py::test_r_at_close_uses_per_share_initial_risk`, plus regime endpoint and R-related portfolio/backtest regressions.
 
+26. Trade-plan currency requirement
+   - Status: done.
+   - Ensure report-level trade-plan sizing does not silently assume account currency when ranked universe rows lack quote-currency data.
+   - Outcome: `build_trade_plans` now skips rows without an explicit, finite quote currency and continues to fail closed for `UNKNOWN`, preventing execution sizing under a false same-currency assumption.
+   - Verification: `tests/test_position_sizing.py::test_build_trade_plans_skips_missing_quote_currency`, plus position sizing/report/screener regressions.
+
 ## Next
 
 - No open backend correctness backlog items.

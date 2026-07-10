@@ -75,7 +75,7 @@ def test_position_plan_none_when_too_volatile():
 
 def test_build_trade_plans_filters_none_and_requires_signal():
     ranked = pd.DataFrame(
-        {"atr14": [1.2, 10.0], "last": [30.0, 30.0]},
+        {"atr14": [1.2, 10.0], "last": [30.0, 30.0], "currency": ["EUR", "EUR"]},
         index=["AAA", "BBB"],
     )
 
@@ -91,6 +91,28 @@ def test_build_trade_plans_filters_none_and_requires_signal():
     assert "AAA" in plans.index
     assert "BBB" not in plans.index  # too volatile -> None
     assert plans.loc["AAA", "shares"] >= 1
+
+
+def test_build_trade_plans_skips_missing_quote_currency():
+    ranked = pd.DataFrame(
+        {"atr14": [1.2], "last": [30.0]},
+        index=["AAA"],
+    )
+    signals = pd.DataFrame(
+        {"last": [30.0], "signal": ["breakout"]},
+        index=["AAA"],
+    )
+    cfg = RiskConfig(
+        account_size=500,
+        risk_pct=0.01,
+        k_atr=2.0,
+        max_position_pct=0.60,
+        account_currency="EUR",
+    )
+
+    plans = build_trade_plans(ranked, signals, cfg)
+
+    assert plans.empty
 
 
 def test_build_trade_plans_skips_unknown_quote_currency():
@@ -139,7 +161,7 @@ def test_build_trade_plans_skips_cross_currency_when_rate_missing():
 
 def test_build_trade_plans_infers_atr_column():
     ranked = pd.DataFrame(
-        {"atr20": [1.2], "last": [30.0]},
+        {"atr20": [1.2], "last": [30.0], "currency": ["EUR"]},
         index=["AAA"],
     )
     signals = pd.DataFrame(

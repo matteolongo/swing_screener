@@ -42,6 +42,11 @@ def _normalize_currency(value: object, fallback: str = "EUR") -> str:
 def _normalize_quote_currency(value: object, account_currency: str) -> Optional[str]:
     if value is None:
         return account_currency
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
     normalized = str(value).strip().upper()
     if normalized in {"", "UNKNOWN"}:
         return None
@@ -221,10 +226,10 @@ def build_trade_plans(
         entry = float(active.loc[t, "last"])
         atr14 = float(ranked_universe.loc[t, atr_col])
         account_currency = _normalize_currency(cfg.account_currency)
+        if "currency" not in ranked_universe.columns:
+            continue
         quote_currency = _normalize_quote_currency(
-            ranked_universe.loc[t, "currency"]
-            if "currency" in ranked_universe.columns
-            else None,
+            ranked_universe.loc[t, "currency"],
             account_currency,
         )
         if quote_currency is None:
