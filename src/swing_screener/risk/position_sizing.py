@@ -6,6 +6,7 @@ import re
 
 import math
 import pandas as pd
+from swing_screener.risk.currency import normalize_account_to_quote_rate
 from swing_screener.settings import get_settings_manager
 
 
@@ -53,13 +54,6 @@ def _normalize_quote_currency(value: object, account_currency: str) -> Optional[
     return normalized
 
 
-def _normalize_account_to_quote_rate(value: float) -> float:
-    rate = float(value)
-    if not math.isfinite(rate) or rate <= 0:
-        raise ValueError("account_to_quote_rate must be a positive finite number")
-    return rate
-
-
 def _lookup_account_to_quote_rate(
     *,
     account_currency: str,
@@ -79,7 +73,7 @@ def _lookup_account_to_quote_rate(
     )
     for key in candidates:
         if key in account_to_quote_rates:
-            return _normalize_account_to_quote_rate(account_to_quote_rates[key])
+            return normalize_account_to_quote_rate(account_to_quote_rates[key])
     return None
 
 
@@ -117,7 +111,7 @@ def position_plan(
     elif account_to_quote_rate is None:
         return None
     else:
-        account_to_quote_rate = _normalize_account_to_quote_rate(account_to_quote_rate)
+        account_to_quote_rate = normalize_account_to_quote_rate(account_to_quote_rate)
 
     risk_amount_account = cfg.account_size * cfg.risk_pct
     risk_amount = risk_amount_account * account_to_quote_rate

@@ -7,6 +7,8 @@ from typing import Optional
 
 from api.models.recommendation import Recommendation, RecommendationRisk
 from api.models.screener import SameSymbolCandidateContext, ScreenerCandidate
+from swing_screener.risk.currency import normalize_currency_code
+
 
 def _parse_date(value: object) -> Optional[date]:
     if value is None:
@@ -23,15 +25,10 @@ def _safe_round(value: Optional[float], digits: int = 4) -> Optional[float]:
     return round(float(value), digits)
 
 
-def _normalize_currency_code(value: object) -> Optional[str]:
-    normalized = str(value or "").strip().upper()
-    return normalized or None
-
-
 def _adjusted_account_to_quote_rate(risk: RecommendationRisk) -> Optional[float]:
     """Return a usable conversion rate without inventing cross-currency FX."""
-    quote_currency = _normalize_currency_code(risk.currency)
-    account_currency = _normalize_currency_code(risk.account_currency)
+    quote_currency = normalize_currency_code(risk.currency)
+    account_currency = normalize_currency_code(risk.account_currency)
     same_currency = (
         quote_currency is not None
         and account_currency is not None

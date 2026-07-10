@@ -4,6 +4,11 @@ from dataclasses import dataclass, field
 from typing import Literal, Optional
 import math
 
+from swing_screener.risk.currency import (
+    normalize_account_to_quote_rate,
+    normalize_currency_code,
+)
+
 
 Verdict = Literal["RECOMMENDED", "NOT_RECOMMENDED"]
 ReasonSeverity = Literal["info", "warn", "block"]
@@ -94,18 +99,6 @@ def _estimate_costs(
     )
 
 
-def _normalize_account_to_quote_rate(value: float) -> float:
-    rate = float(value)
-    if not math.isfinite(rate) or rate <= 0:
-        raise ValueError("account_to_quote_rate must be a positive finite number")
-    return rate
-
-
-def _normalize_currency_code(value: object) -> Optional[str]:
-    normalized = str(value or "").strip().upper()
-    return normalized or None
-
-
 def build_recommendation(
     *,
     signal: Optional[str],
@@ -154,8 +147,8 @@ def build_recommendation(
     stop_defined = stop is not None and entry > 0 and stop < entry
     risk_per_share = (entry - stop) if stop_defined else None
 
-    quote_currency = _normalize_currency_code(currency)
-    account_currency_code = _normalize_currency_code(account_currency)
+    quote_currency = normalize_currency_code(currency)
+    account_currency_code = normalize_currency_code(account_currency)
     currency_unknown = quote_currency == "UNKNOWN"
     same_currency = (
         quote_currency is not None
@@ -173,7 +166,7 @@ def build_recommendation(
     normalized_rate = (
         1.0
         if account_to_quote_rate is None or same_currency
-        else _normalize_account_to_quote_rate(account_to_quote_rate)
+        else normalize_account_to_quote_rate(account_to_quote_rate)
     )
     risk_amount_target_account = account_size * risk_pct_target
     risk_amount_target = risk_amount_target_account * normalized_rate
