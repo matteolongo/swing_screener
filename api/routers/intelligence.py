@@ -147,7 +147,19 @@ def _cached_position_context_matches(
     context = inputs.get("position_context")
     if not isinstance(context, dict):
         return False
-    return all(context.get(key) == value for key, value in expected.items())
+
+    def _matches(expected_value: object, cached_value: object) -> bool:
+        # Numeric context (shares, entry_price, stop) is rounded when building the
+        # expected context but stored raw in inputs_used, so compare on the same
+        # rounded scale instead of requiring exact float equality.
+        if isinstance(expected_value, (int, float)) and not isinstance(
+            expected_value, bool
+        ):
+            cached_numeric = _finite_position_number(cached_value)
+            return cached_numeric is not None and cached_numeric == expected_value
+        return cached_value == expected_value
+
+    return all(_matches(value, context.get(key)) for key, value in expected.items())
 
 
 class SweepSymbol(BaseModel):
