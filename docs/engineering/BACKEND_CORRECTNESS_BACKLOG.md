@@ -155,6 +155,12 @@
    - Outcome: stale or miswired `account_to_quote_rate` values no longer alter shares, risk, position value, or payload conversion rate for same-currency plans/recommendations.
    - Verification: `tests/test_position_sizing.py::test_position_plan_uses_identity_rate_for_same_currency` and `tests/test_recommendation_engine.py::test_recommendation_uses_identity_rate_for_same_currency`, plus risk/report/screener regressions.
 
+28. Screener null currency normalization
+   - Status: done.
+   - Ensure pandas/metadata null currency values do not crash candidate assembly or leak invalid currency strings into API responses.
+   - Outcome: screener FX-map collection and candidate assembly now normalize null/blank currency values, fall back to ticker detection, and emit `UNKNOWN` when unresolved so recommendation sizing blocks with `CURRENCY_UNKNOWN`.
+   - Verification: `tests/api/test_screener_endpoints.py::test_screener_normalizes_null_currency_to_unknown`, plus unknown-currency and screener currency regressions.
+
 ## Next
 
 - No open backend correctness backlog items.

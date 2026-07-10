@@ -143,6 +143,20 @@ def _account_currency_from_strategy(strategy: dict) -> str:
     return str(raw_risk.get("account_currency") or "EUR").upper()
 
 
+def _normalize_quote_currency_value(*values: object, fallback_ticker: str | None = None) -> str:
+    for value in values:
+        if is_na_scalar(value):
+            continue
+        normalized = str(value).strip().upper()
+        if normalized and normalized not in {"NAN", "NONE", "NULL", "<NA>"}:
+            return normalized
+    if fallback_ticker:
+        detected = str(detect_currency(fallback_ticker) or "").strip().upper()
+        if detected:
+            return detected
+    return "UNKNOWN"
+
+
 def _last_close_for_ticker(ohlcv: pd.DataFrame, ticker: str) -> float | None:
     if ohlcv is None or ohlcv.empty:
         return None
@@ -771,16 +785,10 @@ class ScreenerService:
         account_currency = _account_currency_from_strategy(ctx.strategy)
         quote_currencies = set()
         if getattr(ctx.request, "currencies", None):
-            quote_currencies.update(
-                str(currency).strip().upper()
-                for currency in (ctx.active_currencies or [])
-                if str(currency).strip()
-            )
-        quote_currencies.update(
-            str(info.get("currency") or "").strip().upper()
-            for info in (ticker_info or {}).values()
-            if str(info.get("currency") or "").strip()
-        )
+            for currency in ctx.active_currencies or []:
+                quote_currencies.add(_normalize_quote_currency_value(currency))
+        for info in (ticker_info or {}).values():
+            quote_currencies.add(_normalize_quote_currency_value(info.get("currency")))
         quote_currencies.discard("UNKNOWN")
         account_quote_currencies = set(quote_currencies)
         account_quote_currencies.discard(account_currency)
@@ -891,12 +899,14 @@ class ScreenerService:
             info = ticker_info.get(ticker_str, {})
             instrument = get_instrument_record(ticker_str) or {}
             last_bar = last_bar_map.get(ticker_str) or overall_last_bar
-            currency = str(
+            currency = _normalize_quote_currency_value(
                 info.get("currency")
-                or row.get("currency")
-                or instrument.get("currency")
-                or detect_currency(ticker_str)
-            ).upper()
+                if isinstance(info, dict)
+                else None,
+                row.get("currency"),
+                instrument.get("currency"),
+                fallback_ticker=ticker_str,
+            )
 
             signal = row.get("signal")
             entry_val = safe_optional_float(row.get("entry")) or last_price

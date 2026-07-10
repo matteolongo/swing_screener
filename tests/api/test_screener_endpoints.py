@@ -1153,6 +1153,82 @@ def test_screener_blocks_sizing_for_unknown_currency(monkeypatch):
         app.dependency_overrides.pop(get_portfolio_service, None)
 
 
+def test_screener_normalizes_null_currency_to_unknown(monkeypatch):
+    """Null currency data should block sizing explicitly instead of crashing."""
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(
+        ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs
+    ):
+        idx = ["AAA"]
+        data = {
+            "atr14": [2.0],
+            "mom_6m": [0.15],
+            "mom_12m": [0.25],
+            "rs_6m": [0.05],
+            "score": [0.994],
+            "confidence": [92.7],
+            "last": [50.0],
+            "currency": [pd.NA],
+            "ma20_level": [48.0],
+            "dist_sma50_pct": [9.5],
+            "dist_sma200_pct": [22.0],
+            "rank": [1],
+            "signal": ["breakout"],
+            "entry": [50.0],
+            "stop": [48.0],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    class StubPortfolioService:
+        def list_positions(self, status=None):
+            del status
+            return SimpleNamespace(positions=[])
+
+        def list_orders(self, status=None, ticker=None):
+            del status, ticker
+            return SimpleNamespace(orders=[])
+
+    monkeypatch.setattr(
+        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_service,
+        "get_multiple_ticker_info",
+        lambda tickers: {
+            "AAA": {
+                "name": "AAA Corp",
+                "sector": "Technology",
+                "currency": None,
+            }
+        },
+    )
+    monkeypatch.setattr(
+        screener_service,
+        "apply_pattern_stop",
+        lambda **kwargs: (None, None),
+    )
+
+    app.dependency_overrides[get_portfolio_service] = lambda: StubPortfolioService()
+    try:
+        client = TestClient(app, raise_server_exceptions=False)
+        res = client.post(
+            "/api/screener/run", json={"universe": "broad_market_stocks", "top": 20}
+        )
+        assert res.status_code == 200
+
+        candidate = res.json()["candidates"][0]
+        assert candidate["currency"] == "UNKNOWN"
+        reason_codes = {
+            reason["code"] for reason in candidate["recommendation"]["reasons_detailed"]
+        }
+        assert "CURRENCY_UNKNOWN" in reason_codes
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+
+
 def test_screener_coerces_nonfinite_float_fields(monkeypatch):
     """Non-finite report floats are sanitized before API serialization."""
     ohlcv = _ohlcv_with_spy()
