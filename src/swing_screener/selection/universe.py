@@ -107,14 +107,28 @@ def apply_universe_filters(
     allowed_currencies = {str(c).strip().upper() for c in cfg.currencies if str(c).strip()}
     if not allowed_currencies:
         allowed_currencies = {"USD", "EUR"}
-    detected_currencies = pd.Series(
-        [detect_currency(str(ticker)) for ticker in df.index],
-        index=df.index,
-    )
+    if "currency" in df.columns:
+        detected_currencies = df["currency"].map(
+            lambda value: str(value or "").strip().upper() or "UNKNOWN"
+        )
+        missing_currency = detected_currencies == "UNKNOWN"
+        if bool(missing_currency.any()):
+            fallback_currencies = pd.Series(
+                [detect_currency(str(ticker)) for ticker in df.index],
+                index=df.index,
+            )
+            detected_currencies = detected_currencies.where(
+                ~missing_currency, fallback_currencies
+            )
+    else:
+        detected_currencies = pd.Series(
+            [detect_currency(str(ticker)) for ticker in df.index],
+            index=df.index,
+        )
     df["currency"] = detected_currencies
-    # UNKNOWN currency passes the filter (can't confirm a mismatch without instrument master entry).
-    # Tickers with a known non-matching currency (e.g. GBP in a USD-only filter) are excluded.
-    cond_currency = detected_currencies.isin(allowed_currencies) | (detected_currencies == "UNKNOWN")
+    # Unknown quote currency cannot satisfy a currency filter; downstream sizing
+    # must not infer a safe conversion for an unidentified quote currency.
+    cond_currency = detected_currencies.isin(allowed_currencies)
 
     cond_trend = (
         (df["trend_ok"] == True)

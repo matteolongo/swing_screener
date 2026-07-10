@@ -13,18 +13,18 @@ def _make_ohlcv_for_report():
     # SPY baseline uptrend
     close_spy = pd.Series(range(100, 360), index=idx, dtype=float)
 
-    # AAA breakout on last day (flat then spike)
+    # AAPL breakout on last day (flat then spike)
     close_aaa = pd.Series(100.0, index=idx, dtype=float)
     close_aaa.iloc[-60:-1] = 120.0
     close_aaa.iloc[-1] = 160.0  # breakout
 
-    # BBB pullback reclaim (dip then reclaim)
+    # MSFT pullback reclaim (dip then reclaim)
     close_bbb = pd.Series(120.0, index=idx, dtype=float)
     close_bbb.iloc[-30:-2] = 120.0
     close_bbb.iloc[-2] = 90.0
     close_bbb.iloc[-1] = 130.0
 
-    # CCC high volatility -> should be filtered by atr_pct
+    # NVDA high volatility -> should be filtered by atr_pct
     close_ccc = close_spy * 1.05
 
     def mk(close: pd.Series, range_width: float):
@@ -48,9 +48,9 @@ def _make_ohlcv_for_report():
         ("Volume", v_s, v_a, v_b, v_c),
     ]:
         data[(field, "SPY")] = s_s
-        data[(field, "AAA")] = s_a
-        data[(field, "BBB")] = s_b
-        data[(field, "CCC")] = s_c
+        data[(field, "AAPL")] = s_a
+        data[(field, "MSFT")] = s_b
+        data[(field, "NVDA")] = s_c
 
     df = pd.DataFrame(data, index=idx)
     df.columns = pd.MultiIndex.from_tuples(df.columns)
@@ -114,22 +114,22 @@ def test_build_daily_report_returns_expected_structure():
     assert isinstance(rep, pd.DataFrame)
     assert not rep.empty
 
-    # CCC filtered out
-    assert "CCC" not in rep.index
+    # NVDA filtered out
+    assert "NVDA" not in rep.index
 
     # report has key columns
     for col in ["score", "rank", "last", "signal", "confidence"]:
         assert col in rep.columns
 
-    # should contain AAA and BBB
-    assert "AAA" in rep.index
-    assert "BBB" in rep.index
+    # should contain AAPL and MSFT
+    assert "AAPL" in rep.index
+    assert "MSFT" in rep.index
 
-    # confidence only for active signals (AAA/BBB should be active in this fixture)
-    assert pd.notna(rep.loc["AAA", "confidence"])
-    assert pd.notna(rep.loc["BBB", "confidence"])
-    assert 0 <= float(rep.loc["AAA", "confidence"]) <= 100
-    assert 0 <= float(rep.loc["BBB", "confidence"]) <= 100
+    # confidence only for active signals (AAPL/MSFT should be active in this fixture)
+    assert pd.notna(rep.loc["AAPL", "confidence"])
+    assert pd.notna(rep.loc["MSFT", "confidence"])
+    assert 0 <= float(rep.loc["AAPL", "confidence"]) <= 100
+    assert 0 <= float(rep.loc["MSFT", "confidence"]) <= 100
 
 
 def test_build_daily_report_applies_liquidity_filter_before_ranking():
@@ -289,10 +289,10 @@ def test_build_daily_report_excludes_open_positions():
         )
     )
 
-    rep = build_daily_report(ohlcv, cfg, exclude_tickers=["AAA"])
+    rep = build_daily_report(ohlcv, cfg, exclude_tickers=["AAPL"])
 
-    assert "AAA" not in rep.index
-    assert "BBB" in rep.index
+    assert "AAPL" not in rep.index
+    assert "MSFT" in rep.index
 
 
 def test_ranking_input_is_subset_of_feature_columns():

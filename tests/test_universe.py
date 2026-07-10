@@ -19,13 +19,13 @@ def _make_synthetic_ohlcv_universe():
     # SPY baseline uptrend
     close_spy = pd.Series(range(100, 360), index=idx, dtype=float)
 
-    # AAA: outperforms SPY, uptrend, moderate ranges
+    # AAPL: outperforms SPY, uptrend, moderate ranges
     close_aaa = close_spy * 1.15
 
-    # BBB: downtrend
+    # MSFT: downtrend
     close_bbb = pd.Series(range(360, 100, -1), index=idx, dtype=float)
 
-    # CCC: uptrend but extremely volatile ranges (ATR% high)
+    # NVDA: uptrend but extremely volatile ranges (ATR% high)
     close_ccc = close_spy * 1.05
 
     def mk(close: pd.Series, range_width: float):
@@ -50,9 +50,9 @@ def _make_synthetic_ohlcv_universe():
         ("Volume", v_s, v_a, v_b, v_c),
     ]:
         data[(field, "SPY")] = s_spy
-        data[(field, "AAA")] = s_aaa
-        data[(field, "BBB")] = s_bbb
-        data[(field, "CCC")] = s_ccc
+        data[(field, "AAPL")] = s_aaa
+        data[(field, "MSFT")] = s_bbb
+        data[(field, "NVDA")] = s_ccc
 
     df = pd.DataFrame(data, index=idx)
     df.columns = pd.MultiIndex.from_tuples(df.columns)
@@ -72,11 +72,11 @@ def test_build_feature_table_contains_expected_columns():
     for col in ["last", "trend_ok", "atr_pct", "mom_6m", "mom_12m", "rs_6m"]:
         assert col in feats.columns
 
-    # includes AAA/BBB/CCC (benchmark removed in momentum, but feature join is inner, so SPY stays in trend/vol
+    # includes AAPL/MSFT/NVDA (benchmark removed in momentum, but feature join is inner, so SPY stays in trend/vol
     # and will be removed only when momentum drops it; result should NOT include SPY)
-    assert "AAA" in feats.index
-    assert "BBB" in feats.index
-    assert "CCC" in feats.index
+    assert "AAPL" in feats.index
+    assert "MSFT" in feats.index
+    assert "NVDA" in feats.index
     assert "SPY" not in feats.index
 
 
@@ -110,9 +110,9 @@ def test_build_feature_table_handles_sparse_calendars():
         ("Volume", v_s, v_a, v_b, v_c),
     ]:
         data[(field, "SPY")] = s_spy
-        data[(field, "AAA")] = s_aaa
-        data[(field, "BBB")] = s_bbb
-        data[(field, "CCC")] = s_ccc
+        data[(field, "AAPL")] = s_aaa
+        data[(field, "MSFT")] = s_bbb
+        data[(field, "NVDA")] = s_ccc
 
     ohlcv = pd.DataFrame(data, index=idx)
     ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
@@ -120,8 +120,8 @@ def test_build_feature_table_handles_sparse_calendars():
     # Simulate sparse calendars with different gaps per ticker
     for field in ["Open", "High", "Low", "Close", "Volume"]:
         ohlcv.loc[ohlcv.index[::9], (field, "SPY")] = float("nan")
-        ohlcv.loc[ohlcv.index[::7], (field, "AAA")] = float("nan")
-        ohlcv.loc[ohlcv.index[::8], (field, "BBB")] = float("nan")
+        ohlcv.loc[ohlcv.index[::7], (field, "AAPL")] = float("nan")
+        ohlcv.loc[ohlcv.index[::8], (field, "MSFT")] = float("nan")
 
     cfg = UniverseConfig(
         trend=TrendConfig(),
@@ -131,8 +131,8 @@ def test_build_feature_table_handles_sparse_calendars():
     feats = build_feature_table(ohlcv, cfg)
 
     assert not feats.empty
-    assert "AAA" in feats.index
-    assert "BBB" in feats.index
+    assert "AAPL" in feats.index
+    assert "MSFT" in feats.index
 
 
 def test_build_universe_filters_expected_fail_reasons():
@@ -142,8 +142,8 @@ def test_build_universe_filters_expected_fail_reasons():
         filt=UniverseFilterConfig(
             min_price=10,
             max_price=1000,
-            max_atr_pct=10.0,  # CCC should fail due to huge ATR%
-            require_trend_ok=True,  # BBB should fail due to downtrend
+            max_atr_pct=10.0,  # NVDA should fail due to huge ATR%
+            require_trend_ok=True,  # MSFT should fail due to downtrend
             require_rs_positive=False,
             min_avg_daily_volume_eur=0.0,
         )
@@ -151,18 +151,18 @@ def test_build_universe_filters_expected_fail_reasons():
 
     uni = build_universe(ohlcv, cfg)
 
-    assert "AAA" in uni.index
-    assert "BBB" in uni.index
-    assert "CCC" in uni.index
+    assert "AAPL" in uni.index
+    assert "MSFT" in uni.index
+    assert "NVDA" in uni.index
 
-    assert bool(uni.loc["AAA", "is_eligible"]) is True
-    assert uni.loc["AAA", "reason"] == "ok"
+    assert bool(uni.loc["AAPL", "is_eligible"]) is True
+    assert uni.loc["AAPL", "reason"] == "ok"
 
-    assert bool(uni.loc["BBB", "is_eligible"]) is False
-    assert "trend" in uni.loc["BBB", "reason"]
+    assert bool(uni.loc["MSFT", "is_eligible"]) is False
+    assert "trend" in uni.loc["MSFT", "reason"]
 
-    assert bool(uni.loc["CCC", "is_eligible"]) is False
-    assert "atr_pct" in uni.loc["CCC", "reason"]
+    assert bool(uni.loc["NVDA", "is_eligible"]) is False
+    assert "atr_pct" in uni.loc["NVDA", "reason"]
 
 
 def test_eligible_universe_returns_only_eligible():
@@ -179,9 +179,9 @@ def test_eligible_universe_returns_only_eligible():
     )
 
     elig = eligible_universe(ohlcv, cfg)
-    assert "AAA" in elig.index
-    assert "BBB" not in elig.index
-    assert "CCC" not in elig.index
+    assert "AAPL" in elig.index
+    assert "MSFT" not in elig.index
+    assert "NVDA" not in elig.index
 
 
 def test_apply_universe_filters_currency_filter():

@@ -24,35 +24,48 @@ def test_liquidity_filter_removes_illiquid():
     """Tickers below min_avg_daily_volume_eur are excluded."""
     cfg = UniverseFilterConfig(min_avg_daily_volume_eur=100_000.0)
     df = _minimal_feature_df(
-        ["LIQUID", "ILLIQUID"],
-        adv_eur={"LIQUID": 500_000.0, "ILLIQUID": 40_000.0},
+        ["AAPL", "MSFT"],
+        adv_eur={"AAPL": 500_000.0, "MSFT": 40_000.0},
     )
     result = apply_universe_filters(df, cfg)
-    assert result.loc["LIQUID", "is_eligible"] == True
-    assert result.loc["ILLIQUID", "is_eligible"] == False
+    assert result.loc["AAPL", "is_eligible"] == True
+    assert result.loc["MSFT", "is_eligible"] == False
 
 
 def test_liquidity_filter_reason_column():
     """Reason column includes 'liquidity' for excluded tickers."""
     cfg = UniverseFilterConfig(min_avg_daily_volume_eur=100_000.0)
-    df = _minimal_feature_df(["ILLIQUID"], adv_eur={"ILLIQUID": 40_000.0})
+    df = _minimal_feature_df(["AAPL"], adv_eur={"AAPL": 40_000.0})
     result = apply_universe_filters(df, cfg)
-    assert "liquidity" in result.loc["ILLIQUID", "reason"]
+    assert "liquidity" in result.loc["AAPL", "reason"]
 
 
 def test_liquidity_filter_zero_means_no_filter():
     """min_avg_daily_volume_eur=0 disables the filter."""
     cfg = UniverseFilterConfig(min_avg_daily_volume_eur=0.0)
-    df = _minimal_feature_df(["LOW_VOL"], adv_eur={"LOW_VOL": 1.0})
+    df = _minimal_feature_df(["AAPL"], adv_eur={"AAPL": 1.0})
     result = apply_universe_filters(df, cfg)
-    assert result.loc["LOW_VOL", "is_eligible"] == True
+    assert result.loc["AAPL", "is_eligible"] == True
 
 
 def test_liquidity_filter_absent_column_fails_when_threshold_is_required():
     """Missing liquidity data cannot satisfy an active liquidity threshold."""
     cfg = UniverseFilterConfig(min_avg_daily_volume_eur=100_000.0)
-    df = _minimal_feature_df(["NOVOLDATA"], adv_eur=None)
+    df = _minimal_feature_df(["AAPL"], adv_eur=None)
     result = apply_universe_filters(df, cfg)
 
-    assert result.loc["NOVOLDATA", "is_eligible"] == False
-    assert "liquidity" in result.loc["NOVOLDATA", "reason"]
+    assert result.loc["AAPL", "is_eligible"] == False
+    assert "liquidity" in result.loc["AAPL", "reason"]
+
+
+def test_unknown_currency_fails_active_currency_filter():
+    """Unknown quote currency cannot satisfy a USD/EUR universe filter."""
+    cfg = UniverseFilterConfig(currencies=["USD", "EUR"], min_avg_daily_volume_eur=0.0)
+    df = _minimal_feature_df(["UNKNOWNCUR"])
+    df.loc["UNKNOWNCUR", "currency"] = "UNKNOWN"
+
+    result = apply_universe_filters(df, cfg)
+
+    assert result.loc["UNKNOWNCUR", "currency"] == "UNKNOWN"
+    assert result.loc["UNKNOWNCUR", "is_eligible"] == False
+    assert "currency" in result.loc["UNKNOWNCUR", "reason"]

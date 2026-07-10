@@ -97,7 +97,7 @@ def test_pipeline_board_contains_weekly_trend():
     close_spy = pd.Series(prices_spy, index=dates)
     volume = pd.Series([1_000_000.0] * n, index=dates)
 
-    ticker = "AAAA"
+    ticker = "AAPL"
     ohlcv = pd.DataFrame(
         {
             ("Open", ticker): close * 0.99,

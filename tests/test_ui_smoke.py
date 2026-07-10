@@ -32,7 +32,7 @@ def _make_ohlcv_for_ui_smoke():
         ("Volume", v_s, v_a),
     ]:
         data[(field, "SPY")] = s_spy
-        data[(field, "AAA")] = s_aaa
+        data[(field, "AAPL")] = s_aaa
 
     df = pd.DataFrame(data, index=idx)
     df.columns = pd.MultiIndex.from_tuples(df.columns)
@@ -65,11 +65,11 @@ def test_ui_smoke_pipeline():
 
     entry_date = str(ohlcv.index[-10].date())
     pos = Position(
-        ticker="AAA",
+        ticker="AAPL",
         status="open",
         entry_date=entry_date,
-        entry_price=float(ohlcv["Close"]["AAA"].iloc[-10]),
-        stop_price=float(ohlcv["Close"]["AAA"].iloc[-10]) - 5.0,
+        entry_price=float(ohlcv["Close"]["AAPL"].iloc[-10]),
+        stop_price=float(ohlcv["Close"]["AAPL"].iloc[-10]) - 5.0,
         shares=10,
     )
 

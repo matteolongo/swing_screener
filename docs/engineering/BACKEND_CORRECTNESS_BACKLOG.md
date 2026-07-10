@@ -107,6 +107,12 @@
    - Outcome: live Finnhub tests now guard vendor-empty/unavailable payloads with explicit skips and validate client parsing against a single raw vendor payload rather than hard-coded, time-sensitive AAPL values.
    - Verification: `tests/test_finnhub_integration.py` plus related Finnhub/fundamentals tests.
 
+20. Unknown currency universe filter
+   - Status: done.
+   - Ensure universe-level currency filters do not admit tickers whose quote currency cannot be resolved.
+   - Outcome: `apply_universe_filters` now treats `UNKNOWN` quote currency as failing the active currency filter instead of passing it through to ranking/sizing. Filter diagnostics report `currency` as the exclusion reason.
+   - Verification: `tests/test_universe_filter.py`, plus report/selection/screener regressions.
+
 ## Next
 
 - No open backend correctness backlog items.
