@@ -920,8 +920,6 @@ class ScreenerService:
             if risk_cfg.account_size:
                 if risk_account is not None:
                     risk_pct = risk_account / risk_cfg.account_size
-                elif risk_usd is not None:
-                    risk_pct = risk_usd / risk_cfg.account_size
 
             # Anchor the entry stop to the setup's structural invalidation when a
             # tighter pattern stop is available, so 1R reflects the real risk level

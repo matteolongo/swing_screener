@@ -125,6 +125,12 @@
    - Outcome: same-symbol adjusted recommendations now preserve missing cross-currency FX by leaving `account_to_quote_rate`, account risk, and account position size unavailable instead of deriving them from a false identity conversion.
    - Verification: `tests/api/test_same_symbol_reentry.py::test_same_symbol_reentry_preserves_missing_cross_currency_fx_for_add_on`, plus same-symbol, screener currency, recommendation, and screener service regressions.
 
+23. Candidate risk percent account-currency contract
+   - Status: done.
+   - Ensure screener candidate `risk_pct` is never computed by dividing quote-currency risk by account-currency account size when account-currency risk is unavailable.
+   - Outcome: candidate assembly now derives `risk_pct` only from `realized_risk_account`; otherwise it falls back to the recommendation engine result, preserving missing-FX blocks for cross-currency rows.
+   - Verification: `tests/api/test_screener_currency_contract.py::test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx`, plus screener currency/service/recommendation regressions.
+
 ## Next
 
 - No open backend correctness backlog items.

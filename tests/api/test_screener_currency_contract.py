@@ -127,3 +127,66 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
     assert usd["recommendation"]["risk"]["account_currency"] == "EUR"
     assert usd["recommendation"]["risk"]["account_to_quote_rate"] == 1.25
     assert usd["recommendation"]["risk"]["risk_amount_account"] == 9.6
+
+
+def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(monkeypatch):
+    def fake_build_daily_report(*args, **kwargs):
+        return pd.DataFrame(
+            {
+                "atr14": [2.0],
+                "mom_6m": [0.2],
+                "mom_12m": [0.3],
+                "rs_6m": [0.06],
+                "score": [0.7],
+                "confidence": [65.0],
+                "last": [181.0],
+                "currency": ["USD"],
+                "ma20_level": [180.0],
+                "dist_sma50_pct": [5.0],
+                "dist_sma200_pct": [10.0],
+                "rank": [1],
+                "signal": ["breakout"],
+                "entry": [181.0],
+                "stop": [177.0],
+                "shares": [3],
+                "position_value": [543.0],
+                "realized_risk": [12.0],
+            },
+            index=["AAPL"],
+        )
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: _mock_provider())
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_service,
+        "get_multiple_ticker_info",
+        lambda tickers: {"AAPL": {"name": "Apple Inc.", "currency": "USD"}},
+    )
+    monkeypatch.setattr(
+        screener_service,
+        "fetch_next_earnings_days",
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {ticker: None for ticker in tickers},
+    )
+
+    app.dependency_overrides[get_portfolio_service] = lambda: _PortfolioStub()
+    try:
+        response = TestClient(app).post(
+            "/api/screener/run",
+            json={"tickers": ["AAPL"], "top": 1},
+        )
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+
+    assert response.status_code == 200
+    candidate = response.json()["candidates"][0]
+    assert candidate["quote_currency"] == "USD"
+    assert candidate["account_currency"] == "EUR"
+    assert candidate["risk_quote"] == 12.0
+    assert candidate["risk_pct"] == 0.0
+    risk = candidate["recommendation"]["risk"]
+    assert risk["account_to_quote_rate"] is None
+    assert risk["risk_amount_account"] == 0.0
+    reason_codes = {
+        reason["code"] for reason in candidate["recommendation"]["reasons_detailed"]
+    }
+    assert "FX_RATE_MISSING" in reason_codes
