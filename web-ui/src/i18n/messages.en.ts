@@ -2705,9 +2705,17 @@ export const messagesEn = {
     volume: 'Volume',
     patternStopLabel: 'Pattern stop',
     symbolLegend: 'Symbol',
+    loading: 'Loading chart...',
     fullscreen: 'Fullscreen',
     exitFullscreen: 'Exit fullscreen',
     volumeConfirmed: 'vol✓',
+    overlays: {
+      sma20: 'SMA 20',
+      sma50: 'SMA 50',
+      sma200: 'SMA 200',
+      rLevels: 'Stop / Target levels',
+      keyLevels: 'Key levels from patterns',
+    },
     pattern: {
       hammer: 'Hammer',
       shooting_star: 'Shooting star',
