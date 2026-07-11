@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
@@ -56,5 +57,27 @@ describe('ScreenerCandidatesTable', () => {
 
     expect(screen.getByText(t('screener.table.signalBadge.breakout'))).toBeInTheDocument();
     expect(screen.queryByText(/^Breakout$/)).not.toBeInTheDocument();
+  });
+
+  it('activates selectable rows with the keyboard', async () => {
+    server.use(http.get('/api/screener/recurrence', () => HttpResponse.json([])));
+    const onRowClick = vi.fn();
+
+    renderWithProviders(
+      <ScreenerCandidatesTable
+        candidates={[candidate()]}
+        onCreateOrder={vi.fn()}
+        onRecommendationDetails={vi.fn()}
+        onRowClick={onRowClick}
+      />
+    );
+
+    const row = screen.getByRole('button', { name: t('screener.table.selectRow', { ticker: 'GE' }) });
+    row.focus();
+    await userEvent.keyboard('{Enter}');
+    await userEvent.keyboard(' ');
+
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+    expect(onRowClick).toHaveBeenCalledWith(expect.objectContaining({ ticker: 'GE' }));
   });
 });

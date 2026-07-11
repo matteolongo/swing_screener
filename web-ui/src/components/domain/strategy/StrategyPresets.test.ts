@@ -28,6 +28,7 @@ function buildStrategy(): Strategy {
         maxAtrPct: 15,
         requireTrendOk: true,
         requireRsPositive: false,
+        requireWeeklyUptrend: false,
         currencies: ['USD', 'EUR'],
       },
     },

@@ -43,6 +43,9 @@ const risk: RiskConfig = {
   kAtr: 2,
   minRr: 2,
   maxFeeRiskPct: 0.2,
+  maxConcentrationPct: 60,
+  accountSizeMode: 'equity',
+  accountCurrency: 'EUR',
 };
 
 function makeContext(overrides: Partial<OrderReviewContext> = {}): OrderReviewContext {

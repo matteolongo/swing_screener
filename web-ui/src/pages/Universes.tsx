@@ -157,9 +157,9 @@ export default function Universes() {
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-4">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-foreground">Universe Management</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t('universesPage.title')}</h1>
         <p className="mt-1 text-sm text-muted">
-          Review source coverage, freshness, validation, and refresh official universes without editing snapshots by hand.
+          {t('universesPage.subtitle')}
         </p>
       </div>
 

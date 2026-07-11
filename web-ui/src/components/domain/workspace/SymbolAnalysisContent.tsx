@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
 import AgentTracePanel from '@/components/domain/workspace/AgentTracePanel';
 import CatalystContextCard from '@/components/domain/workspace/CatalystContextCard';
@@ -89,14 +89,27 @@ export default function SymbolAnalysisContent({
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
   const [intelSubView, setIntelSubView] = useState<'analysis' | 'trace'>('analysis');
+  const currentTickerRef = useRef(ticker.toUpperCase());
+  const tabsId = useId();
+  const intelligenceTabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
   const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
   const hasNarrative = Boolean(!isIntelligenceLoading && displayedIntelligence?.narrative?.trim());
 
+  useEffect(() => {
+    currentTickerRef.current = ticker.toUpperCase();
+  }, [ticker]);
+
   const handleAnalyzeWithAi = (force = false) => {
     intelligenceMutation.mutate(
       { ticker, candidate, position, force },
-      { onSuccess: (result) => setIntelligenceResult(result) }
+      {
+        onSuccess: (result) => {
+          if (result.symbol.toUpperCase() === currentTickerRef.current) {
+            setIntelligenceResult(result);
+          }
+        },
+      }
     );
   };
 
@@ -192,6 +205,39 @@ export default function SymbolAnalysisContent({
   const handleUnwatch = () => {
     unwatchSymbolMutation.mutate(ticker);
   };
+  const handleAnalysisTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    const lastIndex = tabs.length - 1;
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
+    if (event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = lastIndex;
+    if (nextIndex == null) return;
+
+    event.preventDefault();
+    onTabChange(tabs[nextIndex].id);
+    document.getElementById(`${tabsId}-tab-${tabs[nextIndex].id}`)?.focus();
+  };
+  const intelligenceViews = ['analysis', 'trace'] as const;
+  const handleIntelligenceTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    const lastIndex = intelligenceViews.length - 1;
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
+    if (event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = lastIndex;
+    if (nextIndex == null) return;
+
+    event.preventDefault();
+    setIntelSubView(intelligenceViews[nextIndex]);
+    document.getElementById(`${intelligenceTabsId}-tab-${intelligenceViews[nextIndex]}`)?.focus();
+  };
 
   return (
     <>
@@ -205,10 +251,14 @@ export default function SymbolAnalysisContent({
           return (
             <button
               key={tab.id}
+              id={`${tabsId}-tab-${tab.id}`}
               type="button"
               role="tab"
               aria-selected={isActive}
+              aria-controls={`${tabsId}-panel-${tab.id}`}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => onTabChange(tab.id)}
+              onKeyDown={(event) => handleAnalysisTabKeyDown(event, tabs.findIndex((item) => item.id === tab.id))}
               className={cn(
                 'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                 isActive ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
@@ -220,7 +270,12 @@ export default function SymbolAnalysisContent({
         })}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+      <div
+        id={`${tabsId}-panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`${tabsId}-tab-${activeTab}`}
+        className="flex-1 min-h-0 overflow-y-auto space-y-3"
+      >
         <AnalysisDecisionStrip
           ticker={ticker}
           candidate={candidate}
@@ -313,15 +368,19 @@ export default function SymbolAnalysisContent({
                 className="flex w-fit items-center gap-1 rounded-lg border border-border bg-surface p-1"
                 role="tablist"
               >
-                {(['analysis', 'trace'] as const).map((view) => {
+                {intelligenceViews.map((view, index) => {
                   const isActive = intelSubView === view;
                   return (
                     <button
                       key={view}
+                      id={`${intelligenceTabsId}-tab-${view}`}
                       type="button"
                       role="tab"
                       aria-selected={isActive}
+                      aria-controls={`${intelligenceTabsId}-panel-${view}`}
+                      tabIndex={isActive ? 0 : -1}
                       onClick={() => setIntelSubView(view)}
+                      onKeyDown={(event) => handleIntelligenceTabKeyDown(event, index)}
                       className={cn(
                         'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                         isActive ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
@@ -337,9 +396,19 @@ export default function SymbolAnalysisContent({
             )}
 
             {!isIntelligenceLoading && hasNarrative && intelSubView === 'trace' ? (
-              <AgentTracePanel runId={displayedIntelligence?.runId ?? null} />
+              <div
+                id={`${intelligenceTabsId}-panel-trace`}
+                role="tabpanel"
+                aria-labelledby={`${intelligenceTabsId}-tab-trace`}
+              >
+                <AgentTracePanel runId={displayedIntelligence?.runId ?? null} />
+              </div>
             ) : (
-              <>
+              <div
+                id={`${intelligenceTabsId}-panel-analysis`}
+                role="tabpanel"
+                aria-labelledby={`${intelligenceTabsId}-tab-analysis`}
+              >
                 {isIntelligenceLoading ? (
                   <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
                     {t('workspacePage.panels.analysis.intelligence.analyzingAction')}
@@ -397,7 +466,7 @@ export default function SymbolAnalysisContent({
                     )}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </>
         )}

@@ -1,4 +1,5 @@
-import { CandleChart, type ChartVolumeZone } from '@/components/domain/market/CandleChart';
+import { lazy, Suspense } from 'react';
+import type { ChartVolumeZone } from '@/components/domain/market/CandleChart';
 import { useTickerCandles } from '@/features/screener/hooks';
 import { useVolumeAnalysisQuery } from '@/features/volumeZones/hooks';
 import { t } from '@/i18n/t';
@@ -6,6 +7,20 @@ import type { MessageKey } from '@/i18n/types';
 
 const K = 'workspacePage.panels.analysis.volumeZones';
 const tk = (leaf: string) => t(`${K}.${leaf}` as MessageKey);
+const CandleChart = lazy(() =>
+  import('@/components/domain/market/CandleChart').then((module) => ({ default: module.CandleChart })),
+);
+
+function ChartLoadingFallback() {
+  return (
+    <div
+      className="flex h-[360px] w-full items-center justify-center rounded border border-border bg-surface text-sm text-muted"
+      role="status"
+    >
+      {t('chart.loading')}
+    </div>
+  );
+}
 
 export default function VolumeZonesTab({ ticker }: { ticker: string }) {
   const analysisQuery = useVolumeAnalysisQuery(ticker);
@@ -60,16 +75,18 @@ export default function VolumeZonesTab({ ticker }: { ticker: string }) {
         )}
       </div>
 
-      <CandleChart
-        ticker={ticker}
-        bars={candlesQuery.data?.priceHistory ?? []}
-        patterns={candlesQuery.data?.patterns ?? []}
-        entryPrice={analysis.tradePlan.entry ?? null}
-        stopPrice={analysis.tradePlan.stop ?? null}
-        targetPrice={analysis.tradePlan.target ?? null}
-        volumeZones={zones}
-        showVolumeZones
-      />
+      <Suspense fallback={<ChartLoadingFallback />}>
+        <CandleChart
+          ticker={ticker}
+          bars={candlesQuery.data?.priceHistory ?? []}
+          patterns={candlesQuery.data?.patterns ?? []}
+          entryPrice={analysis.tradePlan.entry ?? null}
+          stopPrice={analysis.tradePlan.stop ?? null}
+          targetPrice={analysis.tradePlan.target ?? null}
+          volumeZones={zones}
+          showVolumeZones
+        />
+      </Suspense>
 
       <div className="rounded-lg border border-border bg-surface p-3">
         <div className="mb-1 text-xs font-semibold text-muted">{tk('rationale')}</div>

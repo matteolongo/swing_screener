@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState, type KeyboardEvent } from 'react';
 
 import Badge from '@/components/common/Badge';
 import { useRunTrace } from '@/features/intelligence/hooks';
@@ -56,6 +56,20 @@ function availableTabs(step: StepTrace): DetailTab[] {
 function StepDetail({ step }: { step: StepTrace }) {
   const tabs = availableTabs(step);
   const [tab, setTab] = useState<DetailTab>(tabs[0] ?? 'data');
+  const tabsId = useId();
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const lastIndex = tabs.length - 1;
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
+    if (event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = lastIndex;
+    if (nextIndex == null) return;
+
+    event.preventDefault();
+    setTab(tabs[nextIndex]);
+    document.getElementById(`${tabsId}-tab-${tabs[nextIndex]}`)?.focus();
+  };
 
   if (tabs.length === 0) {
     return (
@@ -68,13 +82,17 @@ function StepDetail({ step }: { step: StepTrace }) {
   return (
     <div className="rounded-lg border border-border bg-surface p-3">
       <div className="flex flex-wrap gap-1 border-b border-border pb-2" role="tablist">
-        {tabs.map((id) => (
+        {tabs.map((id, index) => (
           <button
             key={id}
+            id={`${tabsId}-tab-${id}`}
             type="button"
             role="tab"
             aria-selected={tab === id}
+            aria-controls={`${tabsId}-panel-${id}`}
+            tabIndex={tab === id ? 0 : -1}
             onClick={() => setTab(id)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
             className={cn(
               'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
               tab === id ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
@@ -85,7 +103,12 @@ function StepDetail({ step }: { step: StepTrace }) {
         ))}
       </div>
 
-      <div className="mt-3 text-sm">
+      <div
+        id={`${tabsId}-panel-${tab}`}
+        role="tabpanel"
+        aria-labelledby={`${tabsId}-tab-${tab}`}
+        className="mt-3 text-sm"
+      >
         {tab === 'data' && (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t(`${KEY}.fields.outputs`)}</p>

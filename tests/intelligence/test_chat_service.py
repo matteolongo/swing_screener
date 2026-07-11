@@ -60,10 +60,57 @@ def test_send_persists_user_and_assistant_messages(tmp_path, monkeypatch):
     )
 
     assert [message.role for message in response.messages] == ["user", "assistant"]
+    assert response.analysis_generated_at == "2026-07-03T08:00:00Z"
     assert response.messages[0].content == "What invalidates this?"
     assert response.messages[1].content == "Guidance is the main risk."
     stored = json.loads((tmp_path / "intelligence" / "chat" / "AAPL" / "2026-07-03.json").read_text())
     assert [message["role"] for message in stored["messages"]] == ["user", "assistant"]
+
+
+def test_changed_analysis_revision_archives_old_chat_and_starts_fresh(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    chat_date = date(2026, 7, 3)
+    first = _make_intelligence()
+    write_to_cache("AAPL", first, for_date=chat_date)
+    service = IntelligenceChatService(today=lambda: chat_date, answer_fn=lambda **_: "Answer")
+
+    service.send_message("AAPL", IntelligenceChatRequest(message="Question for first revision"))
+    refreshed = first.model_copy(update={"generated_at": "2026-07-03T09:00:00Z"})
+    write_to_cache("AAPL", refreshed, for_date=chat_date)
+
+    response = service.send_message(
+        "AAPL",
+        IntelligenceChatRequest(
+            message="Question for refreshed revision",
+            analysis_generated_at=refreshed.generated_at,
+        ),
+    )
+
+    assert response.analysis_generated_at == refreshed.generated_at
+    assert [message.content for message in response.messages] == [
+        "Question for refreshed revision",
+        "Answer",
+    ]
+    archived = list((tmp_path / "intelligence" / "chat" / "AAPL").glob("2026-07-03.*.json"))
+    assert len(archived) == 1
+    assert "Question for first revision" in archived[0].read_text()
+
+
+def test_get_hides_messages_after_analysis_refresh_until_new_revision_is_sent(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    chat_date = date(2026, 7, 3)
+    first = _make_intelligence()
+    write_to_cache("AAPL", first, for_date=chat_date)
+    service = IntelligenceChatService(today=lambda: chat_date, answer_fn=lambda **_: "Answer")
+    service.send_message("AAPL", IntelligenceChatRequest(message="Old context"))
+
+    refreshed = first.model_copy(update={"generated_at": "2026-07-03T09:00:00Z"})
+    write_to_cache("AAPL", refreshed, for_date=chat_date)
+
+    response = service.get_chat("AAPL")
+
+    assert response.analysis_generated_at == refreshed.generated_at
+    assert response.messages == []
 
 
 def test_send_requires_cached_intelligence(tmp_path, monkeypatch):

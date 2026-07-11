@@ -9,6 +9,8 @@ import {
   type ISeriesApi,
   type SeriesType,
   type IPriceLine,
+  type SeriesMarker,
+  type Time,
 } from 'lightweight-charts';
 import type { PriceHistoryPoint, CandlePattern } from '@/features/screener/types';
 import { t } from '@/i18n/t';
@@ -315,17 +317,28 @@ export function CandleChart({
 
     // Pattern markers
     if (patterns.length > 0) {
-      const markers = patterns
+      const markers: SeriesMarker<Time>[] = patterns
         .map((p) => {
           const bar = usable.find((b) => b.date === p.date);
-          if (!bar) return null;
-          return {
+          if (!bar || p.direction === 'neutral') return null;
+          if (p.direction === 'bearish') {
+            const marker: SeriesMarker<Time> = {
+              time: p.date,
+              position: 'aboveBar',
+              shape: 'arrowDown',
+              color: PRIMARY,
+              text: patternLabel(p),
+            };
+            return marker;
+          }
+          const marker: SeriesMarker<Time> = {
             time: p.date,
-            position: (p.direction === 'bearish' ? 'aboveBar' : 'belowBar') as 'aboveBar' | 'belowBar',
-            shape: (p.direction === 'bearish' ? 'arrowDown' : 'arrowUp') as 'arrowDown' | 'arrowUp',
+            position: 'belowBar',
+            shape: 'arrowUp',
             color: PRIMARY,
             text: patternLabel(p),
           };
+          return marker;
         })
         .filter((m): m is NonNullable<typeof m> => m != null);
       createSeriesMarkers(candleSeries, markers);

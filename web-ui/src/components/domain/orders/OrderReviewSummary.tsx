@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import { getSetupExecutionGuidance } from '@/features/orders/setupGuidance';
 import type {
@@ -64,6 +65,20 @@ export default function OrderReviewSummary({
   hardInvalidations,
   softInvalidations,
 }: OrderReviewSummaryProps) {
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const lastIndex = REVIEW_SECTIONS.length - 1;
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
+    if (event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = lastIndex;
+    if (nextIndex == null) return;
+
+    event.preventDefault();
+    onSectionChange(REVIEW_SECTIONS[nextIndex].id);
+    document.getElementById(`order-review-tab-${REVIEW_SECTIONS[nextIndex].id}`)?.focus();
+  };
+
   return (
     <section
       className="rounded-lg border border-border bg-foreground/5 p-3"
@@ -89,7 +104,7 @@ export default function OrderReviewSummary({
           role="tablist"
           aria-label={t('order.review.carouselLabel')}
         >
-          {REVIEW_SECTIONS.map((section) => {
+          {REVIEW_SECTIONS.map((section, index) => {
             const isActive = activeSection === section.id;
             return (
               <button
@@ -99,7 +114,9 @@ export default function OrderReviewSummary({
                 role="tab"
                 aria-selected={isActive}
                 aria-controls={`order-review-panel-${section.id}`}
+                tabIndex={isActive ? 0 : -1}
                 onClick={() => onSectionChange(section.id)}
+                onKeyDown={(event) => handleTabKeyDown(event, index)}
                 className={cn(
                   'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                   isActive

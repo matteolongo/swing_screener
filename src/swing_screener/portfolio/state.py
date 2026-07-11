@@ -485,6 +485,11 @@ def evaluate_positions(
             action = "MOVE_STOP_UP"
         else:
             action = "NO_ACTION"
+            if r_now >= cfg.trail_after_R and reason != "No rule triggered":
+                reason = (
+                    f"{reason}; suggested stop {stop_suggested_rounded:.2f} "
+                    f"is not above current stop {stop_old_rounded:.2f}, so no stop update."
+                )
 
         updates.append(
             PositionUpdate(

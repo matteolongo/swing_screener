@@ -46,6 +46,8 @@ def test_bearish_insider_contributes_negative():
     insider = next(c for c in ledger.contributions if c.key == "insider_activity")
     assert insider.direction == "bearish"
     assert insider.contribution == -10.0
+    assert insider.explanation is not None
+    assert "adds caution" in insider.explanation
 
 
 def test_neutral_contributes_zero():
@@ -59,6 +61,9 @@ def test_neutral_contributes_zero():
 
     insider = next((c for c in ledger.contributions if c.key == "insider_activity"), None)
     assert insider is None or insider.contribution == 0.0
+    if insider is not None:
+        assert insider.explanation is not None
+        assert "balanced" in insider.explanation
 
 
 def test_news_and_catalysts_are_cited():
@@ -91,6 +96,10 @@ def test_news_and_catalysts_are_cited():
     assert catalyst.event_date == "2026-07-01"
     assert catalyst.source in {"http://gs", "GS upgrade"}
     assert catalyst.contribution == 9.0
+    assert news.explanation is not None
+    assert "cited news item" in news.explanation
+    assert catalyst.explanation is not None
+    assert "GS upgrade" in catalyst.explanation
 
 
 def test_thresholds_bucket_net():

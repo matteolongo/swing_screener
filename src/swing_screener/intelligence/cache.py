@@ -9,6 +9,8 @@ from swing_screener.intelligence.models import SymbolIntelligence
 from swing_screener.settings.paths import data_dir
 from swing_screener.utils.file_lock import FileLockTimeoutError, open_locked_text, read_json_with_lock
 
+_CACHE_SCHEMA_VERSION = 2
+
 
 def _cache_path(for_date: date) -> Path:
     return data_dir() / "intelligence" / f"sweep_{for_date.isoformat()}.json"
@@ -45,12 +47,17 @@ def _write_cache_mapping(fh: TextIO, payload: dict[str, Any]) -> None:
     fh.flush()
 
 
+def _is_current_cache_entry(entry: Any) -> bool:
+    return isinstance(entry, dict) and entry.get("_cache_schema_version") == _CACHE_SCHEMA_VERSION
+
+
 def write_to_cache(ticker: str, result: SymbolIntelligence, for_date: date | None = None) -> None:
     target_date = for_date or datetime.now(timezone.utc).date()
     path = _cache_path(target_date)
     path.parent.mkdir(parents=True, exist_ok=True)
     upper = ticker.upper()
     entry = json.loads(result.model_dump_json())
+    entry["_cache_schema_version"] = _CACHE_SCHEMA_VERSION
     with open_locked_text(
         path,
         mode="r+",
@@ -71,6 +78,8 @@ def read_from_cache(ticker: str, for_date: date | None = None) -> SymbolIntellig
         data = _read_cache_mapping(path)
         entry = data.get(ticker.upper())
         if entry is None:
+            return None
+        if not _is_current_cache_entry(entry):
             return None
         return SymbolIntelligence.model_validate(entry)
     except (FileLockTimeoutError, json.JSONDecodeError, OSError, ValueError):
@@ -96,6 +105,8 @@ def read_latest_from_cache(ticker: str) -> SymbolIntelligence | None:
             continue
         entry = data.get(upper)
         if entry is None:
+            continue
+        if not _is_current_cache_entry(entry):
             continue
         try:
             return SymbolIntelligence.model_validate(entry)

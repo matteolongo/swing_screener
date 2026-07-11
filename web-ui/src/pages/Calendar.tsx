@@ -16,6 +16,10 @@ const SOURCE_STYLES: Record<EventSourceTag, { dot: string; badge: string }> = {
     dot: 'bg-warning',
     badge: 'bg-warning/10 text-warning',
   },
+  ipo: {
+    dot: 'bg-foreground/60',
+    badge: 'bg-foreground/10 text-foreground',
+  },
 };
 
 function formatDate(dateStr: string): string {

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 
 type Row = {
@@ -54,5 +55,25 @@ describe('DataTable', () => {
     );
 
     expect(screen.getByText('No rows')).toBeInTheDocument();
+  });
+
+  it('activates clickable rows with Enter and Space', async () => {
+    const onRowClick = vi.fn();
+    render(
+      <DataTable
+        rows={rows}
+        columns={columns}
+        getRowKey={(row) => row.id}
+        onRowClick={onRowClick}
+      />,
+    );
+
+    const firstRow = screen.getByRole('button', { name: /AAPL 10/ });
+    firstRow.focus();
+    await userEvent.keyboard('{Enter}');
+    await userEvent.keyboard(' ');
+
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+    expect(onRowClick).toHaveBeenCalledWith(rows[0], 0);
   });
 });

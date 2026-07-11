@@ -11,6 +11,7 @@ import type {
   useUpdateUniverseBenchmarkMutation,
 } from '@/features/universes/hooks';
 import { BENCHMARK_OPTIONS, freshnessLabel, freshnessVariant, sourceLabel } from './universesShared';
+import { t } from '@/i18n/t';
 
 interface UniverseConfigTabProps {
   universes: UniverseSummary[];
@@ -40,11 +41,11 @@ export default function UniverseConfigTab({
   return (
     <Card variant="bordered" className="p-4">
       {!selectedSummary ? (
-        <div className="py-8 text-center text-sm text-muted">Select a universe to inspect it.</div>
+        <div className="py-8 text-center text-sm text-muted">{t('universesPage.config.noSelection')}</div>
       ) : detailLoading ? (
-        <div className="text-sm text-muted">Loading universe detail…</div>
+        <div className="text-sm text-muted">{t('universesPage.config.loading')}</div>
       ) : detailError || !detail ? (
-        <div className="text-sm text-danger">Failed to load universe detail.</div>
+        <div className="text-sm text-danger">{t('universesPage.config.error')}</div>
       ) : (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -57,35 +58,37 @@ export default function UniverseConfigTab({
                 {freshnessLabel(detail.freshness_status)}
               </Badge>
               <Badge variant="default">{detail.kind}</Badge>
-              <Badge variant="default">{detail.member_count} members</Badge>
+              <Badge variant="default">{t('universesPage.config.members', { count: String(detail.member_count) })}</Badge>
             </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl border border-border bg-surface p-3">
-              <div className="text-xs uppercase tracking-wide text-muted">Source</div>
+	              <div className="text-xs uppercase tracking-wide text-muted">{t('universesPage.config.source')}</div>
               <div className="mt-1 text-sm font-medium text-foreground">{sourceLabel(detail.source)}</div>
               <div className="mt-1 text-xs text-muted">{detail.source_adapter}</div>
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">
-              <div className="text-xs uppercase tracking-wide text-muted">Freshness</div>
-              <div className="mt-1 text-sm font-medium text-foreground">Reviewed {detail.last_reviewed_at}</div>
-              <div className="mt-1 text-xs text-muted">
-                {detail.days_since_review == null ? 'Unknown age' : `${detail.days_since_review} days ago`}
-              </div>
+	              <div className="text-xs uppercase tracking-wide text-muted">{t('universesPage.config.freshness')}</div>
+	              <div className="mt-1 text-sm font-medium text-foreground">{t('universesPage.config.reviewed', { date: detail.last_reviewed_at })}</div>
+	              <div className="mt-1 text-xs text-muted">
+	                {detail.days_since_review == null
+	                  ? t('universesPage.config.unknownAge')
+	                  : t('universesPage.config.daysAgo', { count: String(detail.days_since_review) })}
+	              </div>
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">
-              <div className="text-xs uppercase tracking-wide text-muted">Source As Of</div>
-              <div className="mt-1 text-sm font-medium text-foreground">{detail.source_asof}</div>
-              <div className="mt-1 text-xs text-muted">Configured benchmark {detail.benchmark}</div>
+	              <div className="text-xs uppercase tracking-wide text-muted">{t('universesPage.config.sourceAsOf')}</div>
+	              <div className="mt-1 text-sm font-medium text-foreground">{detail.source_asof}</div>
+	              <div className="mt-1 text-xs text-muted">{t('universesPage.config.configuredBenchmark', { benchmark: detail.benchmark })}</div>
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">
-              <div className="text-xs uppercase tracking-wide text-muted">Rules</div>
+	              <div className="text-xs uppercase tracking-wide text-muted">{t('universesPage.config.rules')}</div>
               <div className="mt-1 text-sm font-medium text-foreground">
-                {(detail.rules.currencies ?? []).join(', ') || 'No currency rule'}
+	                {(detail.rules.currencies ?? []).join(', ') || t('universesPage.config.noCurrencyRule')}
               </div>
               <div className="mt-1 text-xs text-muted">
-                {(detail.rules.exchange_mics ?? []).join(', ') || 'Any exchange'}
+	                {(detail.rules.exchange_mics ?? []).join(', ') || t('universesPage.config.anyExchange')}
               </div>
             </div>
           </div>
@@ -95,16 +98,16 @@ export default function UniverseConfigTab({
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <Target className="h-4 w-4 text-muted" />
-                  Benchmark
+	                  {t('universesPage.config.benchmark')}
                 </div>
                 <p className="mt-1 text-sm text-muted">
-                  Select the index or ETF used for performance comparison in the screener and chart overlay.
+	                  {t('universesPage.config.benchmarkDescription')}
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:min-w-[360px] sm:flex-row">
                 <div className="flex-1">
                   <label htmlFor="universe-benchmark" className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
-                    Benchmark symbol
+	                    {t('universesPage.config.benchmarkSymbol')}
                   </label>
                   <Input
                     id="universe-benchmark"
@@ -122,7 +125,7 @@ export default function UniverseConfigTab({
                   size="sm"
                   className="self-end"
                 >
-                  {benchmarkMutation.isPending ? 'Saving…' : 'Save benchmark'}
+	                  {benchmarkMutation.isPending ? t('universesPage.config.saving') : t('universesPage.config.saveBenchmark')}
                 </Button>
               </div>
             </div>
@@ -135,12 +138,12 @@ export default function UniverseConfigTab({
             </datalist>
             {benchmarkMutation.isError ? (
               <div className="mt-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-                {benchmarkMutation.error instanceof Error ? benchmarkMutation.error.message : 'Failed to update benchmark.'}
+	                {benchmarkMutation.error instanceof Error ? benchmarkMutation.error.message : t('universesPage.config.updateBenchmarkError')}
               </div>
             ) : null}
             {benchmarkMutation.data ? (
               <div className="mt-3 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
-                Benchmark updated to {benchmarkMutation.data.benchmark}. The catalog and screener will pick it up after refresh.
+	                {t('universesPage.config.benchmarkUpdated', { benchmark: benchmarkMutation.data.benchmark })}
               </div>
             ) : null}
           </div>
@@ -156,12 +159,12 @@ export default function UniverseConfigTab({
                   {refreshMutation.isPending ? (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Refreshing…
+	                      {t('universesPage.config.refreshing')}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Preview Refresh
+	                      {t('universesPage.config.previewRefresh')}
                     </>
                   )}
                 </Button>
@@ -171,17 +174,17 @@ export default function UniverseConfigTab({
                   variant="secondary"
                   size="sm"
                 >
-                  Apply Refresh
+	                  {t('universesPage.config.applyRefresh')}
                 </Button>
               </>
             ) : (
-              <div className="text-sm text-muted">This universe is manual-only for now.</div>
+	              <div className="text-sm text-muted">{t('universesPage.config.manualOnly')}</div>
             )}
           </div>
 
           {refreshMutation.isError ? (
             <div className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
-              {refreshMutation.error instanceof Error ? refreshMutation.error.message : 'Refresh failed.'}
+	              {refreshMutation.error instanceof Error ? refreshMutation.error.message : t('universesPage.config.refreshFailed')}
             </div>
           ) : null}
 
@@ -193,12 +196,12 @@ export default function UniverseConfigTab({
                 ) : (
                   <CheckCircle2 className="h-4 w-4 text-success" />
                 )}
-                Refresh Preview
+	                {t('universesPage.config.refreshPreview')}
               </div>
               <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted">
-                <span>{refreshResult.current_member_count} current</span>
-                <span>{refreshResult.proposed_member_count} proposed</span>
-                <span>{refreshResult.applied ? 'Applied locally' : 'Preview only'}</span>
+	                <span>{t('universesPage.config.currentMembers', { count: String(refreshResult.current_member_count) })}</span>
+	                <span>{t('universesPage.config.proposedMembers', { count: String(refreshResult.proposed_member_count) })}</span>
+	                <span>{refreshResult.applied ? t('universesPage.config.appliedLocally') : t('universesPage.config.previewOnly')}</span>
               </div>
               {refreshResult.notes.length ? (
                 <div className="mt-3 space-y-1 text-sm text-muted">
@@ -210,7 +213,7 @@ export default function UniverseConfigTab({
               {(refreshResult.additions.length || refreshResult.removals.length) ? (
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <div>
-                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-success">Additions</div>
+	                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-success">{t('universesPage.config.additions')}</div>
                     <div className="flex flex-wrap gap-2">
                       {refreshResult.additions.map((symbol) => (
                         <Badge key={symbol} variant="success">{symbol}</Badge>
@@ -218,7 +221,7 @@ export default function UniverseConfigTab({
                     </div>
                   </div>
                   <div>
-                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-danger">Removals</div>
+	                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-danger">{t('universesPage.config.removals')}</div>
                     <div className="flex flex-wrap gap-2">
                       {refreshResult.removals.map((symbol) => (
                         <Badge key={symbol} variant="error">{symbol}</Badge>
@@ -232,7 +235,7 @@ export default function UniverseConfigTab({
 
           {detail.validation_errors.length ? (
             <div className="rounded-xl border border-danger/40 bg-danger/10 p-3">
-              <div className="mb-2 text-sm font-semibold text-danger">Validation Issues</div>
+	              <div className="mb-2 text-sm font-semibold text-danger">{t('universesPage.config.validationIssues')}</div>
               <div className="space-y-1 text-sm text-danger">
                 {detail.validation_errors.map((error) => (
                   <div key={error}>{error}</div>
@@ -243,7 +246,7 @@ export default function UniverseConfigTab({
 
           {detail.source_documents.length ? (
             <div>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Source Documents</div>
+	              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{t('universesPage.config.sourceDocuments')}</div>
               <div className="space-y-1">
                 {detail.source_documents.map((document) => (
                   <a

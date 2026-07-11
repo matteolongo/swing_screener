@@ -516,6 +516,7 @@ export async function closePosition(
     body: JSON.stringify({
       exit_price: request.exitPrice,
       fee_eur: request.feeEur,
+      exit_fx_rate: request.exitFxRate,
       reason: request.reason || '',
       lesson: request.lesson ?? null,
       tags: request.tags ?? [],
@@ -535,6 +536,7 @@ export async function partialClosePosition(
       shares_closed: request.sharesClosed,
       price: request.price,
       fee_eur: request.feeEur,
+      fx_rate: request.fxRate,
     }),
     errorMessage: 'Failed to partial close position',
   });

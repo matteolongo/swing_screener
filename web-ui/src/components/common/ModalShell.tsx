@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useId, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import Button from '@/components/common/Button';
@@ -53,6 +53,15 @@ function releaseScrollLock() {
   previousDocumentStyles = null;
 }
 
+const focusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
 interface ModalShellProps {
   title: ReactNode;
   onClose: () => void;
@@ -81,6 +90,9 @@ export default function ModalShell({
   fullScreen = false,
 }: ModalShellProps) {
   const immersive = fullScreen;
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!closeOnEscape) return;
@@ -101,6 +113,46 @@ export default function ModalShell({
     return () => releaseScrollLock();
   }, [lockScroll]);
 
+  useEffect(() => {
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const dialog = dialogRef.current;
+    if (!dialog) return undefined;
+
+    const firstFocusable = dialog.querySelector<HTMLElement>(focusableSelector);
+    (firstFocusable ?? dialog).focus();
+
+    return () => {
+      previouslyFocusedRef.current?.focus();
+    };
+  }, []);
+
+  const handleDialogKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector))
+      .filter((element) => element.offsetParent !== null || element === document.activeElement);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -111,8 +163,11 @@ export default function ModalShell({
       role="presentation"
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className={cn(
           'w-full bg-surface shadow-xl',
           fullScreen
@@ -121,6 +176,7 @@ export default function ModalShell({
           className,
         )}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={handleDialogKeyDown}
       >
         <div
           className={cn(
@@ -128,7 +184,7 @@ export default function ModalShell({
             immersive ? 'shrink-0 bg-surface/95' : null,
           )}
         >
-          <h2 className="text-2xl font-bold">{title}</h2>
+          <h2 id={titleId} className="text-2xl font-bold">{title}</h2>
           <div className="flex items-center gap-2">
             {headerActions}
             <Button
