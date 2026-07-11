@@ -1519,6 +1519,7 @@ export const messagesEn = {
     },
     table: {
       empty: 'No candidates found',
+      selectRow: 'Select {{ticker}}',
       signalBadge: {
         buyNow: 'Buy Now',
         pullback: 'Pullback',

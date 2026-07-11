@@ -156,6 +156,15 @@ export default function ScreenerCandidatesTable({
           <React.Fragment key={candidate.ticker}>
             <tr
               onClick={onRowClick ? () => onRowClick(candidate) : undefined}
+              onKeyDown={onRowClick ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onRowClick(candidate);
+                }
+              } : undefined}
+              role={onRowClick ? 'button' : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              aria-label={onRowClick ? t('screener.table.selectRow', { ticker: candidate.ticker }) : undefined}
               className={`border-b border-border ${
                 isSelected
                   ? 'bg-primary/10 hover:bg-primary/10'

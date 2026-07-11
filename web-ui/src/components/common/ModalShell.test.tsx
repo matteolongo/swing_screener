@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import ModalShell from '@/components/common/ModalShell'
 
 describe('ModalShell', () => {
@@ -67,5 +68,24 @@ describe('ModalShell', () => {
 
     expect(screen.getByRole('dialog')).toHaveClass('h-dvh')
     expect(screen.getByRole('dialog')).toHaveClass('rounded-none')
+  })
+
+  it('names the dialog from the visible title and traps tab focus', async () => {
+    render(
+      <ModalShell title="Test Modal" onClose={() => {}}>
+        <button type="button">First</button>
+        <button type="button">Last</button>
+      </ModalShell>
+    )
+
+    const dialog = screen.getByRole('dialog', { name: 'Test Modal' })
+    expect(dialog).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Close modal' })).toHaveFocus()
+
+    await userEvent.tab({ shift: true })
+    expect(screen.getByRole('button', { name: 'Last' })).toHaveFocus()
+
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'Close modal' })).toHaveFocus()
   })
 })
