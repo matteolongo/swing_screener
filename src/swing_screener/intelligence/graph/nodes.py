@@ -139,6 +139,7 @@ def build_prompt(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerSt
         pre_open=state["pre_open"],
         pre_open_since=state["pre_open_since"],
         prior_digest=state["prior_digest"],
+        intelligence_policy=getattr(analyzer, "_intelligence_policy", None),
     )
     return state
 

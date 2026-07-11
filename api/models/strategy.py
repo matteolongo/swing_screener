@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Optional, Literal
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class StrategyTrend(BaseModel):
@@ -95,29 +95,12 @@ class StrategyManage(BaseModel):
 
 class StrategyIntelligenceLLM(BaseModel):
     enabled: bool = False
-    provider: Literal["mock", "openai"] = "openai"
+    provider: Literal["openai"] = "openai"
     model: str = "gpt-4.1-mini"
-    base_url: str = "https://api.openai.com/v1"
-    enable_cache: bool = True
-    enable_audit: bool = True
-    cache_path: str = "data/intelligence/llm_cache.json"
-    audit_path: str = "data/intelligence/llm_audit"
-    max_concurrency: int = Field(default=4, ge=1, le=16)
-
-    @model_validator(mode="after")
-    def coerce_mock_fields(self) -> "StrategyIntelligenceLLM":
-        if self.provider != "mock":
-            return self
-        self.model = "mock-classifier"
-        self.base_url = ""
-        return self
 
 
 class StrategyIntelligenceCatalyst(BaseModel):
     lookback_hours: int = Field(default=72, ge=1)
-    recency_half_life_hours: int = Field(default=36, ge=1)
-    false_catalyst_return_z: float = Field(default=1.5, ge=0)
-    min_price_reaction_atr: float = Field(default=0.8, ge=0)
     require_price_confirmation: bool = True
 
 
@@ -125,7 +108,6 @@ class StrategyIntelligenceTheme(BaseModel):
     enabled: bool = True
     min_cluster_size: int = Field(default=3, ge=1)
     min_peer_confirmation: int = Field(default=2, ge=1)
-    curated_peer_map_path: str = "data/intelligence/peer_map.yaml"
 
 
 class StrategyIntelligenceOpportunity(BaseModel):
@@ -137,42 +119,10 @@ class StrategyIntelligenceOpportunity(BaseModel):
 
 class StrategyMarketIntelligence(BaseModel):
     enabled: bool = False
-    providers: list[str] = Field(default_factory=lambda: ["yahoo_finance"])
-    universe_scope: Literal["screener_universe", "strategy_universe"] = "screener_universe"
-    market_context_symbols: list[str] = Field(
-        default_factory=lambda: ["SPY", "QQQ", "XLK", "SMH", "XBI"]
-    )
     llm: StrategyIntelligenceLLM = Field(default_factory=StrategyIntelligenceLLM)
     catalyst: StrategyIntelligenceCatalyst = Field(default_factory=StrategyIntelligenceCatalyst)
     theme: StrategyIntelligenceTheme = Field(default_factory=StrategyIntelligenceTheme)
     opportunity: StrategyIntelligenceOpportunity = Field(default_factory=StrategyIntelligenceOpportunity)
-
-    @field_validator("providers")
-    @classmethod
-    def validate_intel_providers(cls, values: list[str]) -> list[str]:
-        cleaned: list[str] = []
-        for value in values:
-            text = str(value).strip().lower()
-            if not text:
-                continue
-            if text not in {"yahoo_finance", "earnings_calendar"}:
-                continue
-            if text not in cleaned:
-                cleaned.append(text)
-        return cleaned or ["yahoo_finance"]
-
-    @field_validator("market_context_symbols")
-    @classmethod
-    def validate_market_context_symbols(cls, values: list[str]) -> list[str]:
-        cleaned: list[str] = []
-        for value in values:
-            text = str(value).strip().upper()
-            if not text:
-                continue
-            if text not in cleaned:
-                cleaned.append(text)
-        return cleaned or ["SPY", "QQQ", "XLK", "SMH", "XBI"]
-
 
 class StrategyBase(BaseModel):
     name: str

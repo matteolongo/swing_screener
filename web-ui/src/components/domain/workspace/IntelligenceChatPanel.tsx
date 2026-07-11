@@ -22,10 +22,15 @@ export default function IntelligenceChatPanel({
 }: IntelligenceChatPanelProps) {
   const [message, setMessage] = useState('');
   const [refreshSources, setRefreshSources] = useState(false);
-  const chatQuery = useIntelligenceChatQuery(ticker, Boolean(intelligence));
+  const chatQuery = useIntelligenceChatQuery(ticker, Boolean(intelligence), intelligence?.generatedAt);
   const sendMutation = useSendIntelligenceChatMutation(ticker);
   const disabled = !intelligence;
-  const messages = chatQuery.data?.messages ?? [];
+  // Never render a cached response that belongs to a superseded analysis while
+  // React Query is fetching the query keyed by the new revision.
+  const chat = chatQuery.data;
+  const messages = chat && chat.analysisGeneratedAt === intelligence?.generatedAt
+    ? chat.messages
+    : [];
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -10,7 +10,7 @@ import {
 } from '@/features/strategy/api';
 import type { Strategy, StrategyUpdateRequestAPI } from '@/features/strategy/types';
 import { queryKeys } from '@/lib/queryKeys';
-import { invalidateStrategyQueries } from '@/lib/queryInvalidation';
+import { invalidateStrategyDependentQueries, invalidateStrategyQueries } from '@/lib/queryInvalidation';
 
 export function useStrategiesQuery() {
   return useQuery({
@@ -31,7 +31,7 @@ export function useSetActiveStrategyMutation() {
   return useMutation({
     mutationFn: (strategyId: string) => setActiveStrategy(strategyId),
     onSuccess: async () => {
-      await invalidateStrategyQueries(queryClient);
+      await invalidateStrategyDependentQueries(queryClient);
     },
   });
 }
@@ -41,7 +41,12 @@ export function useUpdateStrategyMutation(onSuccess?: (updated: Strategy) => voi
   return useMutation({
     mutationFn: updateStrategy,
     onSuccess: async (updated) => {
-      await invalidateStrategyQueries(queryClient);
+      const active = queryClient.getQueryData<Strategy>(queryKeys.strategyActive());
+      if (!active || active.id === updated.id) {
+        await invalidateStrategyDependentQueries(queryClient);
+      } else {
+        await invalidateStrategyQueries(queryClient);
+      }
       onSuccess?.(updated);
     },
   });
@@ -70,8 +75,13 @@ export function useDeleteStrategyMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (strategyId: string) => deleteStrategy(strategyId),
-    onSuccess: async () => {
-      await invalidateStrategyQueries(queryClient);
+    onSuccess: async (_result, strategyId) => {
+      const active = queryClient.getQueryData<Strategy>(queryKeys.strategyActive());
+      if (!active || active.id === strategyId) {
+        await invalidateStrategyDependentQueries(queryClient);
+      } else {
+        await invalidateStrategyQueries(queryClient);
+      }
       onSuccess?.();
     },
   });

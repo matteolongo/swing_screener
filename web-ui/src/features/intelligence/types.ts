@@ -486,6 +486,7 @@ export interface IntelligenceChatMessage {
 export interface IntelligenceChatResponseAPI {
   ticker: string;
   chat_date: string;
+  analysis_generated_at: string;
   messages: IntelligenceChatMessageAPI[];
   refreshed_at?: string | null;
 }
@@ -493,6 +494,7 @@ export interface IntelligenceChatResponseAPI {
 export interface IntelligenceChatResponse {
   ticker: string;
   chatDate: string;
+  analysisGeneratedAt: string;
   messages: IntelligenceChatMessage[];
   refreshedAt: string | null;
 }
@@ -501,6 +503,7 @@ export function transformIntelligenceChat(api: IntelligenceChatResponseAPI): Int
   return {
     ticker: api.ticker,
     chatDate: api.chat_date,
+    analysisGeneratedAt: api.analysis_generated_at,
     refreshedAt: api.refreshed_at ?? null,
     messages: (api.messages ?? []).map((message) => ({
       id: message.id,
