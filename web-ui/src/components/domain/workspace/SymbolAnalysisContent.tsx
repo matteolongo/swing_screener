@@ -89,14 +89,25 @@ export default function SymbolAnalysisContent({
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
   const [intelSubView, setIntelSubView] = useState<'analysis' | 'trace'>('analysis');
+  const currentTickerRef = useRef(ticker.toUpperCase());
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
   const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
   const hasNarrative = Boolean(!isIntelligenceLoading && displayedIntelligence?.narrative?.trim());
 
+  useEffect(() => {
+    currentTickerRef.current = ticker.toUpperCase();
+  }, [ticker]);
+
   const handleAnalyzeWithAi = (force = false) => {
     intelligenceMutation.mutate(
       { ticker, candidate, position, force },
-      { onSuccess: (result) => setIntelligenceResult(result) }
+      {
+        onSuccess: (result) => {
+          if (result.symbol.toUpperCase() === currentTickerRef.current) {
+            setIntelligenceResult(result);
+          }
+        },
+      }
     );
   };
 
