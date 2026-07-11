@@ -162,6 +162,7 @@ def test_trailing_suggestion_below_one_cent_does_not_trigger_move():
     update = updates[0]
     assert update.stop_suggested == pytest.approx(17.75)
     assert update.action == "NO_ACTION"
+    assert "not above current stop" in update.reason
 
 
 # ─── Exit signal tests ───────────────────────────────────────────────────────

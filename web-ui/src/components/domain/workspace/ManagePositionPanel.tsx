@@ -14,6 +14,7 @@ import {
 } from '@/features/portfolio/hooks';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
+import { formatCurrency } from '@/utils/formatters';
 
 interface ManagePositionPanelProps {
   position: PositionWithMetrics;
@@ -37,7 +38,8 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
   const setActiveTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const canAdd = ENTRY_ACTIONS.has(candidate?.decisionSummary?.action ?? '');
 
-  const rSign = position.rNow >= 0 ? '+' : '';
+  const displayedR = checkLive && stopPreview.data ? stopPreview.data.rNow : position.rNow;
+  const rSign = displayedR >= 0 ? '+' : '';
 
   return (
     <div className="rounded-lg border border-border p-3 space-y-3">
@@ -51,8 +53,8 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant={position.rNow >= 0 ? 'success' : 'error'}>
-            {t('workspacePage.panels.analysis.managePosition.currentR')}: {rSign}{position.rNow.toFixed(2)}R
+          <Badge variant={displayedR >= 0 ? 'success' : 'error'}>
+            {t('workspacePage.panels.analysis.managePosition.currentR')}: {rSign}{displayedR.toFixed(2)}R
           </Badge>
           <Badge variant="default">
             {t('workspacePage.panels.analysis.managePosition.daysHeld')}: {position.daysOpen}
@@ -81,9 +83,22 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
       </div>
 
       {checkLive && stopPreview.data && (
-        <div className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-muted">
-          <span className="font-medium text-foreground">{stopPreview.data.action}</span>
-          {' · '}{stopPreview.data.reason}
+        <div className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-muted space-y-1">
+          <div>
+            <span className="font-medium text-foreground">{stopPreview.data.action}</span>
+            {' · '}{stopPreview.data.reason}
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            <span>
+              {t('workspacePage.panels.analysis.managePosition.liveR')}: {rSign}{stopPreview.data.rNow.toFixed(2)}R
+            </span>
+            <span>
+              {t('workspacePage.panels.analysis.managePosition.currentStop')}: {formatCurrency(stopPreview.data.stopOld)}
+            </span>
+            <span>
+              {t('workspacePage.panels.analysis.managePosition.suggestedStop')}: {formatCurrency(stopPreview.data.stopSuggested)}
+            </span>
+          </div>
         </div>
       )}
 
