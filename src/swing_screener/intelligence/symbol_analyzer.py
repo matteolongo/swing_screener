@@ -179,7 +179,8 @@ class _LLMPositionAnalysis(_LLMAnalysis):
 _FORMAT_PROMPT = (
     "Convert the analyst write-up below into the structured schema. Use only "
     "information present in the write-up. Copy every URL from its Sources section "
-    "into `sources`. Do not invent fields."
+    "into `sources`. For `news`, copy the source date into `date` when the "
+    "write-up or source-evidence line provides one; otherwise use null. Do not invent fields."
 )
 
 
