@@ -38,6 +38,40 @@ def test_write_and_read_roundtrip(tmp_path, monkeypatch):
     assert result.symbol == "AAPL"
     assert result.action == "BUY_NOW"
     assert result.catalyst_urgency == "medium"
+    cache_file = tmp_path / "intelligence" / "sweep_2026-05-24.json"
+    data = json.loads(cache_file.read_text())
+    assert data["AAPL"]["_cache_schema_version"] == 2
+
+
+def test_read_skips_legacy_entries_without_cache_schema(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    cache_file = tmp_path / "intelligence" / "sweep_2026-05-24.json"
+    cache_file.parent.mkdir(parents=True)
+    cache_file.write_text(
+        json.dumps(
+            {
+                "AAPL": {
+                    "symbol": "AAPL",
+                    "generated_at": "2026-05-24T10:00:00Z",
+                    "action": "BUY_NOW",
+                    "conviction": "high",
+                    "catalyst_urgency": "medium",
+                    "summary_line": "Legacy.",
+                    "narrative": "Legacy.",
+                    "news": [
+                        {
+                            "headline": "Old undated item",
+                            "url": "https://example.com/old",
+                            "date": None,
+                            "sentiment": "neutral",
+                        }
+                    ],
+                }
+            }
+        )
+    )
+
+    assert read_from_cache("AAPL", for_date=date(2026, 5, 24)) is None
 
 
 def test_read_returns_none_for_missing_ticker(tmp_path, monkeypatch):

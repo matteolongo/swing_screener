@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import Button from '@/components/common/Button';
 import { useStrategicReviewMutation } from '@/features/intelligence/hooks';
@@ -172,6 +172,17 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
   const [watchAreas, setWatchAreas] = useState<WatchAreaId[]>(DEFAULT_WATCH_AREAS);
   const [topic, setTopic] = useState('');
   const mutation = useStrategicReviewMutation();
+  const normalizedTicker = useMemo(() => ticker.trim().toUpperCase(), [ticker]);
+  const mutationTicker = mutation.variables?.ticker?.trim().toUpperCase();
+  const isCurrentMutation = !mutationTicker || mutationTicker === normalizedTicker;
+
+  useEffect(() => {
+    mutation.reset?.();
+    setRefreshSources(false);
+    setRiskMode('normal');
+    setWatchAreas(DEFAULT_WATCH_AREAS);
+    setTopic('');
+  }, [normalizedTicker]);
 
   const handleRun = () => {
     const selectedWatchAreas = WATCH_AREAS.filter((area) => watchAreas.includes(area.id)).map((area) =>
@@ -181,7 +192,7 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
     const topicParts = [...selectedWatchAreas, ...(investigationTopic ? [investigationTopic] : [])];
 
     mutation.mutate({
-      ticker,
+      ticker: normalizedTicker,
       topic: topicParts.length > 0 ? topicParts.join(', ') : null,
       refreshSources,
       riskMode,
@@ -200,8 +211,8 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t(`${I18N_PREFIX}.title`)}</p>
           <p className="mt-1 text-xs text-muted">{t(`${I18N_PREFIX}.description`)}</p>
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={mutation.isPending}>
-          {mutation.isPending ? t(`${I18N_PREFIX}.runningAction`) : t(`${I18N_PREFIX}.runAction`)}
+        <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={isCurrentMutation && mutation.isPending}>
+          {isCurrentMutation && mutation.isPending ? t(`${I18N_PREFIX}.runningAction`) : t(`${I18N_PREFIX}.runAction`)}
         </Button>
       </div>
 
@@ -222,7 +233,7 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
                 <input
                   type="checkbox"
                   checked={watchAreas.includes(area.id)}
-                  disabled={mutation.isPending}
+                  disabled={isCurrentMutation && mutation.isPending}
                   onChange={() => toggleWatchArea(area.id)}
                 />
                 {t(`${I18N_PREFIX}.${area.labelKey}`)}
@@ -237,7 +248,7 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
             <input
               className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               value={topic}
-              disabled={mutation.isPending}
+              disabled={isCurrentMutation && mutation.isPending}
               onChange={(event) => setTopic(event.target.value)}
               placeholder={t(`${I18N_PREFIX}.topicPlaceholder`)}
             />
@@ -248,7 +259,7 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
             <select
               className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               value={riskMode}
-              disabled={mutation.isPending}
+              disabled={isCurrentMutation && mutation.isPending}
               onChange={(event) => setRiskMode(event.target.value as typeof riskMode)}
             >
               <option value="normal">{t(`${I18N_PREFIX}.riskMode.normal`)}</option>
@@ -261,20 +272,20 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
             <input
               type="checkbox"
               checked={refreshSources}
-              disabled={mutation.isPending}
+              disabled={isCurrentMutation && mutation.isPending}
               onChange={(event) => setRefreshSources(event.target.checked)}
             />
             {t(`${I18N_PREFIX}.refreshSources`)}
           </label>
         </div>
 
-        {mutation.isError && (
+        {isCurrentMutation && mutation.isError && (
           <p className="text-sm text-danger">
             {mutation.error instanceof Error ? mutation.error.message : t(`${I18N_PREFIX}.runError`)}
           </p>
         )}
 
-        {mutation.data ? (
+        {isCurrentMutation && mutation.data ? (
           <StrategicResult review={mutation.data} />
         ) : (
           <p className="text-sm text-muted">{t(`${I18N_PREFIX}.idle`)}</p>

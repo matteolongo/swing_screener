@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
+from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.intelligence.symbol_analyzer import (
     SymbolAnalyzer,
     _LLMAnalysis,
@@ -157,6 +158,43 @@ def test_symbol_analyzer_returns_intelligence():
     assert result.summary_line == "Cyclical recovery with strong EBITDA momentum."
     assert "Aperam" in result.narrative
     assert result.sources == ["https://aperam.com/q1-2026"]
+
+
+def test_symbol_analyzer_fills_news_dates_from_source_evidence():
+    evidence = SourceEvidence(
+        title="Apple and Broadcom extend chip deal to 2031",
+        url="https://example.com/apple-broadcom",
+        publisher="Example News",
+        published_at="2026-07-09",
+        quote_or_summary="Apple and Broadcom extended a chip supply agreement.",
+        relevance="news",
+    )
+    request = SymbolIntelligenceRequest(
+        close=200.0,
+        signal="breakout",
+        catalyst_evidence=[evidence],
+    )
+    response = {
+        **_FAKE_RESPONSE_JSON,
+        "news": [
+            {
+                "headline": "Apple and Broadcom extend chip deal to 2031",
+                "url": "https://example.com/apple-broadcom",
+                "date": None,
+                "sentiment": "bullish",
+            }
+        ],
+    }
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, response)
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", request)
+
+    assert result.news[0].date == "2026-07-09"
 
 
 def test_inputs_used_includes_recent_candle_patterns():

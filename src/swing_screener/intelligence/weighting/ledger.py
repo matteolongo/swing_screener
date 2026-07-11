@@ -91,6 +91,50 @@ def _bucket(net: float, thresholds: dict[str, float]) -> BalanceLabel:
     return "mixed"
 
 
+def _direction_word(direction: Direction | str) -> str:
+    return {
+        "bullish": "supports the long setup",
+        "bearish": "argues against the setup",
+        "neutral": "is neutral for the setup",
+    }.get(str(direction), "is included in the evidence balance")
+
+
+def _scalar_explanation(key: str, direction: Direction) -> str:
+    if key == "insider_activity":
+        if direction == "bullish":
+            return "Recent insider activity is net positive, which suggests insiders have been adding exposure."
+        if direction == "bearish":
+            return "Recent insider activity is net negative, which adds caution because insiders have been reducing exposure."
+        return "Recent insider activity is balanced, so it does not move the evidence balance either way."
+    if key == "analyst_actions":
+        if direction == "bullish":
+            return "Recent analyst revisions lean positive, adding external confirmation to the setup."
+        if direction == "bearish":
+            return "Recent analyst revisions lean negative, reducing confidence in the setup."
+        return "Recent analyst revisions are balanced, so they do not change the evidence balance."
+    if key == "sma_trend":
+        if direction == "bullish":
+            return "Price is aligned above the key moving averages, so trend structure supports the setup."
+        if direction == "bearish":
+            return "Price is aligned below the key moving averages, so trend structure works against the setup."
+        return "The moving averages are mixed, so trend structure is not giving a clean signal."
+    if key == "momentum":
+        if direction == "bullish":
+            return "Six-month momentum is positive, supporting continued relative demand."
+        if direction == "bearish":
+            return "Six-month momentum is negative, which weakens the setup."
+        return "Six-month momentum is flat, so it contributes no directional edge."
+    if key == "relative_strength":
+        if direction == "bullish":
+            return "The symbol is outperforming its benchmark, which supports a long setup."
+        if direction == "bearish":
+            return "The symbol is lagging its benchmark, which weakens the long setup."
+        return "Relative strength is neutral, so it does not change the evidence balance."
+    if key == "52w_proximity":
+        return "Trading near a 52-week high shows leadership and demand, which supports momentum continuation."
+    return f"This signal {_direction_word(direction)}."
+
+
 def weigh(draft, req, cfg: EvidenceWeightsConfig) -> EvidenceLedger:
     signals: list[WeightedSignal] = []
 
@@ -102,6 +146,7 @@ def weigh(draft, req, cfg: EvidenceWeightsConfig) -> EvidenceLedger:
         weight: float,
         source: str | None,
         event_date: str | None = None,
+        explanation: str | None = None,
     ) -> None:
         if direction is None:
             return
@@ -120,27 +165,36 @@ def weigh(draft, req, cfg: EvidenceWeightsConfig) -> EvidenceLedger:
                 contribution=weight * _SIGN[normalized],
                 source=source or label,
                 event_date=event_date,
+                explanation=explanation,
             )
         )
 
     for spec in _SCALAR_SIGNALS:
+        direction = spec.direction(req)
         add(
             spec.key,
             spec.label,
             spec.category,
-            spec.direction(req),
+            direction,
             cfg.signal_weight(spec.key),
             spec.source,
+            explanation=_scalar_explanation(spec.key, direction) if direction else None,
         )
 
     if req.valuation_label in {"cheap", "expensive"}:
+        valuation_direction = "bullish" if req.valuation_label == "cheap" else "bearish"
         add(
             "valuation",
             f"Valuation: {req.valuation_label}",
             "fundamental",
-            "bullish" if req.valuation_label == "cheap" else "bearish",
+            valuation_direction,
             cfg.signal_weight("valuation"),
             "Valuation label",
+            explanation=(
+                "Valuation looks supportive relative to the current setup."
+                if valuation_direction == "bullish"
+                else "Valuation looks expensive, so price needs stronger confirmation to justify the risk."
+            ),
         )
 
     for catalyst in getattr(draft, "classified_catalysts", []) or []:
@@ -154,6 +208,9 @@ def weigh(draft, req, cfg: EvidenceWeightsConfig) -> EvidenceLedger:
             cfg.catalyst_weight(catalyst_type),
             catalyst.source_url or catalyst.summary,
             getattr(catalyst, "date", None),
+            explanation=(
+                f"This cited catalyst {_direction_word(direction)}: {catalyst.summary}"
+            ),
         )
 
     for item in getattr(draft, "news", []) or []:
@@ -166,6 +223,7 @@ def weigh(draft, req, cfg: EvidenceWeightsConfig) -> EvidenceLedger:
             cfg.signal_weight("news"),
             item.url or item.headline,
             getattr(item, "date", None),
+            explanation=f"This cited news item {_direction_word(sentiment)}: {item.headline}",
         )
 
     for event in getattr(draft, "upcoming_events", []) or []:
@@ -179,6 +237,7 @@ def weigh(draft, req, cfg: EvidenceWeightsConfig) -> EvidenceLedger:
             cfg.upcoming_weight(event_type),
             event.summary,
             getattr(event, "date", None),
+            explanation=f"This upcoming event {_direction_word(direction)}: {event.summary}",
         )
 
     bull = sum(signal.contribution for signal in signals if signal.contribution > 0)

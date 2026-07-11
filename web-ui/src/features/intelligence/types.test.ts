@@ -30,6 +30,7 @@ describe('transformIntelligenceChat', () => {
     const api: IntelligenceChatResponseAPI = {
       ticker: 'AAPL',
       chat_date: '2026-07-03',
+      analysis_generated_at: '2026-07-03T08:00:00Z',
       refreshed_at: '2026-07-03T10:00:00Z',
       messages: [
         {
@@ -54,6 +55,7 @@ describe('transformIntelligenceChat', () => {
     const result = transformIntelligenceChat(api);
 
     expect(result.chatDate).toBe('2026-07-03');
+    expect(result.analysisGeneratedAt).toBe('2026-07-03T08:00:00Z');
     expect(result.refreshedAt).toBe('2026-07-03T10:00:00Z');
     expect(result.messages[0].createdAt).toBe('2026-07-03T09:00:00Z');
     expect(result.messages[0].refreshSources).toBe(true);

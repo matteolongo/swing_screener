@@ -40,6 +40,7 @@ export function useIntelligenceAnalysisMutation() {
       // A fresh analysis is appended to history server-side; refresh the timeline.
       queryClient.invalidateQueries({ queryKey: ['intelligence', 'history', ticker] });
       queryClient.invalidateQueries({ queryKey: ['intelligence', 'latest', ticker] });
+      queryClient.invalidateQueries({ queryKey: ['intelligence', 'chat', ticker] });
     },
   });
 }
@@ -67,9 +68,13 @@ export function useIntelligenceHistoryQuery(ticker: string, enabled: boolean) {
   });
 }
 
-export function useIntelligenceChatQuery(ticker: string, enabled: boolean) {
+export function useIntelligenceChatQuery(
+  ticker: string,
+  enabled: boolean,
+  analysisGeneratedAt: string | null | undefined,
+) {
   return useQuery<IntelligenceChatResponse, Error>({
-    queryKey: ['intelligence', 'chat', ticker],
+    queryKey: ['intelligence', 'chat', ticker, analysisGeneratedAt ?? null],
     queryFn: () => getIntelligenceChat(ticker),
     enabled,
     retry: false,

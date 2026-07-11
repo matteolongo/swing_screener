@@ -108,4 +108,25 @@ describe('StrategicReviewPanel', () => {
     expect(screen.getByLabelText('Mixed strategic signal')).toBeInTheDocument();
     expect(screen.getByText(t(`${I18N_PREFIX}.signal.mixed`))).toBeInTheDocument();
   });
+
+  it('does not show a prior ticker result or error after selection changes', () => {
+    vi.mocked(intelligenceHooks.useStrategicReviewMutation).mockReturnValue({
+      mutate: vi.fn(),
+      reset: vi.fn(),
+      variables: { ticker: 'ASML', refreshSources: false, riskMode: 'normal', horizonDays: 10 },
+      data: review,
+      isPending: false,
+      isError: true,
+      error: new Error('ASML review failed'),
+    } as never);
+
+    const { rerender } = renderWithProviders(<StrategicReviewPanel ticker="ASML" />);
+    expect(screen.getByText('Strategic overlay built from app context only for ASML.')).toBeInTheDocument();
+    expect(screen.getByText('ASML review failed')).toBeInTheDocument();
+
+    rerender(<StrategicReviewPanel ticker="AAPL" />);
+
+    expect(screen.queryByText('Strategic overlay built from app context only for ASML.')).not.toBeInTheDocument();
+    expect(screen.queryByText('ASML review failed')).not.toBeInTheDocument();
+  });
 });

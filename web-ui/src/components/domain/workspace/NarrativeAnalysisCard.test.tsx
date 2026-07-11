@@ -76,6 +76,7 @@ describe('NarrativeAnalysisCard', () => {
             contribution: 10,
             source: 'https://example.com/news',
             eventDate: '2026-05-08',
+            explanation: 'Recent insider activity is net positive, which supports the setup.',
           },
         ],
         bullWeight: 10,
@@ -92,6 +93,44 @@ describe('NarrativeAnalysisCard', () => {
     expect(screen.getByText(t('workspacePage.panels.analysis.intelligence.ledger.expand'))).toBeInTheDocument();
     expect(screen.getByText('Monster Beverage Reports 2026 First Quarter Financial Results')).toBeInTheDocument();
     expect(screen.getByText('2026-05-08')).toBeInTheDocument();
+  });
+
+  it('shows weighted signal explanations only after opening a signal row', async () => {
+    const intelligenceWithLedger: SymbolIntelligence = {
+      ...baseIntelligence,
+      evidenceLedger: {
+        contributions: [
+          {
+            key: 'insider_activity',
+            label: 'Insider activity (90d)',
+            category: 'positioning',
+            direction: 'bearish',
+            weight: 10,
+            contribution: -10,
+            source: 'Finnhub insider 90d',
+            explanation: 'Recent insider activity is net negative, which adds caution.',
+          },
+        ],
+        bullWeight: 0,
+        bearWeight: 10,
+        net: -10,
+        balanceLabel: 'bearish',
+      },
+    };
+
+    const { user } = render(<NarrativeAnalysisCard intelligence={intelligenceWithLedger} />);
+
+    await user.click(screen.getByText(t('workspacePage.panels.analysis.intelligence.ledger.expand')));
+
+    const signal = screen.getByText('Insider activity (90d)');
+    const rowButton = signal.closest('button');
+    expect(rowButton).not.toBeNull();
+    expect(rowButton).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(rowButton as HTMLElement);
+
+    expect(rowButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Recent insider activity is net negative, which adds caution.')).toBeInTheDocument();
   });
 
   it('renders an evidence balance empty label when no ledger is present', () => {
@@ -542,10 +581,11 @@ describe('NarrativeAnalysisCard — status-aware skeleton', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps the full rationale inside a collapsed details element', () => {
+  it('keeps the structured rationale inside a collapsed details element', () => {
     const { container } = render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
     const summaries = Array.from(container.querySelectorAll('details > summary')).map((s) => s.textContent);
     expect(summaries).toContain(t('workspacePage.panels.analysis.intelligence.fullRationale'));
+    expect(screen.getByText(/Enter near \$182/)).toBeInTheDocument();
   });
 });
 

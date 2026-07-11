@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
+from hashlib import sha256
 from collections.abc import Callable
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -44,6 +45,13 @@ def _chat_root() -> Path:
 
 def _chat_file(ticker: str, chat_date: date) -> Path:
     return _chat_root() / ticker.upper() / f"{chat_date.isoformat()}.json"
+
+
+def _archive_chat_file(ticker: str, chat_date: date, analysis_generated_at: str | None) -> Path:
+    """Give a replaced conversation a stable, filesystem-safe revision name."""
+    revision = analysis_generated_at or "unknown"
+    digest = sha256(revision.encode("utf-8")).hexdigest()[:12]
+    return _chat_root() / ticker.upper() / f"{chat_date.isoformat()}.{digest}.json"
 
 
 def _normalize_evidence(items: list[SourceEvidence]) -> list[IntelligenceChatEvidence]:
@@ -102,6 +110,7 @@ def _default_answer_fn(
     model = str(configured_model)
     client = OpenAI(
         api_key=os.environ.get("OPENAI_API_KEY"),
+        base_url=(str(cfg.get("base_url")).strip() if cfg.get("base_url") else None),
         timeout=float(cfg.get("request_timeout_seconds", 60.0)),
         max_retries=int(cfg.get("max_retries", 2)),
     )
@@ -161,8 +170,21 @@ class IntelligenceChatService:
         intelligence = read_from_cache(ticker, for_date=chat_date)
         if intelligence is None:
             raise MissingIntelligenceError(f"No cached analysis for {ticker} on {chat_date.isoformat()}")
-        messages = self._read_messages(ticker, chat_date)
-        return IntelligenceChatResponse(ticker=ticker, chat_date=chat_date.isoformat(), messages=messages)
+        stored = self._read_chat(ticker, chat_date)
+        # A GET is read-only. If a refresh replaced the analysis before a later
+        # POST can archive the previous conversation, do not leak those messages
+        # into the new revision.
+        messages = (
+            self._messages_from(stored)
+            if self._stored_revision(stored) == intelligence.generated_at
+            else []
+        )
+        return IntelligenceChatResponse(
+            ticker=ticker,
+            chat_date=chat_date.isoformat(),
+            analysis_generated_at=intelligence.generated_at,
+            messages=messages,
+        )
 
     def send_message(
         self,
@@ -176,7 +198,19 @@ class IntelligenceChatService:
         if intelligence is None:
             raise MissingIntelligenceError(f"No cached analysis for {ticker} on {chat_date.isoformat()}")
 
-        existing = self._read_messages(ticker, chat_date)
+        stored = self._read_chat(ticker, chat_date)
+        requested_revision = (request.analysis_generated_at or "").strip() or None
+        current_revision = intelligence.generated_at
+        if self._stored_revision(stored) != current_revision:
+            self._archive_stale_chat(ticker, chat_date, stored)
+            existing: list[IntelligenceChatMessage] = []
+        elif requested_revision is not None and requested_revision != current_revision:
+            # The browser submitted a message from a stale analysis card. Never
+            # append it to any existing revision; the answer is grounded only in
+            # the current cached analysis.
+            existing = []
+        else:
+            existing = self._messages_from(stored)
         user_message = IntelligenceChatMessage(
             id=str(uuid.uuid4()),
             role="user",
@@ -206,24 +240,54 @@ class IntelligenceChatService:
         )
         messages = [*existing, user_message, assistant_message]
         refreshed_at = _now_iso() if request.refresh_sources else None
-        self._write_chat(ticker, chat_date, messages, intelligence.generated_at, refreshed_at)
+        self._write_chat(ticker, chat_date, messages, current_revision, refreshed_at)
         return IntelligenceChatResponse(
             ticker=ticker,
             chat_date=chat_date.isoformat(),
+            analysis_generated_at=current_revision,
             messages=messages,
             refreshed_at=refreshed_at,
         )
 
-    def _read_messages(self, ticker: str, chat_date: date) -> list[IntelligenceChatMessage]:
+    def _read_chat(self, ticker: str, chat_date: date) -> dict[str, Any] | None:
         path = _chat_file(ticker, chat_date)
         if not path.exists():
-            return []
+            return None
         try:
             raw = json.loads(path.read_text())
-            messages = raw.get("messages", []) if isinstance(raw, dict) else []
-            return [IntelligenceChatMessage.model_validate(item) for item in messages]
+            return raw if isinstance(raw, dict) else None
         except (OSError, ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _stored_revision(stored: dict[str, Any] | None) -> str | None:
+        if stored is None:
+            return None
+        value = stored.get("analysis_generated_at")
+        return value if isinstance(value, str) and value else None
+
+    @staticmethod
+    def _messages_from(stored: dict[str, Any] | None) -> list[IntelligenceChatMessage]:
+        if stored is None:
             return []
+        try:
+            messages = stored.get("messages", [])
+            return [IntelligenceChatMessage.model_validate(item) for item in messages]
+        except (ValueError, TypeError):
+            return []
+
+    def _archive_stale_chat(
+        self,
+        ticker: str,
+        chat_date: date,
+        stored: dict[str, Any] | None,
+    ) -> None:
+        if stored is None or not self._messages_from(stored):
+            return
+        archive = _archive_chat_file(ticker, chat_date, self._stored_revision(stored))
+        # Preserve the old payload rather than mutating it. The current-path
+        # write below atomically establishes the new analysis revision.
+        write_json_with_lock(archive, stored)
 
     def _write_chat(
         self,

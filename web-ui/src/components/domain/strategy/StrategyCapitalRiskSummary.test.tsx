@@ -60,7 +60,7 @@ const strategy: Strategy = {
     marketContextSymbols: [],
     llm: {
       enabled: false,
-      provider: 'mock',
+      provider: 'openai',
       model: 'gpt-4o-mini',
       baseUrl: '',
       enableCache: true,

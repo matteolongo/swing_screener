@@ -33,5 +33,6 @@ class IntelligenceChatRequest(BaseModel):
 class IntelligenceChatResponse(BaseModel):
     ticker: str
     chat_date: str
+    analysis_generated_at: str
     messages: list[IntelligenceChatMessage]
     refreshed_at: str | None = None

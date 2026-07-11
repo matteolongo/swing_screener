@@ -17,6 +17,7 @@ describe('transformEvidenceLedger', () => {
           contribution: 10,
           source: 'Finnhub',
           event_date: '2026-05-08',
+          explanation: 'Recent insider activity is net positive.',
         },
       ],
       bull_weight: 10,
@@ -30,5 +31,6 @@ describe('transformEvidenceLedger', () => {
     expect(out?.bullWeight).toBe(10);
     expect(out?.contributions[0].key).toBe('insider_activity');
     expect(out?.contributions[0].eventDate).toBe('2026-05-08');
+    expect(out?.contributions[0].explanation).toBe('Recent insider activity is net positive.');
   });
 });

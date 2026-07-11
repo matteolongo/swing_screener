@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import { http, HttpResponse } from 'msw';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
+import { API_BASE_URL } from '@/lib/api';
+import { server } from '@/test/mocks/server';
 import { t } from '@/i18n/t';
 import ManagePositionPanel from './ManagePositionPanel';
 
@@ -36,5 +39,35 @@ describe('ManagePositionPanel', () => {
     renderWithProviders(<ManagePositionPanel position={position} candidate={null} />);
     await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.updateStop') }));
     expect(screen.getByText(t('positions.updateStopModal.title', { ticker: 'LRCX' }))).toBeInTheDocument();
+  });
+
+  it('updates the displayed R and explains a live NO_ACTION stop preview', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-preview`, () =>
+        HttpResponse.json({
+          ticker: 'LRCX',
+          status: 'open',
+          last: 470.5,
+          entry: 383.04,
+          stop_old: 400,
+          stop_suggested: 400,
+          shares: 2,
+          r_now: 2.38,
+          action: 'NO_ACTION',
+          reason: 'Trail active; suggested stop 400.00 is not above current stop 400.00, so no stop update.',
+        }),
+      ),
+    );
+
+    renderWithProviders(<ManagePositionPanel position={position} candidate={null} />);
+    expect(screen.getByText(`${t('workspacePage.panels.analysis.managePosition.currentR')}: +0.51R`)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.checkLive') }));
+
+    expect(await screen.findByText(`${t('workspacePage.panels.analysis.managePosition.currentR')}: +2.38R`)).toBeInTheDocument();
+    expect(screen.getByText(/not above current stop/)).toBeInTheDocument();
+    expect(screen.getByText(`${t('workspacePage.panels.analysis.managePosition.liveR')}: +2.38R`)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(t('workspacePage.panels.analysis.managePosition.currentStop')))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(t('workspacePage.panels.analysis.managePosition.suggestedStop')))).toBeInTheDocument();
   });
 });

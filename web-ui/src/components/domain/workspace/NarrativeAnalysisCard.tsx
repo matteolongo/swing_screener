@@ -270,8 +270,18 @@ export default function NarrativeAnalysisCard({
   // Only fetch history once the timeline disclosure is opened — it lives in a
   // collapsed <details> the user may never expand.
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [openLedgerRows, setOpenLedgerRows] = useState<Set<string>>(new Set());
   const historyQuery = useIntelligenceHistoryQuery(symbol, Boolean(symbol) && timelineOpen);
   const historyEntries = historyQuery.data ?? [];
+
+  const toggleLedgerRow = (rowKey: string) => {
+    setOpenLedgerRows((current) => {
+      const next = new Set(current);
+      if (next.has(rowKey)) next.delete(rowKey);
+      else next.add(rowKey);
+      return next;
+    });
+  };
 
   const decisionHighlights = [
     { label: t('workspacePage.panels.analysis.intelligence.whyNow'), value: summary?.whyNow },
@@ -396,28 +406,42 @@ export default function NarrativeAnalysisCard({
                   {t('workspacePage.panels.analysis.intelligence.ledger.expand')}
                 </summary>
                 <div className="mt-2 divide-y divide-border rounded-md border border-border">
-                  {evidenceLedger.contributions.map((item) => (
-                    <div key={`${item.key}-${item.source}`} className="px-3 py-2 text-xs">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0 flex-1 text-foreground">{item.label}</span>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {item.eventDate && <DateBadge date={item.eventDate} />}
-                          <span className={`font-semibold ${directionClass(item.direction)}`}>
-                            {item.contribution > 0 ? '+' : ''}{item.contribution}
+                  {evidenceLedger.contributions.map((item) => {
+                    const rowKey = `${item.key}-${item.source}`;
+                    const isOpen = openLedgerRows.has(rowKey);
+                    return (
+                      <div key={rowKey} className="px-3 py-2 text-xs">
+                        <button
+                          type="button"
+                          className="flex w-full cursor-pointer items-start justify-between gap-3 text-left"
+                          aria-expanded={isOpen}
+                          onClick={() => toggleLedgerRow(rowKey)}
+                        >
+                          <span className="min-w-0 flex-1 text-foreground">{item.label}</span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            {item.eventDate && <DateBadge date={item.eventDate} />}
+                            <span className={`font-semibold ${directionClass(item.direction)}`}>
+                              {item.contribution > 0 ? '+' : ''}{item.contribution}
+                            </span>
                           </span>
-                        </div>
-                      </div>
-                      <div className="mt-1 min-w-0 break-words text-muted">
-                        {isHttpUrl(item.source) ? (
-                          <a href={item.source} target="_blank" rel="noreferrer" className="underline">
-                            {item.source}
-                          </a>
-                        ) : (
-                          <span>{item.source}</span>
+                        </button>
+                        {isOpen && (
+                          <div className="mt-2 space-y-1 pl-4 text-muted">
+                            <p>{item.explanation || t('workspacePage.panels.analysis.intelligence.ledger.noDetails')}</p>
+                            <div className="min-w-0 break-words">
+                              {isHttpUrl(item.source) ? (
+                                <a href={item.source} target="_blank" rel="noreferrer" className="underline">
+                                  {item.source}
+                                </a>
+                              ) : (
+                                <span>{item.source}</span>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </details>
             </div>
@@ -682,7 +706,7 @@ export default function NarrativeAnalysisCard({
           </div>
         )}
 
-        {/* Full rationale — always collapsed; available on expand */}
+        {/* Structured rationale — always collapsed; available on expand */}
         <details className="rounded-md bg-surface border border-border p-3">
           <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted select-none">
             {t('workspacePage.panels.analysis.intelligence.fullRationale')}
