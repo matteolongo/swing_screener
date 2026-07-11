@@ -122,7 +122,9 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
     assert usd["account_currency"] == "EUR"
     assert usd["position_size_quote"] == 543.0
     assert usd["risk_quote"] == 12.0
-    assert usd["risk_pct"] == pytest.approx(0.012, abs=1e-6)
+    # ``risk_pct`` is measured against the EUR account balance, not against
+    # the USD quote-currency risk.  USD 12 at 1.25 USD/EUR is EUR 9.60.
+    assert usd["risk_pct"] == pytest.approx(0.0096, abs=1e-6)
     assert usd["recommendation"]["risk"]["currency"] == "USD"
     assert usd["recommendation"]["risk"]["account_currency"] == "EUR"
     assert usd["recommendation"]["risk"]["account_to_quote_rate"] == 1.25
