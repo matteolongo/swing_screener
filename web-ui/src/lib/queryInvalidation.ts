@@ -17,6 +17,10 @@ export async function invalidateOrderQueries(queryClient: QueryClient): Promise<
   ]);
 }
 
+export async function invalidateDailyReviewQueries(queryClient: QueryClient): Promise<void> {
+  await queryClient.invalidateQueries({ queryKey: ['dailyReview'] });
+}
+
 export async function invalidatePositionQueries(queryClient: QueryClient): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.positions() }),

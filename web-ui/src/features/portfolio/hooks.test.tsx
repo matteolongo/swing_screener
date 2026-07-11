@@ -18,6 +18,7 @@ vi.mock('@/features/portfolio/api', () => ({
 }))
 
 vi.mock('@/lib/queryInvalidation', () => ({
+  invalidateDailyReviewQueries: vi.fn(),
   invalidateOrderQueries: vi.fn(),
   invalidatePositionQueries: vi.fn(),
 }))
@@ -51,11 +52,13 @@ describe('portfolio hooks', () => {
   const mockedCreateOrder = vi.mocked(portfolioApi.createOrder)
   const mockedFetchPositionStopSuggestion = vi.mocked(portfolioApi.fetchPositionStopSuggestion)
   const mockedUpdatePositionStop = vi.mocked(portfolioApi.updatePositionStop)
+  const mockedInvalidateDailyReviewQueries = vi.mocked(queryInvalidation.invalidateDailyReviewQueries)
   const mockedInvalidateOrderQueries = vi.mocked(queryInvalidation.invalidateOrderQueries)
   const mockedInvalidatePositionQueries = vi.mocked(queryInvalidation.invalidatePositionQueries)
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockedInvalidateDailyReviewQueries.mockResolvedValue(undefined)
     mockedInvalidateOrderQueries.mockResolvedValue(undefined)
     mockedInvalidatePositionQueries.mockResolvedValue(undefined)
   })
@@ -124,6 +127,7 @@ describe('portfolio hooks', () => {
     expect(mockedUpdatePositionStop).toHaveBeenCalledWith(payload.positionId, payload.request)
     expect(mockedInvalidatePositionQueries).toHaveBeenCalledWith(queryClient)
     expect(mockedInvalidateOrderQueries).toHaveBeenCalledWith(queryClient)
+    expect(mockedInvalidateDailyReviewQueries).toHaveBeenCalledWith(queryClient)
     expect(onSuccess).toHaveBeenCalledTimes(1)
   })
 
