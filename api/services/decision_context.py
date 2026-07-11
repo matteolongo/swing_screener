@@ -196,6 +196,9 @@ def rebuild_recommendations_with_decision_action(
             momentum_12m=candidate.momentum_12m,
             rel_strength=candidate.rel_strength,
             confidence=candidate.confidence,
+            currency=rec.risk.currency if rec.risk else None,
+            account_currency=rec.risk.account_currency if rec.risk else None,
+            account_to_quote_rate=rec.risk.account_to_quote_rate if rec.risk else None,
         )
         rebuilt.append(
             candidate.model_copy(

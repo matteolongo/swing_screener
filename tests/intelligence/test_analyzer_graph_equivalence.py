@@ -243,6 +243,10 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 10.0,
                     "source": "Finnhub insider 90d",
                     "event_date": None,
+                    "explanation": (
+                        "Recent insider activity is net positive, which suggests "
+                        "insiders have been adding exposure."
+                    ),
                 },
                 {
                     "key": "analyst_actions",
@@ -253,6 +257,10 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 9.0,
                     "source": "Finnhub analyst 30d",
                     "event_date": None,
+                    "explanation": (
+                        "Recent analyst revisions lean positive, adding external "
+                        "confirmation to the setup."
+                    ),
                 },
                 {
                     "key": "sma_trend",
@@ -263,6 +271,10 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 6.0,
                     "source": "OHLCV SMAs",
                     "event_date": None,
+                    "explanation": (
+                        "Price is aligned above the key moving averages, so trend "
+                        "structure supports the setup."
+                    ),
                 },
                 {
                     "key": "momentum",
@@ -273,6 +285,10 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 6.0,
                     "source": "OHLCV momentum",
                     "event_date": None,
+                    "explanation": (
+                        "Six-month momentum is positive, supporting continued "
+                        "relative demand."
+                    ),
                 },
                 {
                     "key": "relative_strength",
@@ -283,6 +299,10 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 7.0,
                     "source": "Benchmark RS",
                     "event_date": None,
+                    "explanation": (
+                        "The symbol is outperforming its benchmark, which supports "
+                        "a long setup."
+                    ),
                 },
                 {
                     "key": "news",
@@ -293,6 +313,9 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 4.0,
                     "source": "https://example.com/a",
                     "event_date": "2026-07-01",
+                    "explanation": (
+                        "This cited news item supports the long setup: Upgrade"
+                    ),
                 },
             ],
             "bull_weight": 42.0,
@@ -345,6 +368,15 @@ _EXPECTED_STABLE_BY_CASE = {
                 "momentum_6m": 10.0,
                 "signal": "MANAGE",
             },
+            "position_context": {
+                "ticker": "AAPL",
+                "entry_price": 98.0,
+                "entry_date": "2026-06-01",
+                "stop": 96.0,
+                "current_price": 105.0,
+                "r_now": 1.75,
+                "days_open": 20,
+            },
             "sources": {
                 "attempted": [
                     "degiro_news",
@@ -389,6 +421,10 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 6.0,
                     "source": "OHLCV SMAs",
                     "event_date": None,
+                    "explanation": (
+                        "Price is aligned above the key moving averages, so trend "
+                        "structure supports the setup."
+                    ),
                 },
                 {
                     "key": "momentum",
@@ -399,6 +435,10 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 6.0,
                     "source": "OHLCV momentum",
                     "event_date": None,
+                    "explanation": (
+                        "Six-month momentum is positive, supporting continued "
+                        "relative demand."
+                    ),
                 },
                 {
                     "key": "news",
@@ -409,6 +449,9 @@ _EXPECTED_STABLE_BY_CASE = {
                     "contribution": 4.0,
                     "source": "https://example.com/a",
                     "event_date": "2026-07-01",
+                    "explanation": (
+                        "This cited news item supports the long setup: Upgrade"
+                    ),
                 },
             ],
             "bull_weight": 16.0,

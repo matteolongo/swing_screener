@@ -79,7 +79,7 @@ class ManageConfig:
     trail_sma:       int   = 20     # SMA window for trailing stop
     trail_after_R:   float = 2.0    # begin trailing when R reaches this
     sma_buffer_pct:  float = 0.005  # trail 0.5% below SMA
-    max_holding_days: int  = 20     # time exit after N calendar days
+    max_holding_days: int  = 20     # hard time exit after N trading bars
     benchmark:       str   = "SPY"
 ```
 
@@ -88,7 +88,7 @@ Returned by management functions — describes what action (if any) should be ta
 - `NO_ACTION` — no stop change needed
 - `MOVE_STOP_UP` — move stop to `stop_suggested`
 - `CLOSE_STOP_HIT` — price hit stop, close the position
-- `CLOSE_TIME_EXIT` — max holding days exceeded
+- `CLOSE_TIME_EXIT` — max holding trading bars exceeded
 
 ## Metrics
 

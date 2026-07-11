@@ -152,6 +152,27 @@ def test_buy_pressure_ratio_absent_without_volume() -> None:
     assert "buy_pressure_ratio" not in result.columns or result["buy_pressure_ratio"].isna().all()
 
 
+def test_close_location_uses_aligned_ohlc_bar_dates() -> None:
+    """A close without same-date high/low must not be paired with stale ranges."""
+    dates = pd.date_range("2026-01-01", periods=25, freq="B")
+    close = [100.0] * 24 + [200.0]
+    high = [101.0] * 24 + [float("nan")]
+    low = [99.0] * 24 + [float("nan")]
+    ohlcv = pd.DataFrame(
+        {
+            ("Close", "AAA"): close,
+            ("High", "AAA"): high,
+            ("Low", "AAA"): low,
+        },
+        index=dates,
+    )
+    ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
+
+    result = compute_setup_quality(ohlcv, ["AAA"])
+
+    assert result.loc["AAA", "close_location_in_range"] == pytest.approx(0.5)
+
+
 # ── test 3: new ranking columns optional and backward-compatible ─────────────
 
 def test_ranking_without_new_columns_unchanged() -> None:
@@ -255,17 +276,44 @@ def test_volume_ratio_absent_when_insufficient_volume_bars() -> None:
 
 
 def test_avg_daily_volume_eur_present() -> None:
-    """avg_daily_volume_eur = close * avg_vol_20 when volume data is present."""
+    """EUR quote liquidity uses close * avg_vol_20 without FX conversion."""
     close_price = 20.0
     avg_volume = 500_000.0
     close = [close_price] * 30
     volume = [avg_volume] * 30  # avg_vol_20 = 500_000; eur = 20 * 500_000 = 10_000_000
 
-    ohlcv = _make_ohlcv(close, volume=volume, ticker="LIQUID")
-    result = compute_setup_quality(ohlcv, ["LIQUID"])
+    ohlcv = _make_ohlcv(close, volume=volume, ticker="LIQUID.AS")
+    result = compute_setup_quality(ohlcv, ["LIQUID.AS"])
 
     assert "avg_daily_volume_eur" in result.columns
-    assert abs(result.loc["LIQUID", "avg_daily_volume_eur"] - 10_000_000.0) < 1.0
+    assert abs(result.loc["LIQUID.AS", "avg_daily_volume_eur"] - 10_000_000.0) < 1.0
+
+
+def test_avg_daily_volume_eur_converts_usd_quote_to_eur() -> None:
+    close_price_usd = 100.0
+    avg_volume = 100_000.0
+    close = [close_price_usd] * 30
+    volume = [avg_volume] * 30
+
+    ohlcv = _make_ohlcv(close, volume=volume, ticker="AAPL")
+    result = compute_setup_quality(
+        ohlcv,
+        ["AAPL"],
+        quote_to_eur_rates={"USD": 0.8},
+    )
+
+    assert "avg_daily_volume_eur" in result.columns
+    assert result.loc["AAPL", "avg_daily_volume_eur"] == pytest.approx(8_000_000.0)
+
+
+def test_avg_daily_volume_eur_absent_for_usd_without_fx_rate() -> None:
+    close = [100.0] * 30
+    volume = [100_000.0] * 30
+
+    ohlcv = _make_ohlcv(close, volume=volume, ticker="AAPL")
+    result = compute_setup_quality(ohlcv, ["AAPL"])
+
+    assert "avg_daily_volume_eur" not in result.columns
 
 
 def test_avg_daily_volume_eur_absent_when_no_volume() -> None:
@@ -277,6 +325,19 @@ def test_avg_daily_volume_eur_absent_when_no_volume() -> None:
 
     assert "avg_daily_volume_eur" not in result.columns, \
         "avg_daily_volume_eur should not appear when volume data is absent"
+
+
+def test_avg_daily_volume_eur_uses_aligned_close_volume_bar_dates() -> None:
+    """Liquidity turnover must use a close from the same bar set as volume."""
+    dates = pd.date_range("2026-01-01", periods=30, freq="B")
+    close = [50.0] * 29 + [100.0]
+    volume = [1_000.0] * 29 + [float("nan")]
+    ohlcv = _make_ohlcv(close, volume=volume, ticker="LIQUID.AS")
+    ohlcv.index = dates
+
+    result = compute_setup_quality(ohlcv, ["LIQUID.AS"])
+
+    assert result.loc["LIQUID.AS", "avg_daily_volume_eur"] == pytest.approx(50_000.0)
 
 
 # ── 52-week high proximity tests ─────────────────────────────────────────────

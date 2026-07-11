@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { createSeriesMarkers } from 'lightweight-charts';
 import { renderWithProviders } from '@/test/utils';
 import { CandleChart, rebaseBenchmark, computeSMA, patternLabel } from './CandleChart';
 import type { CandlePattern, PriceHistoryPoint } from '@/features/screener/types';
@@ -47,6 +48,22 @@ describe('CandleChart', () => {
   it('hides benchmark legend when no benchmark label', () => {
     renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={[]} />);
     expect(screen.queryByText('SPY')).not.toBeInTheDocument();
+  });
+
+  it('does not draw markers for neutral patterns', () => {
+    vi.mocked(createSeriesMarkers).mockClear();
+    const neutralPattern: CandlePattern = {
+      barIndex: 1,
+      date: '2024-01-01',
+      name: 'doji',
+      direction: 'neutral',
+      keyLevel: 10,
+      context: 'none',
+    };
+
+    renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={[neutralPattern]} />);
+
+    expect(createSeriesMarkers).toHaveBeenCalledWith(expect.anything(), []);
   });
 });
 

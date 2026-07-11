@@ -56,29 +56,39 @@ function makeVm(volumeRatio: number | null): CandidateViewModel {
   };
 }
 
+function renderDetailsRow(candidate: CandidateViewModel) {
+  return renderWithProviders(
+    <table>
+      <tbody>
+        <ScreenerCandidateDetailsRow candidate={candidate} />
+      </tbody>
+    </table>,
+  );
+}
+
 describe('ScreenerCandidateDetailsRow — volume ratio', () => {
   it('shows volume ratio label when volumeRatio is present', () => {
-    renderWithProviders(<ScreenerCandidateDetailsRow candidate={makeVm(1.87)} />);
+    renderDetailsRow(makeVm(1.87));
     expect(screen.getByText(t('screener.details.volumeRatio.label'))).toBeInTheDocument();
   });
 
   it('shows strong label for ratio >= 1.5', () => {
-    renderWithProviders(<ScreenerCandidateDetailsRow candidate={makeVm(1.87)} />);
+    renderDetailsRow(makeVm(1.87));
     expect(screen.getByText(t('screener.details.volumeRatio.strong', { value: '1.87' }))).toBeInTheDocument();
   });
 
   it('shows weak label for ratio < 0.9', () => {
-    renderWithProviders(<ScreenerCandidateDetailsRow candidate={makeVm(0.7)} />);
+    renderDetailsRow(makeVm(0.7));
     expect(screen.getByText(t('screener.details.volumeRatio.weak', { value: '0.70' }))).toBeInTheDocument();
   });
 
   it('shows neutral label for ratio between 0.9 and 1.5', () => {
-    renderWithProviders(<ScreenerCandidateDetailsRow candidate={makeVm(1.2)} />);
+    renderDetailsRow(makeVm(1.2));
     expect(screen.getByText(t('screener.details.volumeRatio.neutral', { value: '1.20' }))).toBeInTheDocument();
   });
 
   it('does not show volume label when volumeRatio is null', () => {
-    renderWithProviders(<ScreenerCandidateDetailsRow candidate={makeVm(null)} />);
+    renderDetailsRow(makeVm(null));
     expect(screen.queryByText(t('screener.details.volumeRatio.label'))).not.toBeInTheDocument();
   });
 });
@@ -86,20 +96,20 @@ describe('ScreenerCandidateDetailsRow — volume ratio', () => {
 describe('ScreenerCandidateDetailsRow — weekly trend', () => {
   it('shows weekly trend label when weeklyTrend is "up"', () => {
     const vm = { ...makeVm(null), weeklyTrend: 'up' as const };
-    renderWithProviders(<ScreenerCandidateDetailsRow candidate={vm} />);
+    renderDetailsRow(vm);
     expect(screen.getByText(t('screener.details.weeklyTrend.label'))).toBeInTheDocument();
     expect(screen.getByText(t('screener.details.weeklyTrend.up'))).toBeInTheDocument();
   });
 
   it('shows weekly trend label when weeklyTrend is "down"', () => {
     const vm = { ...makeVm(null), weeklyTrend: 'down' as const };
-    renderWithProviders(<ScreenerCandidateDetailsRow candidate={vm} />);
+    renderDetailsRow(vm);
     expect(screen.getByText(t('screener.details.weeklyTrend.label'))).toBeInTheDocument();
     expect(screen.getByText(t('screener.details.weeklyTrend.down'))).toBeInTheDocument();
   });
 
   it('does not show weekly trend section when weeklyTrend is null', () => {
-    renderWithProviders(<ScreenerCandidateDetailsRow candidate={makeVm(null)} />);
+    renderDetailsRow(makeVm(null));
     expect(screen.queryByText(t('screener.details.weeklyTrend.label'))).not.toBeInTheDocument();
   });
 });

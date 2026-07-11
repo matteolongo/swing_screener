@@ -17,9 +17,21 @@ def test_safe_float_defaults_on_na():
     assert safe_float("2.5") == 2.5
 
 
+def test_safe_float_defaults_on_nonfinite_values():
+    assert safe_float(float("inf")) == 0.0
+    assert safe_float(float("-inf"), default=-1.0) == -1.0
+    assert safe_float("Infinity") == 0.0
+
+
 def test_safe_optional_float_returns_none_on_na():
     assert safe_optional_float(None) is None
     assert safe_optional_float(3) == 3.0
+
+
+def test_safe_optional_float_returns_none_on_nonfinite_values():
+    assert safe_optional_float(float("inf")) is None
+    assert safe_optional_float(float("-inf")) is None
+    assert safe_optional_float("-Infinity") is None
 
 
 def test_safe_optional_int_returns_none_on_na():

@@ -108,7 +108,12 @@ def test_build_daily_report_computes_only_misses(tmp_path, monkeypatch):
     cache = EvalCache(root=tmp_path)
     calls = []
 
-    def fake_compute(ohlcv, cfg, sector_benchmark_returns=None):
+    def fake_compute(
+        ohlcv,
+        cfg,
+        sector_benchmark_returns=None,
+        quote_to_eur_rates=None,
+    ):
         tks = [str(c) for c in ohlcv["Close"].columns]
         calls.append(tuple(sorted(tks)))
         return _records(tks)

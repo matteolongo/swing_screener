@@ -48,6 +48,16 @@ function resultFor(ticker: string) {
 }
 
 describe('SymbolBacktestTab', () => {
+  it('explains pattern stop override choices', () => {
+    renderWithProviders(<SymbolBacktestTab ticker="AAPL" />);
+
+    const select = screen.getByLabelText(t('backtest.form.patternStop'));
+    expect(select).toHaveAccessibleDescription(t('backtest.form.patternStopHint'));
+    expect(screen.getByRole('option', { name: t('backtest.form.patternStopOptions.default') })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: t('backtest.form.patternStopOptions.on') })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: t('backtest.form.patternStopOptions.off') })).toBeInTheDocument();
+  });
+
   it('runs an event study for the locked ticker and renders results', async () => {
     let postedTickers: string[] = [];
     server.use(

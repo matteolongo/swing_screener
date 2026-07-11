@@ -158,14 +158,23 @@ class OrdersService:
                         old_shares = int(pos.get("shares", 0))
                         old_entry = float(pos.get("entry_price", 0.0))
                         new_shares = old_shares + add_shares
-                        if new_shares > 0:
-                            pos["entry_price"] = round(
-                                (old_entry * old_shares + request.filled_price * add_shares)
-                                / new_shares,
-                                6,
-                            )
-                        pos["shares"] = new_shares
                         existing_stop = float(pos.get("stop_price", 0.0))
+                        if existing_stop <= 0:
+                            raise UnprocessableError(
+                                f"No valid existing stop price for position {target_position_id}"
+                            )
+                        new_entry = old_entry
+                        if new_shares > 0:
+                            new_entry = (
+                                (old_entry * old_shares + request.filled_price * add_shares)
+                                / new_shares
+                            )
+                        if existing_stop >= new_entry:
+                            raise UnprocessableError(
+                                "existing stop_price must be below blended entry_price"
+                            )
+                        pos["entry_price"] = round(new_entry, 6)
+                        pos["shares"] = new_shares
                         pos["initial_risk"] = round(pos["entry_price"] - existing_stop, 4)
                         if request.fee_eur is not None:
                             prior_fee = pos.get("entry_fee_eur") or 0.0

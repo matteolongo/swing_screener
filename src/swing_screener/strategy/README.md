@@ -73,7 +73,7 @@ Plugins are self-contained feature modules in `strategy/plugins/`. Each plugin c
 | `regime_risk` | Scale down risk in bear/high-vol regimes |
 | `rr_gate` | Require minimum reward-to-risk ratio |
 | `rs_filter` | Require positive relative strength |
-| `time_exit_management` | Exit after max holding days |
+| `time_exit_management` | Exit after max holding trading bars |
 | `trailing_management` | Trail stop under SMA after 2R gain |
 | `trend_filter` | Require price above SMA200 in uptrend |
 | `volume_confirmation` | (reserved) |

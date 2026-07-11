@@ -9,6 +9,8 @@ import {
   type ISeriesApi,
   type SeriesType,
   type IPriceLine,
+  type SeriesMarker,
+  type Time,
 } from 'lightweight-charts';
 import type { PriceHistoryPoint, CandlePattern } from '@/features/screener/types';
 import { t } from '@/i18n/t';
@@ -24,6 +26,32 @@ const SMA20_COLOR = '#F59E0B';
 const SMA50_COLOR = '#38BDF8';
 const SMA200_COLOR = '#A78BFA';
 const MUTED_LINE = '#475569';
+const POC_COLOR = '#EAB308';
+const HVN_COLOR = '#22D3EE';
+const LVN_COLOR = '#94A3B8';
+const MAX_HVN = 3;
+const MAX_LVN = 2;
+
+export interface ChartVolumeZone {
+  kind: 'poc' | 'hvn' | 'lvn';
+  center: number;
+  priceLow: number;
+  priceHigh: number;
+  volumeShare: number;
+}
+
+export function selectDrawnZones(zones: ChartVolumeZone[]): ChartVolumeZone[] {
+  const byShareDesc = (a: ChartVolumeZone, b: ChartVolumeZone) => b.volumeShare - a.volumeShare;
+  const poc = zones.filter((z) => z.kind === 'poc');
+  const hvn = zones.filter((z) => z.kind === 'hvn').sort(byShareDesc).slice(0, MAX_HVN);
+  const lvn = zones.filter((z) => z.kind === 'lvn').sort(byShareDesc).slice(0, MAX_LVN);
+  return [...poc, ...hvn, ...lvn];
+}
+
+// Stable empty defaults: a fresh `[]` default parameter is a new reference every
+// render, which would churn the memoized derivations and rebuild the chart.
+const EMPTY_BARS: PriceHistoryPoint[] = [];
+const EMPTY_ZONES: ChartVolumeZone[] = [];
 
 interface CandleChartProps {
   ticker: string;
@@ -40,6 +68,8 @@ interface CandleChartProps {
   showSma200?: boolean;
   showRLevels?: boolean;
   showKeyLevels?: boolean;
+  volumeZones?: ChartVolumeZone[];
+  showVolumeZones?: boolean;
   className?: string;
   width?: number;
   height?: number;
@@ -103,7 +133,7 @@ export function CandleChart({
   ticker,
   bars,
   patterns,
-  benchmarkBars = [],
+  benchmarkBars = EMPTY_BARS,
   benchmarkLabel,
   outperformancePct,
   entryPrice,
@@ -114,6 +144,8 @@ export function CandleChart({
   showSma200 = false,
   showRLevels = true,
   showKeyLevels = true,
+  volumeZones = EMPTY_ZONES,
+  showVolumeZones = true,
   className,
   height = 320,
 }: CandleChartProps) {
@@ -125,6 +157,7 @@ export function CandleChart({
   const sma200Ref = useRef<ISeriesApi<SeriesType> | null>(null);
   const rLineRefs = useRef<IPriceLine[]>([]);
   const keyLineRefs = useRef<IPriceLine[]>([]);
+  const vzLineRefs = useRef<IPriceLine[]>([]);
 
   const usable = useMemo(() => toUsable(bars), [bars]);
   const rebasedBenchmark = useMemo(() => rebaseBenchmark(usable, benchmarkBars), [usable, benchmarkBars]);
@@ -237,6 +270,40 @@ export function CandleChart({
     );
     keyLineRefs.current = kLines;
 
+    const vzLines: IPriceLine[] = [];
+    for (const z of selectDrawnZones(volumeZones)) {
+      const color = z.kind === 'poc' ? POC_COLOR : z.kind === 'hvn' ? HVN_COLOR : LVN_COLOR;
+      if (z.kind === 'poc') {
+        vzLines.push(
+          candleSeries.createPriceLine({
+            price: z.center,
+            color,
+            lineWidth: 2,
+            lineStyle: LineStyle.Solid,
+            axisLabelVisible: true,
+            title: t('workspacePage.panels.analysis.volumeZones.poc'),
+            lineVisible: showVolumeZones,
+          }),
+        );
+      } else {
+        const style = z.kind === 'lvn' ? LineStyle.Dotted : LineStyle.Solid;
+        for (const price of [z.priceLow, z.priceHigh]) {
+          vzLines.push(
+            candleSeries.createPriceLine({
+              price,
+              color,
+              lineWidth: 1,
+              lineStyle: style,
+              axisLabelVisible: false,
+              title: '',
+              lineVisible: showVolumeZones,
+            }),
+          );
+        }
+      }
+    }
+    vzLineRefs.current = vzLines;
+
     // Benchmark overlay line
     if (showBenchmark) {
       const lineData = usable
@@ -255,17 +322,28 @@ export function CandleChart({
 
     // Pattern markers
     if (patterns.length > 0) {
-      const markers = patterns
+      const markers: SeriesMarker<Time>[] = patterns
         .map((p) => {
           const bar = usable.find((b) => b.date === p.date);
-          if (!bar) return null;
-          return {
+          if (!bar || p.direction === 'neutral') return null;
+          if (p.direction === 'bearish') {
+            const marker: SeriesMarker<Time> = {
+              time: p.date,
+              position: 'aboveBar',
+              shape: 'arrowDown',
+              color: PRIMARY,
+              text: patternLabel(p),
+            };
+            return marker;
+          }
+          const marker: SeriesMarker<Time> = {
             time: p.date,
-            position: (p.direction === 'bearish' ? 'aboveBar' : 'belowBar') as 'aboveBar' | 'belowBar',
-            shape: (p.direction === 'bearish' ? 'arrowDown' : 'arrowUp') as 'arrowDown' | 'arrowUp',
+            position: 'belowBar',
+            shape: 'arrowUp',
             color: PRIMARY,
             text: patternLabel(p),
           };
+          return marker;
         })
         .filter((m): m is NonNullable<typeof m> => m != null);
       createSeriesMarkers(candleSeries, markers);
@@ -278,8 +356,18 @@ export function CandleChart({
       sma200Ref.current = null;
       rLineRefs.current = [];
       keyLineRefs.current = [];
+      vzLineRefs.current = [];
     };
-  }, [usable, rebasedBenchmark, showBenchmark, patterns, entryPrice, stopPrice, targetPrice]);
+  }, [
+    usable,
+    rebasedBenchmark,
+    showBenchmark,
+    patterns,
+    entryPrice,
+    stopPrice,
+    targetPrice,
+    volumeZones,
+  ]);
 
   // Visibility effects — update series/lines without recreating the chart
   useEffect(() => { sma20Ref.current?.applyOptions({ visible: showSma20 }); }, [showSma20]);
@@ -287,6 +375,7 @@ export function CandleChart({
   useEffect(() => { sma200Ref.current?.applyOptions({ visible: showSma200 }); }, [showSma200]);
   useEffect(() => { rLineRefs.current.forEach((l) => l.applyOptions({ lineVisible: showRLevels })); }, [showRLevels]);
   useEffect(() => { keyLineRefs.current.forEach((l) => l.applyOptions({ lineVisible: showKeyLevels })); }, [showKeyLevels]);
+  useEffect(() => { vzLineRefs.current.forEach((l) => l.applyOptions({ lineVisible: showVolumeZones })); }, [showVolumeZones]);
 
   if (usable.length === 0) {
     return (

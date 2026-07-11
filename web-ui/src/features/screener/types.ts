@@ -49,14 +49,32 @@ export interface CandlePatternRaw {
   volume_confirmed?: boolean | null;
 }
 
+const CANDLE_PATTERN_DIRECTIONS = ['bullish', 'bearish', 'neutral'] as const satisfies readonly CandlePattern['direction'][];
+const CANDLE_PATTERN_CONTEXTS = [
+  'at_breakout',
+  'at_pullback',
+  'extended',
+  'none',
+] as const satisfies readonly CandlePattern['context'][];
+
+function toCandlePatternDirection(value: string): CandlePattern['direction'] {
+  const match = CANDLE_PATTERN_DIRECTIONS.find((direction) => direction === value);
+  return match ?? 'neutral';
+}
+
+function toCandlePatternContext(value: string): CandlePattern['context'] {
+  const match = CANDLE_PATTERN_CONTEXTS.find((context) => context === value);
+  return match ?? 'none';
+}
+
 export function transformCandlePattern(raw: CandlePatternRaw): CandlePattern {
   return {
     barIndex: raw.bar_index,
     date: raw.date,
     name: raw.name,
-    direction: raw.direction as CandlePattern['direction'],
+    direction: toCandlePatternDirection(raw.direction),
     keyLevel: raw.key_level,
-    context: raw.context as CandlePattern['context'],
+    context: toCandlePatternContext(raw.context),
     volumeRatio: raw.volume_ratio ?? undefined,
     volumeConfirmed: raw.volume_confirmed ?? undefined,
   };
@@ -158,9 +176,9 @@ export interface ScreenerCandidate {
   sector?: string;
   lastBar?: string;
   close: number;
-  sma20: number;
-  sma50: number;
-  sma200: number;
+  sma20: number | null;
+  sma50: number | null;
+  sma200: number | null;
   atr: number;
   momentum6m: number;
   momentum12m: number;
@@ -274,9 +292,9 @@ export interface ScreenerCandidateAPI {
   sector?: string;
   last_bar?: string;
   close: number;
-  sma_20: number;
-  sma_50: number;
-  sma_200: number;
+  sma_20: number | null;
+  sma_50: number | null;
+  sma_200: number | null;
   atr: number;
   momentum_6m: number;
   momentum_12m: number;
@@ -361,6 +379,9 @@ export interface ScreenerResponse {
   candidates: ScreenerCandidate[];
   asofDate: string;
   totalScreened: number;
+  totalWithMarketData?: number;
+  totalRankedCandidates?: number;
+  totalReturnedCandidates?: number;
   benchmarkTicker?: string;
   benchmarkChangePct?: number;
   benchmarkLastBar?: string;
@@ -375,6 +396,9 @@ export interface ScreenerResponseAPI {
   candidates: ScreenerCandidateAPI[];
   asof_date: string;
   total_screened: number;
+  total_with_market_data?: number;
+  total_ranked_candidates?: number;
+  total_returned_candidates?: number;
   benchmark_ticker?: string;
   benchmark_change_pct?: number;
   benchmark_last_bar?: string;
@@ -595,6 +619,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
+    totalWithMarketData: apiResponse.total_with_market_data,
+    totalRankedCandidates: apiResponse.total_ranked_candidates,
+    totalReturnedCandidates: apiResponse.total_returned_candidates,
     benchmarkTicker: apiResponse.benchmark_ticker,
     benchmarkChangePct: apiResponse.benchmark_change_pct,
     benchmarkLastBar: apiResponse.benchmark_last_bar,

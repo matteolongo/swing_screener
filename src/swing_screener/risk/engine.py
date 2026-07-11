@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import Optional
 
@@ -39,6 +40,9 @@ def evaluate_recommendation(
     momentum_12m: Optional[float] = None,
     rel_strength: Optional[float] = None,
     confidence: Optional[float] = None,
+    currency: Optional[str] = None,
+    account_currency: Optional[str] = None,
+    account_to_quote_rate: Optional[float] = None,
 ) -> RecommendationPayload:
     """
     Evaluate recommendation with optional Trade Thesis generation.
@@ -47,6 +51,17 @@ def evaluate_recommendation(
     Otherwise, falls back to basic recommendation without thesis.
     """
     thesis_dict = None
+    thesis_stop = None
+    if (
+        entry is not None
+        and stop is not None
+        and math.isfinite(entry)
+        and math.isfinite(stop)
+        and entry > 0
+        and stop > 0
+        and entry > stop
+    ):
+        thesis_stop = stop
     
     # Build Trade Thesis if we have the required data
     if all([
@@ -64,8 +79,8 @@ def evaluate_recommendation(
         try:
             # Calculate RR for thesis (will be recalculated in build_recommendation)
             rr = 0.0
-            if stop is not None and entry is not None and entry > stop:
-                risk_per_share = entry - stop
+            if thesis_stop is not None:
+                risk_per_share = entry - thesis_stop
                 target = entry + (rr_target * risk_per_share)
                 rr = (target - entry) / risk_per_share
             
@@ -74,7 +89,7 @@ def evaluate_recommendation(
                 strategy=strategy,
                 signal=signal,
                 entry=entry,
-                stop=stop,
+                stop=thesis_stop,
                 rr=rr,
                 close=close,
                 sma_20=sma_20,
@@ -108,5 +123,8 @@ def evaluate_recommendation(
         fx_estimate_pct=costs.fx_estimate_pct,
         min_shares=risk_cfg.min_shares,
         max_position_pct=risk_cfg.max_position_pct,
+        currency=currency,
+        account_currency=account_currency,
+        account_to_quote_rate=account_to_quote_rate,
         thesis=thesis_dict,
     )

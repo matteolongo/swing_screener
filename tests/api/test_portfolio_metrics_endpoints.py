@@ -1,4 +1,5 @@
 import json
+import time
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -256,6 +257,8 @@ def test_positions_endpoint_returns_precomputed_metrics(
 
 
 def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    portfolio_service._eurusd_cache.clear()
+    monkeypatch.setitem(portfolio_service._eurusd_cache, "eurusd", (1.18, time.time()))
     positions_file = tmp_path / "positions.json"
     positions_file.write_text(
         json.dumps(
@@ -303,12 +306,18 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
-    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes(
-        {
-            "VALE": [16.30, 16.65],
-            "MUFG": [10.8, 11.0],
-        }
-    )
+
+    def mock_fetch_ohlcv(tickers, **kwargs):
+        if "EURUSD=X" in tickers:
+            return _ohlcv_with_closes({"EURUSD=X": [1.18, 1.18]})
+        return _ohlcv_with_closes(
+            {
+                "VALE": [16.30, 16.65],
+                "MUFG": [10.8, 11.0],
+            }
+        )
+
+    mock_provider.fetch_ohlcv.side_effect = mock_fetch_ohlcv
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
 
@@ -318,15 +327,15 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
 
     data = res.json()
     assert data["total_positions"] == 2
-    assert data["total_cost_basis"] == pytest.approx(145.34, abs=0.01)
-    assert data["total_value"] == pytest.approx(154.90, abs=0.01)
-    assert data["total_pnl"] == pytest.approx(9.56, abs=0.01)
+    assert data["total_cost_basis"] == pytest.approx(123.17, abs=0.01)
+    assert data["total_value"] == pytest.approx(131.27, abs=0.01)
+    assert data["total_pnl"] == pytest.approx(8.10, abs=0.01)
     assert data["total_pnl_percent"] == pytest.approx(6.58, abs=0.01)
-    assert data["open_risk"] == pytest.approx(12.74, abs=0.01)
-    assert data["open_risk_percent"] == pytest.approx(1.274, abs=0.001)
+    assert data["open_risk"] == pytest.approx(10.80, abs=0.01)
+    assert data["open_risk_percent"] == pytest.approx(1.080, abs=0.001)
     assert data["account_size"] == 1000.0
-    assert data["available_capital"] == pytest.approx(845.10, abs=0.01)
-    assert data["largest_position_value"] == pytest.approx(99.90, abs=0.01)
+    assert data["available_capital"] == pytest.approx(868.73, abs=0.01)
+    assert data["largest_position_value"] == pytest.approx(84.66, abs=0.01)
     assert data["largest_position_ticker"] == "VALE"
     assert data["best_performer_ticker"] == "MUFG"
     assert data["best_performer_pnl_pct"] == pytest.approx(10.0, abs=0.01)

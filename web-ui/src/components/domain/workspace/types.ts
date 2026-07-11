@@ -6,7 +6,13 @@ import type {
   SameSymbolCandidateContext,
 } from '@/features/screener/types';
 
-export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'intelligence' | 'order' | 'backtest';
+export type WorkspaceAnalysisTab =
+  | 'overview'
+  | 'fundamentals'
+  | 'intelligence'
+  | 'order'
+  | 'backtest'
+  | 'volumeZones';
 
 export interface SymbolAnalysisCandidate {
   ticker: string;
@@ -18,9 +24,9 @@ export interface SymbolAnalysisCandidate {
   confidence?: number;
   rank?: number;
   atr?: number;
-  sma20?: number;
-  sma50?: number;
-  sma200?: number;
+  sma20?: number | null;
+  sma50?: number | null;
+  sma200?: number | null;
   momentum6m?: number;
   momentum12m?: number;
   relStrength?: number;

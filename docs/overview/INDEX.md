@@ -44,6 +44,7 @@
 | Module | Doc | What it covers |
 | --- | --- | --- |
 | Intelligence | [`src/swing_screener/intelligence/README.md`](/src/swing_screener/intelligence/README.md) | LLM pipeline diagrams, data/source map, prompt flow, observability, evidence collectors, caching, action types |
+| Analysis | [`src/swing_screener/analysis/README.md`](/src/swing_screener/analysis/README.md) | Advisory single-symbol analysis engines, including approximate volume-zone analysis |
 | Data | [`src/swing_screener/data/README.md`](/src/swing_screener/data/README.md) | OHLCV provider config, caching, universes, per-symbol eval cache |
 | Data providers | [`src/swing_screener/data/providers/README.md`](/src/swing_screener/data/providers/README.md) | Provider table, how to add/remove a data source |
 | Selection | [`src/swing_screener/selection/README.md`](/src/swing_screener/selection/README.md) | Universe filtering, momentum ranking, entry signal detection |
@@ -56,3 +57,8 @@
 | Backtest | [`src/swing_screener/backtest/README.md`](/src/swing_screener/backtest/README.md) | Event-study backtesting, fill model, known limitations |
 | Fundamentals providers | [`src/swing_screener/fundamentals/providers/README.md`](/src/swing_screener/fundamentals/providers/README.md) | SEC EDGAR, yfinance, DeGiro fundamentals providers |
 | Utils | [`src/swing_screener/utils/README.md`](/src/swing_screener/utils/README.md) | Shared helpers: date, file locking, DataFrame utilities |
+
+## Current implementation plans
+
+- [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/spec.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/spec.md) — approved design for Volume-Zone Stock Analysis V1
+- [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/plan.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/plan.md) — task-by-task implementation plan for Volume-Zone Stock Analysis V1

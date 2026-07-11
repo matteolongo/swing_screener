@@ -2,15 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { renderWithProviders, screen, within, waitForQueriesToSettle } from '@/test/utils';
 import { act } from '@testing-library/react';
 import StrategyPage from './Strategy';
+import { t } from '@/i18n/t';
 
 describe('Strategy Page', () => {
   it('renders strategy editor and loads options', async () => {
     const { queryClient } = renderWithProviders(<StrategyPage />);
 
     expect(
-      await screen.findByRole('heading', { name: /^Strategy$/ })
+	      await screen.findByRole('heading', { name: t('strategyPage.header.title') })
     ).toBeInTheDocument();
-    expect(await screen.findByText('Capital Risk at a Glance')).toBeInTheDocument();
+    expect(await screen.findByText(t('strategyCapitalRisk.title'))).toBeInTheDocument();
 
     const select = await screen.findByLabelText(/choose strategy/i);
     expect(select).toBeInTheDocument();
@@ -23,14 +24,14 @@ describe('Strategy Page', () => {
     const { user, queryClient } = renderWithProviders(<StrategyPage />);
 
     // Advanced settings card is always present but collapsed by default
-    expect(screen.queryByText('SMA Fast')).not.toBeInTheDocument();
+    expect(screen.queryByText(t('strategyPage.advanced.fields.smaFast'))).not.toBeInTheDocument();
 
-    const advancedToggle = await screen.findByRole('button', { name: /show advanced/i });
+    const advancedToggle = await screen.findByRole('button', { name: t('strategyPage.advanced.actions.show') });
     await act(async () => {
       await user.click(advancedToggle);
     });
 
-    expect(await screen.findByText('SMA Fast')).toBeInTheDocument();
+    expect(await screen.findByText(t('strategyPage.advanced.fields.smaFast'))).toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -40,11 +41,11 @@ describe('Strategy Page', () => {
   it('disables delete for default strategy', async () => {
     const { user, queryClient } = renderWithProviders(<StrategyPage />);
 
-    const manageButton = await screen.findByRole('button', { name: /manage strategies/i });
+    const manageButton = await screen.findByRole('button', { name: t('strategyPage.selection.manageStrategies') });
     await act(async () => {
       await user.click(manageButton);
     });
-    const deleteButton = await screen.findByRole('button', { name: /delete/i });
+    const deleteButton = await screen.findByRole('button', { name: t('common.actions.delete') });
     expect(deleteButton).toBeDisabled();
     await waitForQueriesToSettle(queryClient);
   });
@@ -52,19 +53,19 @@ describe('Strategy Page', () => {
   it('can save a strategy as new', async () => {
     const { user, queryClient } = renderWithProviders(<StrategyPage />);
 
-    const manageButton = await screen.findByRole('button', { name: /manage strategies/i });
+    const manageButton = await screen.findByRole('button', { name: t('strategyPage.selection.manageStrategies') });
     await act(async () => {
       await user.click(manageButton);
     });
-    const idInput = await screen.findByLabelText(/new id/i);
-    const nameInput = screen.getByLabelText(/new name/i);
+    const idInput = await screen.findByLabelText(t('strategyPage.create.newId'));
+    const nameInput = screen.getByLabelText(t('strategyPage.create.newName'));
 
     await act(async () => {
       await user.type(idInput, 'breakout_v2');
       await user.type(nameInput, 'Breakout v2');
     });
 
-    const saveButton = screen.getByRole('button', { name: /save as new/i });
+    const saveButton = screen.getByRole('button', { name: t('strategyPage.create.saveAsNew') });
     await act(async () => {
       await user.click(saveButton);
     });

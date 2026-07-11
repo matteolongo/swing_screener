@@ -30,6 +30,7 @@ const baseIntelligence: SymbolIntelligence = {
 const emptyChat: IntelligenceChatResponse = {
   ticker: 'AAPL',
   chatDate: '2026-07-03',
+  analysisGeneratedAt: '2026-07-03T08:00:00Z',
   refreshedAt: null,
   messages: [],
 };
@@ -86,6 +87,7 @@ describe('IntelligenceChatPanel', () => {
       data: {
         ticker: 'AAPL',
         chatDate: '2026-07-03',
+        analysisGeneratedAt: '2026-07-03T08:00:00Z',
         refreshedAt: '2026-07-03T10:00:00Z',
         messages: [
           {
@@ -124,5 +126,44 @@ describe('IntelligenceChatPanel', () => {
     expect(screen.getByText('Supplier evidence improved.')).toBeInTheDocument();
     expect(screen.getByText(t('workspacePage.panels.analysis.intelligence.chat.evidenceUsed'))).toBeInTheDocument();
     expect(screen.getByText('Supplier update')).toBeInTheDocument();
+  });
+
+  it('does not display messages from a prior analysis revision after refresh', () => {
+    vi.mocked(intelligenceHooks.useIntelligenceChatQuery).mockReturnValue({
+      data: {
+        ticker: 'AAPL',
+        chatDate: '2026-07-03',
+        analysisGeneratedAt: '2026-07-03T08:00:00Z',
+        refreshedAt: null,
+        messages: [{
+          id: 'old',
+          role: 'assistant',
+          content: 'Old-revision answer',
+          createdAt: '2026-07-03T08:01:00Z',
+          refreshSources: false,
+          evidenceUsed: [],
+        }],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    const { rerender } = renderWithProviders(<IntelligenceChatPanel ticker="AAPL" intelligence={baseIntelligence} />);
+    expect(screen.getByText('Old-revision answer')).toBeInTheDocument();
+
+    rerender(
+      <IntelligenceChatPanel
+        ticker="AAPL"
+        intelligence={{ ...baseIntelligence, generatedAt: '2026-07-03T09:00:00Z' }}
+      />,
+    );
+
+    expect(screen.queryByText('Old-revision answer')).not.toBeInTheDocument();
+    expect(intelligenceHooks.useIntelligenceChatQuery).toHaveBeenLastCalledWith(
+      'AAPL',
+      true,
+      '2026-07-03T09:00:00Z',
+    );
   });
 });

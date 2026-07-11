@@ -46,6 +46,7 @@ def build_feature_table(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
     sector_benchmark_returns: dict[str, float] | None = None,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Join trend + volatility + momentum into a single per-ticker feature table.
@@ -72,10 +73,15 @@ def build_feature_table(
 
     # Setup-quality features so the w_setup_quality / extension_penalty ranking
     # weights actually apply (they were inert while these columns were missing).
-    setup_df = compute_setup_quality(ohlcv)
+    setup_df = compute_setup_quality(ohlcv, quote_to_eur_rates=quote_to_eur_rates)
     setup_cols = [
         c
-        for c in ("consolidation_tightness", "close_location_in_range", "above_breakout_extension")
+        for c in (
+            "consolidation_tightness",
+            "close_location_in_range",
+            "above_breakout_extension",
+            "avg_daily_volume_eur",
+        )
         if c in setup_df.columns
     ]
     if setup_cols:
@@ -101,14 +107,28 @@ def apply_universe_filters(
     allowed_currencies = {str(c).strip().upper() for c in cfg.currencies if str(c).strip()}
     if not allowed_currencies:
         allowed_currencies = {"USD", "EUR"}
-    detected_currencies = pd.Series(
-        [detect_currency(str(ticker)) for ticker in df.index],
-        index=df.index,
-    )
+    if "currency" in df.columns:
+        detected_currencies = df["currency"].map(
+            lambda value: str(value or "").strip().upper() or "UNKNOWN"
+        )
+        missing_currency = detected_currencies == "UNKNOWN"
+        if bool(missing_currency.any()):
+            fallback_currencies = pd.Series(
+                [detect_currency(str(ticker)) for ticker in df.index],
+                index=df.index,
+            )
+            detected_currencies = detected_currencies.where(
+                ~missing_currency, fallback_currencies
+            )
+    else:
+        detected_currencies = pd.Series(
+            [detect_currency(str(ticker)) for ticker in df.index],
+            index=df.index,
+        )
     df["currency"] = detected_currencies
-    # UNKNOWN currency passes the filter (can't confirm a mismatch without instrument master entry).
-    # Tickers with a known non-matching currency (e.g. GBP in a USD-only filter) are excluded.
-    cond_currency = detected_currencies.isin(allowed_currencies) | (detected_currencies == "UNKNOWN")
+    # Unknown quote currency cannot satisfy a currency filter; downstream sizing
+    # must not infer a safe conversion for an unidentified quote currency.
+    cond_currency = detected_currencies.isin(allowed_currencies)
 
     cond_trend = (
         (df["trend_ok"] == True)
@@ -121,11 +141,22 @@ def apply_universe_filters(
         else pd.Series(True, index=df.index)
     )
 
-    # liquidity filter — skipped when column absent or threshold is 0
-    if cfg.min_avg_daily_volume_eur > 0 and "avg_daily_volume_eur" in df.columns:
-        cond_liquidity = df["avg_daily_volume_eur"] >= cfg.min_avg_daily_volume_eur
-    else:
+    # liquidity filter: threshold 0 disables it; active thresholds require data and
+    # fail closed when it is missing. ``liquidity_available`` tracks whether the
+    # exclusion is "below threshold" vs "could not be computed" (e.g. FX missing),
+    # so an emptied universe is diagnosable instead of silent.
+    if cfg.min_avg_daily_volume_eur <= 0:
         cond_liquidity = pd.Series(True, index=df.index)
+        liquidity_available = pd.Series(True, index=df.index)
+    elif "avg_daily_volume_eur" in df.columns:
+        liquidity_values = pd.to_numeric(df["avg_daily_volume_eur"], errors="coerce")
+        liquidity_available = liquidity_values.notna()
+        cond_liquidity = liquidity_available & (
+            liquidity_values >= cfg.min_avg_daily_volume_eur
+        )
+    else:
+        cond_liquidity = pd.Series(False, index=df.index)
+        liquidity_available = pd.Series(False, index=df.index)
 
     # weekly trend filter — skipped when column absent or flag is False
     if cfg.require_weekly_uptrend:
@@ -154,7 +185,11 @@ def apply_universe_filters(
         if not bool(cond_currency.loc[t]):
             r.append("currency")
         if not bool(cond_liquidity.loc[t]):
-            r.append("liquidity")
+            r.append(
+                "liquidity"
+                if bool(liquidity_available.loc[t])
+                else "liquidity_unavailable"
+            )
         if not bool(cond_weekly.loc[t]):
             r.append("weekly_trend")
         reasons.append(",".join(r) if r else "ok")
@@ -167,6 +202,7 @@ def build_universe(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
     sector_benchmark_returns: dict[str, float] | None = None,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Shortcut: build features + apply filters.
@@ -175,6 +211,7 @@ def build_universe(
         ohlcv,
         cfg,
         sector_benchmark_returns=sector_benchmark_returns,
+        quote_to_eur_rates=quote_to_eur_rates,
     )
     return apply_universe_filters(feats, cfg.filt)
 
@@ -183,6 +220,7 @@ def eligible_universe(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
     sector_benchmark_returns: dict[str, float] | None = None,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Returns only eligible tickers (filtered).
@@ -192,6 +230,7 @@ def eligible_universe(
         ohlcv,
         cfg,
         sector_benchmark_returns=sector_benchmark_returns,
+        quote_to_eur_rates=quote_to_eur_rates,
     )
     df = df[df["is_eligible"]]
     if df.empty:

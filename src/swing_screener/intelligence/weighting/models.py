@@ -20,6 +20,7 @@ class WeightedSignal(BaseModel):
     contribution: float
     source: str
     event_date: str | None = None
+    explanation: str | None = None
 
 
 class EvidenceLedger(BaseModel):

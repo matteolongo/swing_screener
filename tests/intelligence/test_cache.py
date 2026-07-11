@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
 from swing_screener.intelligence.cache import (
@@ -36,6 +38,40 @@ def test_write_and_read_roundtrip(tmp_path, monkeypatch):
     assert result.symbol == "AAPL"
     assert result.action == "BUY_NOW"
     assert result.catalyst_urgency == "medium"
+    cache_file = tmp_path / "intelligence" / "sweep_2026-05-24.json"
+    data = json.loads(cache_file.read_text())
+    assert data["AAPL"]["_cache_schema_version"] == 2
+
+
+def test_read_skips_legacy_entries_without_cache_schema(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    cache_file = tmp_path / "intelligence" / "sweep_2026-05-24.json"
+    cache_file.parent.mkdir(parents=True)
+    cache_file.write_text(
+        json.dumps(
+            {
+                "AAPL": {
+                    "symbol": "AAPL",
+                    "generated_at": "2026-05-24T10:00:00Z",
+                    "action": "BUY_NOW",
+                    "conviction": "high",
+                    "catalyst_urgency": "medium",
+                    "summary_line": "Legacy.",
+                    "narrative": "Legacy.",
+                    "news": [
+                        {
+                            "headline": "Old undated item",
+                            "url": "https://example.com/old",
+                            "date": None,
+                            "sentiment": "neutral",
+                        }
+                    ],
+                }
+            }
+        )
+    )
+
+    assert read_from_cache("AAPL", for_date=date(2026, 5, 24)) is None
 
 
 def test_read_returns_none_for_missing_ticker(tmp_path, monkeypatch):
@@ -105,3 +141,31 @@ def test_multiple_tickers_in_same_file(tmp_path, monkeypatch):
     data = json.loads(cache_file.read_text())
     assert "AAPL" in data
     assert "MSFT" in data
+
+
+def test_concurrent_writes_preserve_distinct_tickers(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    d = date(2026, 5, 24)
+    cache_file = tmp_path / "intelligence" / "sweep_2026-05-24.json"
+    cache_file.parent.mkdir(parents=True)
+    cache_file.write_text("{}")
+
+    original_dump = SymbolIntelligence.model_dump_json
+    barrier = threading.Barrier(2)
+
+    def delayed_dump(self, *args, **kwargs):
+        barrier.wait(timeout=3)
+        return original_dump(self, *args, **kwargs)
+
+    monkeypatch.setattr(SymbolIntelligence, "model_dump_json", delayed_dump)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(write_to_cache, "AAPL", _make_intel("AAPL"), d),
+            executor.submit(write_to_cache, "MSFT", _make_intel("MSFT"), d),
+        ]
+        for future in futures:
+            future.result()
+
+    data = json.loads(cache_file.read_text())
+    assert set(data) == {"AAPL", "MSFT"}

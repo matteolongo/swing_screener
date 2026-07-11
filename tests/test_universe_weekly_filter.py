@@ -28,7 +28,10 @@ def _feature_df(tickers: list[str], weekly_trends: dict[str, str]) -> pd.DataFra
 
 
 def test_require_weekly_uptrend_excludes_down_and_neutral():
-    cfg = UniverseFilterConfig(require_weekly_uptrend=True)
+    cfg = UniverseFilterConfig(
+        require_weekly_uptrend=True,
+        min_avg_daily_volume_eur=0.0,
+    )
     df = _feature_df(["UP", "DOWN", "NEUTRAL"], {"UP": "up", "DOWN": "down", "NEUTRAL": "neutral"})
     result = apply_universe_filters(df, cfg)
     assert result.loc["UP", "is_eligible"] == True
@@ -37,7 +40,10 @@ def test_require_weekly_uptrend_excludes_down_and_neutral():
 
 
 def test_require_weekly_uptrend_false_passes_all():
-    cfg = UniverseFilterConfig(require_weekly_uptrend=False)
+    cfg = UniverseFilterConfig(
+        require_weekly_uptrend=False,
+        min_avg_daily_volume_eur=0.0,
+    )
     df = _feature_df(["UP", "DOWN", "NEUTRAL"], {"UP": "up", "DOWN": "down", "NEUTRAL": "neutral"})
     result = apply_universe_filters(df, cfg)
     assert result.loc["UP", "is_eligible"] == True
@@ -46,7 +52,10 @@ def test_require_weekly_uptrend_false_passes_all():
 
 
 def test_weekly_trend_failure_appears_in_reason():
-    cfg = UniverseFilterConfig(require_weekly_uptrend=True)
+    cfg = UniverseFilterConfig(
+        require_weekly_uptrend=True,
+        min_avg_daily_volume_eur=0.0,
+    )
     df = _feature_df(["DOWN"], {"DOWN": "down"})
     result = apply_universe_filters(df, cfg)
     assert "weekly_trend" in result.loc["DOWN", "reason"]
@@ -54,7 +63,10 @@ def test_weekly_trend_failure_appears_in_reason():
 
 def test_weekly_trend_absent_column_treated_as_neutral():
     """When weekly_trend column is missing and filter is on, ticker is excluded."""
-    cfg = UniverseFilterConfig(require_weekly_uptrend=True)
+    cfg = UniverseFilterConfig(
+        require_weekly_uptrend=True,
+        min_avg_daily_volume_eur=0.0,
+    )
     data = {
         "last": {"AAA": 20.0},
         "atr_pct": {"AAA": 3.0},
@@ -85,7 +97,7 @@ def test_pipeline_board_contains_weekly_trend():
     close_spy = pd.Series(prices_spy, index=dates)
     volume = pd.Series([1_000_000.0] * n, index=dates)
 
-    ticker = "AAAA"
+    ticker = "AAPL"
     ohlcv = pd.DataFrame(
         {
             ("Open", ticker): close * 0.99,
@@ -114,6 +126,7 @@ def test_pipeline_board_contains_weekly_trend():
             require_rs_positive=False,
             require_weekly_uptrend=False,
             currencies=["USD"],
+            min_avg_daily_volume_eur=0.0,
         ),
     )
 

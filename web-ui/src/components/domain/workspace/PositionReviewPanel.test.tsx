@@ -129,6 +129,7 @@ describe('PositionReviewPanel', () => {
     const mutate = vi.fn();
     const symbolReview: PositionReview = {
       ...review,
+      ticker: 'GOOG',
       mode: 'symbol',
       suggestedAction: 'ENTER',
       thesisStatus: 'intact',
@@ -163,5 +164,26 @@ describe('PositionReviewPanel', () => {
     await waitFor(() => {
       expect(mutate).toHaveBeenCalledWith({ ticker: 'GOOG', positionId: null, refreshSources: false });
     });
+  });
+
+  it('does not show a prior ticker result or error after selection changes', () => {
+    vi.mocked(intelligenceHooks.usePositionReviewMutation).mockReturnValue({
+      mutate: vi.fn(),
+      reset: vi.fn(),
+      variables: { ticker: 'MNST', positionId: 'pos-mnst', refreshSources: false },
+      data: review,
+      isPending: false,
+      isError: true,
+      error: new Error('MNST review failed'),
+    } as never);
+
+    const { rerender } = renderWithProviders(<PositionReviewPanel ticker="MNST" position={position} />);
+    expect(screen.getByText('MNST: raise stop and protect profit.')).toBeInTheDocument();
+    expect(screen.getByText('MNST review failed')).toBeInTheDocument();
+
+    rerender(<PositionReviewPanel ticker="AAPL" />);
+
+    expect(screen.queryByText('MNST: raise stop and protect profit.')).not.toBeInTheDocument();
+    expect(screen.queryByText('MNST review failed')).not.toBeInTheDocument();
   });
 });

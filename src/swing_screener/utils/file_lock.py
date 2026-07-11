@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import json
 import logging
+import math
 from typing import Any, Callable, Iterator, Literal, TextIO
 
 try:
@@ -81,13 +82,23 @@ def _load_json(fh: TextIO, *, text_filter: TextFilter | None = None) -> Any:
     text = fh.read()
     if text_filter is not None:
         text = text_filter(text)
-    return json.loads(text)
+    return json.loads(text, parse_constant=lambda _constant: None)
+
+
+def _json_safe_value(value: Any) -> Any:
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _json_safe_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_value(item) for item in value]
+    return value
 
 
 def _dump_json(fh: TextIO, data: Any) -> None:
     fh.seek(0)
     fh.truncate()
-    json.dump(data, fh, indent=2, ensure_ascii=False)
+    json.dump(_json_safe_value(data), fh, indent=2, ensure_ascii=False, allow_nan=False)
     fh.write("\n")
     fh.flush()
 

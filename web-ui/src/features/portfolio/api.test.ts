@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fillOrder } from '@/features/portfolio/api';
+import { closePosition, fillOrder, partialClosePosition } from '@/features/portfolio/api';
 
 describe('portfolio api', () => {
   beforeEach(() => {
@@ -30,5 +30,35 @@ describe('portfolio api', () => {
         stopPrice: 20.33,
       }),
     ).rejects.toThrow('REP.MC: open position already exists.');
+  });
+
+  it('serializes close FX rate for backend close requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await closePosition('POS-AAPL-1', {
+      exitPrice: 125,
+      feeEur: 1.5,
+      exitFxRate: 1.08,
+      reason: 'target',
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.exit_fx_rate).toBe(1.08);
+  });
+
+  it('serializes partial close FX rate for backend partial-close requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await partialClosePosition('POS-AAPL-1', {
+      sharesClosed: 3,
+      price: 121,
+      feeEur: 0.9,
+      fxRate: 1.07,
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.fx_rate).toBe(1.07);
   });
 });

@@ -71,6 +71,7 @@ export interface FundamentalSnapshot {
   earningsGrowthYoy?: number;
   grossMargin?: number;
   operatingMargin?: number;
+  netMargin?: number;
   freeCashFlow?: number;
   freeCashFlowMargin?: number;
   debtToEquity?: number;
@@ -83,6 +84,10 @@ export interface FundamentalSnapshot {
   bookValuePerShare?: number;
   priceToBook?: number;
   bookToPrice?: number;
+  insiderNetShares90d?: number;
+  insiderTransactionCount90d?: number;
+  forwardEpsEstimate?: number;
+  analystUpgradeDowngradeNet30d?: number;
   mostRecentQuarter?: string;
   dataRegion?: string;
   pillars: Record<string, FundamentalPillarScore>;
@@ -113,6 +118,7 @@ export interface FundamentalSnapshotAPI {
   earnings_growth_yoy?: number | null;
   gross_margin?: number | null;
   operating_margin?: number | null;
+  net_margin?: number | null;
   free_cash_flow?: number | null;
   free_cash_flow_margin?: number | null;
   debt_to_equity?: number | null;
@@ -125,6 +131,10 @@ export interface FundamentalSnapshotAPI {
   book_value_per_share?: number | null;
   price_to_book?: number | null;
   book_to_price?: number | null;
+  insider_net_shares_90d?: number | null;
+  insider_transaction_count_90d?: number | null;
+  forward_eps_estimate?: number | null;
+  analyst_upgrade_downgrade_net_30d?: number | null;
   most_recent_quarter?: string | null;
   data_region?: string | null;
   pillars?: Record<string, FundamentalPillarScoreAPI>;
@@ -198,6 +208,7 @@ export function transformFundamentalSnapshot(api: FundamentalSnapshotAPI): Funda
     earningsGrowthYoy: api.earnings_growth_yoy ?? undefined,
     grossMargin: api.gross_margin ?? undefined,
     operatingMargin: api.operating_margin ?? undefined,
+    netMargin: api.net_margin ?? undefined,
     freeCashFlow: api.free_cash_flow ?? undefined,
     freeCashFlowMargin: api.free_cash_flow_margin ?? undefined,
     debtToEquity: api.debt_to_equity ?? undefined,
@@ -210,6 +221,10 @@ export function transformFundamentalSnapshot(api: FundamentalSnapshotAPI): Funda
     bookValuePerShare: api.book_value_per_share ?? undefined,
     priceToBook: api.price_to_book ?? undefined,
     bookToPrice: api.book_to_price ?? undefined,
+    insiderNetShares90d: api.insider_net_shares_90d ?? undefined,
+    insiderTransactionCount90d: api.insider_transaction_count_90d ?? undefined,
+    forwardEpsEstimate: api.forward_eps_estimate ?? undefined,
+    analystUpgradeDowngradeNet30d: api.analyst_upgrade_downgrade_net_30d ?? undefined,
     mostRecentQuarter: api.most_recent_quarter ?? undefined,
     dataRegion: api.data_region ?? undefined,
     pillars,

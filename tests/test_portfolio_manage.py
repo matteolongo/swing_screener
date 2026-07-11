@@ -3,18 +3,22 @@ import pytest
 from swing_screener.portfolio.state import Position, evaluate_positions, ManageConfig
 
 
-def _make_ohlcv(close_by_ticker: dict[str, list[float]]) -> pd.DataFrame:
+def _make_ohlcv(
+    close_by_ticker: dict[str, list[float]],
+    low_by_ticker: dict[str, list[float]] | None = None,
+) -> pd.DataFrame:
     idx = pd.date_range(
         "2026-01-01", periods=len(next(iter(close_by_ticker.values()))), freq="B"
     )
     cols = []
     data = {}
     for t, closes in close_by_ticker.items():
+        lows = (low_by_ticker or {}).get(t, closes)
         data[("Close", t)] = closes
         # dummy other fields not needed
         data[("Open", t)] = closes
         data[("High", t)] = closes
-        data[("Low", t)] = closes
+        data[("Low", t)] = lows
         data[("Volume", t)] = [100] * len(closes)
         cols.extend([("Close", t), ("Open", t), ("High", t), ("Low", t), ("Volume", t)])
     df = pd.DataFrame(data, index=idx)
@@ -53,6 +57,58 @@ def test_stop_hit_triggers_close():
     )
     updates, _ = evaluate_positions(ohlcv, [pos], ManageConfig())
     assert updates[-1].action == "CLOSE_STOP_HIT"
+
+
+def test_stop_hit_uses_daily_low_when_close_recovers_above_stop():
+    ohlcv = _make_ohlcv(
+        {"AAA": [100, 95, 92]},
+        low_by_ticker={"AAA": [99, 94, 89]},
+    )
+    pos = Position(
+        ticker="AAA",
+        status="open",
+        entry_date="2026-01-01",
+        entry_price=100.0,
+        stop_price=90.0,
+        shares=1,
+    )
+
+    updates, _ = evaluate_positions(ohlcv, [pos], ManageConfig())
+
+    assert updates[-1].action == "CLOSE_STOP_HIT"
+    assert updates[-1].last == 92.0
+
+
+def test_time_exit_counts_trading_bars_not_calendar_days():
+    dates = pd.to_datetime(["2026-01-02", "2026-01-05", "2026-01-06"])
+    values = [100.0, 101.0, 102.0]
+    ohlcv = pd.DataFrame(
+        {
+            ("Close", "AAA"): values,
+            ("Open", "AAA"): values,
+            ("High", "AAA"): values,
+            ("Low", "AAA"): values,
+            ("Volume", "AAA"): [100, 100, 100],
+        },
+        index=dates,
+    )
+    ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
+    pos = Position(
+        ticker="AAA",
+        status="open",
+        entry_date="2026-01-02",
+        entry_price=100.0,
+        stop_price=90.0,
+        shares=1,
+    )
+    cfg = ManageConfig(max_holding_days=3, exit_signal_days=0)
+
+    monday_updates, _ = evaluate_positions(ohlcv.iloc[:2], [pos], cfg)
+    tuesday_updates, _ = evaluate_positions(ohlcv, [pos], cfg)
+
+    assert monday_updates[0].action != "CLOSE_TIME_EXIT"
+    assert tuesday_updates[0].action == "CLOSE_TIME_EXIT"
+    assert "3 bars" in tuesday_updates[0].reason
 
 
 def test_trailing_stop_above_entry_uses_initial_risk():
@@ -106,6 +162,7 @@ def test_trailing_suggestion_below_one_cent_does_not_trigger_move():
     update = updates[0]
     assert update.stop_suggested == pytest.approx(17.75)
     assert update.action == "NO_ACTION"
+    assert "not above current stop" in update.reason
 
 
 # ─── Exit signal tests ───────────────────────────────────────────────────────
@@ -133,6 +190,8 @@ def test_exit_signal_fires_when_two_consecutive_closes_below_sma20():
     )
     assert updates[0].action == "CLOSE_EXIT_SIGNAL"
     assert "SMA20" in updates[0].reason
+    assert "bars held" in updates[0].reason
+    assert "d held" not in updates[0].reason
 
 
 def test_exit_signal_does_not_fire_for_single_close_below_sma20():

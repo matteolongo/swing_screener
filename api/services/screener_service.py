@@ -136,6 +136,42 @@ def _fetch_ohlcv_chunked(
     return out
 
 
+def _account_currency_from_strategy(strategy: dict) -> str:
+    raw_risk = strategy.get("risk") if isinstance(strategy, dict) else None
+    if not isinstance(raw_risk, dict):
+        return "EUR"
+    return str(raw_risk.get("account_currency") or "EUR").upper()
+
+
+def _normalize_quote_currency_value(*values: object, fallback_ticker: str | None = None) -> str:
+    for value in values:
+        if is_na_scalar(value):
+            continue
+        normalized = str(value).strip().upper()
+        if normalized and normalized not in {"NAN", "NONE", "NULL", "<NA>"}:
+            return normalized
+    if fallback_ticker:
+        detected = str(detect_currency(fallback_ticker) or "").strip().upper()
+        if detected:
+            return detected
+    return "UNKNOWN"
+
+
+def _last_close_for_ticker(ohlcv: pd.DataFrame, ticker: str) -> float | None:
+    if ohlcv is None or ohlcv.empty:
+        return None
+    if "Close" not in ohlcv.columns.get_level_values(0):
+        return None
+    close = ohlcv["Close"]
+    if ticker not in close.columns:
+        return None
+    series = close[ticker].dropna()
+    if series.empty:
+        return None
+    value = safe_optional_float(series.iloc[-1])
+    return value if value and value > 0 else None
+
+
 @dataclass
 class _RunContext:
     """Mutable state accumulated across run_screener pipeline steps.
@@ -167,6 +203,8 @@ class _RunContext:
     data_freshness: str = ""
     ticker_info: dict = field(default_factory=dict)
     sector_rotation_by_name: dict = field(default_factory=dict)
+    market_data_ticker_count: int = 0
+    ranked_candidate_count: int = 0
     combined_priority_cfg: CombinedPriorityConfig | None = None
     now_utc: datetime | None = None
     benchmark_change_pct: float | None = None
@@ -522,6 +560,7 @@ class ScreenerService:
         if "Close" in ctx.ohlcv.columns.get_level_values(0):
             present = set(ctx.ohlcv["Close"].columns.tolist())
             requested_set = set(ctx.tickers) - {ctx.benchmark}
+            ctx.market_data_ticker_count = len(requested_set & present)
             missing = sorted(requested_set - present)
             if missing:
                 ctx.warnings.append(
@@ -693,12 +732,17 @@ class ScreenerService:
 
         ctx.ticker_info = ticker_info
         ctx.sector_rotation_by_name = sector_rotation_by_name
+        account_to_quote_rates, quote_to_eur_rates = self._screener_fx_rate_maps(
+            ctx, ticker_info
+        )
 
         results = build_daily_report(
             ctx.ohlcv,
             cfg=ctx.report_cfg,
             exclude_tickers=sector_rotation.SECTOR_ETFS.keys(),
             sector_benchmark_returns=sector_benchmark_returns,
+            account_to_quote_rates=account_to_quote_rates,
+            quote_to_eur_rates=quote_to_eur_rates,
             eval_cache=self._eval_cache,
             asof_date=ctx.asof_str,
             force_refresh=bool(getattr(ctx.request, "force_refresh", False)),
@@ -708,6 +752,7 @@ class ScreenerService:
         except Exception as exc:
             logger.debug("Eval cache prune failed (non-fatal): %s", exc)
         if results is None or results.empty:
+            ctx.ranked_candidate_count = 0
             logger.warning(
                 "Screener returned no candidates (top=%s, tickers=%s).",
                 requested_top,
@@ -731,7 +776,70 @@ class ScreenerService:
             ctx.warnings.append(message)
             logger.warning(message)
 
+        ctx.ranked_candidate_count = len(results)
         return results
+
+    def _screener_fx_rate_maps(
+        self, ctx: _RunContext, ticker_info: dict
+    ) -> tuple[dict[str, float], dict[str, float]]:
+        account_currency = _account_currency_from_strategy(ctx.strategy)
+        quote_currencies = set()
+        if getattr(ctx.request, "currencies", None):
+            for currency in ctx.active_currencies or []:
+                quote_currencies.add(_normalize_quote_currency_value(currency))
+        for info in (ticker_info or {}).values():
+            quote_currencies.add(_normalize_quote_currency_value(info.get("currency")))
+        quote_currencies.discard("UNKNOWN")
+        account_quote_currencies = set(quote_currencies)
+        account_quote_currencies.discard(account_currency)
+        needs_eurusd = "USD" in quote_currencies or any(
+            {account_currency, quote} == {"EUR", "USD"}
+            for quote in account_quote_currencies
+        )
+        if not needs_eurusd:
+            return {}, {}
+
+        force_refresh = bool(getattr(ctx.request, "force_refresh", False))
+        try:
+            fx = self._provider.fetch_ohlcv(
+                ["EURUSD=X"],
+                start_date=ctx.start_date or ctx.asof_str,
+                end_date=ctx.end_date or ctx.asof_str,
+                force_refresh=force_refresh,
+            )
+            eurusd_rate = _last_close_for_ticker(fx, "EURUSD=X")
+        except Exception as exc:
+            logger.warning("Failed to fetch EURUSD rate for screener sizing: %s", exc)
+            ctx.warnings.append("EURUSD FX rate unavailable; cross-currency sizing may be omitted.")
+            return {}, {}
+
+        if eurusd_rate is None or eurusd_rate <= 0:
+            ctx.warnings.append("EURUSD FX rate unavailable; cross-currency sizing may be omitted.")
+            return {}, {}
+
+        account_to_quote_rates: dict[str, float] = {}
+        quote_to_eur_rates: dict[str, float] = {}
+        for quote in quote_currencies:
+            if quote == "EUR":
+                quote_to_eur_rates["EUR"] = 1.0
+            elif quote == "USD":
+                quote_to_eur_rates["USD"] = 1.0 / eurusd_rate
+
+        for quote in account_quote_currencies:
+            if account_currency == "EUR" and quote == "USD":
+                account_to_quote_rates["USD"] = eurusd_rate
+            elif account_currency == "USD" and quote == "EUR":
+                account_to_quote_rates["EUR"] = 1.0 / eurusd_rate
+        unsupported = sorted(
+            quote
+            for quote in account_quote_currencies
+            if quote != account_currency and quote not in account_to_quote_rates
+        )
+        if unsupported:
+            ctx.warnings.append(
+                "Unsupported FX conversion for quote currencies: " + ", ".join(unsupported)
+            )
+        return account_to_quote_rates, quote_to_eur_rates
 
     def _build_candidates(
         self, ctx: _RunContext, results: "pd.DataFrame"
@@ -752,6 +860,7 @@ class ScreenerService:
         universe_cfg = ctx.universe_cfg
         signals_cfg = ctx.signals_cfg
         sector_rotation_by_name = ctx.sector_rotation_by_name
+        account_currency = _account_currency_from_strategy(ctx.strategy)
 
         ticker_list = [str(idx) for idx in results.index]
 
@@ -769,50 +878,58 @@ class ScreenerService:
         ma_col = f"ma{signals_cfg.pullback_ma}_level"
         candidates = []
         for idx, row in results.iterrows():
-            sma20 = safe_float(row.get(ma_col))
-            sma50_dist = safe_float(row.get("dist_sma50_pct"))
-            sma200_dist = safe_float(row.get("dist_sma200_pct"))
+            sma20 = safe_optional_float(row.get(ma_col))
+            sma50_dist = safe_optional_float(row.get("dist_sma50_pct"))
+            sma200_dist = safe_optional_float(row.get("dist_sma200_pct"))
             last_price = safe_float(row.get("last"))
 
-            sma50 = (
-                last_price / (1 + sma50_dist / 100)
-                if last_price and sma50_dist
-                else last_price
-            )
-            sma200 = (
-                last_price / (1 + sma200_dist / 100)
-                if last_price and sma200_dist
-                else last_price
-            )
+            sma50 = None
+            if last_price and sma50_dist is not None:
+                denominator = 1 + sma50_dist / 100
+                if denominator != 0:
+                    sma50 = last_price / denominator
+
+            sma200 = None
+            if last_price and sma200_dist is not None:
+                denominator = 1 + sma200_dist / 100
+                if denominator != 0:
+                    sma200 = last_price / denominator
 
             ticker_str = str(idx)
             info = ticker_info.get(ticker_str, {})
             instrument = get_instrument_record(ticker_str) or {}
             last_bar = last_bar_map.get(ticker_str) or overall_last_bar
-            currency = str(
+            currency = _normalize_quote_currency_value(
                 info.get("currency")
-                or row.get("currency")
-                or instrument.get("currency")
-                or detect_currency(ticker_str)
-            ).upper()
+                if isinstance(info, dict)
+                else None,
+                row.get("currency"),
+                instrument.get("currency"),
+                fallback_ticker=ticker_str,
+            )
 
             signal = row.get("signal")
             entry_val = safe_optional_float(row.get("entry")) or last_price
             stop_val = safe_optional_float(row.get("stop"))
             if stop_val is None and entry_val:
-                # No explicit stop from the pipeline — derive one from ATR so that
-                # target and R:R can be computed for the order panel.
+                # No explicit stop from the pipeline; derive one from ATR with
+                # the active strategy multiplier so the order panel contract
+                # matches the report/risk configuration.
                 atr_val = safe_optional_float(row.get(atr_col))
                 if atr_val and atr_val > 0:
-                    stop_val = round(entry_val - 2.0 * atr_val, 4)
+                    atr_multiplier = safe_float(
+                        getattr(risk_cfg, "k_atr", 2.0), default=2.0
+                    )
+                    stop_val = round(entry_val - atr_multiplier * atr_val, 4)
             shares_val = safe_optional_int(row.get("shares"))
             position_size = safe_optional_float(row.get("position_value"))
             risk_usd = safe_optional_float(row.get("realized_risk"))
-            risk_pct = (
-                (risk_usd / risk_cfg.account_size)
-                if risk_usd and risk_cfg.account_size
-                else None
-            )
+            risk_account = safe_optional_float(row.get("realized_risk_account"))
+            account_to_quote_rate = safe_optional_float(row.get("account_to_quote_rate"))
+            risk_pct = None
+            if risk_cfg.account_size:
+                if risk_account is not None:
+                    risk_pct = risk_account / risk_cfg.account_size
 
             # Anchor the entry stop to the setup's structural invalidation when a
             # tighter pattern stop is available, so 1R reflects the real risk level
@@ -833,6 +950,7 @@ class ScreenerService:
                 stop_val = pattern_stop_val
                 position_size = None
                 risk_usd = None
+                risk_account = None
                 risk_pct = None
 
             rr_target = safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
@@ -864,6 +982,9 @@ class ScreenerService:
                 momentum_12m=safe_float(row.get("mom_12m")),
                 rel_strength=safe_float(row.get("rs_6m")),
                 confidence=safe_float(row.get("confidence")),
+                currency=currency,
+                account_currency=account_currency,
+                account_to_quote_rate=account_to_quote_rate,
             )
             recommendation = Recommendation.model_validate(asdict(rec_payload))
             rec_risk = recommendation.risk
@@ -959,6 +1080,14 @@ class ScreenerService:
                     target=rec_risk.target,
                     rr=rec_risk.rr,
                     shares=shares_val if shares_val is not None else rec_risk.shares,
+                    quote_currency=currency,
+                    account_currency=account_currency,
+                    position_size_quote=(
+                        position_size
+                        if position_size is not None
+                        else rec_risk.position_size
+                    ),
+                    risk_quote=risk_usd if risk_usd is not None else rec_risk.risk_amount,
                     position_size_usd=(
                         position_size
                         if position_size is not None
@@ -1155,7 +1284,10 @@ class ScreenerService:
                 return ScreenerResponse(
                     candidates=[],
                     asof_date=ctx.asof_str,
-                    total_screened=len(ctx.tickers),
+                    total_screened=len(ctx.screening_tickers),
+                    total_with_market_data=ctx.market_data_ticker_count,
+                    total_ranked_candidates=ctx.ranked_candidate_count,
+                    total_returned_candidates=0,
                     data_freshness=ctx.data_freshness,
                     warnings=ctx.warnings,
                     same_symbol_suppressed_count=0,
@@ -1174,7 +1306,10 @@ class ScreenerService:
             response = ScreenerResponse(
                 candidates=candidates,
                 asof_date=ctx.asof_str,
-                total_screened=len(ctx.tickers),
+                total_screened=len(ctx.screening_tickers),
+                total_with_market_data=ctx.market_data_ticker_count,
+                total_ranked_candidates=ctx.ranked_candidate_count,
+                total_returned_candidates=len(candidates),
                 benchmark_ticker=ctx.benchmark,
                 benchmark_change_pct=ctx.benchmark_change_pct,
                 benchmark_last_bar=ctx.benchmark_last_bar,

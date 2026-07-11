@@ -71,6 +71,14 @@ export default function DataTable<RowT>({
           key={getRowKey(row, index)}
           className={typeof rowClassName === 'function' ? rowClassName(row, index) : rowClassName}
           onClick={onRowClick ? () => onRowClick(row, index) : undefined}
+          onKeyDown={onRowClick ? (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              onRowClick(row, index);
+            }
+          } : undefined}
+          role={onRowClick ? 'button' : undefined}
+          tabIndex={onRowClick ? 0 : undefined}
         >
           {columns.map((column) => (
             <td

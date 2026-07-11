@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import OnboardingPage from './Onboarding';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { t } from '@/i18n/t';
 
 const mockUseStrategyReadiness = vi.fn();
 
@@ -28,18 +29,18 @@ describe('OnboardingPage', () => {
     renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
 
     expect(await screen.findByText('Mock Strategy Setup Step')).toBeInTheDocument();
-    expect(screen.getByText('Step 2 of 5')).toBeInTheDocument();
+    expect(screen.getByText(t('onboardingPage.progress', { step: 2, total: 5 }))).toBeInTheDocument();
   });
 
   it('blocks progress on strategy step when strategy is not ready', async () => {
     useOnboardingStore.setState({ status: 'new', currentStep: 1 });
     renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
 
-    await screen.findByText('Step 2 of 5');
-    const nextButton = screen.getByRole('button', { name: 'Next' });
+    await screen.findByText(t('onboardingPage.progress', { step: 2, total: 5 }));
+    const nextButton = screen.getByRole('button', { name: t('onboardingPage.actions.next') });
     expect(nextButton).toBeDisabled();
     expect(
-      screen.getByText('Save a valid strategy before moving to the next onboarding step.'),
+	      screen.getByText(t('onboardingPage.strategyStep.blockingHint')),
     ).toBeInTheDocument();
   });
 
@@ -48,11 +49,11 @@ describe('OnboardingPage', () => {
     useOnboardingStore.setState({ status: 'new', currentStep: 1 });
     renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
 
-    await screen.findByText('Step 2 of 5');
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await screen.findByText(t('onboardingPage.progress', { step: 2, total: 5 }));
+    fireEvent.click(screen.getByRole('button', { name: t('onboardingPage.actions.next') }));
 
     await waitFor(() => {
-      expect(screen.getByText('Step 3 of 5')).toBeInTheDocument();
+      expect(screen.getByText(t('onboardingPage.progress', { step: 3, total: 5 }))).toBeInTheDocument();
     });
   });
 
@@ -62,7 +63,7 @@ describe('OnboardingPage', () => {
 
     renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Complete' }));
+    fireEvent.click(screen.getByRole('button', { name: t('onboardingPage.actions.complete') }));
 
     await waitFor(() => {
       expect(useOnboardingStore.getState().status).toBe('completed');
@@ -75,7 +76,7 @@ describe('OnboardingPage', () => {
 
     renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
 
-    expect(await screen.findByText('How will you reconcile broker execution?')).toBeInTheDocument();
-    expect(screen.getByText(/Manual mode is fully supported/i)).toBeInTheDocument();
+    expect(await screen.findByText(t('onboardingPage.execution.title'))).toBeInTheDocument();
+    expect(screen.getByText(t('onboardingPage.execution.manual.title'))).toBeInTheDocument();
   });
 });

@@ -57,9 +57,9 @@ class ScreenerCandidate(BaseModel):
     sector: Optional[str] = None
     last_bar: Optional[str] = None
     close: float
-    sma_20: float
-    sma_50: float
-    sma_200: float
+    sma_20: Optional[float] = None
+    sma_50: Optional[float] = None
+    sma_200: Optional[float] = None
     atr: float
     momentum_6m: float
     momentum_12m: float
@@ -82,6 +82,16 @@ class ScreenerCandidate(BaseModel):
     target: Optional[float] = None
     rr: Optional[float] = None
     shares: Optional[int] = None
+    quote_currency: str = Field(
+        default="USD",
+        description="Currency of entry/stop/target/share-derived money fields",
+    )
+    account_currency: str = Field(
+        default="EUR",
+        description="Configured account base currency",
+    )
+    position_size_quote: Optional[float] = None
+    risk_quote: Optional[float] = None
     position_size_usd: Optional[float] = None
     risk_usd: Optional[float] = None
     risk_pct: Optional[float] = None
@@ -264,7 +274,30 @@ class ScreenerRequest(BaseModel):
 class ScreenerResponse(BaseModel):
     candidates: list[ScreenerCandidate]
     asof_date: str
-    total_screened: int
+    total_screened: int = Field(
+        description=(
+            "Resolved candidate ticker count after request/taxonomy filters, "
+            "excluding benchmark and sector context symbols."
+        )
+    )
+    total_with_market_data: int = Field(
+        default=0,
+        ge=0,
+        description="Candidate tickers with downloaded close data.",
+    )
+    total_ranked_candidates: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Candidate rows produced by the technical ranking stage before "
+            "same-symbol, earnings, combined-priority, and final top-N trimming."
+        ),
+    )
+    total_returned_candidates: int = Field(
+        default=0,
+        ge=0,
+        description="Final candidate rows returned in this response.",
+    )
     benchmark_ticker: Optional[str] = None
     benchmark_change_pct: Optional[float] = None
     benchmark_last_bar: Optional[str] = None

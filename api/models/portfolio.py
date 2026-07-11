@@ -38,6 +38,10 @@ class Position(BaseModel):
     exit_date: Optional[str] = None
     exit_price: Optional[float] = None
     exit_fee_eur: Optional[float] = None
+    exit_fx_rate: Optional[float] = Field(
+        default=None,
+        description="EURUSD rate at final exit execution (optional)",
+    )
     current_price: Optional[float] = None
     notes: str = ""
     exit_order_ids: Optional[list[str]] = None
@@ -113,6 +117,20 @@ class PartialCloseEvent(BaseModel):
     price: float = Field(..., gt=0, description="Exit price for this leg")
     r_at_close: float = Field(..., description="R-multiple at the time of this partial close")
     fee_eur: Optional[float] = Field(default=None, ge=0, description="Fee for this leg in EUR")
+    fx_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="EURUSD rate at partial-close execution (optional)",
+    )
+
+    @field_validator("fx_rate")
+    @classmethod
+    def validate_fx_rate(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
+        if not math.isfinite(v):
+            raise ValueError("FX rate must be finite")
+        return v
 
 
 class PartialCloseRequest(BaseModel):
@@ -120,6 +138,20 @@ class PartialCloseRequest(BaseModel):
     shares_closed: int = Field(..., gt=0, description="Number of shares to close")
     price: float = Field(..., gt=0, description="Exit price for this leg")
     fee_eur: Optional[float] = Field(default=None, ge=0, description="Fee in EUR (optional)")
+    fx_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="EURUSD rate at partial-close execution (optional)",
+    )
+
+    @field_validator("fx_rate")
+    @classmethod
+    def validate_fx_rate(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
+        if not math.isfinite(v):
+            raise ValueError("FX rate must be finite")
+        return v
 
 
 class ClosePositionRequest(BaseModel):
@@ -128,6 +160,11 @@ class ClosePositionRequest(BaseModel):
         default=None,
         ge=0,
         description="Execution fee in EUR (optional)",
+    )
+    exit_fx_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="EURUSD rate at exit execution (optional)",
     )
     reason: str = Field(default="", description="Reason for closing")
     lesson: Optional[str] = Field(default=None, description="Lesson / reflection (optional)")
@@ -157,13 +194,26 @@ class ClosePositionRequest(BaseModel):
             raise ValueError("Fee exceeds reasonable maximum (100,000)")
         return v
 
+    @field_validator("exit_fx_rate")
+    @classmethod
+    def validate_exit_fx_rate(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
+        if not math.isfinite(v):
+            raise ValueError("Exit FX rate must be finite")
+        return v
+
 
 class StopSuggestionManageConfig(BaseModel):
     breakeven_at_r: float = Field(default=1.0, ge=0)
     trail_after_r: float = Field(default=2.0, ge=0)
     trail_sma: int = Field(default=20, gt=0)
     sma_buffer_pct: float = Field(default=0.005, ge=0)
-    max_holding_days: int = Field(default=20, gt=0)
+    max_holding_days: int = Field(
+        default=20,
+        gt=0,
+        description="Max trading bars to hold before the hard time-exit rule",
+    )
     time_stop_days: int = Field(default=15, gt=0)
     time_stop_min_r: float = Field(default=0.5, ge=0)
 
@@ -213,7 +263,7 @@ class CreateOrderRequest(BaseModel):
     order_type: str
     quantity: int = Field(gt=0, description="Number of shares")
     limit_price: Optional[float] = Field(default=None, ge=0)
-    stop_price: Optional[float] = Field(default=None, ge=0)
+    stop_price: Optional[float] = Field(default=None, gt=0)
     target_price: Optional[float] = Field(default=None, gt=0, description="Planned price target (optional)")
     notes: str = ""
     order_kind: str = "entry"
@@ -236,6 +286,20 @@ class CreateOrderRequest(BaseModel):
     @classmethod
     def validate_order_type(cls, v: str) -> str:
         return v.strip().upper()
+
+    @model_validator(mode="after")
+    def validate_stop_below_limit(self):
+        # Long entry orders require stop below the limit entry. A protective SELL
+        # stop-limit legitimately has stop_price >= limit_price, so skip sells.
+        is_sell = self.order_type.upper().startswith("SELL")
+        if (
+            not is_sell
+            and self.stop_price is not None
+            and self.limit_price is not None
+            and self.stop_price >= self.limit_price
+        ):
+            raise ValueError("stop_price must be below limit_price for a long entry order")
+        return self
 
 
 class FillOrderRequest(BaseModel):

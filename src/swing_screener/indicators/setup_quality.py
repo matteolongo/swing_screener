@@ -10,6 +10,7 @@ from typing import Iterable
 
 import pandas as pd
 
+from swing_screener.data.currency import detect_currency
 from swing_screener.indicators.volume_pressure import windowed_buy_pressure_ratio
 
 
@@ -26,9 +27,40 @@ def _get_field(ohlcv: pd.DataFrame, field: str) -> pd.DataFrame | None:
     return None
 
 
+def _positive_rate(value) -> float | None:
+    try:
+        rate = float(value)
+    except (TypeError, ValueError):
+        return None
+    return rate if pd.notna(rate) and rate > 0 else None
+
+
+def _quote_to_eur_rate(
+    ticker: str,
+    quote_to_eur_rates: dict[str, float] | None,
+) -> float | None:
+    currency = str(detect_currency(str(ticker)) or "").strip().upper()
+    if currency == "EUR":
+        return 1.0
+    if not quote_to_eur_rates:
+        return None
+
+    normalized = {
+        str(key).strip().upper(): value
+        for key, value in quote_to_eur_rates.items()
+        if str(key).strip()
+    }
+    for key in (str(ticker).strip().upper(), currency):
+        if key in normalized:
+            return _positive_rate(normalized[key])
+    return None
+
+
 def compute_setup_quality(
     ohlcv: pd.DataFrame,
     tickers: Iterable[str] | None = None,
+    *,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """Compute setup quality features per ticker.
 
@@ -66,9 +98,17 @@ def compute_setup_quality(
         if ticker not in close_m.columns:
             continue
 
-        c = close_m[ticker].dropna()
-        h = high_m[ticker].dropna() if high_m is not None and ticker in high_m.columns else pd.Series(dtype=float)
-        l = low_m[ticker].dropna() if low_m is not None and ticker in low_m.columns else pd.Series(dtype=float)
+        c_raw = close_m[ticker]
+        h_raw = high_m[ticker] if high_m is not None and ticker in high_m.columns else None
+        l_raw = low_m[ticker] if low_m is not None and ticker in low_m.columns else None
+        v_raw = vol_m[ticker] if vol_m is not None and ticker in vol_m.columns else None
+
+        c = c_raw.dropna()
+        ohlc = (
+            pd.concat({"h": h_raw, "l": l_raw, "c": c_raw}, axis=1).dropna()
+            if h_raw is not None and l_raw is not None
+            else pd.DataFrame(columns=["h", "l", "c"])
+        )
 
         if len(c) < 14:
             continue
@@ -78,12 +118,15 @@ def compute_setup_quality(
 
         # ── consolidation_tightness ──────────────────────────────────────────
         ct = float("nan")
-        if len(h) >= 78 and len(l) >= 78 and len(c) >= 78:
+        if len(ohlc) >= 78:
             # ATR14: simple mean of true range over most recent 14 bars
+            h = ohlc["h"]
+            l = ohlc["l"]
+            c_aligned = ohlc["c"]
             h14 = h.iloc[-14:].values
             l14 = l.iloc[-14:].values
-            c14 = c.iloc[-14:].values
-            c14_prev = c.iloc[-15:-1].values
+            c14 = c_aligned.iloc[-14:].values
+            c14_prev = c_aligned.iloc[-15:-1].values
             tr14 = pd.DataFrame({
                 "hl": h14 - l14,
                 "hcp": abs(h14 - c14_prev),
@@ -94,8 +137,8 @@ def compute_setup_quality(
             # ATR63: simple mean of true range over previous 63 bars
             h63 = h.iloc[-77:-14].values
             l63 = l.iloc[-77:-14].values
-            c63 = c.iloc[-77:-14].values
-            c63_prev = c.iloc[-78:-15].values
+            c63 = c_aligned.iloc[-77:-14].values
+            c63_prev = c_aligned.iloc[-78:-15].values
             tr63 = pd.DataFrame({
                 "hl": h63 - l63,
                 "hcp": abs(h63 - c63_prev),
@@ -109,20 +152,23 @@ def compute_setup_quality(
 
         # ── close_location_in_range ─────────────────────────────────────────
         clr = float("nan")
-        if len(h) >= 20 and len(l) >= 20:
-            high_20 = float(h.iloc[-20:].max())
-            low_20 = float(l.iloc[-20:].min())
+        if len(ohlc) >= 20:
+            window_20 = ohlc.iloc[-20:]
+            high_20 = float(window_20["h"].max())
+            low_20 = float(window_20["l"].min())
             rng = high_20 - low_20
             if rng > 0:
-                clr = max(0.0, min(1.0, (last_close - low_20) / rng))
+                aligned_close = float(window_20["c"].iloc[-1])
+                clr = max(0.0, min(1.0, (aligned_close - low_20) / rng))
         row["close_location_in_range"] = clr
 
         # ── above_breakout_extension ─────────────────────────────────────────
         ext = float("nan")
-        if len(h) >= 51:
-            prior_high_50 = float(h.iloc[-51:-1].max())
+        if len(ohlc) >= 51:
+            prior_high_50 = float(ohlc["h"].iloc[-51:-1].max())
             if prior_high_50 > 0:
-                ext = max(0.0, (last_close / prior_high_50) - 1.0)
+                aligned_close = float(ohlc["c"].iloc[-1])
+                ext = max(0.0, (aligned_close / prior_high_50) - 1.0)
         row["above_breakout_extension"] = ext
 
         # ── 52-week high proximity ────────────────────────────────────────────
@@ -137,21 +183,26 @@ def compute_setup_quality(
         row["near_52w_high"] = near_high
 
         # ── breakout_volume_confirmation + volume_ratio + avg_daily_volume_eur ─
-        if vol_m is not None and ticker in vol_m.columns:
-            v = vol_m[ticker].dropna()
-            if len(v) >= 21:
-                today_vol = float(v.iloc[-1])
-                avg_vol_20 = float(v.iloc[-21:-1].mean())
+        if v_raw is not None:
+            cv = pd.concat({"c": c_raw, "v": v_raw}, axis=1).dropna()
+            if len(cv) >= 21:
+                today_vol = float(cv["v"].iloc[-1])
+                avg_vol_20 = float(cv["v"].iloc[-21:-1].mean())
                 row["breakout_volume_confirmation"] = bool(today_vol > 1.5 * avg_vol_20)
                 if avg_vol_20 > 0:
                     row["volume_ratio"] = today_vol / avg_vol_20
-                row["avg_daily_volume_eur"] = last_close * avg_vol_20
+                aligned_close = float(cv["c"].iloc[-1])
+                quote_turnover = aligned_close * avg_vol_20
+                quote_to_eur_rate = _quote_to_eur_rate(ticker, quote_to_eur_rates)
+                if quote_to_eur_rate is not None:
+                    row["avg_daily_volume_eur"] = quote_turnover * quote_to_eur_rate
 
             # ── buy_pressure_ratio: volume-weighted close-location over 20 bars ──
             # >0.5 = recent range accumulated (buy-dominated), <0.5 = distributed.
-            bpr = windowed_buy_pressure_ratio(h, l, c, vol_m[ticker], n=20)
-            if pd.notna(bpr):
-                row["buy_pressure_ratio"] = bpr
+            if h_raw is not None and l_raw is not None:
+                bpr = windowed_buy_pressure_ratio(h_raw, l_raw, c_raw, v_raw, n=20)
+                if pd.notna(bpr):
+                    row["buy_pressure_ratio"] = bpr
 
         rows.append(row)
 

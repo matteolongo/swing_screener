@@ -8,6 +8,7 @@ This document is the canonical module layout after the 2026 architecture consoli
 ## Canonical Top-Level Domains
 
 - `src/swing_screener/backtest`
+- `src/swing_screener/analysis`
 - `src/swing_screener/data`
 - `src/swing_screener/execution`
 - `src/swing_screener/fundamentals`
@@ -39,6 +40,7 @@ This document is the canonical module layout after the 2026 architecture consoli
 11. `settings` owns settings load/migrate/path resolution.
 12. `integrations` owns third-party brokerage integrations (e.g. degiro).
 13. `backtest` orchestrates the live signal/stop/exit functions over point-in-time history to measure expectancy; owns no trading logic of its own. Validation harness only, never a parameter optimizer.
+14. `analysis` owns advisory, single-symbol analysis engines such as volume-zone analysis. It consumes already-fetched data, stays deterministic, and never mutates screener ranking, sizing, portfolio, or order state.
 
 ## Canonical Import Paths
 
@@ -51,6 +53,8 @@ Use these paths for new code:
 - Report config: `swing_screener.strategy.report_config.ReportConfig`
 - Scalar coercion helpers: `swing_screener.utils.coerce.*` (`is_na_scalar`, `safe_float`, `safe_optional_float`, `safe_optional_int`, `safe_list`)
 - Price-history / OHLCV shaping: `swing_screener.data.price_history.*` (`merge_ohlcv`, `to_date_iso`, `last_bar_map`, `price_history_map`, `price_history_change_pct`, `aligned_benchmark_price_history`)
+- Advisory analysis: `swing_screener.analysis.volume_zones.analyze_volume_zones`
+- Volume-zone indicators: `swing_screener.indicators.volume_profile`, `swing_screener.indicators.vwap`, `swing_screener.indicators.swings`
 
 ## Screener Pipeline
 

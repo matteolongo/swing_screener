@@ -28,6 +28,7 @@ def _mock_position(ticker: str = "BESI.AS", position_id: str = "pos-1") -> Magic
     p.ticker = ticker
     p.entry_price = 250.0
     p.stop_price = 230.0
+    p.shares = 5
     p.current_price = 287.6
     p.r_now = 1.88
     p.days_open = 14
@@ -140,7 +141,15 @@ def test_analyze_position_returns_cache_without_calling_analyzer(client):
         upcoming_events=[],
         position_signal=PositionSignal(action=PositionSignalAction.HOLD, reason="From cache."),
         sources=[],
-        inputs_used={},
+        inputs_used={
+            "position_context": {
+                "position_id": "pos-1",
+                "ticker": "BESI.AS",
+                "shares": 5.0,
+                "entry_price": 250.0,
+                "stop": 230.0,
+            }
+        },
     )
 
     def override_portfolio():
@@ -167,6 +176,83 @@ def test_analyze_position_returns_cache_without_calling_analyzer(client):
     data = response.json()
     assert data["summary_line"] == "Cached result."
     assert data["position_signal"]["action"] == "HOLD"
+
+
+def test_analyze_position_ignores_cache_without_matching_position_context(client):
+    from swing_screener.intelligence.models import (
+        SymbolIntelligence,
+        PositionSignal,
+        PositionSignalAction,
+    )
+
+    pos = _mock_position()
+    positions_resp = MagicMock()
+    positions_resp.positions = [pos]
+
+    cached = SymbolIntelligence(
+        symbol="BESI.AS",
+        generated_at="2026-06-25T00:00:00+00:00",
+        action="BUY_NOW",
+        conviction="high",
+        catalyst_urgency="none",
+        summary_line="Ticker cache without position context.",
+        narrative="...",
+        upcoming_events=[],
+        sources=[],
+        inputs_used={},
+    )
+    fresh = SymbolIntelligence(
+        symbol="BESI.AS",
+        generated_at="2026-06-25T00:05:00+00:00",
+        action="MANAGE_ONLY",
+        conviction="low",
+        catalyst_urgency="none",
+        summary_line="Fresh position context.",
+        narrative="...",
+        upcoming_events=[],
+        position_signal=PositionSignal(action=PositionSignalAction.HOLD, reason="Fresh."),
+        sources=[],
+        inputs_used={},
+    )
+
+    def override_portfolio():
+        import pandas as pd
+        from api.models.portfolio import EarningsProximityResponse
+
+        svc = MagicMock()
+        svc.list_positions.return_value = positions_resp
+        svc.suggest_position_stop.return_value = _mock_stop_suggestion()
+        svc.get_earnings_proximity.return_value = EarningsProximityResponse(ticker="BESI.AS")
+        svc.fetch_recent_ohlcv.return_value = pd.DataFrame()
+        return svc
+
+    def override_fundamentals():
+        svc = MagicMock()
+        svc.get_snapshot.return_value = None
+        return svc
+
+    analyzer_instance = MagicMock()
+    analyzer_instance.analyze.return_value = fresh
+
+    app.dependency_overrides[get_portfolio_service] = override_portfolio
+    app.dependency_overrides[get_fundamentals_service] = override_fundamentals
+    try:
+        with (
+            patch("api.routers.intelligence.read_from_cache", return_value=cached),
+            patch("api.routers.intelligence._get_analyzer", return_value=analyzer_instance),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}),
+        ):
+            response = client.post("/api/intelligence/position/pos-1")
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+        app.dependency_overrides.pop(get_fundamentals_service, None)
+
+    assert response.status_code == 200
+    assert response.json()["summary_line"] == "Fresh position context."
+    analyzer_instance.analyze.assert_called_once()
+    request_arg = analyzer_instance.analyze.call_args.args[1]
+    assert request_arg.position_id == "pos-1"
+    assert request_arg.shares == 5
 
 
 def test_analyze_position_503_without_api_key(client):

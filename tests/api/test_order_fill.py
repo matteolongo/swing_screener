@@ -4,6 +4,50 @@ import pytest
 from fastapi.testclient import TestClient
 from api.main import app
 
+
+@pytest.fixture()
+def client_with_empty_order_book(tmp_path, monkeypatch):
+    orders_path = tmp_path / "orders.json"
+    positions_path = tmp_path / "positions.json"
+    orders_path.write_text(json.dumps({"orders": [], "asof": "2026-04-25"}))
+    positions_path.write_text(json.dumps({"positions": [], "asof": "2026-04-25"}))
+    import api.dependencies as deps
+
+    monkeypatch.setattr(deps, "_orders_path", orders_path)
+    monkeypatch.setattr(deps, "_positions_path", positions_path)
+    return TestClient(app)
+
+
+def test_create_order_rejects_zero_stop(client_with_empty_order_book):
+    resp = client_with_empty_order_book.post(
+        "/api/portfolio/orders",
+        json={
+            "ticker": "SBMO",
+            "order_type": "LIMIT",
+            "quantity": 200,
+            "limit_price": 12.50,
+            "stop_price": 0,
+        },
+    )
+
+    assert resp.status_code == 422
+
+
+def test_create_order_rejects_stop_at_or_above_limit(client_with_empty_order_book):
+    resp = client_with_empty_order_book.post(
+        "/api/portfolio/orders",
+        json={
+            "ticker": "SBMO",
+            "order_type": "LIMIT",
+            "quantity": 200,
+            "limit_price": 12.50,
+            "stop_price": 12.50,
+        },
+    )
+
+    assert resp.status_code == 422
+
+
 @pytest.fixture()
 def client_with_pending_order(tmp_path, monkeypatch):
     orders_path = tmp_path / "orders.json"
@@ -203,3 +247,68 @@ def test_fill_addon_merges_into_existing_position(client_with_addon_order):
     positions = client_with_addon_order.get("/api/portfolio/positions").json()["positions"]
     sbmo = [p for p in positions if p["ticker"] == "SBMO"]
     assert len(sbmo) == 1
+
+
+@pytest.fixture()
+def client_with_addon_order_below_live_stop(tmp_path, monkeypatch):
+    orders_path = tmp_path / "orders.json"
+    positions_path = tmp_path / "positions.json"
+    orders_path.write_text(json.dumps({
+        "orders": [{
+            "order_id": "ORD-SBMO-003",
+            "ticker": "SBMO",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_type": "LIMIT",
+            "quantity": 50,
+            "limit_price": 8.00,
+            "stop_price": 7.00,
+            "order_date": "2026-04-25",
+            "filled_date": None,
+            "entry_price": None,
+            "notes": "",
+            "parent_order_id": None,
+            "position_id": "POS-EXIST",
+            "tif": "GTC",
+            "fee_eur": None,
+            "fill_fx_rate": None,
+            "isin": "NL0010273215",
+            "thesis": None,
+        }],
+        "asof": "2026-04-25",
+    }))
+    positions_path.write_text(json.dumps({
+        "positions": [{
+            "position_id": "POS-EXIST",
+            "ticker": "SBMO",
+            "status": "open",
+            "entry_date": "2026-04-20",
+            "entry_price": 12.0,
+            "stop_price": 11.0,
+            "shares": 100,
+            "initial_risk": 1.0,
+        }],
+        "asof": "2026-04-25",
+    }))
+    import api.dependencies as deps
+
+    monkeypatch.setattr(deps, "_orders_path", orders_path)
+    monkeypatch.setattr(deps, "_positions_path", positions_path)
+    return TestClient(app)
+
+
+def test_fill_addon_rejects_live_stop_above_blended_entry(
+    client_with_addon_order_below_live_stop,
+):
+    resp = client_with_addon_order_below_live_stop.post(
+        "/api/portfolio/orders/ORD-SBMO-003/fill",
+        json={"filled_price": 8.00, "filled_date": "2026-04-26"},
+    )
+
+    assert resp.status_code == 422
+    positions = client_with_addon_order_below_live_stop.get(
+        "/api/portfolio/positions"
+    ).json()["positions"]
+    assert positions[0]["entry_price"] == 12.0
+    assert positions[0]["stop_price"] == 11.0
+    assert positions[0]["shares"] == 100

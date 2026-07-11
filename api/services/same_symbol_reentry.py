@@ -7,6 +7,8 @@ from typing import Optional
 
 from api.models.recommendation import Recommendation, RecommendationRisk
 from api.models.screener import SameSymbolCandidateContext, ScreenerCandidate
+from swing_screener.risk.currency import normalize_currency_code
+
 
 def _parse_date(value: object) -> Optional[date]:
     if value is None:
@@ -21,6 +23,31 @@ def _safe_round(value: Optional[float], digits: int = 4) -> Optional[float]:
     if value is None or not math.isfinite(value):
         return None
     return round(float(value), digits)
+
+
+def _adjusted_account_to_quote_rate(risk: RecommendationRisk) -> Optional[float]:
+    """Return a usable conversion rate without inventing cross-currency FX."""
+    quote_currency = normalize_currency_code(risk.currency)
+    account_currency = normalize_currency_code(risk.account_currency)
+    same_currency = (
+        quote_currency is not None
+        and account_currency is not None
+        and quote_currency == account_currency
+    )
+
+    if risk.account_to_quote_rate is None:
+        if same_currency or (quote_currency is None and account_currency is None):
+            return 1.0
+        return None
+
+    try:
+        parsed = float(risk.account_to_quote_rate)
+    except (TypeError, ValueError):
+        return 1.0 if same_currency else None
+
+    if math.isfinite(parsed) and parsed > 0:
+        return parsed
+    return 1.0 if same_currency else None
 
 
 def _order_field(order: object, key: str, default=None):
@@ -85,19 +112,32 @@ def _copy_recommendation_with_adjusted_risk(
     rr = risk.rr
     if target is not None and risk_per_share > 0:
         rr = (float(target) - float(risk.entry)) / risk_per_share
+    account_to_quote_rate = _adjusted_account_to_quote_rate(risk)
     risk_amount = risk_per_share * shares
-    risk_pct = (risk_amount / account_size) if account_size > 0 else 0.0
     position_size = float(risk.entry) * shares
+    if account_to_quote_rate is None:
+        risk_amount_account = None
+        risk_pct = 0.0
+        position_size_account = None
+    else:
+        risk_amount_account = risk_amount / account_to_quote_rate
+        risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
+        position_size_account = position_size / account_to_quote_rate
     adjusted_risk = RecommendationRisk(
         entry=risk.entry,
         stop=execution_stop,
         target=target,
         rr=_safe_round(rr),
         risk_amount=_safe_round(risk_amount) or 0.0,
+        risk_amount_account=_safe_round(risk_amount_account),
         risk_pct=_safe_round(risk_pct, 6) or 0.0,
         position_size=_safe_round(position_size) or 0.0,
+        position_size_account=_safe_round(position_size_account),
         shares=int(shares),
         invalidation_level=execution_stop,
+        currency=risk.currency,
+        account_currency=risk.account_currency,
+        account_to_quote_rate=account_to_quote_rate,
     )
     payload = recommendation.model_dump()
     payload["risk"] = adjusted_risk.model_dump()
@@ -221,10 +261,20 @@ class SameSymbolReentryEvaluator:
             candidate.same_symbol = context
             return candidate, context
 
+        account_to_quote_rate = _adjusted_account_to_quote_rate(recommendation.risk)
+        if account_to_quote_rate is None:
+            context.reason = "A valid FX rate is required before same-symbol add-on sizing."
+            candidate.same_symbol = context
+            return candidate, context
+
         risk_per_share = float(entry_price) - current_stop
-        remaining_risk_budget = (account_size * risk_pct_target) - _current_position_risk(matching_position)
+        # Risk and max-position budgets are configured in account currency;
+        # same-symbol sizing below compares them to quote-currency exposure.
+        risk_budget_quote = account_size * risk_pct_target * account_to_quote_rate
+        max_position_value_quote = account_size * max_position_pct * account_to_quote_rate
+        remaining_risk_budget = risk_budget_quote - _current_position_risk(matching_position)
         current_position_value = _position_market_value(matching_position, candidate.close)
-        remaining_value_capacity = (account_size * max_position_pct) - current_position_value
+        remaining_value_capacity = max_position_value_quote - current_position_value
         shares_by_risk = math.floor(remaining_risk_budget / risk_per_share) if risk_per_share > 0 else 0
         shares_by_value = math.floor(remaining_value_capacity / float(entry_price)) if entry_price > 0 else 0
         candidate_share_cap = candidate.shares or recommendation.risk.shares
@@ -244,8 +294,10 @@ class SameSymbolReentryEvaluator:
         candidate.recommendation = adjusted_recommendation
         candidate.stop = _safe_round(current_stop)
         candidate.rr = adjusted_recommendation.risk.rr
+        candidate.risk_quote = adjusted_recommendation.risk.risk_amount
         candidate.risk_usd = adjusted_recommendation.risk.risk_amount
         candidate.risk_pct = adjusted_recommendation.risk.risk_pct
+        candidate.position_size_quote = adjusted_recommendation.risk.position_size
         candidate.position_size_usd = adjusted_recommendation.risk.position_size
         candidate.shares = adjusted_recommendation.risk.shares
         context.mode = "SCALE_BACK" if has_partial_closes else "ADD_ON"

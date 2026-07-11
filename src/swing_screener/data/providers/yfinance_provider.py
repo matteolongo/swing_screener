@@ -76,19 +76,32 @@ class YfinanceProvider(MarketDataProvider):
     def _ticker_cache_dir(self) -> Path:
         return self.cache_dir / "by_ticker"
 
-    def _ticker_cache_path(self, ticker: str) -> Path:
+    def _cache_interval_token(self, interval: str) -> str:
+        token = str(interval or "1d").strip().lower() or "1d"
+        return re.sub(r"[^A-Za-z0-9._-]", "_", token)
+
+    def _ticker_cache_path(self, ticker: str, interval: str = "1d") -> Path:
         """Per-ticker parquet path, so universe membership changes never
         invalidate other tickers' cached data."""
         safe = re.sub(r"[^A-Za-z0-9._-]", "_", ticker)
         if safe != ticker:
             safe = f"{safe}__{hashlib.sha1(ticker.encode('utf-8')).hexdigest()[:8]}"
-        return self._ticker_cache_dir() / f"{safe}__adj={int(self.auto_adjust)}.parquet"
+        interval_token = self._cache_interval_token(interval)
+        interval_suffix = "" if interval_token == "1d" else f"__interval={interval_token}"
+        return (
+            self._ticker_cache_dir()
+            / f"{safe}__adj={int(self.auto_adjust)}{interval_suffix}.parquet"
+        )
 
     def _ticker_index_path(self) -> Path:
         return self._ticker_cache_dir() / "index.json"
 
-    def _index_key(self, ticker: str) -> str:
-        return f"{ticker}|adj={int(self.auto_adjust)}"
+    def _index_key(self, ticker: str, interval: str = "1d") -> str:
+        key = f"{ticker}|adj={int(self.auto_adjust)}"
+        interval_token = self._cache_interval_token(interval)
+        if interval_token != "1d":
+            key = f"{key}|interval={interval_token}"
+        return key
 
     def _load_ticker_index(self) -> dict:
         """Coverage index: ticker key -> {start, end} of the cached window."""
@@ -118,6 +131,7 @@ class YfinanceProvider(MarketDataProvider):
         tickers: list[str],
         start_date: str,
         end_for_coverage: str,
+        interval: str = "1d",
     ) -> None:
         """Persist each downloaded ticker's columns to its own parquet and
         extend the coverage window recorded in the index."""
@@ -133,7 +147,7 @@ class YfinanceProvider(MarketDataProvider):
             sub = df.loc[:, df.columns.get_level_values(1) == ticker]
             if sub.dropna(how="all").empty:
                 continue
-            path = self._ticker_cache_path(ticker)
+            path = self._ticker_cache_path(ticker, interval)
             if path.exists():
                 existing = self._read_cached_ohlcv(path, [ticker])
                 if existing is not None and not existing.empty:
@@ -141,7 +155,7 @@ class YfinanceProvider(MarketDataProvider):
                     merged = merged.loc[~merged.index.duplicated(keep="last")].sort_index()
                     sub = merged
             self._write_cached_ohlcv(path, sub)
-            key = self._index_key(ticker)
+            key = self._index_key(ticker, interval)
             entry = index.get(key) if isinstance(index.get(key), dict) else {}
             old_start = str(entry.get("start")) if entry.get("start") else None
             old_end = str(entry.get("end")) if entry.get("end") else None
@@ -217,6 +231,7 @@ class YfinanceProvider(MarketDataProvider):
         tickers: list[str],
         start_date: str,
         end_date: Optional[str],
+        interval: str = "1d",
         threads: Optional[bool] = None,
     ) -> pd.DataFrame:
         """
@@ -230,6 +245,7 @@ class YfinanceProvider(MarketDataProvider):
             tickers,
             start=start_date,
             end=end_date,
+            interval=interval,
             auto_adjust=self.auto_adjust,
             progress=self.progress,
             group_by="column",
@@ -241,11 +257,14 @@ class YfinanceProvider(MarketDataProvider):
         tickers: list[str],
         start_date: str,
         end_date: Optional[str],
+        interval: str = "1d",
         threads: Optional[bool] = None,
     ) -> pd.DataFrame:
         """Download and normalize one ticker batch, returning empty frame on failure."""
         try:
-            df = self._download_raw(tickers, start_date, end_date, threads=threads)
+            df = self._download_raw(
+                tickers, start_date, end_date, interval=interval, threads=threads
+            )
         except Exception as exc:
             logger.warning(
                 "yfinance download failed for %s tickers (%s): %s",
@@ -301,11 +320,14 @@ class YfinanceProvider(MarketDataProvider):
         tickers: list[str],
         start_date: str,
         end_date: Optional[str],
+        interval: str = "1d",
     ) -> pd.DataFrame:
         """Download tickers one-by-one as a fallback when bulk calls fail."""
         out = pd.DataFrame()
         for ticker in tickers:
-            single = self._download_batch([ticker], start_date, end_date, threads=False)
+            single = self._download_batch(
+                [ticker], start_date, end_date, interval=interval, threads=False
+            )
             out = self._merge_ohlcv_frames(out, single)
         return out
 
@@ -314,19 +336,25 @@ class YfinanceProvider(MarketDataProvider):
         tickers: list[str],
         start_date: str,
         end_date: Optional[str],
+        interval: str = "1d",
     ) -> pd.DataFrame:
         """
         Retry missing tickers in smaller batches, then one-by-one for stubborn symbols.
         """
         out = pd.DataFrame()
         for chunk in self._iter_chunks(tickers, self._RETRY_CHUNK_SIZE):
-            chunk_df = self._download_batch(chunk, start_date, end_date, threads=False)
+            chunk_df = self._download_batch(
+                chunk, start_date, end_date, interval=interval, threads=False
+            )
             out = self._merge_ohlcv_frames(out, chunk_df)
 
             still_missing = self._missing_close_tickers(chunk_df, chunk)
             if still_missing:
                 out = self._merge_ohlcv_frames(
-                    out, self._download_sequential(still_missing, start_date, end_date)
+                    out,
+                    self._download_sequential(
+                        still_missing, start_date, end_date, interval=interval
+                    ),
                 )
         return out
     
@@ -431,8 +459,8 @@ class YfinanceProvider(MarketDataProvider):
         read_cache = use_cache and not force_refresh
         index = self._load_ticker_index() if (read_cache or allow_cache_fallback_on_error) else {}
         for ticker in tks:
-            path = self._ticker_cache_path(ticker)
-            entry = index.get(self._index_key(ticker))
+            path = self._ticker_cache_path(ticker, interval)
+            entry = index.get(self._index_key(ticker, interval))
             covered = (
                 isinstance(entry, dict)
                 and str(entry.get("start") or "9999") <= start_date
@@ -459,7 +487,7 @@ class YfinanceProvider(MarketDataProvider):
         df = pd.DataFrame()
         if misses:
             # Download from Yahoo Finance (bulk first, then targeted retries)
-            df = self._download_batch(misses, start_date, actual_end)
+            df = self._download_batch(misses, start_date, actual_end, interval=interval)
 
             if (df is None or df.empty) and len(misses) > 1:
                 logger.warning(
@@ -473,7 +501,9 @@ class YfinanceProvider(MarketDataProvider):
                     fell_back_to="yfinance-sequential",
                     tickers=list(misses[:20]),
                 )
-                df = self._download_sequential(misses, start_date, actual_end)
+                df = self._download_sequential(
+                    misses, start_date, actual_end, interval=interval
+                )
 
             if df is None or df.empty:
                 df = pd.DataFrame()
@@ -505,7 +535,9 @@ class YfinanceProvider(MarketDataProvider):
                         len(missing_tickers),
                         len(misses),
                     )
-                    retry_df = self._retry_missing_tickers(missing_tickers, start_date, actual_end)
+                    retry_df = self._retry_missing_tickers(
+                        missing_tickers, start_date, actual_end, interval=interval
+                    )
                     df = self._merge_ohlcv_frames(df, retry_df)
 
                     remaining_missing = self._missing_close_tickers(df, misses)
@@ -541,11 +573,14 @@ class YfinanceProvider(MarketDataProvider):
                     )
 
                 if use_cache:
-                    self._store_per_ticker_cache(df, misses, start_date, end_for_coverage)
+                    self._store_per_ticker_cache(
+                        df, misses, start_date, end_for_coverage, interval=interval
+                    )
 
         out = df
         for frame in cached_frames:
             out = self._merge_ohlcv_frames(out, frame)
+        out = self._slice_window(out, start_date, end_for_coverage)
         if out is None or out.empty:
             raise RuntimeError("Download empty. Check tickers or connection.")
 

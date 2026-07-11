@@ -7,6 +7,7 @@ from typing import Optional
 
 from swing_screener.errors import NotFoundError
 from swing_screener.data.currency import detect_currency
+from swing_screener.risk.currency import convert_via_eurusd
 from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 from swing_screener.portfolio.metrics import (
     calculate_current_position_value,
@@ -77,6 +78,143 @@ def _compute_r_fx_adjusted(
     return (current_eur - entry_eur) / per_share_risk_eur
 
 
+def _to_account_currency(
+    amount: float,
+    *,
+    position_currency: str,
+    account_currency: str,
+    eurusd_rate: float,
+) -> float:
+    quote = str(position_currency or "").strip().upper()
+    account = str(account_currency or "EUR").strip().upper()
+    if quote == account or quote in {"", "UNKNOWN"}:
+        return amount
+    if eurusd_rate <= 0:
+        logger.warning(
+            "Invalid EURUSD rate %s; leaving %s amount unconverted",
+            eurusd_rate,
+            quote,
+        )
+        return amount
+    converted, ok = convert_via_eurusd(amount, quote, account, eurusd_rate)
+    if not ok:
+        logger.warning(
+            "No FX conversion path for %s -> %s; leaving amount unconverted",
+            quote,
+            account,
+        )
+        return amount
+    return converted
+
+
+def _needs_eurusd_rate(position_currency: str, account_currency: str) -> bool:
+    quote = str(position_currency or "").strip().upper()
+    account = str(account_currency or "EUR").strip().upper()
+    return quote != account and {quote, account} == {"USD", "EUR"}
+
+
+def _positive_float(value) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _partial_close_share_count(position: dict) -> int:
+    total = 0
+    for event in position.get("partial_closes") or []:
+        total += int(event.get("shares_closed", 0) or 0)
+    return total
+
+
+def _original_share_count(position: dict) -> int:
+    current_shares = int(position.get("shares", 0) or 0)
+    return current_shares + _partial_close_share_count(position)
+
+
+def _allocated_entry_fee_eur(position: dict, shares: int) -> float:
+    total_entry_fee_eur = float(position.get("entry_fee_eur") or 0.0)
+    original_shares = _original_share_count(position)
+    if total_entry_fee_eur <= 0 or shares <= 0 or original_shares <= 0:
+        return 0.0
+    return total_entry_fee_eur * (shares / original_shares)
+
+
+def _remaining_entry_fee_eur(position: dict) -> float:
+    return _allocated_entry_fee_eur(position, int(position.get("shares", 0) or 0))
+
+
+def _fee_eur_to_account_currency(
+    fee_eur: float,
+    *,
+    account_currency: str,
+    eurusd_rate: float,
+) -> float:
+    account = str(account_currency or "EUR").strip().upper()
+    if account == "EUR":
+        return fee_eur
+    if eurusd_rate <= 0:
+        logger.warning(
+            "Invalid EURUSD rate %s; leaving EUR fee unconverted",
+            eurusd_rate,
+        )
+        return fee_eur
+    converted, ok = convert_via_eurusd(fee_eur, "EUR", account, eurusd_rate)
+    if not ok:
+        logger.warning(
+            "No FX conversion path for EUR fee -> %s; leaving amount unconverted",
+            account,
+        )
+        return fee_eur
+    return converted
+
+
+def _fee_eur_to_position_currency(
+    fee_eur: float,
+    *,
+    position_currency: str,
+    eurusd_rate: float,
+) -> float:
+    quote = str(position_currency or "").strip().upper()
+    converted, ok = convert_via_eurusd(fee_eur, "EUR", quote, eurusd_rate)
+    return converted if ok else fee_eur
+
+
+def _rate_for_conversion(raw_rate, fallback_rate: float) -> float:
+    return _positive_float(raw_rate) or fallback_rate
+
+
+def _realized_leg_pnl_account_currency(
+    *,
+    entry_price: float,
+    exit_price: float,
+    shares: int,
+    position_currency: str,
+    account_currency: str,
+    entry_fx_rate,
+    exit_fx_rate,
+    fallback_eurusd_rate: float,
+) -> float:
+    entry_rate = _rate_for_conversion(entry_fx_rate, fallback_eurusd_rate)
+    exit_rate = _rate_for_conversion(exit_fx_rate, fallback_eurusd_rate)
+    entry_value = _to_account_currency(
+        entry_price * shares,
+        position_currency=position_currency,
+        account_currency=account_currency,
+        eurusd_rate=entry_rate,
+    )
+    exit_value = _to_account_currency(
+        exit_price * shares,
+        position_currency=position_currency,
+        account_currency=account_currency,
+        eurusd_rate=exit_rate,
+    )
+    return exit_value - entry_value
+
+
 class PortfolioReadService:
     """Read-model: positions list, metrics, portfolio summary."""
 
@@ -106,8 +244,15 @@ class PortfolioReadService:
         live_price = current_prices.get(ticker)
         current_price_for_metrics = live_price if live_price is not None else self._pricing._fallback_price(position)
         per_share_risk = calculate_per_share_risk(state_position)
-        entry_fee_eur = float(position.get("entry_fee_eur") or 0.0)
-        fee_for_pnl = entry_fee_eur * eurusd_rate if detect_currency(ticker) == "USD" else entry_fee_eur
+        position_currency = detect_currency(ticker)
+        entry_fee_eur = _remaining_entry_fee_eur(position)
+        if state_position.status == "closed":
+            entry_fee_eur += float(position.get("exit_fee_eur") or 0.0)
+        fee_for_pnl = _fee_eur_to_position_currency(
+            entry_fee_eur,
+            position_currency=position_currency,
+            eurusd_rate=eurusd_rate,
+        )
         pnl = calculate_pnl(state_position.entry_price, current_price_for_metrics, state_position.shares) - fee_for_pnl
         entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
         pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0
@@ -141,7 +286,6 @@ class PortfolioReadService:
             and r_now < min_progress_r
         )
 
-        position_currency = detect_currency(ticker)
         r_fx_adjusted: Optional[float] = None
         entry_fx_rate_raw = position.get("entry_fx_rate")
         if (
@@ -193,12 +337,15 @@ class PortfolioReadService:
     ) -> PositionsWithMetricsResponse:
         positions, asof = self._positions_repo.list_positions(status=status)
         current_prices, live_tickers = self._pricing._attach_live_prices(positions)
-        has_usd_positions = any(
-            detect_currency(str(position.get("ticker", "")).upper()) == "USD"
+        account_currency = getattr(self._config_repo.get().risk, "account_currency", "EUR")
+        needs_eurusd = any(
+            _needs_eurusd_rate(
+                detect_currency(str(position.get("ticker", "")).upper()),
+                account_currency,
+            )
             for position in positions
         )
-        eurusd_rate = self._pricing._eurusd_rate() if has_usd_positions else 1.0
-        account_currency = getattr(self._config_repo.get().risk, "account_currency", "EUR")
+        eurusd_rate = self._pricing._eurusd_rate() if needs_eurusd else 1.0
 
         positions_with_metrics = [
             self._build_position_with_metrics(
@@ -246,9 +393,16 @@ class PortfolioReadService:
                     price_source = "cached"
 
         state_position = to_state_position(position)
-        entry_fee_eur = float(position.get("entry_fee_eur") or 0.0)
-        eurusd_rate = self._pricing._eurusd_rate() if detect_currency(ticker) == "USD" and entry_fee_eur else 1.0
-        fee_for_pnl = entry_fee_eur * eurusd_rate if detect_currency(ticker) == "USD" else entry_fee_eur
+        position_currency = detect_currency(ticker)
+        entry_fee_eur = _remaining_entry_fee_eur(position)
+        if state_position.status == "closed":
+            entry_fee_eur += float(position.get("exit_fee_eur") or 0.0)
+        eurusd_rate = self._pricing._eurusd_rate() if position_currency == "USD" and entry_fee_eur else 1.0
+        fee_for_pnl = _fee_eur_to_position_currency(
+            entry_fee_eur,
+            position_currency=position_currency,
+            eurusd_rate=eurusd_rate,
+        )
         pnl = calculate_pnl(state_position.entry_price, current_price, state_position.shares) - fee_for_pnl
         per_share_risk = calculate_per_share_risk(state_position)
         entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
@@ -262,6 +416,7 @@ class PortfolioReadService:
                 price=float(e["price"]),
                 r_at_close=float(e["r_at_close"]),
                 fee_eur=e.get("fee_eur"),
+                fx_rate=e.get("fx_rate"),
             )
             for e in raw_events
         ]
@@ -272,7 +427,6 @@ class PortfolioReadService:
             blended_r = sum(e.shares_closed * e.r_at_close for e in partial_close_events) / total_shares
 
         account_currency = getattr(self._config_repo.get().risk, "account_currency", "EUR")
-        position_currency = detect_currency(ticker)
         r_fx_adjusted: Optional[float] = None
         entry_fx_rate_raw = position.get("entry_fx_rate")
         if (
@@ -314,41 +468,102 @@ class PortfolioReadService:
             r_uses_initial_risk=r_uses_initial_risk_metrics,
         )
 
-    def _realized_pnl(self) -> float:
-        positions, _ = self._positions_repo.list_positions(status=None)
+    def _realized_pnl(
+        self,
+        positions: list[dict],
+        *,
+        account_currency: str,
+        eurusd_rate: float,
+    ) -> float:
         realized_pnl = 0.0
         for position in positions:
             entry_price = float(position.get("entry_price", 0.0))
+            position_currency = detect_currency(str(position.get("ticker", "")).upper())
+            entry_fx_rate = position.get("entry_fx_rate")
 
-            # Proceeds already realized via partial closes, on any position
-            # (still open or closed). shares/exit_price below only cover the
-            # remaining shares, so partial tranches must be added separately.
             for event in position.get("partial_closes") or []:
-                realized_pnl += (
-                    (float(event.get("price", 0.0)) - entry_price)
-                    * int(event.get("shares_closed", 0))
+                shares_closed = int(event.get("shares_closed", 0) or 0)
+                if shares_closed <= 0:
+                    continue
+                event_fx_rate = event.get("fx_rate")
+                realized_pnl += _realized_leg_pnl_account_currency(
+                    entry_price=entry_price,
+                    exit_price=float(event.get("price", 0.0)),
+                    shares=shares_closed,
+                    position_currency=position_currency,
+                    account_currency=account_currency,
+                    entry_fx_rate=entry_fx_rate,
+                    exit_fx_rate=event_fx_rate,
+                    fallback_eurusd_rate=eurusd_rate,
+                )
+                realized_pnl -= _fee_eur_to_account_currency(
+                    _allocated_entry_fee_eur(position, shares_closed),
+                    account_currency=account_currency,
+                    eurusd_rate=_rate_for_conversion(entry_fx_rate, eurusd_rate),
                 )
                 fee_eur = event.get("fee_eur")
                 if fee_eur is not None:
-                    realized_pnl -= abs(float(fee_eur))
+                    realized_pnl -= _fee_eur_to_account_currency(
+                        abs(float(fee_eur)),
+                        account_currency=account_currency,
+                        eurusd_rate=_rate_for_conversion(event_fx_rate, eurusd_rate),
+                    )
 
             if position.get("status") != "closed" or position.get("exit_price") is None:
                 continue
 
-            realized_pnl += (
-                (float(position.get("exit_price")) - entry_price)
-                * int(position.get("shares", 0))
+            final_shares = int(position.get("shares", 0) or 0)
+            if final_shares <= 0:
+                continue
+            exit_fx_rate = position.get("exit_fx_rate")
+            realized_pnl += _realized_leg_pnl_account_currency(
+                entry_price=entry_price,
+                exit_price=float(position.get("exit_price")),
+                shares=final_shares,
+                position_currency=position_currency,
+                account_currency=account_currency,
+                entry_fx_rate=entry_fx_rate,
+                exit_fx_rate=exit_fx_rate,
+                fallback_eurusd_rate=eurusd_rate,
+            )
+            realized_pnl -= _fee_eur_to_account_currency(
+                _allocated_entry_fee_eur(position, final_shares),
+                account_currency=account_currency,
+                eurusd_rate=_rate_for_conversion(entry_fx_rate, eurusd_rate),
             )
             exit_fee_eur = position.get("exit_fee_eur")
             if exit_fee_eur is not None:
-                realized_pnl -= abs(float(exit_fee_eur))
+                realized_pnl -= _fee_eur_to_account_currency(
+                    abs(float(exit_fee_eur)),
+                    account_currency=account_currency,
+                    eurusd_rate=_rate_for_conversion(exit_fx_rate, eurusd_rate),
+                )
         return realized_pnl
 
     def get_portfolio_summary(self, account_size: float, account_size_mode: str = "equity") -> PortfolioSummary:
-        realized_pnl = self._realized_pnl()
+        account_currency = str(getattr(self._config_repo.get().risk, "account_currency", "EUR")).upper()
+        all_positions, _ = self._positions_repo.list_positions(status=None)
+        needs_eurusd = any(
+            _needs_eurusd_rate(
+                detect_currency(str(position.get("ticker", "")).upper()),
+                account_currency,
+            )
+            for position in all_positions
+        )
+        realized_eurusd_rate = self._pricing._eurusd_rate() if needs_eurusd else 1.0
+        realized_pnl = self._realized_pnl(
+            all_positions,
+            account_currency=account_currency,
+            eurusd_rate=realized_eurusd_rate,
+        )
         effective_account_size = account_size + realized_pnl if account_size_mode == "equity" else account_size
         positions_response = self.list_positions(status="open")
         positions = positions_response.positions
+        needs_open_eurusd = any(
+            _needs_eurusd_rate(detect_currency(position.ticker.upper()), account_currency)
+            for position in positions
+        )
+        eurusd_rate = self._pricing._eurusd_rate() if needs_open_eurusd else 1.0
         if not positions:
             return PortfolioSummary(
                 total_positions=0,
@@ -393,18 +608,44 @@ class PortfolioReadService:
         positions_losing = 0
 
         for position in positions:
-            total_cost_basis += position.entry_value
-            total_value += position.current_value
-            total_pnl += position.pnl
+            position_currency = detect_currency(position.ticker.upper())
+            entry_value_account = _to_account_currency(
+                position.entry_value,
+                position_currency=position_currency,
+                account_currency=account_currency,
+                eurusd_rate=eurusd_rate,
+            )
+            current_value_account = _to_account_currency(
+                position.current_value,
+                position_currency=position_currency,
+                account_currency=account_currency,
+                eurusd_rate=eurusd_rate,
+            )
+            pnl_account = _to_account_currency(
+                position.pnl,
+                position_currency=position_currency,
+                account_currency=account_currency,
+                eurusd_rate=eurusd_rate,
+            )
+            risk_account = _to_account_currency(
+                position.total_risk,
+                position_currency=position_currency,
+                account_currency=account_currency,
+                eurusd_rate=eurusd_rate,
+            )
+
+            total_cost_basis += entry_value_account
+            total_value += current_value_account
+            total_pnl += pnl_account
             total_fees_eur += position.fees_eur
 
-            if position.total_risk > 0:
-                open_risk += position.total_risk
+            if risk_account > 0:
+                open_risk += risk_account
                 total_r_now += position.r_now
                 r_count += 1
 
-            if position.current_value > largest_position_value:
-                largest_position_value = position.current_value
+            if current_value_account > largest_position_value:
+                largest_position_value = current_value_account
                 largest_position_ticker = position.ticker
 
             if position.pnl_percent > best_performer_pnl_pct:
@@ -415,16 +656,21 @@ class PortfolioReadService:
                 worst_performer_pnl_pct = position.pnl_percent
                 worst_performer_ticker = position.ticker
 
-            if position.pnl > 0:
+            if pnl_account > 0:
                 positions_profitable += 1
-            elif position.pnl < 0:
+            elif pnl_account < 0:
                 positions_losing += 1
 
         total_pnl_percent = (total_pnl / total_cost_basis * 100.0) if total_cost_basis > 0 else 0.0
         open_risk_percent = (open_risk / effective_account_size * 100.0) if effective_account_size > 0 else 0.0
         avg_r_now = (total_r_now / r_count) if r_count > 0 else 0.0
         win_rate = (positions_profitable / len(positions) * 100.0) if positions else 0.0
-        concentration = self._concentration_groups(positions, open_risk)
+        concentration = self._concentration_groups(
+            positions,
+            open_risk,
+            account_currency=account_currency,
+            eurusd_rate=eurusd_rate,
+        )
 
         return PortfolioSummary(
             total_positions=len(positions),
@@ -456,14 +702,23 @@ class PortfolioReadService:
         self,
         positions: list[PositionWithMetrics],
         open_risk: float,
+        *,
+        account_currency: str = "EUR",
+        eurusd_rate: float = 1.0,
     ) -> list[ConcentrationGroup]:
         country_risk: dict[str, float] = {}
         country_count: dict[str, int] = {}
         for position in positions:
-            if position.total_risk <= 0:
+            risk_amount = _to_account_currency(
+                position.total_risk,
+                position_currency=detect_currency(position.ticker.upper()),
+                account_currency=account_currency,
+                eurusd_rate=eurusd_rate,
+            )
+            if risk_amount <= 0:
                 continue
             country = _country_from_ticker(position.ticker)
-            country_risk[country] = country_risk.get(country, 0.0) + position.total_risk
+            country_risk[country] = country_risk.get(country, 0.0) + risk_amount
             country_count[country] = country_count.get(country, 0) + 1
 
         threshold = float(getattr(self._config_repo.get().risk, "max_concentration_pct", 60.0))

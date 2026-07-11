@@ -35,6 +35,37 @@ export const mockConfig = {
   orders_file: 'data/orders.json',
 }
 
+export const mockVolumeAnalysis = {
+  symbol: 'AAPL',
+  provider: 'mock',
+  interval: '1d',
+  lookback: 120,
+  data_quality: { ok: true, bars: 160, warnings: [] },
+  profile_type: 'approximate_bar_based',
+  market_bias: 'bullish',
+  setup_type: 'hvn_support_retest',
+  action: 'Long',
+  confidence_score: 72.5,
+  rationale: ['Market bias is bullish.'],
+  key_levels: {
+    price: 100,
+    poc: 95,
+    vwap: 96,
+    sma20: 94,
+    sma50: 90,
+    sma200: 80,
+    atr14: 2.5,
+    swing_high: 105,
+    swing_low: 88,
+    rel_volume: 1.3,
+  },
+  volume_zones: [
+    { kind: 'poc', role: 'buyer_defense', price_low: 94, price_high: 96, center: 95, volume_share: 0.18 },
+  ],
+  trade_plan: { direction: 'long', entry: 100, stop: 93, target: 114, rr: 2.0 },
+  warnings: ['Approximate volume profile built from OHLCV bars, not tick-level trades.'],
+}
+
 export const mockStrategies = [
   {
     id: 'default',
@@ -717,6 +748,18 @@ export const handlers = [
   }),
 
   // Orders endpoints
+  http.get(`${API_BASE_URL}/api/portfolio/orders/local`, ({ request }) => {
+    const url = new URL(request.url)
+    const status = url.searchParams.get('status')
+
+    let orders = mockOrders
+    if (status) {
+      orders = mockOrders.filter((o) => o.status === status)
+    }
+
+    return HttpResponse.json({ orders, asof: '2026-02-08' })
+  }),
+
   http.get(`${API_BASE_URL}/api/portfolio/orders`, ({ request }) => {
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
@@ -731,6 +774,15 @@ export const handlers = [
 
   http.get(`${API_BASE_URL}/api/portfolio/summary`, () => {
     return HttpResponse.json(mockPortfolioSummary)
+  }),
+
+  http.get(`${API_BASE_URL}/api/portfolio/earnings-proximity/:ticker`, ({ params }) => {
+    return HttpResponse.json({
+      ticker: String(params.ticker || '').toUpperCase(),
+      next_earnings_date: null,
+      days_until: null,
+      warning: false,
+    })
   }),
 
   http.post(`${API_BASE_URL}/api/portfolio/orders`, async ({ request }) => {
@@ -880,6 +932,33 @@ export const handlers = [
     })
   }),
 
+  http.get(`${API_BASE_URL}/api/weekly-reviews`, () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get(`${API_BASE_URL}/api/weekly-reviews/:weekId`, ({ params }) => {
+    return HttpResponse.json({
+      week_id: String(params.weekId),
+      what_worked: '',
+      what_didnt: '',
+      rules_violated: '',
+      next_week_focus: '',
+      updated_at: '2026-05-04T00:00:00Z',
+    })
+  }),
+
+  http.put(`${API_BASE_URL}/api/weekly-reviews/:weekId`, async ({ params, request }) => {
+    const body = asObject(await request.json())
+    return HttpResponse.json({
+      week_id: String(params.weekId),
+      what_worked: String(body.what_worked ?? ''),
+      what_didnt: String(body.what_didnt ?? ''),
+      rules_violated: String(body.rules_violated ?? ''),
+      next_week_focus: String(body.next_week_focus ?? ''),
+      updated_at: '2026-05-04T00:00:00Z',
+    })
+  }),
+
   // Screener endpoints
   http.get(`${API_BASE_URL}/api/universes`, () => {
     return HttpResponse.json(mockUniverses)
@@ -981,6 +1060,18 @@ export const handlers = [
     return HttpResponse.json(mockScreenerResults)
   }),
 
+  http.get(`${API_BASE_URL}/api/market-data/:ticker/volume-analysis`, () => {
+    return HttpResponse.json(mockVolumeAnalysis)
+  }),
+
+  http.get(`${API_BASE_URL}/api/market-data/:ticker/candles`, ({ params }) => {
+    return HttpResponse.json({
+      ticker: String(params.ticker ?? 'AAPL').toUpperCase(),
+      price_history: [],
+      patterns: [],
+    })
+  }),
+
   // Catalyst endpoints
   http.post(`${API_BASE_URL}/api/catalysts/daily-scan`, () =>
     HttpResponse.json({
@@ -1040,6 +1131,8 @@ export const handlers = [
   http.get(`${API_BASE_URL}/api/datasources/events`, () => HttpResponse.json({ events: [] })),
   http.post(`${API_BASE_URL}/api/datasources/probe`, () => HttpResponse.json([])),
   http.post(`${API_BASE_URL}/api/datasources/:id/probe`, () => HttpResponse.json({ id: 'x', status: 'ok', latency_ms: 1, detail: null, sample: null, error: null })),
+  http.get(`${API_BASE_URL}/api/cache/status`, () => HttpResponse.json([])),
+  http.post(`${API_BASE_URL}/api/cache/clear/:id`, ({ params }) => HttpResponse.json({ cleared: true, cache_id: params.id })),
 
   // Fundamentals snapshot mock
   http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {

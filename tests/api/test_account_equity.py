@@ -11,7 +11,7 @@ from api.main import app
 POSITIONS = [
     {
         "position_id": "POS-001",
-        "ticker": "AAPL",
+        "ticker": "ASML.AS",
         "status": "closed",
         "entry_date": "2026-01-01",
         "entry_price": 100.0,
@@ -25,7 +25,7 @@ POSITIONS = [
     },
     {
         "position_id": "POS-002",
-        "ticker": "MSFT",
+        "ticker": "AIR.PA",
         "status": "closed",
         "entry_date": "2026-01-05",
         "entry_price": 200.0,
@@ -77,7 +77,7 @@ def client_with_partial_close(tmp_path, monkeypatch):
         "asof": "2026-01-20",
         "positions": [{
             "position_id": "POS-PART",
-            "ticker": "NVDA",
+            "ticker": "ASML.AS",
             "status": "closed",
             "entry_date": "2026-01-01",
             "entry_price": 10.0,

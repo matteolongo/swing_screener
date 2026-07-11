@@ -21,6 +21,13 @@ Candlestick pattern + structural-stop settings live under `low_level`:
   `extension_threshold_pct`, `breakout_lookback`, `pullback_ma`,
   `volume_confirm_ratio` (min bar-volume multiple of the trailing 20-bar average
   for a pattern to be flagged `volume_confirmed`; default `1.5`).
+- `low_level.volume_zones` — advisory, single-symbol volume-zone analysis
+  defaults. The approximate volume profile is built from OHLCV bars, not
+  tick-level order flow, and does not change screener ranking. Keys:
+  `bins` (price bins), `hvn_peak_ratio` and `lvn_peak_ratio` (POC-relative
+  High-/Low-Volume Node thresholds), `min_bars`, `lookback`, `swing_window`,
+  `proximity_atr_mult`, `stop_buffer_atr_mult`, `retest_tol_atr_mult`, and
+  `min_rr` (minimum reward:risk for `Long`/`Short` rather than `Watch`).
 - `low_level.execution.pattern_stop_enabled` / `pattern_stop_atr_buffer` —
   toggle and ATR buffer for the structural stop derived from a bullish pattern on
   the latest bar (`execution/guidance.apply_pattern_stop`). When available it

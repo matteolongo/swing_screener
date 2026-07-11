@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from typing import Iterable
@@ -23,6 +24,24 @@ from swing_screener.execution.guidance import add_execution_guidance
 # makes this an allowlist that auto-excludes any future board/setup column,
 # rather than a denylist that fails open on a new, uniquely-named column.
 _FEATURE_COLS_MARKER = "__feature_cols__"
+
+
+def _strategy_signature_with_liquidity_fx(
+    cfg: ReportConfig,
+    quote_to_eur_rates: dict[str, float] | None,
+) -> str:
+    sig = strategy_signature(cfg)
+    if not quote_to_eur_rates:
+        return sig
+    normalized = {
+        str(key).strip().upper(): float(value)
+        for key, value in quote_to_eur_rates.items()
+        if str(key).strip()
+    }
+    if not normalized:
+        return sig
+    blob = json.dumps(normalized, sort_keys=True, default=str)
+    return f"{sig}-{hashlib.sha1(blob.encode('utf-8')).hexdigest()[:8]}"
 
 
 def _normalize_ticker_set(items: Iterable[str] | None) -> set[str]:
@@ -99,6 +118,7 @@ def compute_symbol_records(
     ohlcv: pd.DataFrame,
     cfg: ReportConfig,
     sector_benchmark_returns: dict[str, float] | None = None,
+    quote_to_eur_rates: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """Universe-independent per-symbol evaluation row for every ticker in ``ohlcv``.
 
@@ -108,7 +128,10 @@ def compute_symbol_records(
     so ranking can later run on exactly those columns.
     """
     feats = build_universe(
-        ohlcv, cfg.universe, sector_benchmark_returns=sector_benchmark_returns
+        ohlcv,
+        cfg.universe,
+        sector_benchmark_returns=sector_benchmark_returns,
+        quote_to_eur_rates=quote_to_eur_rates,
     )
     if feats is None or feats.empty:
         return pd.DataFrame()
@@ -116,11 +139,20 @@ def compute_symbol_records(
     feature_cols = [str(c) for c in feats.columns]
     tickers = [str(t) for t in feats.index]
     board = build_signal_board(ohlcv, tickers, cfg.signals)
-    setup = compute_setup_quality(ohlcv, tickers)
+    setup = compute_setup_quality(
+        ohlcv,
+        tickers,
+        quote_to_eur_rates=quote_to_eur_rates,
+    )
 
     records = feats.join(board, how="left", rsuffix="_sig")
     if setup is not None and not setup.empty:
-        records = records.join(setup, how="left", rsuffix="_sq")
+        setup = setup.drop(
+            columns=[column for column in setup.columns if column in records.columns],
+            errors="ignore",
+        )
+        if len(setup.columns) > 0:
+            records = records.join(setup, how="left", rsuffix="_sq")
     records[_FEATURE_COLS_MARKER] = json.dumps(feature_cols)
     return records
 
@@ -130,6 +162,8 @@ def build_momentum_report(
     cfg: ReportConfig,
     exclude_tickers: Iterable[str] | None = None,
     sector_benchmark_returns: dict[str, float] | None = None,
+    account_to_quote_rates: dict[str, float] | None = None,
+    quote_to_eur_rates: dict[str, float] | None = None,
     records: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Cross-sectional assembly over per-symbol records.
@@ -139,7 +173,10 @@ def build_momentum_report(
     """
     if records is None:
         records = compute_symbol_records(
-            ohlcv, cfg, sector_benchmark_returns=sector_benchmark_returns
+            ohlcv,
+            cfg,
+            sector_benchmark_returns=sector_benchmark_returns,
+            quote_to_eur_rates=quote_to_eur_rates,
         )
     if records is None or records.empty:
         return pd.DataFrame()
@@ -186,13 +223,24 @@ def build_momentum_report(
         board,
         cfg.risk,
         atr_col=atr_col,
+        account_to_quote_rates=account_to_quote_rates,
     )
 
     report = ranked
 
     if plans is not None and not plans.empty:
         # keep some plan cols
-        plan_cols = ["entry", "stop", "shares", "position_value", "realized_risk", "risk_amount_target"]
+        plan_cols = [
+            "entry",
+            "stop",
+            "shares",
+            "position_value",
+            "position_value_account",
+            "realized_risk",
+            "realized_risk_account",
+            "risk_amount_target",
+            "account_to_quote_rate",
+        ]
         plan_cols = [c for c in plan_cols if c in plans.columns]
         report = report.join(plans[plan_cols + ["signal"]], how="left", rsuffix="_plan")
 
@@ -219,7 +267,8 @@ def build_momentum_report(
         "above_breakout_extension", "breakout_volume_confirmation",
         "dist_52w_high_pct", "near_52w_high",
         "volume_ratio", "avg_daily_volume_eur",
-        "entry", "stop", "shares", "position_value", "realized_risk",
+        "entry", "stop", "shares", "position_value", "position_value_account",
+        "realized_risk", "realized_risk_account", "account_to_quote_rate",
     ]
     keep = [c for c in keep if c in report.columns]
     report = report[keep]
@@ -250,6 +299,8 @@ class MomentumStrategyModule:
         eval_cache=None,
         asof_date: str | None = None,
         force_refresh: bool = False,
+        account_to_quote_rates: dict[str, float] | None = None,
+        quote_to_eur_rates: dict[str, float] | None = None,
     ) -> pd.DataFrame:
         if eval_cache is None or asof_date is None:
             return build_momentum_report(
@@ -257,8 +308,10 @@ class MomentumStrategyModule:
                 cfg=cfg,
                 exclude_tickers=exclude_tickers,
                 sector_benchmark_returns=sector_benchmark_returns,
+                account_to_quote_rates=account_to_quote_rates,
+                quote_to_eur_rates=quote_to_eur_rates,
             )
-        sig = strategy_signature(cfg)
+        sig = _strategy_signature_with_liquidity_fx(cfg, quote_to_eur_rates)
         level0 = ohlcv.columns.get_level_values(0)
         all_tickers = (
             [str(t) for t in ohlcv.columns.get_level_values(1)[level0 == "Close"]]
@@ -272,7 +325,12 @@ class MomentumStrategyModule:
         miss_records = pd.DataFrame()
         if misses:
             miss_ohlcv = ohlcv.loc[:, ohlcv.columns.get_level_values(1).isin(misses)]
-            miss_records = compute_symbol_records(miss_ohlcv, cfg, sector_benchmark_returns=sector_benchmark_returns)
+            miss_records = compute_symbol_records(
+                miss_ohlcv,
+                cfg,
+                sector_benchmark_returns=sector_benchmark_returns,
+                quote_to_eur_rates=quote_to_eur_rates,
+            )
             eval_cache.write(miss_records, asof=asof_date, sig=sig)
         frames = [f for f in (hits, miss_records) if f is not None and not f.empty]
         records = pd.concat(frames) if frames else pd.DataFrame()
@@ -283,5 +341,7 @@ class MomentumStrategyModule:
             cfg=cfg,
             exclude_tickers=exclude_tickers,
             sector_benchmark_returns=sector_benchmark_returns,
+            account_to_quote_rates=account_to_quote_rates,
+            quote_to_eur_rates=quote_to_eur_rates,
             records=records,
         )

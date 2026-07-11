@@ -19,6 +19,112 @@ def test_recommendation_happy_path():
     assert all(g.passed for g in rec.checklist)
 
 
+def test_recommendation_sizes_quote_currency_from_account_currency_budget():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=98.0,
+        shares=None,
+        account_size=1000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+        commission_pct=0.0,
+        slippage_bps=0.0,
+        min_rr=2.0,
+        max_position_pct=1.0,
+        currency="USD",
+        account_currency="EUR",
+        account_to_quote_rate=1.25,
+    )
+
+    assert rec.risk.shares == 6
+    assert rec.risk.currency == "USD"
+    assert rec.risk.account_currency == "EUR"
+    assert rec.risk.account_to_quote_rate == 1.25
+    assert rec.risk.risk_amount == 12.0
+    assert rec.risk.risk_amount_account == 9.6
+    assert rec.risk.risk_pct == 0.0096
+    assert rec.verdict == "RECOMMENDED"
+
+
+def test_recommendation_uses_identity_rate_for_same_currency():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=98.0,
+        shares=None,
+        account_size=1000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+        commission_pct=0.0,
+        slippage_bps=0.0,
+        min_rr=2.0,
+        max_position_pct=1.0,
+        currency="EUR",
+        account_currency="EUR",
+        account_to_quote_rate=1.25,
+    )
+
+    assert rec.risk.shares == 5
+    assert rec.risk.currency == "EUR"
+    assert rec.risk.account_currency == "EUR"
+    assert rec.risk.account_to_quote_rate == 1.0
+    assert rec.risk.risk_amount == 10.0
+    assert rec.risk.risk_amount_account == 10.0
+    assert rec.risk.risk_pct == 0.01
+    assert rec.verdict == "RECOMMENDED"
+
+
+def test_recommendation_blocks_unknown_quote_currency():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=98.0,
+        shares=None,
+        account_size=1000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+        commission_pct=0.0,
+        slippage_bps=0.0,
+        min_rr=2.0,
+        max_position_pct=1.0,
+        currency="UNKNOWN",
+        account_currency="EUR",
+    )
+
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert rec.risk.shares == 0
+    assert rec.risk.risk_amount == 0.0
+    assert rec.risk.position_size == 0.0
+    assert any(r.code == "CURRENCY_UNKNOWN" for r in rec.reasons_detailed)
+
+
+def test_recommendation_blocks_missing_cross_currency_rate():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=98.0,
+        shares=None,
+        account_size=1000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+        commission_pct=0.0,
+        slippage_bps=0.0,
+        min_rr=2.0,
+        max_position_pct=1.0,
+        currency="USD",
+        account_currency="EUR",
+        account_to_quote_rate=None,
+    )
+
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert rec.risk.shares == 0
+    assert rec.risk.risk_amount == 0.0
+    assert rec.risk.position_size == 0.0
+    assert rec.risk.account_to_quote_rate is None
+    assert any(r.code == "FX_RATE_MISSING" for r in rec.reasons_detailed)
+
+
 def test_recommendation_requires_stop():
     rec = build_recommendation(
         signal="breakout",
@@ -32,6 +138,42 @@ def test_recommendation_requires_stop():
 
     assert rec.verdict == "NOT_RECOMMENDED"
     assert any(r.code == "STOP_MISSING" for r in rec.reasons_detailed)
+
+
+def test_recommendation_rejects_stop_at_or_above_entry():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=105.0,
+        shares=100,
+        account_size=100000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+    )
+
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert any(r.code == "STOP_INVALID" for r in rec.reasons_detailed)
+    assert not any(r.code == "STOP_MISSING" for r in rec.reasons_detailed)
+    assert rec.risk.stop is None
+    assert rec.risk.invalidation_level is None
+    assert rec.risk.risk_amount == 0.0
+
+
+def test_recommendation_rejects_non_positive_stop():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=0.0,
+        shares=100,
+        account_size=100000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+    )
+
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert any(r.code == "STOP_INVALID" for r in rec.reasons_detailed)
+    assert rec.risk.stop is None
+    assert rec.risk.invalidation_level is None
 
 
 def test_recommendation_rejects_low_rr():

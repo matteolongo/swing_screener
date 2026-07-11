@@ -64,6 +64,16 @@ def _flat_base_then_breakout_then_collapse():
     return opens, highs, lows, closes
 
 
+def _flat_base_then_breakout_then_intraday_stop_recovery():
+    """Breakout entry, then the next bar trades through the stop intraday but
+    closes above it."""
+    closes = [100.0] * 20 + [110.0, 109.0]
+    opens = [100.0] * 20 + [110.0, 110.0]
+    highs = [101.0] * 20 + [111.0, 112.0]
+    lows = [99.0] * 20 + [99.0, 100.0]
+    return opens, highs, lows, closes
+
+
 def test_stop_hit_trade_realizes_exactly_minus_one_r():
     opens, highs, lows, closes = _flat_base_then_breakout_then_collapse()
     ohlcv = _ohlcv("TEST", opens, highs, lows, closes)
@@ -81,6 +91,19 @@ def test_stop_hit_trade_realizes_exactly_minus_one_r():
     assert trade.r_multiple == pytest.approx(-1.0)
     assert trade.initial_risk > 0
     assert trade.bars_held == 1
+
+
+def test_stop_hit_uses_daily_low_even_if_close_recovers():
+    opens, highs, lows, closes = _flat_base_then_breakout_then_intraday_stop_recovery()
+    ohlcv = _ohlcv("TEST", opens, highs, lows, closes)
+
+    result = run_event_study(ohlcv, ["TEST"], _fast_config())
+
+    assert len(result.trades) == 1
+    trade = result.trades[0]
+    assert trade.exit_reason == "stop_hit"
+    assert trade.exit_price == pytest.approx(trade.initial_stop)
+    assert trade.r_multiple == pytest.approx(-1.0)
 
 
 def test_result_carries_metrics_for_its_trades():

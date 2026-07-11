@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 const mockSeries = {
   setData: vi.fn(),
   applyOptions: vi.fn(),
+  createPriceLine: vi.fn(() => ({ applyOptions: vi.fn() })),
 };
 
 const mockPriceScale = {

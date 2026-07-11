@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
+from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.intelligence.symbol_analyzer import (
     SymbolAnalyzer,
     _LLMAnalysis,
@@ -159,6 +160,43 @@ def test_symbol_analyzer_returns_intelligence():
     assert result.sources == ["https://aperam.com/q1-2026"]
 
 
+def test_symbol_analyzer_fills_news_dates_from_source_evidence():
+    evidence = SourceEvidence(
+        title="Apple and Broadcom extend chip deal to 2031",
+        url="https://example.com/apple-broadcom",
+        publisher="Example News",
+        published_at="2026-07-09",
+        quote_or_summary="Apple and Broadcom extended a chip supply agreement.",
+        relevance="news",
+    )
+    request = SymbolIntelligenceRequest(
+        close=200.0,
+        signal="breakout",
+        catalyst_evidence=[evidence],
+    )
+    response = {
+        **_FAKE_RESPONSE_JSON,
+        "news": [
+            {
+                "headline": "Apple and Broadcom extend chip deal to 2031",
+                "url": "https://example.com/apple-broadcom",
+                "date": None,
+                "sentiment": "bullish",
+            }
+        ],
+    }
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, response)
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", request)
+
+    assert result.news[0].date == "2026-07-09"
+
+
 def test_inputs_used_includes_recent_candle_patterns():
     request = SymbolIntelligenceRequest(
         close=48.5,
@@ -312,6 +350,60 @@ def test_symbol_analyzer_maps_position_outlook():
     assert result.position_outlook.expected_holding_period == "2-6_weeks"
     assert result.position_outlook.thesis_status == "intact"
     assert result.position_outlook.profit_management == "trail_stop"
+
+
+def test_position_inputs_used_include_position_context():
+    fake_json = {
+        "action": "MANAGE_ONLY",
+        "conviction": "medium",
+        "catalyst_urgency": "low",
+        "summary_line": "Manage the open position.",
+        "narrative": "Text.",
+        "upcoming_events": [],
+        "position_signal": {"action": "HOLD", "reason": "Thesis remains intact."},
+        "position_outlook": {
+            "expected_holding_period": "2-6_weeks",
+            "hold_until": "Hold while price remains above the stop.",
+            "next_review_trigger": "Reassess on a close below the stop.",
+            "thesis_status": "intact",
+            "invalidation_signals": ["Close below stop"],
+            "profit_management": "trail_stop",
+            "opportunity_cost": "low",
+            "confidence_decay": "Confidence decays if the trade stalls.",
+        },
+        "sources": [],
+    }
+    request = SymbolIntelligenceRequest(
+        close=50.0,
+        signal="position",
+        position_id="pos-1",
+        shares=5,
+        entry_price=48.0,
+        entry_date="2026-06-01",
+        stop=45.0,
+        r_now=1.5,
+        days_open=7,
+    )
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, fake_json)
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", request)
+
+    assert result.inputs_used["position_context"] == {
+        "ticker": "AAPL",
+        "position_id": "pos-1",
+        "shares": 5,
+        "entry_price": 48.0,
+        "entry_date": "2026-06-01",
+        "stop": 45.0,
+        "current_price": 50.0,
+        "r_now": 1.5,
+        "days_open": 7,
+    }
 
 
 def test_format_past_trades_empty():

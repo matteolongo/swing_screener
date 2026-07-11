@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 from typing import TYPE_CHECKING
 
 from swing_screener.intelligence.graph.state import AnalyzerState
@@ -80,6 +81,18 @@ def assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
     _put(decision, "fair_value_high", req.fair_value_high)
     _put_truthy(inputs_used, "decision_context", decision)
 
+    if state["has_position"]:
+        position_context: dict = {"ticker": state["ticker"]}
+        _put_truthy(position_context, "position_id", req.position_id)
+        _put(position_context, "shares", req.shares)
+        _put(position_context, "entry_price", req.entry_price)
+        _put_truthy(position_context, "entry_date", req.entry_date)
+        _put(position_context, "stop", req.stop)
+        _put(position_context, "current_price", req.close)
+        _put(position_context, "r_now", req.r_now)
+        _put(position_context, "days_open", req.days_open)
+        _put_truthy(inputs_used, "position_context", position_context)
+
     if req.catalyst_evidence:
         inputs_used["catalyst_evidence"] = {
             "count": len(req.catalyst_evidence),
@@ -126,6 +139,7 @@ def build_prompt(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerSt
         pre_open=state["pre_open"],
         pre_open_since=state["pre_open_since"],
         prior_digest=state["prior_digest"],
+        intelligence_policy=getattr(analyzer, "_intelligence_policy", None),
     )
     return state
 
@@ -163,6 +177,54 @@ def format_node(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerSta
     return state
 
 
+def _normalized_url(value: str | None) -> str:
+    if not value:
+        return ""
+    parsed = urlparse(value.strip())
+    if not parsed.netloc:
+        return value.strip().lower().rstrip("/")
+    path = parsed.path.rstrip("/")
+    return f"{parsed.netloc.lower()}{path.lower()}"
+
+
+def _normalized_title(value: str | None) -> str:
+    return " ".join((value or "").casefold().split())
+
+
+def _with_news_dates_from_evidence(draft, req):
+    if not getattr(draft, "news", None) or not req.catalyst_evidence:
+        return draft
+
+    by_url = {
+        _normalized_url(ev.url): ev.published_at
+        for ev in req.catalyst_evidence
+        if ev.url and ev.published_at
+    }
+    by_title = {
+        _normalized_title(ev.title): ev.published_at
+        for ev in req.catalyst_evidence
+        if ev.title and ev.published_at
+    }
+    if not by_url and not by_title:
+        return draft
+
+    changed = False
+    news = []
+    for item in draft.news:
+        if item.date:
+            news.append(item)
+            continue
+        date = by_url.get(_normalized_url(item.url)) or by_title.get(
+            _normalized_title(item.headline)
+        )
+        if date:
+            item = item.model_copy(update={"date": date})
+            changed = True
+        news.append(item)
+
+    return draft.model_copy(update={"news": news}) if changed else draft
+
+
 def postprocess(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
     search_usage = state.get("_search_usage")
     parse_usage = state.get("_parse_usage")
@@ -192,6 +254,7 @@ def postprocess(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerSta
         "attempted": attempted,
         "returned": pub_counts,
     }
+    state["draft"] = _with_news_dates_from_evidence(state["draft"], state["req"])
     return state
 
 

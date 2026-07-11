@@ -52,7 +52,7 @@ class ManageConfig:
     trail_sma: int = 20  # after R >= trail_after_R, trail under SMA
     trail_after_R: float = 2.0
     sma_buffer_pct: float = 0.005  # buffer under SMA (0.5%)
-    max_holding_days: int = 20  # time exit
+    max_holding_days: int = 20  # hard time exit after N trading bars
     time_stop_days: int = 15  # soft stale-trade nudge threshold
     time_stop_min_r: float = 0.5  # suppress nudge once trade has made this much progress
     benchmark: str = "SPY"
@@ -306,11 +306,24 @@ def evaluate_positions(
 
         s = _get_close_series(ohlcv, pos.ticker)
         last = float(s.iloc[-1])
+        asof = s.index[-1]
+        low_s = _get_series(ohlcv, "Low", pos.ticker)
+        latest_low = last
+        if not low_s.empty:
+            try:
+                low_value = low_s.loc[asof]
+                if isinstance(low_value, pd.Series):
+                    low_value = low_value.iloc[-1]
+                low_float = float(low_value)
+                if math.isfinite(low_float):
+                    latest_low = low_float
+            except (KeyError, TypeError, ValueError):
+                latest_low = last
 
         exhaustion = compute_exhaustion_score(
             close=s,
             high=_get_series(ohlcv, "High", pos.ticker),
-            low=_get_series(ohlcv, "Low", pos.ticker),
+            low=low_s,
             volume=_get_series(ohlcv, "Volume", pos.ticker),
         )
 
@@ -333,8 +346,8 @@ def evaluate_positions(
             )
         r_now = (last - pos.entry_price) / risk_per_share
 
-        # stop hit?
-        if last <= pos.stop_price:
+        # Stop orders can be hit intraday even when the close recovers.
+        if latest_low <= pos.stop_price:
             upd = PositionUpdate(
                 ticker=pos.ticker,
                 status=pos.status,
@@ -345,7 +358,7 @@ def evaluate_positions(
                 shares=pos.shares,
                 r_now=r_now,
                 action="CLOSE_STOP_HIT",
-                reason="Price <= stop (stop hit)",
+                reason="Low <= stop (stop hit)",
                 exhaustion_score=exhaustion.score,
                 exhaustion_label=exhaustion.label,
             )
@@ -403,9 +416,9 @@ def evaluate_positions(
                 pct_below = (sma20_val - last) / sma20_val * 100
                 stop_dist = (last - pos.stop_price) / last * 100
                 reason = (
-                    f"{pos.ticker} below SMA{cfg.trail_sma} for {cfg.exit_signal_days}d "
+                    f"{pos.ticker} below SMA{cfg.trail_sma} for {cfg.exit_signal_days} bars "
                     f"({pct_below:.1f}% below). "
-                    f"{r_now:+.2f}R, {bars_since}d held. "
+                    f"{r_now:+.2f}R, {bars_since} bars held. "
                     f"Stop {stop_dist:.1f}% away."
                 )
                 updates.append(PositionUpdate(
@@ -472,6 +485,11 @@ def evaluate_positions(
             action = "MOVE_STOP_UP"
         else:
             action = "NO_ACTION"
+            if r_now >= cfg.trail_after_R and reason != "No rule triggered":
+                reason = (
+                    f"{reason}; suggested stop {stop_suggested_rounded:.2f} "
+                    f"is not above current stop {stop_old_rounded:.2f}, so no stop update."
+                )
 
         updates.append(
             PositionUpdate(

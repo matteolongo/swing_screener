@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import type { CandlePattern, PriceHistoryPoint } from '@/features/screener/types';
@@ -11,7 +11,8 @@ import { useTickerCandles } from '@/features/screener/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
-import { CandleChart } from './CandleChart';
+
+const CandleChart = lazy(() => import('./CandleChart').then((module) => ({ default: module.CandleChart })));
 
 interface CachedSymbolCandleChartProps {
   ticker: string;
@@ -35,14 +36,26 @@ const OVERLAY_CHIPS: {
   key: keyof OverlayState;
   label: string;
   color: string;
-  title: string;
+  titleKey: 'chart.overlays.sma20' | 'chart.overlays.sma50' | 'chart.overlays.sma200' | 'chart.overlays.rLevels' | 'chart.overlays.keyLevels';
 }[] = [
-  { key: 'sma20', label: '20', color: '#F59E0B', title: 'SMA 20' },
-  { key: 'sma50', label: '50', color: '#38BDF8', title: 'SMA 50' },
-  { key: 'sma200', label: '200', color: '#A78BFA', title: 'SMA 200' },
-  { key: 'rLevels', label: 'R', color: '#F0654E', title: 'Stop / Target levels' },
-  { key: 'keyLevels', label: 'Key', color: '#7C8CF8', title: 'Key levels from patterns' },
+  { key: 'sma20', label: '20', color: '#F59E0B', titleKey: 'chart.overlays.sma20' },
+  { key: 'sma50', label: '50', color: '#38BDF8', titleKey: 'chart.overlays.sma50' },
+  { key: 'sma200', label: '200', color: '#A78BFA', titleKey: 'chart.overlays.sma200' },
+  { key: 'rLevels', label: 'R', color: '#F0654E', titleKey: 'chart.overlays.rLevels' },
+  { key: 'keyLevels', label: 'Key', color: '#7C8CF8', titleKey: 'chart.overlays.keyLevels' },
 ];
+
+function ChartLoadingFallback({ height }: { height?: number }) {
+  return (
+    <div
+      className="flex w-full items-center justify-center rounded border border-border bg-surface text-sm text-muted"
+      style={{ height: height ?? 360 }}
+      role="status"
+    >
+      {t('chart.loading')}
+    </div>
+  );
+}
 
 interface ToolbarProps {
   availableRanges: PriceRangeKey[];
@@ -95,8 +108,9 @@ function ChartToolbar({
         </button>
       </div>
       <div className="flex flex-wrap gap-1">
-        {OVERLAY_CHIPS.map(({ key, label, color, title }) => {
+        {OVERLAY_CHIPS.map(({ key, label, color, titleKey }) => {
           const active = overlays[key];
+          const title = t(titleKey);
           return (
             <button
               key={key}
@@ -206,7 +220,9 @@ export function CachedSymbolCandleChart({ ticker, className, width, height }: Ca
   return (
     <div className={cn('w-full', className)}>
       <ChartToolbar {...toolbarProps} />
-      <CandleChart {...sharedChartProps} width={width} height={height} />
+      <Suspense fallback={<ChartLoadingFallback height={height} />}>
+        <CandleChart {...sharedChartProps} width={width} height={height} />
+      </Suspense>
       {fullscreen &&
         createPortal(
           <div
@@ -220,7 +236,9 @@ export function CachedSymbolCandleChart({ ticker, className, width, height }: Ca
               onClick={(event) => event.stopPropagation()}
             >
               <ChartToolbar {...toolbarProps} />
-              <CandleChart {...sharedChartProps} width={1280} height={overlayHeight} />
+              <Suspense fallback={<ChartLoadingFallback height={overlayHeight} />}>
+                <CandleChart {...sharedChartProps} width={1280} height={overlayHeight} />
+              </Suspense>
             </div>
           </div>,
           document.body,

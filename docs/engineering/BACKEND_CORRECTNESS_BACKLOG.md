@@ -1,0 +1,172 @@
+# Backend Correctness Backlog
+
+> Status snapshot for the backend/API correctness audit.
+> Scope excludes UI work. Main concern: contracts, calculations, processing logic, and data truthfulness.
+
+## Completed
+
+1. Portfolio summary account-currency contract
+   - Status: done.
+   - Outcome: open-position aggregate money fields now report in account currency for USD/EUR positions.
+   - Verification: `tests/api/test_portfolio_summary_currency.py` plus portfolio summary/concentration regressions.
+
+2. Realized P&L, fees, partial closes, and execution FX
+   - Status: done.
+   - Outcome: realized P&L deducts entry fees once, allocates entry fees pro-rata across partial/final closes, deducts exit fees, and supports optional execution EURUSD rates on partial/final exits.
+   - Verification: `tests/api/test_portfolio_realized_pnl_accounting.py` plus portfolio fee/equity regressions.
+
+3. Screener/risk currency contract
+   - Status: done.
+   - Outcome: screener candidates now expose canonical quote/account currency metadata for position value and risk fields while preserving legacy USD-named fields for compatibility.
+   - Verification: `tests/api/test_screener_currency_contract.py` plus screener/risk/same-symbol regressions.
+
+4. Risk sizing FX contract
+   - Status: done.
+   - Outcome: pure risk sizing and recommendation logic now accept an explicit account-to-quote FX rate, convert account-currency budgets into quote-currency share sizing, and report account-currency realized risk/position value alongside legacy quote-currency fields.
+   - Verification: `tests/test_position_sizing.py`, `tests/test_recommendation_engine.py`, and `tests/test_risk_engine.py`.
+
+5. Screener FX rate wiring
+   - Status: done.
+   - Outcome: screener runs source EURUSD when known/requested quote currencies cross EUR/USD, pass account-to-quote rates into report trade-plan sizing, and preserve account-currency risk through recommendation rebuilds.
+   - Verification: `tests/test_report.py`, `tests/test_screener_service.py`, and `tests/api/test_screener_currency_contract.py`.
+
+6. Liquidity filter correctness
+   - Status: done.
+   - Outcome: average daily volume liquidity thresholds now use EUR-denominated turnover, USD quotes require an explicit USD-to-EUR rate, the liquidity field is available before universe filtering, and active liquidity thresholds fail closed when liquidity cannot be computed.
+   - Verification: `tests/test_setup_quality.py`, `tests/test_universe_filter.py`, `tests/test_report.py`, and `tests/test_screener_service.py`.
+
+7. Stop-hit detection uses daily low
+   - Status: done.
+   - Outcome: live portfolio management and event-study backtests now trigger stop-hit exits when the latest daily low crosses the stop, even if the close recovers above it.
+   - Verification: `tests/test_portfolio_manage.py`, `tests/test_backtest_event_study.py`, and `tests/api/test_backtest_endpoints.py`.
+
+8. Holding period semantics
+   - Status: done.
+   - Outcome: hard max-holding exits are defined as trading-bar based. Runtime reasons, API descriptions, strategy validation, and backend docs now use trading-bar language; stale-position `time_stop_days` remains calendar-day based.
+   - Verification: `tests/test_portfolio_manage.py` and `tests/unit/strategies/test_validation.py`.
+
+9. Screener fallback stop uses strategy ATR multiplier
+   - Status: done.
+   - Outcome: fallback stop generation now derives missing stops from the active strategy `risk.k_atr` multiplier instead of a hard-coded 2 ATR distance.
+   - Verification: `tests/api/test_screener_endpoints.py::test_screener_fallback_stop_uses_strategy_atr_multiplier`.
+
+10. Reject invalid or negative stops
+   - Status: done.
+   - Outcome: long-trade stops are valid only when finite, positive, and below entry. Invalid recommendation/screener stops now block with `STOP_INVALID` and are not echoed as plan stops; pending orders reject provided zero stops and stops at or above the provided limit entry; add-on fills reject live stops at or above the blended entry.
+   - Verification: `tests/test_recommendation_engine.py`, `tests/api/test_screener_endpoints.py`, and `tests/api/test_order_fill.py`.
+
+11. Provider interval/end-date contract
+   - Status: done.
+   - Outcome: yfinance requests now forward the requested `interval` to Yahoo download paths, partition per-ticker cache coverage by interval, call Yahoo with an exclusive `end_date + 1 day`, and trim returned bars to the requested inclusive window.
+   - Verification: `tests/data/test_providers.py`.
+
+12. Align OHLCV in setup quality
+   - Status: done.
+   - Outcome: setup-quality OHLC and Close/Volume features now calculate from timestamp-aligned bars instead of independently dropped field arrays, preventing stale high/low/volume from pairing with a newer close.
+   - Verification: `tests/test_setup_quality.py`, `tests/test_report.py`, `tests/test_selection_pipeline.py`, and `tests/test_screener_service.py`.
+
+13. Missing SMA fields stay missing
+   - Status: done.
+   - Avoid fabricating technical values when source data is insufficient.
+   - Outcome: screener candidates now preserve missing SMA source fields as `null`, and recommendation thesis generation is skipped when the technical SMA context is incomplete.
+   - Verification: `tests/api/test_screener_endpoints.py::test_screener_keeps_missing_sma_fields_null`, plus focused screener/daily-review/recommendation/thesis suites.
+
+14. Unknown currency policy
+   - Status: done.
+   - Define and enforce behavior for tickers whose quote currency cannot be detected.
+   - Outcome: unknown quote currencies and missing cross-currency FX rates no longer receive execution sizing or fabricated 1:1 account conversion; recommendations block with explicit `CURRENCY_UNKNOWN` or `FX_RATE_MISSING` reasons.
+   - Verification: `tests/test_position_sizing.py`, `tests/test_recommendation_engine.py`, `tests/test_report.py`, and API screener currency regressions.
+
+15. Finite float coercion
+   - Status: done.
+   - Prevent NaN/Inf from entering API responses and persisted calculations.
+   - Outcome: shared float coercion now rejects non-finite values, locked JSON reads normalize `NaN`/`Infinity` constants to `null`, and locked JSON writes recursively persist non-finite numbers as `null` with strict JSON dumping.
+   - Verification: `tests/test_coerce.py`, `tests/test_file_lock.py`, `tests/api/test_screener_endpoints.py`, and fundamentals persistence regressions.
+
+16. Intelligence position fallback
+   - Status: done.
+   - Ensure intelligence flows do not silently substitute stale or incorrect position context.
+   - Outcome: position intelligence cache hits now require matching persisted `position_context`; unqualified ticker caches are bypassed for position requests, and new position analyses persist ticker, position id, shares, entry, stop, R, and holding-period context in `inputs_used`.
+   - Verification: `tests/api/test_position_intelligence.py`, `tests/intelligence/test_symbol_analyzer.py`, and broader intelligence API/module suites.
+
+17. Intelligence cache locking
+   - Status: done.
+   - Protect intelligence cache writes from concurrent corruption.
+   - Outcome: intelligence cache writes now update each sweep file under one exclusive file lock, preserving concurrent ticker writes instead of losing one writer's read-modify-write update. Reads use the same lock utility with shared locks so callers do not observe partial writes.
+   - Verification: `tests/intelligence/test_cache.py`, broader intelligence tests, and full backend regression.
+
+18. `total_screened` semantics
+   - Status: done.
+   - Clarify whether it means input universe size, fetched rows, candidates after filters, or displayed rows.
+   - Outcome: `total_screened` is now explicitly the resolved candidate ticker count after request/taxonomy filters, excluding benchmark/context symbols. The screener response also exposes `total_with_market_data`, `total_ranked_candidates`, and `total_returned_candidates` so consumers can distinguish input, fetch, ranking, and final display counts.
+   - Verification: `tests/test_screener_service.py::test_run_screener_response_counts_distinct_pipeline_stages` plus screener API/service regressions.
+
+19. Finnhub integration reliability
+   - Status: done.
+   - Make external Finnhub integration tests deterministic or gracefully skipped when vendor data is missing.
+   - Outcome: live Finnhub tests now guard vendor-empty/unavailable payloads with explicit skips and validate client parsing against a single raw vendor payload rather than hard-coded, time-sensitive AAPL values.
+   - Verification: `tests/test_finnhub_integration.py` plus related Finnhub/fundamentals tests.
+
+20. Unknown currency universe filter
+   - Status: done.
+   - Ensure universe-level currency filters do not admit tickers whose quote currency cannot be resolved.
+   - Outcome: `apply_universe_filters` now treats `UNKNOWN` quote currency as failing the active currency filter instead of passing it through to ranking/sizing. Filter diagnostics report `currency` as the exclusion reason.
+   - Verification: `tests/test_universe_filter.py`, plus report/selection/screener regressions.
+
+21. Decision rebuild FX preservation
+   - Status: done.
+   - Ensure decision-summary recommendation rebuilds do not fabricate a 1:1 FX rate when the original recommendation lacked a required cross-currency rate.
+   - Outcome: `rebuild_recommendations_with_decision_action` now passes through the original `account_to_quote_rate` exactly, preserving `None` so USD/EUR recommendations remain blocked with `FX_RATE_MISSING` until a real rate is available.
+   - Verification: `tests/api/test_screener_fundamentals_context.py::test_decision_rebuild_preserves_missing_cross_currency_fx_block`, plus screener currency/recommendation regressions.
+
+22. Same-symbol adjusted risk FX preservation
+   - Status: done.
+   - Ensure same-symbol add-on/scale-back recommendation risk adjustment does not fabricate a 1:1 FX rate when the original recommendation lacks a required cross-currency rate.
+   - Outcome: same-symbol adjusted recommendations now preserve missing cross-currency FX by leaving `account_to_quote_rate`, account risk, and account position size unavailable instead of deriving them from a false identity conversion.
+   - Verification: `tests/api/test_same_symbol_reentry.py::test_same_symbol_adjusted_risk_preserves_missing_cross_currency_fx`, plus same-symbol, screener currency, recommendation, and screener service regressions.
+
+23. Candidate risk percent account-currency contract
+   - Status: done.
+   - Ensure screener candidate `risk_pct` is never computed by dividing quote-currency risk by account-currency account size when account-currency risk is unavailable.
+   - Outcome: candidate assembly now derives `risk_pct` only from `realized_risk_account`; otherwise it falls back to the recommendation engine result, preserving missing-FX blocks for cross-currency rows.
+   - Verification: `tests/api/test_screener_currency_contract.py::test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx`, plus screener currency/service/recommendation regressions.
+
+24. Portfolio EUR/USD rate selection symmetry
+   - Status: done.
+   - Ensure open-position portfolio metrics fetch EURUSD whenever position and account currencies differ across EUR/USD, regardless of whether the position itself is USD or EUR.
+   - Outcome: portfolio summaries for USD accounts holding EUR instruments now convert value, cost basis, P&L, open risk, available capital, and concentration risk into USD instead of leaving EUR amounts unconverted.
+   - Verification: `tests/api/test_portfolio_summary_currency.py::test_portfolio_summary_converts_eur_positions_for_usd_account`, plus portfolio summary/accounting regressions.
+
+25. Regime analytics R-multiple contract
+   - Status: done.
+   - Ensure closed-trade regime analytics use the app-wide per-share `initial_risk` contract when calculating R at close.
+   - Outcome: regime breakdown R stats now calculate `(exit_price - entry_price) / initial_risk` instead of multiplying by shares and overstating results by position size.
+   - Verification: `tests/api/test_regime_breakdown.py::test_r_at_close_uses_per_share_initial_risk`, plus regime endpoint and R-related portfolio/backtest regressions.
+
+26. Trade-plan currency requirement
+   - Status: done.
+   - Ensure report-level trade-plan sizing does not silently assume account currency when ranked universe rows lack quote-currency data.
+   - Outcome: `build_trade_plans` now skips rows without an explicit, finite quote currency and continues to fail closed for `UNKNOWN`, preventing execution sizing under a false same-currency assumption.
+   - Verification: `tests/test_position_sizing.py::test_build_trade_plans_skips_missing_quote_currency`, plus position sizing/report/screener regressions.
+
+27. Same-currency FX identity
+   - Status: done.
+   - Ensure risk sizing and recommendation sizing always use identity conversion when quote currency equals account currency.
+   - Outcome: stale or miswired `account_to_quote_rate` values no longer alter shares, risk, position value, or payload conversion rate for same-currency plans/recommendations.
+   - Verification: `tests/test_position_sizing.py::test_position_plan_uses_identity_rate_for_same_currency` and `tests/test_recommendation_engine.py::test_recommendation_uses_identity_rate_for_same_currency`, plus risk/report/screener regressions.
+
+28. Screener null currency normalization
+   - Status: done.
+   - Ensure pandas/metadata null currency values do not crash candidate assembly or leak invalid currency strings into API responses.
+   - Outcome: screener FX-map collection and candidate assembly now normalize null/blank currency values, fall back to ticker detection, and emit `UNKNOWN` when unresolved so recommendation sizing blocks with `CURRENCY_UNKNOWN`.
+   - Verification: `tests/api/test_screener_endpoints.py::test_screener_normalizes_null_currency_to_unknown`, plus unknown-currency and screener currency regressions.
+
+29. Same-symbol cross-currency capacity
+   - Status: done.
+   - Ensure same-symbol add-on/scale-back capacity compares quote-currency exposure against quote-currency budgets.
+   - Outcome: same-symbol evaluator now converts account risk and max-position budgets into the candidate quote currency before subtracting existing same-symbol risk/value, and blocks add-on sizing when required FX is missing.
+   - Verification: `tests/api/test_same_symbol_reentry.py::test_same_symbol_reentry_converts_account_budget_for_cross_currency_add_on`, plus same-symbol and screener risk regressions.
+
+## Next
+
+- No open backend correctness backlog items.

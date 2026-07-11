@@ -11,7 +11,10 @@ from api.models.recommendation import (
     RecommendationRisk,
 )
 from api.models.screener import ScreenerCandidate
-from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
+from api.services.same_symbol_reentry import (
+    SameSymbolReentryEvaluator,
+    _copy_recommendation_with_adjusted_risk,
+)
 from tests.api._test_helpers import make_order, make_position
 
 
@@ -146,6 +149,69 @@ def test_same_symbol_reentry_uses_live_stop_for_add_on():
     assert enriched.recommendation.risk.stop == 19.63
     assert enriched.shares == 5
     assert "Live stop 19.63 is used for execution" in (enriched.execution_note or "")
+
+
+def test_same_symbol_adjusted_risk_preserves_missing_cross_currency_fx():
+    recommendation = _make_recommendation()
+    recommendation.risk.currency = "USD"
+    recommendation.risk.account_currency = "EUR"
+    recommendation.risk.account_to_quote_rate = None
+
+    adjusted = _copy_recommendation_with_adjusted_risk(
+        recommendation,
+        execution_stop=19.63,
+        shares=5,
+        account_size=1000.0,
+    )
+
+    assert adjusted.risk.account_to_quote_rate is None
+    assert adjusted.risk.risk_amount == 16.85
+    assert adjusted.risk.risk_amount_account is None
+    assert adjusted.risk.position_size_account is None
+    assert adjusted.risk.risk_pct == 0.0
+
+
+def test_same_symbol_reentry_converts_account_budget_for_cross_currency_add_on():
+    evaluator = SameSymbolReentryEvaluator(_FakePortfolioService(action="NO_ACTION"))
+    recommendation = _make_recommendation(entry=25.0, stop=23.0, shares=10)
+    recommendation.risk.currency = "USD"
+    recommendation.risk.account_currency = "EUR"
+    recommendation.risk.account_to_quote_rate = 1.25
+    candidate = _make_candidate()
+    candidate.currency = "USD"
+    candidate.close = 25.0
+    candidate.entry = recommendation.risk.entry
+    candidate.stop = recommendation.risk.stop
+    candidate.target = recommendation.risk.target
+    candidate.rr = recommendation.risk.rr
+    candidate.shares = recommendation.risk.shares
+    candidate.recommendation = recommendation
+    position = make_position(
+        ticker="REP.MC",
+        position_id="POS-REP-1",
+        entry_price=25.0,
+        current_price=25.0,
+        stop_price=20.0,
+        shares=6,
+    )
+
+    enriched, context = evaluator.evaluate(
+        candidate,
+        positions=[position],
+        orders=[],
+        account_size=1000.0,
+        risk_pct_target=0.03,
+        max_position_pct=1.0,
+        min_shares=1,
+    )
+
+    assert enriched is not None
+    assert context.mode == "ADD_ON"
+    assert enriched.shares == 1
+    assert enriched.recommendation is not None
+    assert enriched.recommendation.risk.risk_amount == 5.0
+    assert enriched.recommendation.risk.risk_amount_account == 4.0
+    assert enriched.recommendation.risk.risk_pct == 0.004
 
 
 def test_same_symbol_reentry_suppresses_when_pending_entry_exists():

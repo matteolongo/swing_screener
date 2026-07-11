@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
 import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
-import { ScreenerCandidate } from '@/features/screener/types';
+import type { DecisionAction, ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import { useScreenerRecurrence } from '@/features/screener/recurrenceHooks';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
@@ -13,7 +13,12 @@ import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
 import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
-function signalBadge(action?: string): { label: string; className: string } | null {
+function assertNever(value: never): never {
+  throw new Error(`Unhandled decision action: ${value}`);
+}
+
+function signalBadge(action?: DecisionAction): { label: string; className: string } | null {
+  if (!action) return null;
   switch (action) {
     case 'BUY_NOW':
       return { label: t('screener.table.signalBadge.buyNow'), className: 'bg-success/10 text-success' };
@@ -30,7 +35,7 @@ function signalBadge(action?: string): { label: string; className: string } | nu
     case 'MANAGE_ONLY':
       return { label: t('screener.table.signalBadge.manage'), className: 'bg-foreground/5 text-muted' };
     default:
-      return null;
+      return assertNever(action);
   }
 }
 
@@ -123,16 +128,16 @@ export default function ScreenerCandidatesTable({
             {t('screener.table.headers.symbol')}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-muted text-left">
-            Signal
+            {t('screener.table.headers.signal')}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-muted text-right">
             {t('screener.table.headers.close')}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-muted text-right">
-            {`6M vs ${benchmarkTicker}`}
+            {t('screener.table.headers.relativeSixMonth', { benchmark: benchmarkTicker })}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-muted text-right">
-            R:R
+            {t('screener.table.headers.rr')}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-muted text-center">
             {t('screener.table.headers.actions')}
@@ -156,6 +161,15 @@ export default function ScreenerCandidatesTable({
           <React.Fragment key={candidate.ticker}>
             <tr
               onClick={onRowClick ? () => onRowClick(candidate) : undefined}
+              onKeyDown={onRowClick ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onRowClick(candidate);
+                }
+              } : undefined}
+              role={onRowClick ? 'button' : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              aria-label={onRowClick ? t('screener.table.selectRow', { ticker: candidate.ticker }) : undefined}
               className={`border-b border-border ${
                 isSelected
                   ? 'bg-primary/10 hover:bg-primary/10'

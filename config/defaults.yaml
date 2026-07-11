@@ -400,6 +400,21 @@ low_level:
     # the pattern direction. Matches breakout_volume_confirmation's 1.5x convention.
     volume_confirm_ratio: 1.5
   # ---------------------------------------------------------------------------
+  # Volume-zone analysis (advisory, single-symbol). Approximate volume profile
+  # from OHLCV bars - NOT tick-level order flow. Does not affect screener ranking.
+  # ---------------------------------------------------------------------------
+  volume_zones:
+    bins: 24                    # price bins for the approximate volume profile
+    hvn_peak_ratio: 0.70        # bin is a High-Volume Node when share >= this * POC share
+    lvn_peak_ratio: 0.20        # bin is a Low-Volume Node when share <= this * POC share
+    min_bars: 20                # minimum aligned bars before analysis is attempted
+    lookback: 120               # default bars of history the engine analyses
+    swing_window: 3             # fractal window for swing-pivot detection
+    proximity_atr_mult: 1.5     # price must be within this * ATR of a zone to arm a setup
+    stop_buffer_atr_mult: 0.5   # stop is placed this * ATR beyond the zone's far edge
+    retest_tol_atr_mult: 0.25   # band half-width (in ATR) used when counting zone retests
+    min_rr: 2.0                 # default minimum reward:risk for a Long/Short (not Watch)
+  # ---------------------------------------------------------------------------
   # Tier 1 free-first data provider stack
   # ---------------------------------------------------------------------------
   # data_providers below configures the OHLCV / price pipeline (yfinance,

@@ -30,6 +30,7 @@ describe('transformIntelligenceChat', () => {
     const api: IntelligenceChatResponseAPI = {
       ticker: 'AAPL',
       chat_date: '2026-07-03',
+      analysis_generated_at: '2026-07-03T08:00:00Z',
       refreshed_at: '2026-07-03T10:00:00Z',
       messages: [
         {
@@ -54,6 +55,7 @@ describe('transformIntelligenceChat', () => {
     const result = transformIntelligenceChat(api);
 
     expect(result.chatDate).toBe('2026-07-03');
+    expect(result.analysisGeneratedAt).toBe('2026-07-03T08:00:00Z');
     expect(result.refreshedAt).toBe('2026-07-03T10:00:00Z');
     expect(result.messages[0].createdAt).toBe('2026-07-03T09:00:00Z');
     expect(result.messages[0].refreshSources).toBe(true);
@@ -106,7 +108,12 @@ describe('transformIntelligence with new fields', () => {
       upcoming_events: [
         { type: 'earnings', date: '2026-05-28', direction: 'bullish', summary: 'Q2 beat expected.' }
       ],
-      position_signal: { action: 'HOLD', reason: 'Thesis intact.' },
+      position_signal: {
+        action: 'HOLD',
+        reason: 'Thesis intact.',
+        trim_pct: 0.25,
+        trim_price: 124.5,
+      },
       position_outlook: {
         expected_holding_period: '1-2_weeks',
         hold_until: 'Hold above SMA20 while catalyst momentum persists.',
@@ -123,7 +130,12 @@ describe('transformIntelligence with new fields', () => {
     expect(result.catalystUrgency).toBe('high');
     expect(result.upcomingEvents).toHaveLength(1);
     expect(result.upcomingEvents[0].type).toBe('earnings');
-    expect(result.positionSignal).toEqual({ action: 'HOLD', reason: 'Thesis intact.' });
+    expect(result.positionSignal).toEqual({
+      action: 'HOLD',
+      reason: 'Thesis intact.',
+      trimPct: 0.25,
+      trimPrice: 124.5,
+    });
     expect(result.positionOutlook).toEqual({
       expectedHoldingPeriod: '1-2_weeks',
       holdUntil: 'Hold above SMA20 while catalyst momentum persists.',

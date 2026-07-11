@@ -88,14 +88,13 @@ def label_regime_at_date(
 
 
 def _r_at_close(pos: dict) -> Optional[float]:
-    """R at close: (exit_price - entry_price) * shares / initial_risk."""
+    """R at close using per-share initial risk."""
     initial_risk = pos.get("initial_risk")
     exit_price = pos.get("exit_price")
     entry_price = pos.get("entry_price")
-    shares = pos.get("shares", 1) or 1
     if not initial_risk or initial_risk <= 0 or exit_price is None or entry_price is None:
         return None
-    return (exit_price - entry_price) * shares / initial_risk
+    return (exit_price - entry_price) / initial_risk
 
 
 class RegimeAnalyticsService:

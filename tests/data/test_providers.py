@@ -113,6 +113,27 @@ class TestYfinanceProvider:
         result_tickers = df.columns.get_level_values(1).unique()
         for ticker in tickers:
             assert ticker in result_tickers
+
+    def test_fetch_ohlcv_forwards_requested_interval(self, monkeypatch, tmp_path):
+        """The provider interval contract must reach yfinance.download."""
+        intervals: list[str | None] = []
+
+        def fake_download(*args, **kwargs):
+            intervals.append(kwargs.get("interval"))
+            return _mock_ohlcv_frame(["AAPL"])
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+
+        provider.fetch_ohlcv(
+            tickers=["AAPL"],
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+            interval="1h",
+            use_cache=False,
+        )
+
+        assert intervals == ["1h"]
     
     def test_fetch_latest_price(self, monkeypatch):
         """Test fetching latest price."""
@@ -349,6 +370,52 @@ class TestYfinanceProvider:
         for ticker in ["AAA", "BBB", "CCC"]:
             assert ticker in df["Close"].columns
 
+    def test_fetch_ohlcv_cache_is_partitioned_by_interval(self, monkeypatch, tmp_path):
+        """Daily cached coverage must not satisfy a later intraday request."""
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+        intervals: list[str | None] = []
+
+        def fake_download(tickers, *args, **kwargs):
+            intervals.append(kwargs.get("interval"))
+            tks = [tickers] if isinstance(tickers, str) else list(tickers)
+            return _mock_ohlcv_frame(tks)
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+
+        provider.fetch_ohlcv(["AAA"], "2026-01-01", "2026-01-31", interval="1d")
+        provider.fetch_ohlcv(["AAA"], "2026-01-01", "2026-01-31", interval="1h")
+
+        assert intervals == ["1d", "1h"]
+
+    def test_fetch_ohlcv_trims_download_to_requested_inclusive_end(
+        self, monkeypatch, tmp_path
+    ):
+        """Provider output must not include bars after the requested end date."""
+        requested_ends: list[str | None] = []
+        idx = pd.to_datetime(["2026-01-01", "2026-01-02", "2026-01-03"])
+        data = {
+            ("Open", "AAA"): pd.Series([100.0, 101.0, 102.0], index=idx),
+            ("High", "AAA"): pd.Series([101.0, 102.0, 103.0], index=idx),
+            ("Low", "AAA"): pd.Series([99.0, 100.0, 101.0], index=idx),
+            ("Close", "AAA"): pd.Series([100.5, 101.5, 102.5], index=idx),
+            ("Volume", "AAA"): pd.Series([1_000_000, 1_000_001, 1_000_002], index=idx),
+        }
+        raw = pd.DataFrame(data, index=idx)
+        raw.columns = pd.MultiIndex.from_tuples(raw.columns)
+
+        def fake_download(*args, **kwargs):
+            requested_ends.append(kwargs.get("end"))
+            return raw
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+
+        df = provider.fetch_ohlcv(["AAA"], "2026-01-01", "2026-01-02", use_cache=False)
+
+        assert requested_ends == ["2026-01-03"]
+        assert pd.Timestamp("2026-01-02") in df.index
+        assert df.index.max() == pd.Timestamp("2026-01-02")
+
     def test_fetch_ohlcv_serves_subwindow_from_cache(self, monkeypatch, tmp_path):
         """A narrower window inside cached coverage is served without downloads."""
         provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
@@ -405,9 +472,7 @@ class TestYfinanceProvider:
         
         provider = YfinanceProvider(cache_dir=str(cache_dir))
         
-        end = datetime.now().strftime("%Y-%m-%d")
-        start = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-        provider.fetch_ohlcv(["AAPL"], start, end)
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
         
         # Check that cache directory was created
         assert cache_dir.exists()

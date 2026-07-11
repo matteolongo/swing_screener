@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 
 
@@ -15,13 +17,19 @@ def is_na_scalar(val) -> bool:
 def safe_float(val, default=0.0):
     if is_na_scalar(val):
         return default
-    return float(val)
+    numeric = float(val)
+    if not math.isfinite(numeric):
+        return default
+    return numeric
 
 
 def safe_optional_float(val):
     if is_na_scalar(val):
         return None
-    return float(val)
+    numeric = float(val)
+    if not math.isfinite(numeric):
+        return None
+    return numeric
 
 
 def safe_optional_int(val):

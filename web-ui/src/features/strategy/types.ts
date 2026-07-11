@@ -22,6 +22,7 @@ export interface StrategyFilt {
   maxAtrPct: number;
   requireTrendOk: boolean;
   requireRsPositive: boolean;
+  requireWeeklyUptrend: boolean;
   currencies: StrategyCurrency[];
 }
 
@@ -77,7 +78,7 @@ export interface StrategyManage {
 
 export interface StrategyIntelligenceLLM {
   enabled: boolean;
-  provider: 'mock' | 'openai';
+  provider: 'openai';
   model: string;
   baseUrl: string;
   enableCache: boolean;
@@ -158,6 +159,7 @@ export interface StrategyFiltAPI {
   max_atr_pct: number;
   require_trend_ok: boolean;
   require_rs_positive: boolean;
+  require_weekly_uptrend?: boolean;
   currencies?: string[];
 }
 
@@ -213,21 +215,12 @@ export interface StrategyManageAPI {
 
 export interface StrategyIntelligenceLLMAPI {
   enabled?: boolean;
-  provider?: 'mock' | 'openai';
+  provider?: 'openai';
   model?: string;
-  base_url?: string;
-  enable_cache?: boolean;
-  enable_audit?: boolean;
-  cache_path?: string;
-  audit_path?: string;
-  max_concurrency?: number;
 }
 
 export interface StrategyIntelligenceCatalystAPI {
   lookback_hours?: number;
-  recency_half_life_hours?: number;
-  false_catalyst_return_z?: number;
-  min_price_reaction_atr?: number;
   require_price_confirmation?: boolean;
 }
 
@@ -235,7 +228,6 @@ export interface StrategyIntelligenceThemeAPI {
   enabled?: boolean;
   min_cluster_size?: number;
   min_peer_confirmation?: number;
-  curated_peer_map_path?: string;
 }
 
 export interface StrategyIntelligenceOpportunityAPI {
@@ -247,9 +239,6 @@ export interface StrategyIntelligenceOpportunityAPI {
 
 export interface StrategyMarketIntelligenceAPI {
   enabled?: boolean;
-  providers?: string[];
-  universe_scope?: 'screener_universe' | 'strategy_universe';
-  market_context_symbols?: string[];
   llm?: StrategyIntelligenceLLMAPI;
   catalyst?: StrategyIntelligenceCatalystAPI;
   theme?: StrategyIntelligenceThemeAPI;
@@ -330,6 +319,7 @@ export function transformStrategy(api: StrategyAPI): Strategy {
         maxAtrPct: api.universe.filt.max_atr_pct,
         requireTrendOk: api.universe.filt.require_trend_ok,
         requireRsPositive: api.universe.filt.require_rs_positive,
+        requireWeeklyUptrend: api.universe.filt.require_weekly_uptrend ?? false,
         currencies: normalizedCurrencies,
       },
     },
@@ -374,32 +364,32 @@ export function transformStrategy(api: StrategyAPI): Strategy {
     },
     marketIntelligence: {
       enabled: marketIntelligenceApi.enabled ?? false,
-      providers: marketIntelligenceApi.providers ?? ['yahoo_finance'],
-      universeScope: marketIntelligenceApi.universe_scope ?? 'screener_universe',
-      marketContextSymbols: marketIntelligenceApi.market_context_symbols ?? ['SPY', 'QQQ', 'XLK', 'SMH', 'XBI'],
+      providers: ['yahoo_finance'],
+      universeScope: 'screener_universe',
+      marketContextSymbols: ['SPY', 'QQQ', 'XLK', 'SMH', 'XBI'],
       llm: {
         enabled: marketIntelligenceLlmApi.enabled ?? false,
         provider: marketIntelligenceLlmApi.provider ?? 'openai',
         model: marketIntelligenceLlmApi.model ?? 'gpt-4.1-mini',
-        baseUrl: marketIntelligenceLlmApi.base_url ?? 'https://api.openai.com/v1',
-        enableCache: marketIntelligenceLlmApi.enable_cache ?? true,
-        enableAudit: marketIntelligenceLlmApi.enable_audit ?? true,
-        cachePath: marketIntelligenceLlmApi.cache_path ?? 'data/intelligence/llm_cache.json',
-        auditPath: marketIntelligenceLlmApi.audit_path ?? 'data/intelligence/llm_audit',
-        maxConcurrency: marketIntelligenceLlmApi.max_concurrency ?? 4,
+        baseUrl: 'https://api.openai.com/v1',
+        enableCache: true,
+        enableAudit: true,
+        cachePath: 'data/intelligence/llm_cache.json',
+        auditPath: 'data/intelligence/llm_audit',
+        maxConcurrency: 4,
       },
       catalyst: {
         lookbackHours: marketIntelligenceCatalystApi.lookback_hours ?? 72,
-        recencyHalfLifeHours: marketIntelligenceCatalystApi.recency_half_life_hours ?? 36,
-        falseCatalystReturnZ: marketIntelligenceCatalystApi.false_catalyst_return_z ?? 1.5,
-        minPriceReactionAtr: marketIntelligenceCatalystApi.min_price_reaction_atr ?? 0.8,
+        recencyHalfLifeHours: 36,
+        falseCatalystReturnZ: 1.5,
+        minPriceReactionAtr: 0.8,
         requirePriceConfirmation: marketIntelligenceCatalystApi.require_price_confirmation ?? true,
       },
       theme: {
         enabled: marketIntelligenceThemeApi.enabled ?? true,
         minClusterSize: marketIntelligenceThemeApi.min_cluster_size ?? 3,
         minPeerConfirmation: marketIntelligenceThemeApi.min_peer_confirmation ?? 2,
-        curatedPeerMapPath: marketIntelligenceThemeApi.curated_peer_map_path ?? 'data/intelligence/peer_map.yaml',
+        curatedPeerMapPath: 'data/intelligence/peer_map.yaml',
       },
       opportunity: {
         technicalWeight: marketIntelligenceOpportunityApi.technical_weight ?? 0.55,
@@ -446,6 +436,7 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
         max_atr_pct: strategy.universe.filt.maxAtrPct,
         require_trend_ok: strategy.universe.filt.requireTrendOk,
         require_rs_positive: strategy.universe.filt.requireRsPositive,
+        require_weekly_uptrend: strategy.universe.filt.requireWeeklyUptrend,
         currencies: currencies.length ? currencies : ['USD', 'EUR'],
       },
     },
@@ -490,32 +481,19 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
     },
     market_intelligence: {
       enabled: strategy.marketIntelligence.enabled,
-      providers: strategy.marketIntelligence.providers,
-      universe_scope: strategy.marketIntelligence.universeScope,
-      market_context_symbols: strategy.marketIntelligence.marketContextSymbols,
       llm: {
         enabled: strategy.marketIntelligence.llm.enabled,
         provider: strategy.marketIntelligence.llm.provider,
         model: strategy.marketIntelligence.llm.model,
-        base_url: strategy.marketIntelligence.llm.baseUrl,
-        enable_cache: strategy.marketIntelligence.llm.enableCache,
-        enable_audit: strategy.marketIntelligence.llm.enableAudit,
-        cache_path: strategy.marketIntelligence.llm.cachePath,
-        audit_path: strategy.marketIntelligence.llm.auditPath,
-        max_concurrency: strategy.marketIntelligence.llm.maxConcurrency,
       },
       catalyst: {
         lookback_hours: strategy.marketIntelligence.catalyst.lookbackHours,
-        recency_half_life_hours: strategy.marketIntelligence.catalyst.recencyHalfLifeHours,
-        false_catalyst_return_z: strategy.marketIntelligence.catalyst.falseCatalystReturnZ,
-        min_price_reaction_atr: strategy.marketIntelligence.catalyst.minPriceReactionAtr,
         require_price_confirmation: strategy.marketIntelligence.catalyst.requirePriceConfirmation,
       },
       theme: {
         enabled: strategy.marketIntelligence.theme.enabled,
         min_cluster_size: strategy.marketIntelligence.theme.minClusterSize,
         min_peer_confirmation: strategy.marketIntelligence.theme.minPeerConfirmation,
-        curated_peer_map_path: strategy.marketIntelligence.theme.curatedPeerMapPath,
       },
       opportunity: {
         technical_weight: strategy.marketIntelligence.opportunity.technicalWeight,

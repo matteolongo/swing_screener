@@ -34,7 +34,7 @@ import {
   UpdateTrailMethodRequest,
 } from './types';
 import { queryKeys } from '@/lib/queryKeys';
-import { invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
+import { invalidateDailyReviewQueries, invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
 
 export function useOrders(status: OrderFilterStatus) {
   return useQuery({
@@ -172,6 +172,7 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       await invalidateOrderQueries(queryClient);
+      await invalidateDailyReviewQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -189,6 +190,7 @@ export function useUpdateTrailMethodMutation(onSuccess?: () => void) {
     }) => updatePositionTrailMethod(positionId, request),
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
+      await invalidateDailyReviewQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -225,6 +227,7 @@ export function useClosePositionMutation(onSuccess?: () => void) {
       closePosition(positionId, request),
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
+      await invalidateDailyReviewQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -237,6 +240,7 @@ export function usePartialClosePositionMutation(onSuccess?: () => void) {
       partialClosePosition(positionId, request),
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
+      await invalidateDailyReviewQueries(queryClient);
       onSuccess?.();
     },
   });

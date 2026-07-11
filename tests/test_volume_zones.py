@@ -1,0 +1,198 @@
+from __future__ import annotations
+
+import pandas as pd
+import pytest
+
+from swing_screener.analysis import volume_zones as vz
+from swing_screener.analysis.volume_zones import (
+    APPROX_WARNING,
+    PROFILE_TYPE,
+    VolumeZoneConfig,
+)
+
+
+def test_defaults_load_from_config():
+    cfg = VolumeZoneConfig()
+    assert cfg.bins == 24
+    assert cfg.min_rr == 2.0
+    assert cfg.lookback == 120
+    assert cfg.swing_window == 3
+
+
+def test_constants():
+    assert PROFILE_TYPE == "approximate_bar_based"
+    assert (
+        APPROX_WARNING
+        == "Approximate volume profile built from OHLCV bars, not tick-level trades."
+    )
+
+
+def _ohlcv(close, high=None, low=None, volume=None, ticker="TEST"):
+    n = len(close)
+    idx = pd.date_range("2024-01-01", periods=n, freq="B")
+    high = high or [c * 1.01 for c in close]
+    low = low or [c * 0.99 for c in close]
+    volume = volume or [1000.0] * n
+    arrays = {"Close": close, "High": high, "Low": low, "Volume": volume}
+    frames = {f: pd.DataFrame({ticker: vals}, index=idx) for f, vals in arrays.items()}
+    combined = pd.concat(frames, axis=1)
+    combined.columns = pd.MultiIndex.from_tuples(
+        [(f, ticker) for f, _ in combined.columns]
+    )
+    return combined
+
+
+def test_extract_symbol_frame_returns_full_aligned_frame():
+    ohlcv = _ohlcv([10.0 + i for i in range(50)])
+    frame = vz._extract_symbol_frame(ohlcv, "TEST")
+    assert list(frame.columns) == ["h", "l", "c", "v"]
+    assert len(frame) == 50
+    assert frame["c"].iloc[-1] == pytest.approx(59.0)
+
+
+def test_extract_symbol_frame_none_for_missing_symbol():
+    ohlcv = _ohlcv([10.0, 11.0, 12.0])
+    assert vz._extract_symbol_frame(ohlcv, "NOPE") is None
+
+
+def test_market_bias_rules():
+    assert vz._market_bias(110, 100, 90, 80) == "bullish"
+    assert vz._market_bias(70, 80, 90, 100) == "bearish"
+    assert vz._market_bias(100, 100, 100, 100) == "neutral"
+    assert vz._market_bias(110, 100, 90, float("nan")) == "bullish"
+
+
+def test_zone_role_by_position():
+    assert vz._zone_role(90.0, price=100.0) == "buyer_defense"
+    assert vz._zone_role(110.0, price=100.0) == "seller_defense"
+
+
+def test_count_retests_counts_distinct_reentries():
+    close = pd.Series([10.0, 12.0, 10.0, 13.0, 10.0, 14.0])
+    assert vz._count_retests(close, 9.5, 10.5) == 3
+
+
+def test_confidence_in_range_and_monotone_on_rr():
+    lo = vz._confidence(
+        bias="bullish",
+        direction="long",
+        proximity_ratio=0.2,
+        rr=1.0,
+        retest_count=1,
+        rel_volume=1.2,
+        close=100.0,
+        vwap=95.0,
+    )
+    hi = vz._confidence(
+        bias="bullish",
+        direction="long",
+        proximity_ratio=0.2,
+        rr=4.0,
+        retest_count=1,
+        rel_volume=1.2,
+        close=100.0,
+        vwap=95.0,
+    )
+    assert 0.0 <= lo <= 100.0 and 0.0 <= hi <= 100.0
+    assert hi >= lo
+
+
+def _degenerate_ohlcv():
+    return _ohlcv([10.0, 10.5, 11.0])
+
+
+def test_no_trade_and_warning_on_insufficient_data():
+    result = vz.analyze_volume_zones(
+        "TEST", _degenerate_ohlcv(), lookback=120, min_rr=2.0
+    )
+    assert result.action == "No Trade"
+    assert result.data_quality.ok is False
+    assert result.market_bias == "neutral"
+    assert vz.APPROX_WARNING in result.warnings
+    assert result.profile_type == vz.PROFILE_TYPE
+    assert result.trade_plan.direction == "none"
+
+
+def test_approx_warning_always_present_even_on_valid_analysis():
+    base = [20.0] * 40
+    ramp = [20.0 + 0.4 * i for i in range(40)]
+    pull = [34.0, 33.0, 32.0]
+    closes = base + ramp + pull
+    result = vz.analyze_volume_zones("TEST", _ohlcv(closes), lookback=120, min_rr=1.0)
+    assert vz.APPROX_WARNING in result.warnings
+    assert result.action in {"Long", "Short", "Watch", "No Trade"}
+    assert 0.0 <= result.confidence_score <= 100.0
+
+
+def test_long_setup_has_stop_below_entry_and_positive_rr():
+    base = [20.0] * 60
+    ramp = [20.0 + 0.5 * i for i in range(30)]
+    pull = [33.0, 31.0, 29.0]
+    result = vz.analyze_volume_zones(
+        "TEST", _ohlcv(base + ramp + pull), lookback=150, min_rr=1.0
+    )
+    if result.action == "Long":
+        assert result.trade_plan.entry is not None
+        assert result.trade_plan.stop is not None
+        assert result.trade_plan.stop < result.trade_plan.entry
+        assert result.trade_plan.rr is not None and result.trade_plan.rr > 0
+
+
+def test_watch_when_rr_below_threshold_but_setup_exists():
+    base = [20.0] * 60
+    ramp = [20.0 + 0.5 * i for i in range(30)]
+    pull = [33.0, 31.0, 29.0]
+    result = vz.analyze_volume_zones(
+        "TEST", _ohlcv(base + ramp + pull), lookback=150, min_rr=99.0
+    )
+    assert result.action in {"Watch", "No Trade"}
+
+
+def test_deterministic():
+    ohlcv = _ohlcv([20.0 + 0.3 * i for i in range(80)])
+    a = vz.analyze_volume_zones("TEST", ohlcv)
+    b = vz.analyze_volume_zones("TEST", ohlcv)
+    assert a == b
+
+
+def test_f_rejects_non_finite_values():
+    """_f nulls NaN and +/-inf instead of leaking non-finite floats into output."""
+    assert vz._f(float("nan")) is None
+    assert vz._f(float("inf")) is None
+    assert vz._f(float("-inf")) is None
+    assert vz._f(1.5) == 1.5
+    assert vz._f(None) is None
+
+
+def test_confidence_proximity_term_is_capped_for_negative_ratio():
+    """A zone straddling the close yields a negative proximity_ratio; the proximity
+    term must not push the score above what ratio=0 (best case) produces."""
+    kwargs = dict(
+        bias="neutral",
+        direction="long",
+        rr=None,
+        retest_count=0,
+        rel_volume=None,
+        close=None,
+        vwap=None,
+    )
+    best = vz._confidence(proximity_ratio=0.0, **kwargs)
+    straddle = vz._confidence(proximity_ratio=-0.5, **kwargs)
+    assert straddle == best
+    assert straddle <= 100.0
+
+
+def test_vwap_and_swings_use_lookback_window_not_full_history():
+    """VWAP and swings must reflect the lookback window, not the longer download
+    (which exists because SMA200 needs >= 200 bars)."""
+    early = [200.0 + (i % 3) for i in range(130)]  # older, far above recent prices
+    recent = [100.0 + (i % 3) for i in range(120)]
+    closes = early + recent
+    ohlcv = _ohlcv(closes)
+    result = vz.analyze_volume_zones("TEST", ohlcv, lookback=120)
+    assert result.key_levels.vwap is not None
+    # Full-history VWAP would be ~152 (pulled up by the 200-priced early bars).
+    assert result.key_levels.vwap < 130
+    assert result.key_levels.swing_high is not None
+    # Full-history swing high would be ~200; the lookback window tops out near 101.
+    assert result.key_levels.swing_high < 150

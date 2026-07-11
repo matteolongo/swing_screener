@@ -67,6 +67,20 @@ def _make_ohlcv(tickers: list[str], periods: int = 3) -> pd.DataFrame:
     return df
 
 
+def _make_fx_ohlcv(ticker: str, rate: float) -> pd.DataFrame:
+    idx = pd.date_range("2024-01-01", periods=2, freq="B")
+    data = {
+        ("Open", ticker): [rate, rate],
+        ("High", ticker): [rate, rate],
+        ("Low", ticker): [rate, rate],
+        ("Close", ticker): [rate, rate],
+        ("Volume", ticker): [1_000_000, 1_000_000],
+    }
+    df = pd.DataFrame(data, index=idx)
+    df.columns = pd.MultiIndex.from_tuples(df.columns, names=["field", "ticker"])
+    return df
+
+
 def _make_screener_service(tmp_path):
     """Build a ScreenerService with minimal stubs and a tmp_path-backed EvalCache."""
     from api.services.screener_service import ScreenerService
@@ -103,6 +117,160 @@ def _make_screener_service(tmp_path):
     return svc, eval_cache, mock_provider
 
 
+def test_run_screener_response_counts_distinct_pipeline_stages(tmp_path, monkeypatch):
+    import api.services.screener_service as screener_svc_mod
+
+    from api.models.screener import ScreenerRequest
+
+    svc, _eval_cache, mock_provider = _make_screener_service(tmp_path)
+    mock_provider.fetch_ohlcv.return_value = _make_ohlcv(["AAA", "BBB", "SPY"])
+
+    def fake_build_daily_report(*args, **kwargs):
+        idx = ["AAA", "BBB"]
+        return pd.DataFrame(
+            {
+                "atr14": [1.2, 1.1],
+                "mom_6m": [0.1, 0.08],
+                "mom_12m": [0.2, 0.18],
+                "rs_6m": [0.05, 0.04],
+                "score": [0.9, 0.8],
+                "confidence": [80.0, 70.0],
+                "last": [50.0, 40.0],
+                "ma20_level": [48.0, 38.0],
+                "dist_sma50_pct": [5.0, 4.0],
+                "dist_sma200_pct": [10.0, 9.0],
+                "rank": [1, 2],
+                "signal": ["breakout", "breakout"],
+            },
+            index=idx,
+        )
+
+    monkeypatch.setattr(screener_svc_mod, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {}
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "compute_sector_benchmark_returns",
+        lambda ohlcv: {},
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "compute_sector_rotation_scores",
+        lambda ohlcv: {},
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "build_ticker_sector_returns",
+        lambda ticker_sectors, etf_returns: {},
+    )
+    monkeypatch.setattr(
+        screener_svc_mod, "load_fundamentals_snapshots", lambda candidates: {}
+    )
+    monkeypatch.setattr(
+        screener_svc_mod,
+        "apply_cached_fundamentals_context",
+        lambda candidates, snapshots: candidates,
+    )
+    monkeypatch.setattr(
+        screener_svc_mod,
+        "apply_decision_summary_context",
+        lambda candidates, snapshots: candidates,
+    )
+    monkeypatch.setattr(
+        screener_svc_mod,
+        "fetch_next_earnings_days",
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {
+            ticker: None for ticker in tickers
+        },
+    )
+
+    result = svc.run_screener(
+        ScreenerRequest(
+            tickers=["AAA", "BBB", "MISS"],
+            top=1,
+            asof_date="2024-01-03",
+        )
+    )
+
+    assert result.total_screened == 3
+    assert result.total_with_market_data == 2
+    assert result.total_ranked_candidates == 2
+    assert result.total_returned_candidates == 1
+    assert [candidate.ticker for candidate in result.candidates] == ["AAA"]
+
+
+def test_run_daily_report_passes_eurusd_rate_for_usd_quotes(tmp_path, monkeypatch):
+    import api.services.screener_service as screener_svc_mod
+
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import _RunContext
+    from swing_screener.recommendation.priority import CombinedPriorityConfig
+    from swing_screener.risk.position_sizing import RiskConfig
+    from swing_screener.strategy.report_config import ReportConfig
+
+    svc, _eval_cache, mock_provider = _make_screener_service(tmp_path)
+    captured: dict = {}
+
+    def fake_build_daily_report(*args, **kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame(
+            {
+                "score": [0.9],
+                "confidence": [80.0],
+                "rank": [1],
+                "last": [100.0],
+                "currency": ["USD"],
+                "signal": ["breakout"],
+            },
+            index=["AAPL"],
+        )
+
+    def fake_fetch_ohlcv(tickers, **kwargs):
+        if "EURUSD=X" in tickers:
+            return _make_fx_ohlcv("EURUSD=X", 1.25)
+        return _make_ohlcv(list(tickers))
+
+    mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
+    monkeypatch.setattr(screener_svc_mod, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {"AAPL": {"currency": "USD"}}
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "compute_sector_benchmark_returns",
+        lambda ohlcv: {},
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "compute_sector_rotation_scores",
+        lambda ohlcv: {},
+    )
+    monkeypatch.setattr(
+        screener_svc_mod.sector_rotation,
+        "build_ticker_sector_returns",
+        lambda ticker_sectors, etf_returns: {},
+    )
+
+    ctx = _RunContext(
+        request=ScreenerRequest(asof_date="2024-01-05", top=1),
+        strategy={"risk": {"account_currency": "EUR"}},
+        combined_priority_cfg=CombinedPriorityConfig(),
+    )
+    ctx.ohlcv = _make_ohlcv(["AAPL", "SPY"])
+    ctx.screening_tickers = ["AAPL"]
+    ctx.active_currencies = ["USD"]
+    ctx.start_date = "2024-01-01"
+    ctx.end_date = "2024-01-05"
+    ctx.asof_str = "2024-01-05"
+    ctx.report_cfg = ReportConfig(risk=RiskConfig(account_size=1000.0, account_currency="EUR"))
+
+    svc._run_daily_report(ctx, requested_top=1)
+
+    assert captured["account_to_quote_rates"] == {"USD": 1.25}
+    assert captured["quote_to_eur_rates"] == {"USD": 0.8}
+
+
 def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
     """Second screener run recomputes ONLY symbols not yet in the cache.
 
@@ -129,7 +297,7 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
 
     computed_tickers: list[set] = []
 
-    def _spying_compute(ohlcv, cfg, sector_benchmark_returns=None):
+    def _spying_compute(ohlcv, cfg, sector_benchmark_returns=None, **kwargs):
         if "Close" in set(ohlcv.columns.get_level_values(0)):
             close_tickers = set(ohlcv["Close"].columns.tolist())
         else:
@@ -276,7 +444,7 @@ def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
 
     computed_tickers: list[set] = []
 
-    def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None):
+    def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None, **kwargs):
         if "Close" in set(ohlcv_arg.columns.get_level_values(0)):
             close_tickers = set(ohlcv_arg["Close"].columns.tolist())
         else:
@@ -407,7 +575,7 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
 
     computed_tickers: list[set] = []
 
-    def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None):
+    def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None, **kwargs):
         if "Close" in set(ohlcv_arg.columns.get_level_values(0)):
             close_tickers = set(ohlcv_arg["Close"].columns.tolist())
         else:
