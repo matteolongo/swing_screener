@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import Button from '@/components/common/Button';
 import { usePositionReviewMutation } from '@/features/intelligence/hooks';
@@ -156,11 +156,22 @@ function ReviewResult({ review }: { review: PositionReview }) {
 export default function PositionReviewPanel({ ticker, position = null }: PositionReviewPanelProps) {
   const [refreshSources, setRefreshSources] = useState(false);
   const mutation = usePositionReviewMutation();
+  const normalizedTicker = useMemo(() => ticker.trim().toUpperCase(), [ticker]);
   const isHeld = Boolean(position?.positionId);
+  const mutationTicker = mutation.variables?.ticker?.trim().toUpperCase();
+  const isCurrentMutation = !mutationTicker || mutationTicker === normalizedTicker;
+  const review = mutation.data?.ticker?.trim().toUpperCase() === normalizedTicker ? mutation.data : null;
+
+  useEffect(() => {
+    // A manual-review mutation belongs to its requested ticker, not to the
+    // workspace component that survives a symbol selection change.
+    mutation.reset?.();
+    setRefreshSources(false);
+  }, [normalizedTicker]);
 
   const handleRun = () => {
     mutation.mutate({
-      ticker,
+      ticker: normalizedTicker,
       positionId: position?.positionId ?? null,
       refreshSources,
     });
@@ -179,8 +190,8 @@ export default function PositionReviewPanel({ ticker, position = null }: Positio
               : 'Assess the setup thesis, what confirms or invalidates entry, and check macro/geopolitical overrides.'}
           </p>
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Reviewing...' : isHeld ? 'Run position review' : 'Run symbol review'}
+        <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={isCurrentMutation && mutation.isPending}>
+          {isCurrentMutation && mutation.isPending ? 'Reviewing...' : isHeld ? 'Run position review' : 'Run symbol review'}
         </Button>
       </div>
       <div className="px-3 py-3">
@@ -188,19 +199,19 @@ export default function PositionReviewPanel({ ticker, position = null }: Positio
           <input
             type="checkbox"
             checked={refreshSources}
-            disabled={mutation.isPending}
+            disabled={isCurrentMutation && mutation.isPending}
             onChange={(event) => setRefreshSources(event.target.checked)}
           />
           Refresh app sources first
         </label>
-        {mutation.isError && (
+        {isCurrentMutation && mutation.isError && (
           <p className="mt-2 text-sm text-danger">
             {mutation.error instanceof Error ? mutation.error.message : 'Failed to run position review'}
           </p>
         )}
-        {mutation.data ? (
+        {review ? (
           <div className="mt-3">
-            <ReviewResult review={mutation.data} />
+            <ReviewResult review={review} />
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted">

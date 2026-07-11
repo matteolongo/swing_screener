@@ -188,3 +188,27 @@ def test_strategy_migrates_legacy_removed_plugin_out_of_payload(monkeypatch, tmp
 
     persisted = yaml.safe_load(strategy_storage.STRATEGIES_FILE.read_text(encoding="utf-8"))
     assert "soc" "ial" "_overlay" not in persisted["strategies"][0]
+
+
+def test_strategy_migrates_deployment_intelligence_settings_out_of_contract(monkeypatch, tmp_path):
+    _patch_strategy_storage(monkeypatch, tmp_path)
+    strategy_storage.STRATEGIES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    legacy = strategy_storage._default_strategy_payload()  # noqa: SLF001
+    strategy_storage.STRATEGIES_FILE.write_text(
+        yaml.safe_dump({"active_strategy_id": "default", "strategies": [legacy]}, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    client = TestClient(app)
+    active = client.get("/api/strategy/active").json()
+
+    assert "base_url" not in active["market_intelligence"]["llm"]
+    assert "cache_path" not in active["market_intelligence"]["llm"]
+    assert "providers" not in active["market_intelligence"]
+    # Reading a legacy document is non-destructive; an explicit strategy save
+    # persists the cleaned, current contract.
+    strategy_storage.save_strategies([legacy])
+    persisted = yaml.safe_load(strategy_storage.STRATEGIES_FILE.read_text(encoding="utf-8"))
+    persisted_llm = persisted["strategies"][0]["market_intelligence"]["llm"]
+    assert "base_url" not in persisted_llm
+    assert "max_concurrency" not in persisted_llm

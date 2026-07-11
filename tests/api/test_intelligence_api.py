@@ -23,11 +23,18 @@ _INTEL_PAYLOAD = {
 
 
 def _write_cache(tmp_path: Path, ticker: str, for_date: date) -> None:
-    cache_dir = tmp_path / "intelligence"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    cache_file = cache_dir / f"sweep_{for_date.isoformat()}.json"
-    data = {ticker.upper(): {**_INTEL_PAYLOAD, "symbol": ticker.upper(), "generated_at": "2026-05-24T10:00:00Z"}}
-    cache_file.write_text(json.dumps(data))
+    from swing_screener.intelligence.cache import write_to_cache
+    from swing_screener.intelligence.models import SymbolIntelligence
+
+    write_to_cache(
+        ticker,
+        SymbolIntelligence(
+            **_INTEL_PAYLOAD,
+            symbol=ticker.upper(),
+            generated_at="2026-05-24T10:00:00Z",
+        ),
+        for_date=for_date,
+    )
 
 
 def test_latest_returns_404_when_no_cache(tmp_path, monkeypatch):
@@ -49,6 +56,30 @@ def test_latest_returns_cached_entry(tmp_path, monkeypatch):
     data = response.json()
     assert data["symbol"] == "AAPL"
     assert data["action"] == "BUY_NOW"
+
+
+def test_latest_rejects_legacy_unversioned_cache_entry(tmp_path, monkeypatch):
+    from datetime import datetime, timezone
+
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    today = datetime.now(timezone.utc).date()
+    cache_dir = tmp_path / "intelligence"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / f"sweep_{today.isoformat()}.json").write_text(
+        json.dumps(
+            {
+                "AAPL": {
+                    **_INTEL_PAYLOAD,
+                    "symbol": "AAPL",
+                    "generated_at": "2026-05-24T10:00:00Z",
+                }
+            }
+        )
+    )
+
+    response = client.get("/api/intelligence/AAPL/latest")
+
+    assert response.status_code == 404
 
 
 def _make_sweep_dep_overrides(app, monkeypatch, tmp_path):
@@ -211,7 +242,9 @@ def test_analyze_returns_503_when_kill_switch_off(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     monkeypatch.setattr(
-        r, "intelligence_config_section", lambda name: {"analyzer_enabled": False}
+        r,
+        "effective_intelligence_config",
+        lambda: {"enabled": True, "llm": {"enabled": True, "analyzer_enabled": False}},
     )
 
     resp = client.post("/api/intelligence/AAA", json={"close": 1.0, "signal": "x"})

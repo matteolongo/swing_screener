@@ -36,7 +36,7 @@ from swing_screener.intelligence.models import (
     ThesisDelta,
 )
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
-from swing_screener.settings import get_settings_manager
+from swing_screener.intelligence.config_access import effective_intelligence_config
 from swing_screener.intelligence.tracing import recording_run
 from swing_screener.utils.logging_config import get_logger
 
@@ -300,6 +300,7 @@ def _build_user_prompt(
     pre_open: bool = False,
     pre_open_since: str | None = None,
     prior_digest: list[HistoryEntry] | None = None,
+    intelligence_policy: dict | None = None,
 ) -> str:
     def fmt(v: float | None) -> str:
         return f"{v:.2f}" if v is not None else "N/A"
@@ -630,13 +631,32 @@ def _build_user_prompt(
         "then follow the most material leads with further searches and run a forward-looking catalyst pass. "
         "Cite every source. Finally write the analyst write-up, ending with a Sources list of every URL you cited."
     )
+    policy = intelligence_policy or {}
+    if policy:
+        catalyst = policy.get("catalyst") if isinstance(policy.get("catalyst"), dict) else {}
+        theme = policy.get("theme") if isinstance(policy.get("theme"), dict) else {}
+        opportunity = policy.get("opportunity") if isinstance(policy.get("opportunity"), dict) else {}
+        lines += [
+            "",
+            "--- Active strategy intelligence policy ---",
+            "Use catalyst evidence from the configured lookback and require price confirmation "
+            f"when evaluating a catalyst: {bool(catalyst.get('require_price_confirmation', True))}; "
+            f"lookback {catalyst.get('lookback_hours', 72)} hours.",
+            "Theme clustering is "
+            f"{'enabled' if bool(theme.get('enabled', True)) else 'disabled'} "
+            f"(minimum cluster {theme.get('min_cluster_size', 3)}, peer confirmation {theme.get('min_peer_confirmation', 2)}).",
+            "Opportunity policy: "
+            f"technical weight {opportunity.get('technical_weight', 0.55)}, "
+            f"catalyst weight {opportunity.get('catalyst_weight', 0.45)}, "
+            f"minimum score {opportunity.get('min_opportunity_score', 0.55)}, "
+            f"maximum daily opportunities {opportunity.get('max_daily_opportunities', 8)}.",
+        ]
     return "\n".join(lines)
 
 
 class SymbolAnalyzer:
     def __init__(self) -> None:
-        doc = get_settings_manager().load_intelligence_document()
-        cfg = doc.get("config", {})
+        cfg = effective_intelligence_config()
         llm_cfg = cfg.get("llm", {})
         self._model = llm_cfg.get("web_search_model", "gpt-4o")
         self._format_model = llm_cfg.get("format_model", "gpt-4o-mini")
@@ -647,8 +667,10 @@ class SymbolAnalyzer:
         self._history_max_entries = int(history_cfg.get("max_entries", 50))
         self._history_digest_size = int(history_cfg.get("digest_size", 5))
         self._pre_open_cfg = cfg.get("pre_open", {})
+        self._intelligence_policy = cfg.get("policy", {})
         self._client = OpenAI(
             api_key=os.environ.get("OPENAI_API_KEY"),
+            base_url=(str(llm_cfg.get("base_url")).strip() if llm_cfg.get("base_url") else None),
             timeout=self._timeout,
             max_retries=self._max_retries,
         )

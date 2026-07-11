@@ -28,7 +28,7 @@ from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.history import HistoryEntry, read_history
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.intelligence.strategic import StrategicIntelligenceReport
-from swing_screener.intelligence.config_access import intelligence_config_section
+from swing_screener.intelligence.config_access import effective_intelligence_config
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
 from swing_screener.intelligence.tracing import (
     RunIndexEntry,
@@ -106,7 +106,10 @@ def _require_api_key() -> None:
 
 
 def _require_analyzer_enabled() -> None:
-    cfg = intelligence_config_section("llm")
+    runtime = effective_intelligence_config()
+    cfg = runtime.get("llm", {})
+    if not bool(runtime.get("enabled", False)) or not bool(cfg.get("enabled", True)):
+        raise HTTPException(status_code=503, detail="Symbol intelligence is disabled for the active strategy")
     if not bool(cfg.get("analyzer_enabled", True)):
         raise HTTPException(status_code=503, detail="Symbol intelligence analyzer is disabled")
 

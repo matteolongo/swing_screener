@@ -19,6 +19,34 @@ DATA_DIR = CONFIG_DIR
 STRATEGIES_FILE = strategies_yaml_path()
 ACTIVE_STRATEGY_FILE = STRATEGIES_FILE
 _LEGACY_REMOVED_PLUGIN_KEY = "social_overlay"
+_STRATEGY_INTELLIGENCE_SECTIONS = ("llm", "catalyst", "theme", "opportunity")
+
+
+def _sanitize_market_intelligence(payload: Any) -> dict:
+    """Keep only policy fields owned by a strategy.
+
+    Old strategy documents also contained deployment URL, cache/audit, source,
+    and concurrency settings. Those now live only in intelligence.yaml and are
+    removed on the next strategy persistence operation.
+    """
+    market = deepcopy(payload) if isinstance(payload, dict) else {}
+    for key in ("providers", "universe_scope", "market_context_symbols", "sources", "scoring_v2", "calendar"):
+        market.pop(key, None)
+
+    llm = market.get("llm")
+    if isinstance(llm, dict):
+        for key in ("api_key", "base_url", "enable_cache", "enable_audit", "cache_path", "audit_path", "max_concurrency"):
+            llm.pop(key, None)
+        if llm.get("provider") != "openai":
+            llm["provider"] = "openai"
+    catalyst = market.get("catalyst")
+    if isinstance(catalyst, dict):
+        for key in ("recency_half_life_hours", "false_catalyst_return_z", "min_price_reaction_atr"):
+            catalyst.pop(key, None)
+    theme = market.get("theme")
+    if isinstance(theme, dict):
+        theme.pop("curated_peer_map_path", None)
+    return market
 
 
 def _ensure_config_dir() -> None:
@@ -37,7 +65,7 @@ def _write_yaml(path: Path, payload: Any) -> None:
 def _default_market_intelligence_payload() -> dict:
     defaults = get_settings_manager().get_strategy_defaults_payload()
     market_intelligence = defaults.get("market_intelligence", {})
-    return deepcopy(market_intelligence if isinstance(market_intelligence, dict) else {})
+    return _sanitize_market_intelligence(market_intelligence)
 
 
 def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
@@ -59,9 +87,7 @@ def _sanitize_strategy_payload(strategy: dict) -> dict:
     payload.pop(_LEGACY_REMOVED_PLUGIN_KEY, None)
     market_intelligence = payload.get("market_intelligence")
     if isinstance(market_intelligence, dict):
-        llm = market_intelligence.get("llm")
-        if isinstance(llm, dict):
-            llm.pop("api_key", None)
+        payload["market_intelligence"] = _sanitize_market_intelligence(market_intelligence)
     return payload
 
 
@@ -151,18 +177,7 @@ def _normalize_document(doc: dict[str, Any]) -> tuple[dict[str, Any], bool]:
             strategy["market_intelligence"] = deepcopy(market_intelligence_default)
             dirty = True
         else:
-            if market_intelligence.get("providers") is None:
-                market_intelligence["providers"] = deepcopy(market_intelligence_default.get("providers", ["yahoo_finance"]))
-                dirty = True
-            if market_intelligence.get("universe_scope") is None:
-                market_intelligence["universe_scope"] = market_intelligence_default.get("universe_scope", "screener_universe")
-                dirty = True
-            if market_intelligence.get("market_context_symbols") is None:
-                market_intelligence["market_context_symbols"] = deepcopy(
-                    market_intelligence_default.get("market_context_symbols", ["SPY", "QQQ", "XLK", "SMH", "XBI"])
-                )
-                dirty = True
-            for section in ("llm", "catalyst", "theme", "opportunity", "sources", "scoring_v2", "calendar"):
+            for section in _STRATEGY_INTELLIGENCE_SECTIONS:
                 current_section = market_intelligence.get(section)
                 default_section = market_intelligence_default.get(section, {})
                 if not isinstance(current_section, dict):
