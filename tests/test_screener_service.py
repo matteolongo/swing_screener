@@ -297,7 +297,7 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
 
     computed_tickers: list[set] = []
 
-    def _spying_compute(ohlcv, cfg, sector_benchmark_returns=None):
+    def _spying_compute(ohlcv, cfg, sector_benchmark_returns=None, **kwargs):
         if "Close" in set(ohlcv.columns.get_level_values(0)):
             close_tickers = set(ohlcv["Close"].columns.tolist())
         else:
@@ -444,7 +444,7 @@ def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
 
     computed_tickers: list[set] = []
 
-    def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None):
+    def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None, **kwargs):
         if "Close" in set(ohlcv_arg.columns.get_level_values(0)):
             close_tickers = set(ohlcv_arg["Close"].columns.tolist())
         else:
@@ -575,7 +575,7 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
 
     computed_tickers: list[set] = []
 
-    def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None):
+    def _spying_compute(ohlcv_arg, cfg, sector_benchmark_returns=None, **kwargs):
         if "Close" in set(ohlcv_arg.columns.get_level_values(0)):
             close_tickers = set(ohlcv_arg["Close"].columns.tolist())
         else:

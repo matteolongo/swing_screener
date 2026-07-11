@@ -325,19 +325,12 @@ class MomentumStrategyModule:
         miss_records = pd.DataFrame()
         if misses:
             miss_ohlcv = ohlcv.loc[:, ohlcv.columns.get_level_values(1).isin(misses)]
-            if quote_to_eur_rates:
-                miss_records = compute_symbol_records(
-                    miss_ohlcv,
-                    cfg,
-                    sector_benchmark_returns=sector_benchmark_returns,
-                    quote_to_eur_rates=quote_to_eur_rates,
-                )
-            else:
-                miss_records = compute_symbol_records(
-                    miss_ohlcv,
-                    cfg,
-                    sector_benchmark_returns=sector_benchmark_returns,
-                )
+            miss_records = compute_symbol_records(
+                miss_ohlcv,
+                cfg,
+                sector_benchmark_returns=sector_benchmark_returns,
+                quote_to_eur_rates=quote_to_eur_rates,
+            )
             eval_cache.write(miss_records, asof=asof_date, sig=sig)
         frames = [f for f in (hits, miss_records) if f is not None and not f.empty]
         records = pd.concat(frames) if frames else pd.DataFrame()
