@@ -706,7 +706,7 @@ export default function NarrativeAnalysisCard({
           </div>
         )}
 
-        {/* Full rationale — always collapsed; available on expand */}
+        {/* Structured rationale — always collapsed; available on expand */}
         <details className="rounded-md bg-surface border border-border p-3">
           <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted select-none">
             {t('workspacePage.panels.analysis.intelligence.fullRationale')}

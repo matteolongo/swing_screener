@@ -581,10 +581,11 @@ describe('NarrativeAnalysisCard — status-aware skeleton', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps the full rationale inside a collapsed details element', () => {
+  it('keeps the structured rationale inside a collapsed details element', () => {
     const { container } = render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
     const summaries = Array.from(container.querySelectorAll('details > summary')).map((s) => s.textContent);
     expect(summaries).toContain(t('workspacePage.panels.analysis.intelligence.fullRationale'));
+    expect(screen.getByText(/Enter near \$182/)).toBeInTheDocument();
   });
 });
 

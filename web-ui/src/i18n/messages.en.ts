@@ -881,7 +881,7 @@ export const messagesEn = {
           emptyPanel: 'Not provided in this analysis.',
           riskFactors: 'Risks',
           pastTrades: 'Past trades on {{symbol}}',
-          fullRationale: 'Full rationale',
+          fullRationale: 'Structured rationale',
           aiAnalysisTitle: 'AI analysis',
           secondOpinion: 'AI second opinion: {{aiAction}} — differs from the screener verdict ({{screenerAction}}). The screener verdict stands.',
           preOpen: {
