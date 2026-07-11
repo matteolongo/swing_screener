@@ -49,14 +49,32 @@ export interface CandlePatternRaw {
   volume_confirmed?: boolean | null;
 }
 
+const CANDLE_PATTERN_DIRECTIONS = ['bullish', 'bearish', 'neutral'] as const satisfies readonly CandlePattern['direction'][];
+const CANDLE_PATTERN_CONTEXTS = [
+  'at_breakout',
+  'at_pullback',
+  'extended',
+  'none',
+] as const satisfies readonly CandlePattern['context'][];
+
+function toCandlePatternDirection(value: string): CandlePattern['direction'] {
+  const match = CANDLE_PATTERN_DIRECTIONS.find((direction) => direction === value);
+  return match ?? 'neutral';
+}
+
+function toCandlePatternContext(value: string): CandlePattern['context'] {
+  const match = CANDLE_PATTERN_CONTEXTS.find((context) => context === value);
+  return match ?? 'none';
+}
+
 export function transformCandlePattern(raw: CandlePatternRaw): CandlePattern {
   return {
     barIndex: raw.bar_index,
     date: raw.date,
     name: raw.name,
-    direction: raw.direction as CandlePattern['direction'],
+    direction: toCandlePatternDirection(raw.direction),
     keyLevel: raw.key_level,
-    context: raw.context as CandlePattern['context'],
+    context: toCandlePatternContext(raw.context),
     volumeRatio: raw.volume_ratio ?? undefined,
     volumeConfirmed: raw.volume_confirmed ?? undefined,
   };

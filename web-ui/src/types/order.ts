@@ -46,6 +46,21 @@ export interface CreateOrderRequest {
   thesis?: string;
 }
 
+export interface CreateOrderRequestApi {
+  ticker: string;
+  order_type: string;
+  quantity: number;
+  limit_price?: number;
+  stop_price?: number;
+  target_price: number | null;
+  notes: string;
+  order_kind: OrderKind;
+  position_id?: string;
+  entry_mode: EntryMode;
+  isin: string | null;
+  thesis: string | null;
+}
+
 export interface FillOrderRequest {
   filledPrice: number;
   filledDate: string;
@@ -235,7 +250,7 @@ export function transformOrderSnapshot(apiOrder: OrderSnapshotApiResponse): Orde
   };
 }
 
-export function transformCreateOrderRequest(req: CreateOrderRequest): any {
+export function transformCreateOrderRequest(req: CreateOrderRequest): CreateOrderRequestApi {
   return {
     ticker: req.ticker,
     order_type: req.orderType,

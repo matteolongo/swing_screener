@@ -55,6 +55,20 @@ describe('transformCandlePattern', () => {
     expect(result.volumeRatio).toBeUndefined();
     expect(result.volumeConfirmed).toBeUndefined();
   });
+
+  it('falls back to neutral/none for unknown direction and context', () => {
+    const result = transformCandlePattern({
+      bar_index: 4,
+      date: '2024-04-04',
+      name: 'unknown',
+      direction: 'sideways',
+      key_level: 11,
+      context: 'unknown_context',
+    });
+
+    expect(result.direction).toBe('neutral');
+    expect(result.context).toBe('none');
+  });
 });
 
 describe('transformScreenerResponse', () => {
