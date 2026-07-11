@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import type { ChartVolumeZone } from '@/components/domain/market/CandleChart';
 import { useTickerCandles } from '@/features/screener/hooks';
 import { useVolumeAnalysisQuery } from '@/features/volumeZones/hooks';
@@ -26,21 +26,25 @@ export default function VolumeZonesTab({ ticker }: { ticker: string }) {
   const analysisQuery = useVolumeAnalysisQuery(ticker);
   const candlesQuery = useTickerCandles(ticker);
 
+  const analysis = analysisQuery.data;
+  const zones = useMemo<ChartVolumeZone[]>(
+    () =>
+      (analysis?.volumeZones ?? []).map((z) => ({
+        kind: z.kind,
+        center: z.center,
+        priceLow: z.priceLow,
+        priceHigh: z.priceHigh,
+        volumeShare: z.volumeShare,
+      })),
+    [analysis?.volumeZones],
+  );
+
   if (analysisQuery.isLoading) {
     return <div className="text-sm text-muted">{tk('loading')}</div>;
   }
-  if (analysisQuery.isError || !analysisQuery.data) {
+  if (analysisQuery.isError || !analysis) {
     return <div className="text-sm text-danger">{tk('loadError')}</div>;
   }
-
-  const analysis = analysisQuery.data;
-  const zones: ChartVolumeZone[] = analysis.volumeZones.map((z) => ({
-    kind: z.kind,
-    center: z.center,
-    priceLow: z.priceLow,
-    priceHigh: z.priceHigh,
-    volumeShare: z.volumeShare,
-  }));
 
   return (
     <div className="space-y-3">

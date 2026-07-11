@@ -48,6 +48,11 @@ export function selectDrawnZones(zones: ChartVolumeZone[]): ChartVolumeZone[] {
   return [...poc, ...hvn, ...lvn];
 }
 
+// Stable empty defaults: a fresh `[]` default parameter is a new reference every
+// render, which would churn the memoized derivations and rebuild the chart.
+const EMPTY_BARS: PriceHistoryPoint[] = [];
+const EMPTY_ZONES: ChartVolumeZone[] = [];
+
 interface CandleChartProps {
   ticker: string;
   bars: PriceHistoryPoint[];
@@ -128,7 +133,7 @@ export function CandleChart({
   ticker,
   bars,
   patterns,
-  benchmarkBars = [],
+  benchmarkBars = EMPTY_BARS,
   benchmarkLabel,
   outperformancePct,
   entryPrice,
@@ -139,7 +144,7 @@ export function CandleChart({
   showSma200 = false,
   showRLevels = true,
   showKeyLevels = true,
-  volumeZones = [],
+  volumeZones = EMPTY_ZONES,
   showVolumeZones = true,
   className,
   height = 320,
@@ -362,7 +367,6 @@ export function CandleChart({
     stopPrice,
     targetPrice,
     volumeZones,
-    showVolumeZones,
   ]);
 
   // Visibility effects — update series/lines without recreating the chart
