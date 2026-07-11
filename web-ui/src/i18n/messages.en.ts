@@ -861,6 +861,7 @@ export const messagesEn = {
             mixed: 'Mixed',
             expand: 'Show weighted signals',
             empty: 'No weighted evidence available',
+            noDetails: 'No scoring details available.',
           },
           chat: {
             title: 'Ask follow-ups',

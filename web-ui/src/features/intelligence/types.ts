@@ -97,6 +97,7 @@ export interface WeightedSignal {
   source: string;
   event_date?: string | null;
   eventDate?: string | null;
+  explanation?: string | null;
 }
 
 export interface EvidenceLedgerAPI {
