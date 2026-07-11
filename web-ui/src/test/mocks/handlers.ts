@@ -748,6 +748,18 @@ export const handlers = [
   }),
 
   // Orders endpoints
+  http.get(`${API_BASE_URL}/api/portfolio/orders/local`, ({ request }) => {
+    const url = new URL(request.url)
+    const status = url.searchParams.get('status')
+
+    let orders = mockOrders
+    if (status) {
+      orders = mockOrders.filter((o) => o.status === status)
+    }
+
+    return HttpResponse.json({ orders, asof: '2026-02-08' })
+  }),
+
   http.get(`${API_BASE_URL}/api/portfolio/orders`, ({ request }) => {
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
@@ -762,6 +774,15 @@ export const handlers = [
 
   http.get(`${API_BASE_URL}/api/portfolio/summary`, () => {
     return HttpResponse.json(mockPortfolioSummary)
+  }),
+
+  http.get(`${API_BASE_URL}/api/portfolio/earnings-proximity/:ticker`, ({ params }) => {
+    return HttpResponse.json({
+      ticker: String(params.ticker || '').toUpperCase(),
+      next_earnings_date: null,
+      days_until: null,
+      warning: false,
+    })
   }),
 
   http.post(`${API_BASE_URL}/api/portfolio/orders`, async ({ request }) => {
@@ -908,6 +929,33 @@ export const handlers = [
         watchlist_near_trigger: 0,
         review_date: '2026-05-04',
       },
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/weekly-reviews`, () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get(`${API_BASE_URL}/api/weekly-reviews/:weekId`, ({ params }) => {
+    return HttpResponse.json({
+      week_id: String(params.weekId),
+      what_worked: '',
+      what_didnt: '',
+      rules_violated: '',
+      next_week_focus: '',
+      updated_at: '2026-05-04T00:00:00Z',
+    })
+  }),
+
+  http.put(`${API_BASE_URL}/api/weekly-reviews/:weekId`, async ({ params, request }) => {
+    const body = asObject(await request.json())
+    return HttpResponse.json({
+      week_id: String(params.weekId),
+      what_worked: String(body.what_worked ?? ''),
+      what_didnt: String(body.what_didnt ?? ''),
+      rules_violated: String(body.rules_violated ?? ''),
+      next_week_focus: String(body.next_week_focus ?? ''),
+      updated_at: '2026-05-04T00:00:00Z',
     })
   }),
 
@@ -1083,6 +1131,8 @@ export const handlers = [
   http.get(`${API_BASE_URL}/api/datasources/events`, () => HttpResponse.json({ events: [] })),
   http.post(`${API_BASE_URL}/api/datasources/probe`, () => HttpResponse.json([])),
   http.post(`${API_BASE_URL}/api/datasources/:id/probe`, () => HttpResponse.json({ id: 'x', status: 'ok', latency_ms: 1, detail: null, sample: null, error: null })),
+  http.get(`${API_BASE_URL}/api/cache/status`, () => HttpResponse.json([])),
+  http.post(`${API_BASE_URL}/api/cache/clear/:id`, ({ params }) => HttpResponse.json({ cleared: true, cache_id: params.id })),
 
   // Fundamentals snapshot mock
   http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {
