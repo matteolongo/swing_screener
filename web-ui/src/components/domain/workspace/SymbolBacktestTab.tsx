@@ -41,16 +41,21 @@ export default function SymbolBacktestTab({ ticker }: SymbolBacktestTabProps) {
       <p className="text-xs text-muted">{t('backtest.tab.intro', { ticker })}</p>
 
       <div className="flex flex-wrap items-end gap-3">
-        <Field label={t('backtest.form.patternStop')} className="w-40">
+        <Field label={t('backtest.form.patternStop')} htmlFor="backtest-pattern-stop" className="w-64">
           <select
+            id="backtest-pattern-stop"
             className={CONTROL_CLASS}
             value={patternStop}
             onChange={(e) => setPatternStop(e.target.value as PatternStopChoice)}
+            aria-describedby="pattern-stop-help"
           >
-            <option value="default">—</option>
-            <option value="on">On</option>
-            <option value="off">Off</option>
+            <option value="default">{t('backtest.form.patternStopOptions.default')}</option>
+            <option value="on">{t('backtest.form.patternStopOptions.on')}</option>
+            <option value="off">{t('backtest.form.patternStopOptions.off')}</option>
           </select>
+          <p id="pattern-stop-help" className="mt-1 text-[11px] text-muted">
+            {t('backtest.form.patternStopHint')}
+          </p>
         </Field>
         <Button onClick={handleRun} disabled={mutation.isPending}>
           {mutation.isPending ? t('backtest.form.running') : t('backtest.form.run')}

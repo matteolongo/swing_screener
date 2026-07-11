@@ -530,6 +530,12 @@ export const messagesEn = {
       overrides: 'Config overrides',
       overridesHint: 'Leave blank to use the live defaults. Change one field to A/B a single rule.',
       patternStop: 'Pattern stop at entry',
+      patternStopHint: 'Changes only the initial entry stop for this backtest run.',
+      patternStopOptions: {
+        default: 'Use live strategy default',
+        on: 'Force pattern stop on',
+        off: 'Force pattern stop off',
+      },
       breakevenAtR: 'Breakeven at R',
       kAtr: 'ATR stop multiple (k)',
       rrTarget: 'Target R:R',
