@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import StrategyCapitalRiskSummary from './StrategyCapitalRiskSummary';
 import type { Strategy } from '@/features/strategy/types';
+import { t } from '@/i18n/t';
 
 const strategy: Strategy = {
   id: 'balanced',
@@ -97,8 +98,8 @@ describe('StrategyCapitalRiskSummary', () => {
   it('renders the strategy capital risk snapshot', () => {
     render(<StrategyCapitalRiskSummary strategy={strategy} />);
 
-    expect(screen.getByText('Capital Risk at a Glance')).toBeInTheDocument();
-    expect(screen.getByText('Account Size')).toBeInTheDocument();
+    expect(screen.getByText(t('strategyCapitalRisk.title'))).toBeInTheDocument();
+    expect(screen.getByText(t('strategyCapitalRisk.accountSize'))).toBeInTheDocument();
     expect(screen.getAllByText('$800.00')).toHaveLength(2);
     expect(screen.getByText('$20.00')).toBeInTheDocument();
   });
@@ -107,8 +108,8 @@ describe('StrategyCapitalRiskSummary', () => {
     render(<StrategyCapitalRiskSummary strategy={strategy} variant="compact" />);
 
     expect(screen.getByText('Balanced')).toBeInTheDocument();
-    expect(screen.getByText(/Account \$800.00/)).toBeInTheDocument();
-    expect(screen.getByText(/Risk \/ trade \$20.00/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${t('strategyCapitalRisk.account')} \\$800\\.00`))).toBeInTheDocument();
+    expect(screen.getByText(t('strategyCapitalRisk.riskPerTrade', { amount: '$20.00', pct: '+2.5%' }))).toBeInTheDocument();
   });
 
   it('uses effective equity when a portfolio equity snapshot is provided', () => {

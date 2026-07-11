@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import Calendar from './Calendar';
+import { t } from '@/i18n/t';
 
 describe('Calendar page', () => {
   it('renders page title', async () => {
     renderWithProviders(<Calendar />);
-    expect(await screen.findByText('Events Calendar')).toBeInTheDocument();
+    expect(await screen.findByText(t('calendarPage.title'))).toBeInTheDocument();
   });
 
   it('renders an earnings event for a position', async () => {
@@ -26,10 +27,10 @@ describe('Calendar page', () => {
 
   it('shows source legend', async () => {
     renderWithProviders(<Calendar />);
-    expect(await screen.findByText('Position')).toBeInTheDocument();
-    expect(await screen.findByText('Screener hit')).toBeInTheDocument();
+    expect(await screen.findByText(t('calendarPage.legend.position'))).toBeInTheDocument();
+    expect(await screen.findByText(t('calendarPage.legend.screener'))).toBeInTheDocument();
     // 'Economic event' appears in both the legend and the event badge — use getAllByText
-    const economicMatches = await screen.findAllByText('Economic event');
+    const economicMatches = await screen.findAllByText(t('calendarPage.legend.economic'));
     expect(economicMatches.length).toBeGreaterThanOrEqual(1);
   });
 });

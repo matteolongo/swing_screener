@@ -33,7 +33,7 @@ function buildRiskSnapshot(strategy?: Strategy | null, equitySnapshot?: EquitySn
   const maxPositionValue = accountSize != null && maxPositionPct != null ? accountSize * maxPositionPct : null;
 
   return {
-    strategyName: strategy?.name ?? 'Strategy',
+    strategyName: strategy?.name ?? t('strategyCapitalRisk.fallbackStrategy'),
     accountSize,
     baseAccountSize,
     realizedPnl: equitySnapshot?.realizedPnl ?? null,
@@ -68,17 +68,17 @@ export default function StrategyCapitalRiskSummary({
         )}
       >
         <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-          <span className="text-muted">Risk</span>
+          <span className="text-muted">{t('strategyCapitalRisk.risk')}</span>
           <span>{snapshot.strategyName}</span>
         </span>
         <span title={snapshot.isEquityMode ? t('portfolioHeader.equityModeHint') : undefined}>
-          {snapshot.isEquityMode ? t('portfolioHeader.effectiveEquity') : 'Account'} {accountSizeLabel}
+          {snapshot.isEquityMode ? t('portfolioHeader.effectiveEquity') : t('strategyCapitalRisk.account')} {accountSizeLabel}
         </span>
         {snapshot.isEquityMode ? (
           <span>{t('portfolioHeader.realizedPnl')} {realizedPnlLabel}</span>
         ) : null}
-        <span>Risk / trade {capitalAtRiskLabel} ({riskPctLabel})</span>
-        <span>Max position {maxPositionLabel}</span>
+        <span>{t('strategyCapitalRisk.riskPerTrade', { amount: capitalAtRiskLabel, pct: riskPctLabel })}</span>
+        <span>{t('strategyCapitalRisk.maxPosition', { amount: maxPositionLabel })}</span>
       </div>
     );
   }
@@ -93,7 +93,7 @@ export default function StrategyCapitalRiskSummary({
     >
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-foreground">Capital Risk at a Glance</span>
+          <span className="text-foreground">{t('strategyCapitalRisk.title')}</span>
           <span className="text-xs font-medium text-muted">
             {snapshot.strategyName}
           </span>
@@ -101,14 +101,13 @@ export default function StrategyCapitalRiskSummary({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted">
-          This strategy sizes positions from the active risk settings below. The education sections
-          underneath still explain why each parameter matters.
+          {t('strategyCapitalRisk.description')}
         </p>
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-surface/80 p-3">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-              {snapshot.isEquityMode ? t('portfolioHeader.effectiveEquity') : 'Account Size'}
+              {snapshot.isEquityMode ? t('portfolioHeader.effectiveEquity') : t('strategyCapitalRisk.accountSize')}
             </div>
             <div className="mt-1 text-lg font-semibold text-foreground">
               {accountSizeLabel}
@@ -121,24 +120,26 @@ export default function StrategyCapitalRiskSummary({
           </div>
           <div className="rounded-lg border border-border bg-surface/80 p-3">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-              Capital at Risk / Trade
+              {t('strategyCapitalRisk.capitalAtRisk')}
             </div>
             <div className="mt-1 text-lg font-semibold text-foreground">
               {capitalAtRiskLabel}
             </div>
             <div className="mt-1 text-xs text-muted">
-              {riskPctLabel} of the account
+              {t('strategyCapitalRisk.accountPct', { pct: riskPctLabel })}
             </div>
           </div>
           <div className="rounded-lg border border-border bg-surface/80 p-3">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-              Max Position Value
+              {t('strategyCapitalRisk.maxPositionValue')}
             </div>
             <div className="mt-1 text-lg font-semibold text-foreground">
               {maxPositionLabel}
             </div>
             <div className="mt-1 text-xs text-muted">
-              {formatOrDash(snapshot.maxPositionPct, (value) => formatRatioAsPercent(value))} cap
+              {t('strategyCapitalRisk.cap', {
+                pct: formatOrDash(snapshot.maxPositionPct, (value) => formatRatioAsPercent(value)),
+              })}
             </div>
           </div>
         </div>
