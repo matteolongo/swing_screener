@@ -19,7 +19,12 @@ function response(candidates: ReturnType<typeof candidate>[]): ScreenerResponse 
 describe('useScreenerStore', () => {
   beforeEach(() => {
     localStorage.clear();
-    useScreenerStore.setState({ lastResult: null });
+    useScreenerStore.setState({
+      lastResult: null,
+      lastRunContext: null,
+      todayRun: null,
+      todayRunInitialized: false,
+    });
   });
 
   it('prioritizes candidates by decision action on setLastResult', () => {
@@ -82,5 +87,34 @@ describe('useScreenerStore', () => {
 
     // persistence moved to IndexedDB; nothing is written to localStorage anymore
     expect(localStorage.getItem('swing-screener-last-result')).toBeNull();
+  });
+
+  it('keeps Today pinned to its selected run when a later scan is exploration-only', () => {
+    const { result } = renderHook(() => useScreenerStore());
+    const todayResult = response([candidate('TODAY', 1)]);
+    const explorationResult = response([candidate('EXPLORE', 1)]);
+
+    act(() => result.current.recordScreenerRun(
+      todayResult,
+      {
+        request: { preset: 'us_large_cap_equities', minPrice: 0, maxPrice: 500 },
+        displayFilters: { recommendedOnly: true, actionFilter: 'all' },
+        completedAt: '2026-07-10T20:00:00Z',
+      },
+      true,
+    ));
+    act(() => result.current.recordScreenerRun(
+      explorationResult,
+      {
+        request: { preset: 'europe_large_cap_equities' },
+        displayFilters: { recommendedOnly: false, actionFilter: 'all' },
+        completedAt: '2026-07-11T08:00:00Z',
+      },
+      false,
+    ));
+
+    expect(result.current.lastResult?.candidates[0].ticker).toBe('EXPLORE');
+    expect(result.current.todayRun?.result.candidates[0].ticker).toBe('TODAY');
+    expect(result.current.todayRun?.displayFilters.recommendedOnly).toBe(true);
   });
 });

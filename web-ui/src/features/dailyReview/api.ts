@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
 import { queryKeys } from '@/lib/queryKeys';
-import { toTaxonomyFilterPayload, type TaxonomyFilterValues } from '@/features/pool/types';
+import { type TaxonomyFilterValues } from '@/features/pool/types';
 import {
   getActiveStrategyLocal,
   getAllOrdersLocal,
@@ -100,10 +100,10 @@ export async function getDailyReview(
   topN: number = 200,
   selection?: DailyReviewSelection,
 ): Promise<DailyReview> {
-  const preset = selection?.presetId?.trim() || null;
-  const taxonomyFilter = hasTaxonomyValues(selection?.taxonomyFilter)
-    ? selection!.taxonomyFilter!
-    : null;
+  // Today deliberately requests a portfolio-only review. Discovery candidates
+  // come from the pinned screener snapshot in the client, not from a second
+  // backend screener run with a potentially different filter set.
+  void selection;
 
   if (isLocalPersistenceMode()) {
     const strategy = getActiveStrategyLocal();
@@ -115,8 +115,7 @@ export async function getDailyReview(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         top_n: topN,
-        preset,
-        taxonomy_filter: taxonomyFilter && toTaxonomyFilterPayload(taxonomyFilter),
+        include_candidates: false,
         strategy: toStrategyApi(strategy),
         positions: positions.map(toPositionApi),
         orders: orders.map(toOrderApi),
@@ -128,12 +127,7 @@ export async function getDailyReview(
 
   const params = new URLSearchParams();
   params.set('top_n', String(topN));
-  if (preset) {
-    params.set('preset', preset);
-  }
-  if (taxonomyFilter) {
-    params.set('taxonomy_filter', JSON.stringify(toTaxonomyFilterPayload(taxonomyFilter)));
-  }
+  params.set('include_candidates', 'false');
   const data = await fetchJson<DailyReviewAPI>(
     `${API_ENDPOINTS.dailyReview}?${params.toString()}`,
     { errorMessage: 'Failed to fetch daily review' },
@@ -150,5 +144,15 @@ export function useDailyReview(topN: number = 200, selection?: DailyReviewSelect
     queryFn: () => getDailyReview(topN, selection),
     staleTime: 1000 * 60 * 5, // 5 minutes - review data is relatively stable
     refetchOnWindowFocus: false, // Don't refetch on window focus - user is reviewing
+  });
+}
+
+/** Portfolio/watchlist review with no implicit candidate-discovery run. */
+export function usePortfolioReview() {
+  return useQuery({
+    queryKey: queryKeys.dailyReview(0, 'portfolio'),
+    queryFn: () => getDailyReview(200),
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 }

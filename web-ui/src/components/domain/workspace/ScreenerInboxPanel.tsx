@@ -111,7 +111,13 @@ export function ScreenerRunningPanel() {
 }
 
 export default function ScreenerInboxPanel() {
-  const { lastResult, setLastResult } = useScreenerStore();
+  const {
+    lastResult,
+    todayRun,
+    lastRunContext,
+    recordScreenerRun,
+    setTodayRunFromLastRun,
+  } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
   const analysisTab = useWorkspaceStore((state) => state.analysisTab);
@@ -176,9 +182,17 @@ export default function ScreenerInboxPanel() {
   );
   const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', true);
   const [forceRefresh, setForceRefresh] = useState(false);
+  const [useForToday, setUseForToday] = useLocalStorage('screener.useForToday', true);
 
-  const screenerMutation = useRunScreenerMutation((data) => {
-    setLastResult(data);
+  const screenerMutation = useRunScreenerMutation((data, request) => {
+    recordScreenerRun(
+      data,
+      {
+        request,
+        displayFilters: { recommendedOnly, actionFilter },
+      },
+      useForToday,
+    );
     if (data.candidates.length > 0) {
       setSelectedTicker(data.candidates[0].ticker, 'screener');
     }
@@ -187,7 +201,7 @@ export default function ScreenerInboxPanel() {
   });
 
   const handleRunScreener = useCallback(() => {
-    screenerMutation.mutate({
+    const request = {
       taxonomyFilter,
       preset: presetId ?? undefined,
       top: topN,
@@ -201,7 +215,8 @@ export default function ScreenerInboxPanel() {
       pullbackMa: strategySignals?.pullbackMa ?? defaultIndicators?.pullbackMa ?? 20,
       minHistory: strategySignals?.minHistory ?? defaultIndicators?.minHistory ?? 260,
       forceRefresh: forceRefresh || undefined,
-    });
+    };
+    screenerMutation.mutate(request);
   }, [
     defaultIndicators?.breakoutLookback,
     defaultIndicators?.minHistory,
@@ -226,6 +241,11 @@ export default function ScreenerInboxPanel() {
   const allCandidates = result ? prioritizeCandidates(result.candidates) : [];
   const filteredCandidates = filterCandidates(allCandidates, { recommendedOnly, actionFilter });
   const displayCandidates = filterOutAddOns(filteredCandidates);
+  const isLastRunTodaySource = Boolean(
+    todayRun &&
+      lastRunContext &&
+      todayRun.completedAt === lastRunContext.completedAt,
+  );
 
   useEffect(() => {
     if (!displayCandidates.length || !selectedTicker || selectedTickerSource === 'portfolio') {
@@ -298,6 +318,8 @@ export default function ScreenerInboxPanel() {
         onToggleCollapsed={() => setIsFormCollapsed(!isFormCollapsed)}
         forceRefresh={forceRefresh}
         setForceRefresh={setForceRefresh}
+        useForToday={useForToday}
+        setUseForToday={setUseForToday}
       />
 
       {screenerMutation.isPending && <ScreenerRunningPanel />}
@@ -356,6 +378,18 @@ export default function ScreenerInboxPanel() {
               </Badge>
             </div>
           </div>
+          {!isLastRunTodaySource && lastRunContext ? (
+            <div className="flex items-center justify-between gap-3 rounded border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+              <span>{t('screener.summary.notTodaySource')}</span>
+              <button
+                type="button"
+                onClick={setTodayRunFromLastRun}
+                className="shrink-0 font-medium underline underline-offset-2 hover:text-foreground"
+              >
+                {t('screener.summary.useForToday')}
+              </button>
+            </div>
+          ) : null}
           {result.sameSymbolSuppressedCount || result.sameSymbolAddOnCount ? (
             <div className="flex flex-wrap gap-2 text-xs">
               {result.sameSymbolSuppressedCount ? (

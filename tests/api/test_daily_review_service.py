@@ -219,6 +219,24 @@ def test_generate_daily_review_basic(
     assert review.summary.review_date == date.today()
 
 
+def test_generate_daily_review_portfolio_only_never_runs_screener(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    """Today refreshes position/watchlist review without rediscovering names."""
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
+    review = service.generate_daily_review(top_n=200, include_candidates=False)
+
+    mock_screener_service.run_screener.assert_not_called()
+    assert review.new_candidates == []
+    assert review.positions_add_on_candidates == []
+    assert review.summary.new_candidates == 0
+    assert review.summary.total_positions == 3
+    assert len(review.positions_hold) == 1
+
+
 def test_generate_daily_review_top_n_limit(
     mock_screener_service, mock_portfolio_service, tmp_path
 ):
