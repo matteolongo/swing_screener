@@ -11,7 +11,7 @@ Daily trading workflow through the Swing Screener web interface.
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| Today | `/today` | Left panel with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right (Overview / Fundamentals / Intelligence / Order / Backtest / Volume Zones tabs; the Backtest tab runs a per-symbol event study inline, and Volume Zones shows advisory POC/HVN/LVN context). For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview |
+| Today | `/today` | Left panel with three tabs — Today (all open positions, pending orders, watchlist-near-trigger items, and a subset of one pinned screener run), Last Run (the latest screener result), Watchlist — plus the symbol analysis canvas on the right. A completed scan becomes Today's source only when **Use this run for Today's review** is selected; exploration scans leave the pinned source unchanged. For a held symbol the Order tab is hidden (unless a fresh add-on entry signal exists) and position management is folded into Overview |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal). **Pool tab**: refresh-all-universes, rebuild symbol pool, and enrich taxonomy — each with a field-level diff table (`PoolTab` / `PoolDiffTable` / `UniverseRefreshSummary`) |
@@ -31,7 +31,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/pool` | Today (filter bar), Header (review queue), Universes (Pool tab) | Taxonomy presets, pool browse, and review-queue health. `QuickFilterBar` consumes presets; `components/domain/pool/ReviewQueueDrawer` + the Header badge surface symbols that repeatedly failed OHLCV fetch (Keep restores, Remove drops the queue entry). `admin.ts` + `adminHooks.ts` drive the Pool tab's rebuild/enrich/refresh-all operations. |
 | `features/intelligence` | Today | Symbol analysis (LLM), cached results, sweep, pre-open gap outlook, thesis-delta, analysis-history timeline |
 | `features/watchlist` | Today | Watchlist CRUD (Watchlist tab) |
-| `features/dailyReview` | Today | Daily review compute and structured result |
+| `features/dailyReview` | Today | Portfolio/watchlist review compute and structured result. Candidate opportunities are derived from the persisted pinned screener snapshot, not from this endpoint. |
 | `features/analytics` | Analytics | Regime breakdown, performance stats |
 | `features/fundamentals` | Today (symbol analysis) | Fundamental snapshots used by the symbol analysis panels. The standalone Research/Fundamentals comparison page was removed; the `compare`/`warmup` hooks are now unused and pending cleanup. |
 | `features/calendar` | Calendar | Calendar events |
@@ -68,7 +68,7 @@ Not every control fits a primitive: checkboxes, radios, range sliders, search bo
 ## Typical Workflow
 
 1. Start API and web UI.
-2. **Today** — compute daily review and check pending orders (Today tab), run the screener and review candidates (Last Run tab), trigger symbol analysis, track the Watchlist tab.
+2. **Today** — check all open positions and pending orders, then review candidates from the explicitly pinned screener run. Use the Last Run checkbox to update Today's source, or clear it to explore another universe without changing the review. Track the Watchlist and trigger symbol analysis as needed.
 3. Create orders via **Book**.
 4. Next trading day: fill orders and update stops in **Book**.
 
