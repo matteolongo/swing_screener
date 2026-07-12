@@ -20,6 +20,8 @@ def test_risk_engine_respects_min_rr():
         shares=100,
         risk_cfg=risk_cfg,
         rr_target=2.0,
+        target=102.0,
+        target_source="structural",
         costs=RiskEngineConfig(
             commission_pct=0.0, slippage_bps=0.0, fx_estimate_pct=0.0
         ),

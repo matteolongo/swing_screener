@@ -59,6 +59,11 @@ export interface IntelligenceRequestPayload {
   next_dividend_date?: string | null;
   next_dividend_amount?: number | null;
   recent_patterns?: string[] | null;
+  price_source?: string | null;
+  price_asof?: string | null;
+  price_status?: 'current' | 'stale' | 'intraday' | 'unknown';
+  fundamentals_asof?: string | null;
+  fundamentals_status?: 'current' | 'stale' | 'intraday' | 'unknown';
 }
 
 export function candidateToPayload(
@@ -84,6 +89,15 @@ export function candidateToPayload(
       momentum_12m: candidate.momentum12m ?? null,
       sector: candidate.sector ?? null,
       currency: candidate.currency ?? 'USD',
+      price_source: 'screener_market_data',
+      price_asof: candidate.lastBar ?? null,
+      price_status: candidate.dataStatus ?? 'unknown',
+      fundamentals_asof: candidate.fundamentalsAsOf ?? null,
+      fundamentals_status: (
+        candidate.fundamentalsFreshnessStatus === 'current' || candidate.fundamentalsFreshnessStatus === 'stale'
+          ? candidate.fundamentalsFreshnessStatus
+          : 'unknown'
+      ),
     };
     payload.rr = candidate.rr ?? null;
     payload.rel_strength = candidate.relStrength ?? null;

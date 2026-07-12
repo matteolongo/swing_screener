@@ -128,6 +128,10 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
     positionId: sameSymbol?.positionId,
     sameSymbol,
     avgDailyVolumeEur: candidate?.avgDailyVolumeEur ?? null,
+    dataStatus: candidate?.dataStatus ?? 'unknown',
+    dataAsOf: candidate?.dataAsOf ?? candidate?.lastBar,
+    daysToEarnings: candidate?.daysToEarnings ?? null,
+    strategyId: activeStrategyQuery.data?.id,
   };
 
   return (

@@ -155,9 +155,14 @@ def test_analyze_position_returns_cache_without_calling_analyzer(client):
     def override_portfolio():
         svc = MagicMock()
         svc.list_positions.return_value = positions_resp
+        svc.suggest_position_stop.return_value.action = "HOLD"
+        svc.fetch_recent_ohlcv.side_effect = RuntimeError("no ohlcv in cache test")
         return svc
 
     class _NeverCalledAnalyzer:
+        def context_fingerprint(self, *a, **k):
+            return "test-fingerprint"
+
         def analyze(self, *a, **k):
             raise AssertionError("analyzer must not be called on a cache hit")
 

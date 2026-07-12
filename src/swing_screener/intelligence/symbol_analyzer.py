@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 from datetime import datetime
 
 from openai import OpenAI
@@ -41,6 +43,11 @@ from swing_screener.intelligence.tracing import recording_run
 from swing_screener.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+def analyzer_config_signature(cfg: dict) -> str:
+    payload = json.dumps(cfg, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode()).hexdigest()
 
 _SYSTEM_PROMPT = """\
 You are a swing-trading analyst. Given the technical context below and live web search results, \
@@ -671,8 +678,10 @@ def _build_user_prompt(
 
 
 class SymbolAnalyzer:
-    def __init__(self) -> None:
-        cfg = effective_intelligence_config()
+    def __init__(self, cfg: dict | None = None) -> None:
+        cfg = cfg or effective_intelligence_config()
+        self._config_signature = analyzer_config_signature(cfg)
+        self._strategy_id = (cfg.get("policy") or {}).get("strategy_id")
         llm_cfg = cfg.get("llm", {})
         self._model = llm_cfg.get("web_search_model", "gpt-4o")
         self._format_model = llm_cfg.get("format_model", "gpt-4o-mini")
@@ -691,6 +700,18 @@ class SymbolAnalyzer:
             max_retries=self._max_retries,
         )
         self._graph = None
+
+    def context_fingerprint(self, ticker: str, req: SymbolIntelligenceRequest) -> str:
+        payload = {
+            "ticker": ticker.upper(),
+            "request": req.model_dump(mode="json"),
+            "config_signature": getattr(self, "_config_signature", "unconfigured"),
+            "prompt_signature": hashlib.sha256(
+                (_SYSTEM_PROMPT + _FORMAT_PROMPT).encode()
+            ).hexdigest(),
+        }
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+        return hashlib.sha256(encoded.encode()).hexdigest()
 
     def _is_us_listed(self, ticker: str, req: SymbolIntelligenceRequest) -> bool:
         """US-listed proxy. Prefer the ticker-based `detect_currency` (knows e.g.
@@ -754,6 +775,7 @@ class SymbolAnalyzer:
             "past_positions": past_positions or [],
             "run_id": recorder.run_id if recorder is not None else None,
             "_recorder": recorder,
+            "context_fingerprint": self.context_fingerprint(ticker, req),
         }
         if now is not None:
             state["now"] = now

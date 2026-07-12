@@ -62,3 +62,6 @@ def test_held_symbol_is_kept_when_include_held_is_set():
     assert suppressed == 0
     assert filtered[0].same_symbol is not None
     assert filtered[0].same_symbol.mode == "MANAGE_ONLY"
+    assert filtered[0].decision_summary is not None
+    assert filtered[0].decision_summary.action == "MANAGE_ONLY"
+    assert filtered[0].decision_summary.trade_plan.entry_condition == "manage_position"

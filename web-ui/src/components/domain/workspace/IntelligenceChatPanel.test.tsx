@@ -70,7 +70,7 @@ describe('IntelligenceChatPanel', () => {
     const { user } = renderWithProviders(<IntelligenceChatPanel ticker="AAPL" intelligence={baseIntelligence} />);
 
     await user.type(screen.getByRole('textbox'), 'Refresh sources first');
-    await user.click(screen.getByLabelText(t('workspacePage.panels.analysis.intelligence.chat.refreshSources')));
+    await user.click(screen.getByLabelText('Use latest sources (slower)'));
     await user.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.intelligence.chat.send') }));
 
     await waitFor(() => {

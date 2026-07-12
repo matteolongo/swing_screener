@@ -226,19 +226,9 @@ def weigh(draft, req, cfg: EvidenceWeightsConfig) -> EvidenceLedger:
             explanation=f"This cited news item {_direction_word(sentiment)}: {item.headline}",
         )
 
-    for event in getattr(draft, "upcoming_events", []) or []:
-        event_type = _enum_value(event.type)
-        direction = _enum_value(event.direction)
-        add(
-            f"upcoming.{event_type}",
-            f"Upcoming: {event_type}",
-            "catalyst",
-            direction,
-            cfg.upcoming_weight(event_type),
-            event.summary,
-            getattr(event, "date", None),
-            explanation=f"This upcoming event {_direction_word(direction)}: {event.summary}",
-        )
+    # Forecast events are useful as risk flags, but an LLM-authored event without
+    # a cited source must never change the decision balance. Grounded, already-
+    # happened news/catalysts are filtered before this function is called.
 
     bull = sum(signal.contribution for signal in signals if signal.contribution > 0)
     bear = -sum(signal.contribution for signal in signals if signal.contribution < 0)

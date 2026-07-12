@@ -12,6 +12,7 @@ from swing_screener.risk.currency import (
 
 Verdict = Literal["RECOMMENDED", "NOT_RECOMMENDED"]
 ReasonSeverity = Literal["info", "warn", "block"]
+GateStatus = Literal["PASS", "WAIT", "BLOCK", "UNKNOWN"]
 
 
 @dataclass(frozen=True)
@@ -32,10 +33,29 @@ class ChecklistGate:
 
 
 @dataclass(frozen=True)
+class DecisionGate:
+    status: GateStatus
+    explanation: str
+
+
+@dataclass(frozen=True)
+class DecisionGateState:
+    """The four independent permissions required before an order is actionable."""
+
+    setup: DecisionGate
+    trigger: DecisionGate
+    plan: DecisionGate
+    portfolio: DecisionGate
+    ready_to_order: bool = False
+
+
+@dataclass(frozen=True)
 class RiskPayload:
     entry: float
     stop: Optional[float]
     target: Optional[float]
+    desired_target: Optional[float]
+    target_source: str
     rr: Optional[float]
     risk_amount: float
     risk_amount_account: float
@@ -73,6 +93,7 @@ class RecommendationPayload:
     risk: RiskPayload
     costs: CostPayload
     checklist: list[ChecklistGate]
+    decision_gates: DecisionGateState
     education: EducationPayload
     thesis: Optional[dict] = None  # Trade Thesis (serialized from thesis.TradeThesis)
 
@@ -108,6 +129,9 @@ def build_recommendation(
     account_size: float,
     risk_pct_target: float,
     rr_target: float,
+    target: Optional[float] = None,
+    target_source: str = "risk_multiple",
+    data_status: str = "current",
     min_rr: float = 2.0,
     max_fee_risk_pct: float = 0.20,
     commission_pct: float = 0.0,
@@ -133,9 +157,9 @@ def build_recommendation(
         stop = None
         stop_invalid = True
 
-    # Accept both raw screener vocab ("breakout"/"pullback"/"both") and
-    # unified decision-action vocab ("BUY_NOW"/"BUY_ON_PULLBACK"/"WAIT_FOR_BREAKOUT").
-    signal_active = signal in {
+    # A setup can be qualified before it is executable. Conditional decision
+    # actions never count as an observed market trigger.
+    setup_qualified = signal in {
         "both",
         "breakout",
         "pullback",
@@ -143,6 +167,8 @@ def build_recommendation(
         "BUY_ON_PULLBACK",
         "WAIT_FOR_BREAKOUT",
     }
+    entry_triggered = signal in {"both", "breakout", "pullback", "BUY_NOW"}
+    conditional_entry = signal in {"BUY_ON_PULLBACK", "WAIT_FOR_BREAKOUT"}
 
     stop_defined = stop is not None and entry > 0 and stop < entry
     risk_per_share = (entry - stop) if stop_defined else None
@@ -201,11 +227,14 @@ def build_recommendation(
     risk_amount_account = risk_amount / normalized_rate
     risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
 
-    target = None
+    desired_target = None
     rr = None
     if stop_defined and risk_per_share and risk_per_share > 0:
-        target = entry + (rr_target * risk_per_share)
-        rr = (target - entry) / risk_per_share if risk_per_share > 0 else None
+        desired_target = entry + (rr_target * risk_per_share)
+        if target is not None and math.isfinite(target) and target > entry:
+            rr = (target - entry) / risk_per_share
+        else:
+            target = None
 
     costs = _estimate_costs(
         entry=entry,
@@ -226,7 +255,9 @@ def build_recommendation(
         ),
     )
 
-    rr_ok = rr is not None and rr >= min_rr
+    target_is_independent = target_source in {"structural", "manual"}
+    rr_ok = target_is_independent and rr is not None and rr >= min_rr
+    data_current = data_status == "current"
     fee_ok = fee_to_risk_pct is not None and fee_to_risk_pct <= max_fee_risk_pct
     risk_ok = (
         not sizing_blocked
@@ -235,14 +266,36 @@ def build_recommendation(
 
     checklist = [
         ChecklistGate(
-            gate_name="signal_active",
-            passed=signal_active,
+            gate_name="setup_qualified",
+            passed=setup_qualified,
             explanation=(
-                "Signal is active (breakout, pullback, or both)."
-                if signal_active
-                else "No active signal."
+                "Setup qualifies for review."
+                if setup_qualified
+                else "No qualified setup."
             ),
             rule="R5",
+        ),
+        ChecklistGate(
+            gate_name="entry_triggered",
+            passed=entry_triggered,
+            explanation=(
+                "The market entry condition has triggered."
+                if entry_triggered
+                else "Entry condition is still waiting for price confirmation."
+                if conditional_entry
+                else "No entry trigger is active."
+            ),
+            rule="R5",
+        ),
+        ChecklistGate(
+            gate_name="data_current",
+            passed=data_current,
+            explanation=(
+                "Critical market data is current."
+                if data_current
+                else f"Critical market data is {data_status}; actionable output is blocked."
+            ),
+            rule="R1",
         ),
         ChecklistGate(
             gate_name="stop_defined",
@@ -299,7 +352,7 @@ def build_recommendation(
     reasons_detailed: list[Reason] = []
     suggestions: list[str] = []
 
-    if not signal_active:
+    if not setup_qualified:
         reasons_detailed.append(
             Reason(
                 code="NO_SIGNAL",
@@ -309,6 +362,28 @@ def build_recommendation(
             )
         )
         suggestions.append("Wait for a breakout or pullback signal.")
+
+    if conditional_entry:
+        reasons_detailed.append(
+            Reason(
+                code="ENTRY_NOT_TRIGGERED",
+                message="The setup is conditional; its entry trigger has not occurred.",
+                severity="block",
+                rule="R5",
+            )
+        )
+        suggestions.append("Keep the setup on the watchlist until its price condition triggers.")
+
+    if not data_current:
+        reasons_detailed.append(
+            Reason(
+                code="DATA_NOT_CURRENT",
+                message=f"Critical market data is {data_status}; refresh before acting.",
+                severity="block",
+                rule="R1",
+            )
+        )
+        suggestions.append("Refresh market data after the relevant session close.")
 
     if currency_unknown:
         reasons_detailed.append(
@@ -381,7 +456,17 @@ def build_recommendation(
         )
         suggestions.append("Reduce position size or widen account risk budget.")
 
-    if stop_defined and not rr_ok:
+    if stop_defined and not target_is_independent:
+        reasons_detailed.append(
+            Reason(
+                code="TARGET_NOT_VALIDATED",
+                message="The desired R-multiple target has not been validated against price structure.",
+                severity="block",
+                rule="R3",
+            )
+        )
+        suggestions.append("Validate a target from resistance, volume zones, or a documented manual level.")
+    elif stop_defined and not rr_ok:
         reasons_detailed.append(
             Reason(
                 code="RR_TOO_LOW",
@@ -408,8 +493,39 @@ def build_recommendation(
         )
         suggestions.append("Avoid micro-sized trades where fees dominate risk.")
 
-    verdict: Verdict = (
-        "RECOMMENDED" if all(g.passed for g in checklist) else "NOT_RECOMMENDED"
+    verdict: Verdict = "RECOMMENDED" if all(g.passed for g in checklist) else "NOT_RECOMMENDED"
+
+    plan_passed = data_current and stop_defined and tradable_size and risk_ok and rr_ok and fee_ok
+    decision_gates = DecisionGateState(
+        setup=DecisionGate(
+            status="PASS" if setup_qualified else "BLOCK",
+            explanation="Setup qualifies for review." if setup_qualified else "No qualified setup.",
+        ),
+        trigger=DecisionGate(
+            status="PASS" if entry_triggered else "WAIT" if conditional_entry else "BLOCK",
+            explanation=(
+                "Entry trigger observed."
+                if entry_triggered
+                else "Waiting for the configured entry condition."
+                if conditional_entry
+                else "No entry trigger is active."
+            ),
+        ),
+        plan=DecisionGate(
+            status="PASS" if plan_passed else "UNKNOWN" if not target_is_independent else "BLOCK",
+            explanation=(
+                "Trigger, stop, structural target, size, costs, and risk reconcile."
+                if plan_passed
+                else "A structural/manual target is required before reward/risk can be validated."
+                if not target_is_independent
+                else "The trade plan fails one or more risk checks."
+            ),
+        ),
+        portfolio=DecisionGate(
+            status="UNKNOWN",
+            explanation="Portfolio permission is evaluated immediately before order creation.",
+        ),
+        ready_to_order=False,
     )
 
     if verdict == "RECOMMENDED":
@@ -437,6 +553,8 @@ def build_recommendation(
         entry=round(entry, 4),
         stop=round(stop, 4) if stop is not None else None,
         target=round(target, 4) if target is not None else None,
+        desired_target=round(desired_target, 4) if desired_target is not None else None,
+        target_source=target_source if target_is_independent else "unvalidated_r_multiple",
         rr=round(rr, 4) if rr is not None else None,
         risk_amount=round(risk_amount, 4),
         risk_amount_account=round(risk_amount_account, 4),
@@ -465,6 +583,7 @@ def build_recommendation(
         risk=risk_payload,
         costs=costs,
         checklist=checklist,
+        decision_gates=decision_gates,
         education=education,
         thesis=thesis,
     )

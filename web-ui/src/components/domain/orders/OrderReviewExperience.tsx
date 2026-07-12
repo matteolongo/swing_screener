@@ -53,6 +53,10 @@ export interface OrderReviewContext {
   positionId?: string | null;
   sameSymbol?: SameSymbolCandidateContext;
   avgDailyVolumeEur?: number | null;
+  dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+  dataAsOf?: string;
+  daysToEarnings?: number | null;
+  strategyId?: string;
 }
 
 interface OrderReviewExperienceProps {
@@ -108,6 +112,14 @@ export default function OrderReviewExperience({
   const suggestedShares = Math.max(1, Math.min(rawSuggestedShares, maxSharesByPositionCap));
   const verdict = context.recommendation?.verdict ?? 'UNKNOWN';
   const isRecommended = verdict === 'RECOMMENDED';
+  const decisionGates = context.recommendation?.decisionGates;
+  const decisionReady = Boolean(
+    decisionGates?.setup.status === 'PASS'
+      && decisionGates.trigger.status === 'PASS'
+      && decisionGates.plan.status === 'PASS'
+      && context.dataStatus === 'current'
+      && context.dataAsOf,
+  );
   const reasonsDetailed = context.recommendation?.reasonsDetailed;
   const COMPLETENESS_CODES = new Set(['STOP_MISSING', 'NO_SIGNAL']);
   const isIncomplete =
@@ -244,6 +256,11 @@ export default function OrderReviewExperience({
       return;
     }
 
+    if (!decisionReady) {
+      setSubmissionError('Order blocked: setup, trigger, coherent plan, and current-data gates must pass.');
+      return;
+    }
+
     if (invalidBuyStopPrice) {
       setSubmissionError(
         t('order.candidateModal.buyStopAboveMarketError', {
@@ -273,6 +290,21 @@ export default function OrderReviewExperience({
         entryMode: context.sameSymbol?.mode === 'ADD_ON' || context.sameSymbol?.mode === 'SCALE_BACK' ? 'ADD_ON' : 'NEW_ENTRY',
         notes: values.notes?.trim() ?? '',
         thesis: tradeThesis.trim() || undefined,
+        setupStatus: decisionGates?.setup.status === 'PASS' || decisionGates?.setup.status === 'BLOCK'
+          ? decisionGates.setup.status : 'UNKNOWN',
+        triggerStatus: decisionGates?.trigger.status === 'PASS' || decisionGates?.trigger.status === 'BLOCK'
+          ? decisionGates.trigger.status : 'UNKNOWN',
+        dataStatus: context.dataStatus ?? 'unknown',
+        dataAsOf: context.dataAsOf,
+        targetSource: context.recommendation?.risk.targetSource === 'structural'
+          ? 'structural'
+          : context.recommendation?.risk.targetSource === 'manual'
+            ? 'manual'
+            : 'unknown',
+        sector: context.sector ?? undefined,
+        currency: context.currency,
+        daysToEarnings: context.daysToEarnings,
+        strategyId: context.strategyId,
       });
       setSubmitSucceeded(true);
       onSuccess?.();
@@ -347,6 +379,13 @@ export default function OrderReviewExperience({
                 {warning}
               </div>
             ))}
+          </div>
+        ) : null}
+
+        {!decisionReady ? (
+          <div className="mb-4 rounded border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+            Order creation is locked until setup, observed trigger, reconciled plan, and current as-of data all pass.
+            {' '}Setup: {decisionGates?.setup.status ?? 'UNKNOWN'} · Trigger: {decisionGates?.trigger.status ?? 'UNKNOWN'} · Plan: {decisionGates?.plan.status ?? 'UNKNOWN'} · Data: {context.dataStatus ?? 'unknown'}.
           </div>
         ) : null}
 
@@ -534,7 +573,8 @@ export default function OrderReviewExperience({
                       isSubmitting ||
                       invalidBuyStopPrice ||
                       (needsOverrideConfirmation && !overrideConfirmed) ||
-                      (enforceRecommendation && !isRecommended)
+                      (enforceRecommendation && !isRecommended) ||
+                      !decisionReady
                     }
                     className="w-full sm:w-auto"
                   >

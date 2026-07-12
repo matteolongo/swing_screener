@@ -40,7 +40,17 @@ def test_write_and_read_roundtrip(tmp_path, monkeypatch):
     assert result.catalyst_urgency == "medium"
     cache_file = tmp_path / "intelligence" / "sweep_2026-05-24.json"
     data = json.loads(cache_file.read_text())
-    assert data["AAPL"]["_cache_schema_version"] == 2
+    assert data["AAPL"]["_cache_schema_version"] == 3
+
+
+def test_read_rejects_incompatible_context_fingerprint(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    d = date(2026, 5, 24)
+    intel = _make_intel("AAPL").model_copy(update={"context_fingerprint": "one"})
+    write_to_cache("AAPL", intel, for_date=d)
+
+    assert read_from_cache("AAPL", for_date=d, expected_fingerprint="two") is None
+    assert read_from_cache("AAPL", for_date=d, expected_fingerprint="one") is not None
 
 
 def test_read_skips_legacy_entries_without_cache_schema(tmp_path, monkeypatch):

@@ -10,6 +10,20 @@ from swing_screener.intelligence.weighting.models import EvidenceLedger
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 
 CatalystUrgency = Literal["high", "medium", "low", "none"]
+DataStatus = Literal["current", "stale", "intraday", "unknown"]
+
+
+class DataProvenance(BaseModel):
+    source: str | None = None
+    as_of: str | None = None
+    status: DataStatus = "unknown"
+
+
+class ClaimGrounding(BaseModel):
+    status: Literal["grounded", "partial", "unsupported"]
+    grounded_claims: int = 0
+    unsupported_claims: list[str] = Field(default_factory=list)
+    grounded_urls: list[str] = Field(default_factory=list)
 
 
 class IntelligenceEventType(str, Enum):
@@ -203,6 +217,13 @@ class SymbolIntelligenceRequest(BaseModel):
     recent_patterns: list[str] | None = None
     # Provenance: which provider supplied the price/technical inputs (e.g. "polygon")
     price_source: str | None = None
+    price_asof: str | None = None
+    price_status: DataStatus = "unknown"
+    fundamentals_source: str | None = None
+    fundamentals_asof: str | None = None
+    fundamentals_status: DataStatus = "unknown"
+    evidence_asof: str | None = None
+    evidence_status: DataStatus = "unknown"
     # Raw fundamentals (filled by the server-side enricher when absent)
     trailing_pe: float | None = None
     revenue_growth_yoy: float | None = None
@@ -237,3 +258,10 @@ class SymbolIntelligence(BaseModel):
     evidence_ledger: EvidenceLedger | None = None
     classified_catalysts: list[ClassifiedCatalyst] = Field(default_factory=list)
     run_id: str | None = None
+    claim_grounding: ClaimGrounding | None = None
+    data_status: DataStatus = "unknown"
+    data_provenance: dict[str, DataProvenance] = Field(default_factory=dict)
+    degraded_reasons: list[str] = Field(default_factory=list)
+    context_fingerprint: str | None = None
+    strategy_id: str | None = None
+    config_signature: str | None = None

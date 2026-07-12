@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import math
 import os
+from threading import Lock
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -29,7 +30,7 @@ from swing_screener.intelligence.history import HistoryEntry, read_history
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.intelligence.strategic import StrategicIntelligenceReport
 from swing_screener.intelligence.config_access import effective_intelligence_config
-from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
+from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer, analyzer_config_signature
 from swing_screener.intelligence.tracing import (
     RunIndexEntry,
     RunTrace,
@@ -75,14 +76,21 @@ def _dividend_for(ticker: str) -> tuple[int | None, str | None, float | None]:
         return None, None, None
 
 _analyzer: SymbolAnalyzer | None = None
+_analyzer_signature: str | None = None
+_analyzer_lock = Lock()
 _chat_service: IntelligenceChatService | None = None
 _strategic_review_service: StrategicReviewService | None = None
 
 
 def _get_analyzer() -> SymbolAnalyzer:
-    global _analyzer
-    if _analyzer is None:
-        _analyzer = SymbolAnalyzer()
+    global _analyzer, _analyzer_signature
+    cfg = effective_intelligence_config()
+    signature = analyzer_config_signature(cfg)
+    if _analyzer is None or _analyzer_signature != signature:
+        with _analyzer_lock:
+            if _analyzer is None or _analyzer_signature != signature:
+                _analyzer = SymbolAnalyzer(cfg)
+                _analyzer_signature = signature
     return _analyzer
 
 
@@ -203,18 +211,12 @@ def sweep(
     """Run intelligence analysis for a batch of symbols, caching each result."""
     _require_api_key()
     _require_analyzer_enabled()
-    analyzer = _get_analyzer()
     past_positions, _ = positions_repo.list_positions(status="closed")
     analyzed: list[str] = []
     failed: list[SweepFailure] = []
     for item in request.symbols:
         try:
             upper = item.ticker.upper()
-            if not item.force:
-                cached = read_from_cache(upper)
-                if cached is not None:
-                    analyzed.append(upper)
-                    continue
             with recording_run(upper) as recorder:
                 with step(recorder, "enrich_request") as draft:
                     item_req = enrich_intelligence_request(
@@ -250,6 +252,15 @@ def sweep(
                 with step(recorder, "enrich_polygon") as draft:
                     item_req = enrich_with_polygon_prices(upper, item_req)
                     _set_step_output(draft, close=item_req.close)
+                analyzer = _get_analyzer()
+                if not item.force:
+                    cached = read_from_cache(
+                        upper,
+                        expected_fingerprint=analyzer.context_fingerprint(upper, item_req),
+                    )
+                    if cached is not None:
+                        analyzed.append(upper)
+                        continue
                 analyzer.analyze(upper, item_req, past_positions=past_positions, recorder=recorder)
             analyzed.append(upper)
         except Exception as exc:
@@ -366,11 +377,6 @@ def analyze_symbol(
     _require_api_key()
     _require_analyzer_enabled()
     upper = ticker.upper()
-    if not force:
-        cached = read_from_cache(upper)
-        if cached is not None:
-            return cached
-
     def _earnings(t: str) -> tuple[int | None, str | None]:
         ep = portfolio_service.get_earnings_proximity(t)
         return ep.days_until, ep.next_earnings_date
@@ -395,7 +401,15 @@ def analyze_symbol(
                 request = enrich_with_polygon_prices(upper, request)
                 _set_step_output(draft, close=request.close)
             past_positions, _ = positions_repo.list_positions(status="closed")
-            return _get_analyzer().analyze(
+            analyzer = _get_analyzer()
+            if not force:
+                cached = read_from_cache(
+                    upper,
+                    expected_fingerprint=analyzer.context_fingerprint(upper, request),
+                )
+                if cached is not None:
+                    return cached
+            return analyzer.analyze(
                 upper, request, past_positions=past_positions, recorder=recorder
             )
     except HTTPException:
@@ -423,10 +437,6 @@ def analyze_position(
     if pos is None:
         raise HTTPException(status_code=404, detail=f"No open position with id {position_id!r}")
     position_context = _position_cache_context(pos)
-    if not force:
-        cached = read_from_cache(pos.ticker.upper())
-        if cached is not None and _cached_position_context_matches(cached, position_context):
-            return cached
     stop = portfolio_service.suggest_position_stop(position_id)
     request = SymbolIntelligenceRequest(
         close=float(pos.current_price if pos.current_price is not None else pos.entry_price),
@@ -483,7 +493,15 @@ def analyze_position(
             # today's intraday price and causing the LLM to misread position direction.
             if pos.current_price is not None:
                 request = request.model_copy(update={"close": float(pos.current_price)})
-            return _get_analyzer().analyze(pos.ticker.upper(), request, recorder=recorder)
+            analyzer = _get_analyzer()
+            if not force:
+                cached = read_from_cache(
+                    pos.ticker.upper(),
+                    expected_fingerprint=analyzer.context_fingerprint(pos.ticker, request),
+                )
+                if cached is not None and _cached_position_context_matches(cached, position_context):
+                    return cached
+            return analyzer.analyze(pos.ticker.upper(), request, recorder=recorder)
     except HTTPException:
         raise
     except Exception as exc:

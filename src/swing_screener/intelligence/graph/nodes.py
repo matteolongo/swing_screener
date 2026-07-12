@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from typing import TYPE_CHECKING
 
 from swing_screener.intelligence.graph.state import AnalyzerState
-from swing_screener.intelligence.models import SymbolIntelligence
+from swing_screener.intelligence.models import ClaimGrounding, DataProvenance, SymbolIntelligence
 from swing_screener.intelligence import symbol_analyzer as mod
 from swing_screener.intelligence.weighting.config import load_evidence_weights_config
 from swing_screener.intelligence.weighting.ledger import weigh
@@ -130,6 +130,36 @@ def assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
     if state["prior_digest"]:
         inputs_used["history"] = {"prior_runs": len(state["prior_digest"])}
 
+    provenance = {
+        "price": DataProvenance(
+            source=req.price_source,
+            as_of=req.price_asof,
+            status=req.price_status,
+        ),
+        "fundamentals": DataProvenance(
+            source=req.fundamentals_source,
+            as_of=req.fundamentals_asof,
+            status=req.fundamentals_status,
+        ),
+        "evidence": DataProvenance(
+            source="configured_evidence_collectors",
+            as_of=req.evidence_asof,
+            status=req.evidence_status,
+        ),
+    }
+    degraded: list[str] = []
+    if req.price_status not in {"current", "intraday"} or not req.price_asof:
+        degraded.append("Price inputs are stale or have no verified as-of time.")
+    if req.evidence_status != "current" or not req.evidence_asof:
+        degraded.append("Catalyst evidence is stale or has no verified as-of time.")
+    if req.fundamentals_status in {"stale", "unknown"}:
+        degraded.append("Fundamentals are stale or unavailable.")
+    state["data_status"] = "current" if not degraded else "stale"
+    state["degraded_reasons"] = degraded
+    inputs_used["data_provenance"] = {
+        key: value.model_dump(mode="json") for key, value in provenance.items()
+    }
+
     state["inputs_used"] = inputs_used
     return state
 
@@ -156,6 +186,7 @@ def search(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
         max_output_tokens=analyzer._max_tokens,
     )
     state["search_text"] = resp.output_text
+    state["search_citation_urls"] = _citation_urls(resp)
     state["_search_usage"] = getattr(resp, "usage", None)
     return state
 
@@ -192,6 +223,67 @@ def _normalized_url(value: str | None) -> str:
 
 def _normalized_title(value: str | None) -> str:
     return " ".join((value or "").casefold().split())
+
+
+def _citation_urls(response: object) -> list[str]:
+    """Extract only URL-citation annotations returned by the search response."""
+    try:
+        payload = response.model_dump(mode="json")  # type: ignore[attr-defined]
+    except Exception:
+        return []
+    urls: set[str] = set()
+
+    def visit(value: object, inside_citation: bool = False) -> None:
+        if isinstance(value, dict):
+            citation = inside_citation or value.get("type") == "url_citation"
+            if citation:
+                url = value.get("url")
+                if isinstance(url, str) and url.startswith(("http://", "https://")):
+                    urls.add(url)
+            for child in value.values():
+                visit(child, citation)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child, inside_citation)
+
+    visit(payload)
+    return sorted(urls)
+
+
+def _ground_claims(draft, req, search_urls: list[str]):
+    evidence_urls = {ev.url for ev in req.catalyst_evidence if ev.url}
+    grounded_urls = sorted(evidence_urls | set(search_urls))
+    normalized = {_normalized_url(url) for url in grounded_urls}
+    unsupported: list[str] = []
+
+    news = []
+    for item in getattr(draft, "news", []) or []:
+        if _normalized_url(item.url) in normalized:
+            news.append(item)
+        else:
+            unsupported.append(f"news: {item.headline}")
+
+    catalysts = []
+    for item in getattr(draft, "classified_catalysts", []) or []:
+        if _normalized_url(item.source_url) in normalized:
+            catalysts.append(item)
+        else:
+            unsupported.append(f"catalyst: {item.summary}")
+
+    sources = [url for url in getattr(draft, "sources", []) or [] if _normalized_url(url) in normalized]
+    grounded_count = len(news) + len(catalysts)
+    status = "grounded" if not unsupported else "partial" if grounded_count else "unsupported"
+    return (
+        draft.model_copy(
+            update={"news": news, "classified_catalysts": catalysts, "sources": sources}
+        ),
+        ClaimGrounding(
+            status=status,
+            grounded_claims=grounded_count,
+            unsupported_claims=unsupported,
+            grounded_urls=grounded_urls,
+        ),
+    )
 
 
 def _with_news_dates_from_evidence(draft, req):
@@ -258,6 +350,9 @@ def postprocess(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerSta
         "returned": pub_counts,
     }
     state["draft"] = _with_news_dates_from_evidence(state["draft"], state["req"])
+    state["draft"], state["claim_grounding"] = _ground_claims(
+        state["draft"], state["req"], state.get("search_citation_urls", [])
+    )
     return state
 
 
@@ -280,16 +375,47 @@ def assemble_result(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
         "MANAGE_ONLY",
     }
     canonical_action = state["req"].decision_action
+    action = (
+        "MANAGE_ONLY"
+        if state["has_position"]
+        else canonical_action if canonical_action in canonical_actions else draft.action
+    )
+    if not state["has_position"] and state.get("data_status") != "current":
+        action = "WATCH"
+    narrative = draft.narrative
+    if state["has_position"]:
+        # Do not pass free-form entry language through in held-position mode.
+        # Build the narrative only from the position-management schema.
+        signal = draft.position_signal
+        signal_text = (
+            f"**Current instruction: {signal.action.value}.** {signal.reason}"
+            if signal is not None
+            else "**Current instruction: HOLD.** Continue managing the existing risk."
+        )
+        outlook = draft.position_outlook
+        review_text = (
+            f"**Review trigger:** {outlook.next_review_trigger} "
+            f"Thesis status: {outlook.thesis_status}."
+            if outlook is not None
+            else "**Review trigger:** Reassess at the stop, target, or next material event."
+        )
+        risks = " ".join(f"- {risk}" for risk in (draft.risk_factors or []))
+        narrative = (
+            "**Position management only — do not initiate a new entry.**\n\n"
+            f"{signal_text}\n\n{review_text}"
+            + (f"\n\n**Risks to monitor:**\n{risks}" if risks else "")
+        )
+
     result = SymbolIntelligence(
         symbol=state["ticker"],
         generated_at=datetime.now(timezone.utc).isoformat(),
         # The deterministic screener decision owns execution. The LLM can
         # explain that action, but it cannot publish a competing instruction.
-        action=canonical_action if canonical_action in canonical_actions else draft.action,
+        action=action,
         conviction=draft.conviction,
         catalyst_urgency=draft.catalyst_urgency,
         summary_line=draft.summary_line,
-        narrative=draft.narrative,
+        narrative=narrative,
         upcoming_events=draft.upcoming_events,
         position_signal=draft.position_signal,
         position_outlook=draft.position_outlook,
@@ -310,6 +436,16 @@ def assemble_result(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
             "inputs_used": state["inputs_used"],
             "evidence_ledger": state.get("evidence_ledger"),
             "run_id": state.get("run_id"),
+            "claim_grounding": state.get("claim_grounding"),
+            "data_status": state.get("data_status", "unknown"),
+            "data_provenance": {
+                key: DataProvenance.model_validate(value)
+                for key, value in state["inputs_used"].get("data_provenance", {}).items()
+            },
+            "degraded_reasons": state.get("degraded_reasons", []),
+            "context_fingerprint": state.get("context_fingerprint"),
+            "strategy_id": getattr(analyzer, "_strategy_id", None),
+            "config_signature": getattr(analyzer, "_config_signature", None),
         }
     )
     return state

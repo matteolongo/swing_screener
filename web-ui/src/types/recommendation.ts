@@ -1,5 +1,19 @@
 export type RecommendationVerdict = 'RECOMMENDED' | 'NOT_RECOMMENDED';
 export type RecommendationSeverity = 'info' | 'warn' | 'block';
+export type DecisionGateStatus = 'PASS' | 'WAIT' | 'BLOCK' | 'UNKNOWN';
+
+export interface DecisionGate {
+  status: DecisionGateStatus;
+  explanation: string;
+}
+
+export interface DecisionGateState {
+  setup: DecisionGate;
+  trigger: DecisionGate;
+  plan: DecisionGate;
+  portfolio: DecisionGate;
+  readyToOrder: boolean;
+}
 
 // Trade Thesis types
 export type SafetyLabel = 'BEGINNER_FRIENDLY' | 'REQUIRES_DISCIPLINE' | 'ADVANCED_ONLY';
@@ -96,6 +110,8 @@ export interface RecommendationRisk {
   entry: number;
   stop?: number;
   target?: number;
+  desiredTarget?: number;
+  targetSource?: string;
   rr?: number;
   riskAmount: number;
   riskPct: number;
@@ -132,6 +148,7 @@ export interface Recommendation {
   risk: RecommendationRisk;
   costs: RecommendationCosts;
   checklist: ChecklistGate[];
+  decisionGates?: DecisionGateState;
   education: RecommendationEducation;
   thesis?: TradeThesis;
 }
@@ -149,6 +166,8 @@ export interface RecommendationRiskAPI {
   entry: number;
   stop?: number | null;
   target?: number | null;
+  desired_target?: number | null;
+  target_source?: string;
   rr?: number | null;
   risk_amount: number;
   risk_pct: number;
@@ -185,6 +204,13 @@ export interface RecommendationAPI {
   risk: RecommendationRiskAPI;
   costs: RecommendationCostsAPI;
   checklist: ChecklistGateAPI[];
+  decision_gates?: {
+    setup: DecisionGate;
+    trigger: DecisionGate;
+    plan: DecisionGate;
+    portfolio: DecisionGate;
+    ready_to_order: boolean;
+  };
   education: RecommendationEducationAPI;
   thesis?: any;  // Thesis comes as dict from backend
 }
@@ -204,6 +230,8 @@ export function transformRecommendation(api: RecommendationAPI): Recommendation 
       entry: api.risk.entry,
       stop: api.risk.stop ?? undefined,
       target: api.risk.target ?? undefined,
+      desiredTarget: api.risk.desired_target ?? undefined,
+      targetSource: api.risk.target_source ?? 'unvalidated_r_multiple',
       rr: api.risk.rr ?? undefined,
       riskAmount: api.risk.risk_amount,
       riskPct: api.risk.risk_pct,
@@ -224,6 +252,13 @@ export function transformRecommendation(api: RecommendationAPI): Recommendation 
       explanation: g.explanation,
       rule: g.rule,
     })),
+    decisionGates: api.decision_gates ? {
+      setup: api.decision_gates.setup,
+      trigger: api.decision_gates.trigger,
+      plan: api.decision_gates.plan,
+      portfolio: api.decision_gates.portfolio,
+      readyToOrder: api.decision_gates.ready_to_order,
+    } : undefined,
     education: {
       commonBiasWarning: api.education.common_bias_warning,
       whatToLearn: api.education.what_to_learn,

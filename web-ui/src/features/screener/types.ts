@@ -185,6 +185,9 @@ export interface ScreenerCandidate {
   name?: string;
   sector?: string;
   lastBar?: string;
+  dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+  dataAsOf?: string;
+  degradedReasons?: string[];
   close: number;
   sma20: number | null;
   sma50: number | null;
@@ -200,6 +203,7 @@ export interface ScreenerCandidate {
   priorityRank?: number;
   fundamentalsCoverageStatus?: string;
   fundamentalsFreshnessStatus?: string;
+  fundamentalsAsOf?: string;
   fundamentalsSummary?: string;
   signal?: string;
   entry?: number;
@@ -304,6 +308,9 @@ export interface ScreenerCandidateAPI {
   name?: string;
   sector?: string;
   last_bar?: string;
+  data_status?: 'current' | 'stale' | 'intraday' | 'unknown';
+  data_asof?: string | null;
+  degraded_reasons?: string[];
   close: number;
   sma_20: number | null;
   sma_50: number | null;
@@ -319,6 +326,7 @@ export interface ScreenerCandidateAPI {
   priority_rank?: number;
   fundamentals_coverage_status?: string;
   fundamentals_freshness_status?: string;
+  fundamentals_asof?: string;
   fundamentals_summary?: string;
   signal?: string;
   entry?: number;
@@ -571,6 +579,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       name: c.name,
       sector: c.sector,
       lastBar: c.last_bar,
+      dataStatus: c.data_status ?? 'unknown',
+      dataAsOf: c.data_asof ?? undefined,
+      degradedReasons: c.degraded_reasons ?? [],
       close: c.close,
       sma20: c.sma_20,
       sma50: c.sma_50,
@@ -586,6 +597,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       priorityRank: c.priority_rank ?? undefined,
       fundamentalsCoverageStatus: c.fundamentals_coverage_status,
       fundamentalsFreshnessStatus: c.fundamentals_freshness_status,
+      fundamentalsAsOf: c.fundamentals_asof,
       fundamentalsSummary: c.fundamentals_summary,
       signal: c.signal,
       entry: c.entry,

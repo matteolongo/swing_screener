@@ -150,6 +150,36 @@ def evaluate_strategy(strategy_dict: dict) -> list[ValidationWarning]:
         if warning:
             warnings.append(warning)
 
+    max_position_pct = risk.get("max_position_pct")
+    if max_position_pct is not None:
+        value = float(max_position_pct)
+        if value > 0.5:
+            warnings.append(
+                ValidationWarning(
+                    parameter="maxPositionPct",
+                    level="danger",
+                    message="Maximum position size above 50% permits severe single-name concentration.",
+                )
+            )
+        elif value > 0.25:
+            warnings.append(
+                ValidationWarning(
+                    parameter="maxPositionPct",
+                    level="warning",
+                    message="Maximum position size above 25% creates material single-name concentration.",
+                )
+            )
+
+    commission_pct = risk.get("commission_pct")
+    if commission_pct is not None and float(commission_pct) <= 0:
+        warnings.append(
+            ValidationWarning(
+                parameter="commissionPct",
+                level="warning",
+                message="Trading costs are zero; displayed sizing and reward/risk may be optimistic.",
+            )
+        )
+
     universe = strategy_dict.get("universe", {})
     filt = universe.get("filt", {})
     max_atr = filt.get("max_atr_pct")

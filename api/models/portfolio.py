@@ -271,6 +271,16 @@ class CreateOrderRequest(BaseModel):
     entry_mode: str = "NEW_ENTRY"
     isin: Optional[str] = None
     thesis: Optional[str] = None
+    setup_status: Literal["PASS", "BLOCK", "UNKNOWN"] = "UNKNOWN"
+    trigger_status: Literal["PASS", "WAIT", "BLOCK", "UNKNOWN"] = "UNKNOWN"
+    data_status: Literal["current", "stale", "intraday", "unknown"] = "unknown"
+    data_asof: Optional[str] = None
+    target_source: Literal["structural", "manual", "unknown", "unvalidated_r_multiple"] = "unknown"
+    sector: Optional[str] = None
+    currency: Optional[str] = None
+    account_to_quote_rate: Optional[float] = Field(default=None, gt=0)
+    days_to_earnings: Optional[int] = None
+    strategy_id: Optional[str] = None
 
     @field_validator("ticker")
     @classmethod
@@ -300,6 +310,24 @@ class CreateOrderRequest(BaseModel):
         ):
             raise ValueError("stop_price must be below limit_price for a long entry order")
         return self
+
+
+class PortfolioApprovalGate(BaseModel):
+    status: Literal["PASS", "BLOCK"]
+    explanation: str
+    current: Optional[float] = None
+    projected: Optional[float] = None
+    limit: Optional[float] = None
+
+
+class PortfolioOrderApproval(BaseModel):
+    approved: bool
+    cash: PortfolioApprovalGate
+    heat: PortfolioApprovalGate
+    concentration: PortfolioApprovalGate
+    event: PortfolioApprovalGate
+    projected_risk: float
+    projected_notional: float
 
 
 class FillOrderRequest(BaseModel):

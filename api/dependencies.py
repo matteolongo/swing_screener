@@ -141,8 +141,15 @@ def get_config_repo() -> ConfigRepository:
 def get_orders_service(
     orders_repo: OrdersRepository = Depends(get_orders_repo),
     positions_repo: PositionsRepository = Depends(get_positions_repo),
+    config_repo: ConfigRepository = Depends(get_config_repo),
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
 ) -> OrdersService:
-    return OrdersService(orders_repo=orders_repo, positions_repo=positions_repo)
+    return OrdersService(
+        orders_repo=orders_repo,
+        positions_repo=positions_repo,
+        config_repo=config_repo,
+        strategy_repo=strategy_repo,
+    )
 
 
 def get_portfolio_service(

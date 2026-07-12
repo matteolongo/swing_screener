@@ -81,7 +81,11 @@ def test_analyze_enriches_request_before_calling_llm(monkeypatch):
             past_trades_context=None,
         )
 
-    analyzer_instance = type("_FakeAnalyzer", (), {"analyze": _fake_analyze})()
+    analyzer_instance = type(
+        "_FakeAnalyzer",
+        (),
+        {"analyze": _fake_analyze, "context_fingerprint": lambda self, *a: "test"},
+    )()
 
     app.dependency_overrides[get_fundamentals_service] = lambda: _Fund()
     app.dependency_overrides[get_portfolio_service] = lambda: _Port()
@@ -158,7 +162,11 @@ def test_position_analysis_trace_records_nonfatal_technical_enrichment_failure(m
             past_trades_context=None,
         )
 
-    analyzer_instance = type("_FakeAnalyzer", (), {"analyze": _fake_analyze})()
+    analyzer_instance = type(
+        "_FakeAnalyzer",
+        (),
+        {"analyze": _fake_analyze, "context_fingerprint": lambda self, *a: "test"},
+    )()
 
     app.dependency_overrides[get_fundamentals_service] = lambda: _Fund()
     app.dependency_overrides[get_portfolio_service] = lambda: _Port(

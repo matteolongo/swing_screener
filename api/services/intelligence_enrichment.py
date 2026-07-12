@@ -6,6 +6,7 @@ to leaving the field None rather than failing the analysis.
 from __future__ import annotations
 
 import logging
+from datetime import date, datetime, timezone
 from typing import Callable, Protocol
 
 from swing_screener.intelligence.models import SymbolIntelligenceRequest, SourceEvidence
@@ -50,6 +51,10 @@ def enrich_intelligence_request(
             logger.warning("Fundamentals fetch failed for %s: %s", ticker, exc)
             snap = None
         if snap is not None:
+            updates["fundamentals_source"] = getattr(snap, "provider", None)
+            updates["fundamentals_asof"] = getattr(snap, "asof_date", None)
+            status = getattr(snap, "freshness_status", "unknown")
+            updates["fundamentals_status"] = status if status in {"current", "stale"} else "unknown"
             for field in _SNAPSHOT_FIELDS:
                 if getattr(request, field, None) is None:
                     value = getattr(snap, field, None)
@@ -83,6 +88,8 @@ def enrich_intelligence_request(
     if evidence is not None and not request.catalyst_evidence:
         try:
             items = evidence(ticker)
+            updates["evidence_asof"] = datetime.now(timezone.utc).isoformat()
+            updates["evidence_status"] = "current"
         except Exception as exc:  # degrade, never fail the analysis
             logger.warning("Evidence collection failed for %s: %s", ticker, exc)
             items = []
@@ -262,6 +269,14 @@ def enrich_with_polygon_prices(
             closes = ohlcv[close_col].dropna()
             if not closes.empty:
                 updates["close"] = float(closes.iloc[-1])
+                last_index = closes.index[-1]
+                updates["price_asof"] = str(last_index)
+                try:
+                    last_date = last_index.date() if hasattr(last_index, "date") else date.fromisoformat(str(last_index)[:10])
+                    age_days = (date.today() - last_date).days
+                    updates["price_status"] = "current" if 0 <= age_days <= 3 else "stale"
+                except (TypeError, ValueError):
+                    updates["price_status"] = "unknown"
     except Exception:
         logger.warning("Polygon close extraction failed for %s", ticker, exc_info=True)
 
