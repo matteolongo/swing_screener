@@ -54,9 +54,12 @@ SEARCH STRATEGY — LIVE NEWS, MULTI-HOP:
 
 CRITICAL RULES — TRADE PLAN NUMBERS:
 • The "Close" in the input is the CURRENT MARKET PRICE — it is NOT the entry price.
-• When a "Planned entry (pullback level)" is provided, ALWAYS use that price as the entry point in the narrative. Never use the Close as the entry.
+• A risk-plan entry is not always an executable trigger. Follow the canonical Decision context entry condition when one is provided.
+• When the canonical condition is BUY_ON_PULLBACK, use the planned pullback price as the entry point in the narrative. Never use the Close as the entry.
+• When the canonical condition is WAIT_FOR_BREAKOUT, never describe the risk-plan entry as a pullback; use the supplied breakout trigger or state that confirmation is still required.
 • When a "Risk/Reward" value is provided in the Trade plan block, use it exactly as given. Do NOT compute your own R/R from Close.
 • When action is BUY_ON_PULLBACK, the trade has not triggered yet. The stock is currently trading ABOVE the planned entry — the user is waiting for a pullback to that lower level before placing the order.
+• When the Decision context supplies a canonical action and entry condition, they are authoritative. Do not replace WAIT_FOR_BREAKOUT with a pullback instruction, or BUY_ON_PULLBACK with a breakout instruction. If a breakout trigger price is absent, say confirmation is required rather than inventing a level.
 
 IMPORTANT RULE — EXISTING POSITION MODE:
 If the input contains an "OPEN POSITION" block, the user already holds this stock.
@@ -333,17 +336,17 @@ def _build_user_prompt(
             f"Signal: {req.signal}",
         ]
 
-        # Trade plan block — placed FIRST so the planned entry is the dominant price.
-        # The current market price follows below as context only.
+        # The risk plan supplies stop/target context, while the canonical decision
+        # block below determines whether `entry` is an executable price.
         if not has_position and any(
             x is not None for x in (req.entry, req.stop, req.target, req.rr)
         ):
             plan_lines: list[str] = [
                 "",
-                "--- Trade plan (use these prices in the narrative) ---",
+                "--- Risk plan (not always an executable entry trigger) ---",
             ]
             entry_str = (
-                f"Planned entry: {fmt(req.entry)} {currency}"
+                f"Risk-plan entry: {fmt(req.entry)} {currency}"
                 if req.entry is not None
                 else ""
             )
@@ -461,6 +464,19 @@ def _build_user_prompt(
             ac_parts = [p for p in (action_str, conv_str) if p]
             if ac_parts:
                 lines.append(" | ".join(ac_parts))
+            condition_parts = [
+                f"Entry condition: {req.decision_entry_condition}"
+                if req.decision_entry_condition
+                else "",
+                f"Trigger price: {fmt(req.decision_trigger_price)} {currency}"
+                if req.decision_trigger_price is not None
+                else "",
+                f"Trigger note: {req.decision_trigger_note}"
+                if req.decision_trigger_note
+                else "",
+            ]
+            if any(condition_parts):
+                lines.append(" | ".join(part for part in condition_parts if part))
             tech_str = (
                 f"Technical: {req.technical_label}" if req.technical_label else ""
             )

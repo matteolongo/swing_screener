@@ -146,13 +146,31 @@ function SituationCard({ situation }: { situation: StrategicSituation }) {
 }
 
 function StrategicResult({ review }: { review: StrategicReview }) {
+  const primaryAction = review.situations.flatMap((situation) => situation.actions)[0] ?? null;
+  const planImpact = (() => {
+    switch (primaryAction?.actionType) {
+      case 'WAIT_FOR_CONFIRMATION':
+        return 'Wait for confirmation before changing the current plan.';
+      case 'TIGHTEN_RISK_REVIEW':
+        return 'Review whether the current risk limits still fit the context.';
+      case 'REDUCE_EXPOSURE_REVIEW':
+        return 'Review whether exposure needs to be reduced.';
+      case 'REVIEW_CONTEXT':
+        return 'Review the context before adding risk.';
+      default:
+        return 'No change identified — keep following the current trade decision.';
+    }
+  })();
   return (
     <div className="grid gap-3">
       <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground">{t(`${I18N_PREFIX}.title`)}</p>
+          <p className="text-sm font-semibold text-foreground">Does this change the plan?</p>
           <span className="text-xs text-muted">{new Date(review.generatedAt).toLocaleString()}</span>
         </div>
+        <p className="mt-2 text-sm font-medium text-foreground">
+          {planImpact}
+        </p>
         <p className="mt-2 text-sm text-muted">{review.memo}</p>
         <p className="mt-1 text-xs text-muted">
           {t(`${I18N_PREFIX}.appContextOnly`, { count: review.externalSourceCount })}
@@ -206,78 +224,90 @@ export default function StrategicReviewPanel({ ticker }: StrategicReviewPanelPro
 
   return (
     <section className="rounded-lg border border-border bg-surface">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-3 py-2">
+      <div className="border-b border-border px-3 py-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t(`${I18N_PREFIX}.title`)}</p>
-          <p className="mt-1 text-xs text-muted">{t(`${I18N_PREFIX}.description`)}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Market context check</p>
+          <p className="mt-1 text-xs text-muted">
+            Optional: use this when macro, news, sector rotation, or an event may change the timing of the current setup.
+          </p>
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={isCurrentMutation && mutation.isPending}>
-          {isCurrentMutation && mutation.isPending ? t(`${I18N_PREFIX}.runningAction`) : t(`${I18N_PREFIX}.runAction`)}
-        </Button>
       </div>
 
       <div className="grid gap-3 px-3 py-3">
-        <div className="grid gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t(`${I18N_PREFIX}.watchListLabel`)}</p>
-          <div className="flex flex-wrap gap-2">
-            {WATCH_AREAS.map((area) => (
-              <label
-                key={area.id}
-                className={cn(
-                  'flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium',
-                  watchAreas.includes(area.id)
-                    ? 'border-primary/40 bg-primary/10 text-primary'
-                    : 'border-border bg-surface text-muted'
-                )}
-              >
+        <p className="text-sm text-muted">
+          Default check: macro, geopolitics, and upcoming earnings. This is advisory context; it does not create an order.
+        </p>
+
+        <details className="rounded-md border border-border bg-background/30 p-3">
+          <summary className="cursor-pointer text-sm font-medium text-foreground">Customize check</summary>
+          <div className="mt-3 grid gap-3">
+            <div className="grid gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t(`${I18N_PREFIX}.watchListLabel`)}</p>
+              <div className="flex flex-wrap gap-2">
+                {WATCH_AREAS.map((area) => (
+                  <label
+                    key={area.id}
+                    className={cn(
+                      'flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium',
+                      watchAreas.includes(area.id)
+                        ? 'border-primary/40 bg-primary/10 text-primary'
+                        : 'border-border bg-surface text-muted'
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={watchAreas.includes(area.id)}
+                      disabled={isCurrentMutation && mutation.isPending}
+                      onChange={() => toggleWatchArea(area.id)}
+                    />
+                    {t(`${I18N_PREFIX}.${area.labelKey}`)}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+              <label className="grid gap-1 text-xs text-muted">
+                {t(`${I18N_PREFIX}.topicLabel`)}
                 <input
-                  type="checkbox"
-                  checked={watchAreas.includes(area.id)}
+                  className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                  value={topic}
                   disabled={isCurrentMutation && mutation.isPending}
-                  onChange={() => toggleWatchArea(area.id)}
+                  onChange={(event) => setTopic(event.target.value)}
+                  placeholder={t(`${I18N_PREFIX}.topicPlaceholder`)}
                 />
-                {t(`${I18N_PREFIX}.${area.labelKey}`)}
               </label>
-            ))}
+
+              <label className="grid gap-1 text-xs text-muted">
+                {t(`${I18N_PREFIX}.riskModeLabel`)}
+                <select
+                  className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                  value={riskMode}
+                  disabled={isCurrentMutation && mutation.isPending}
+                  onChange={(event) => setRiskMode(event.target.value as typeof riskMode)}
+                >
+                  <option value="normal">{t(`${I18N_PREFIX}.riskMode.normal`)}</option>
+                  <option value="defensive">{t(`${I18N_PREFIX}.riskMode.defensive`)}</option>
+                  <option value="aggressive">{t(`${I18N_PREFIX}.riskMode.aggressive`)}</option>
+                </select>
+              </label>
+            </div>
           </div>
-        </div>
+        </details>
 
-        <div className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
-          <label className="grid gap-1 text-xs text-muted">
-            {t(`${I18N_PREFIX}.topicLabel`)}
-            <input
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              value={topic}
-              disabled={isCurrentMutation && mutation.isPending}
-              onChange={(event) => setTopic(event.target.value)}
-              placeholder={t(`${I18N_PREFIX}.topicPlaceholder`)}
-            />
-          </label>
+        <label className="flex items-center gap-2 text-xs text-muted">
+          <input
+            type="checkbox"
+            checked={refreshSources}
+            disabled={isCurrentMutation && mutation.isPending}
+            onChange={(event) => setRefreshSources(event.target.checked)}
+          />
+          Use latest sources (slower)
+        </label>
 
-          <label className="grid gap-1 text-xs text-muted">
-            {t(`${I18N_PREFIX}.riskModeLabel`)}
-            <select
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              value={riskMode}
-              disabled={isCurrentMutation && mutation.isPending}
-              onChange={(event) => setRiskMode(event.target.value as typeof riskMode)}
-            >
-              <option value="normal">{t(`${I18N_PREFIX}.riskMode.normal`)}</option>
-              <option value="defensive">{t(`${I18N_PREFIX}.riskMode.defensive`)}</option>
-              <option value="aggressive">{t(`${I18N_PREFIX}.riskMode.aggressive`)}</option>
-            </select>
-          </label>
-
-          <label className="flex items-end gap-2 pb-2 text-xs text-muted">
-            <input
-              type="checkbox"
-              checked={refreshSources}
-              disabled={isCurrentMutation && mutation.isPending}
-              onChange={(event) => setRefreshSources(event.target.checked)}
-            />
-            {t(`${I18N_PREFIX}.refreshSources`)}
-          </label>
-        </div>
+        <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={isCurrentMutation && mutation.isPending}>
+          {isCurrentMutation && mutation.isPending ? 'Checking market context…' : 'Check market context'}
+        </Button>
 
         {isCurrentMutation && mutation.isError && (
           <p className="text-sm text-danger">

@@ -175,6 +175,9 @@ class SymbolIntelligenceRequest(BaseModel):
     valuation_label: Literal["cheap", "fair", "expensive", "unknown"] | None = None
     decision_action: str | None = None
     decision_conviction: str | None = None
+    decision_entry_condition: str | None = None
+    decision_trigger_price: float | None = None
+    decision_trigger_note: str | None = None
     technical_label: str | None = None
     fundamentals_label: str | None = None
     catalyst_evidence: list[SourceEvidence] = Field(default_factory=list)

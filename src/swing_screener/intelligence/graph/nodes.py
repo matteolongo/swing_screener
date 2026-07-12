@@ -73,6 +73,9 @@ def assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
     decision: dict = {}
     _put_truthy(decision, "action", req.decision_action)
     _put_truthy(decision, "conviction", req.decision_conviction)
+    _put_truthy(decision, "entry_condition", req.decision_entry_condition)
+    _put(decision, "trigger_price", req.decision_trigger_price)
+    _put_truthy(decision, "trigger_note", req.decision_trigger_note)
     _put_truthy(decision, "technical_label", req.technical_label)
     _put_truthy(decision, "fundamentals_label", req.fundamentals_label)
     _put_truthy(decision, "valuation_label", req.valuation_label)
@@ -267,10 +270,22 @@ def weigh_evidence(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyzer
 
 def assemble_result(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
     draft = state["draft"]
+    canonical_actions = {
+        "BUY_NOW",
+        "BUY_ON_PULLBACK",
+        "WAIT_FOR_BREAKOUT",
+        "WATCH",
+        "TACTICAL_ONLY",
+        "AVOID",
+        "MANAGE_ONLY",
+    }
+    canonical_action = state["req"].decision_action
     result = SymbolIntelligence(
         symbol=state["ticker"],
         generated_at=datetime.now(timezone.utc).isoformat(),
-        action=draft.action,
+        # The deterministic screener decision owns execution. The LLM can
+        # explain that action, but it cannot publish a competing instruction.
+        action=canonical_action if canonical_action in canonical_actions else draft.action,
         conviction=draft.conviction,
         catalyst_urgency=draft.catalyst_urgency,
         summary_line=draft.summary_line,

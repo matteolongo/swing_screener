@@ -74,9 +74,9 @@ describe('StrategicReviewPanel', () => {
     expect(screen.getByLabelText(t(`${I18N_PREFIX}.watchArea.geopolitics`))).toBeChecked();
     expect(screen.getByLabelText(t(`${I18N_PREFIX}.watchArea.earnings`))).toBeChecked();
 
-    await user.click(screen.getByLabelText(t(`${I18N_PREFIX}.refreshSources`)));
+    await user.click(screen.getByLabelText('Use latest sources (slower)'));
     await user.selectOptions(screen.getByLabelText(t(`${I18N_PREFIX}.riskModeLabel`)), 'defensive');
-    await user.click(screen.getByRole('button', { name: t(`${I18N_PREFIX}.runAction`) }));
+    await user.click(screen.getByRole('button', { name: 'Check market context' }));
 
     await waitFor(() => {
       expect(mutate).toHaveBeenCalledWith({

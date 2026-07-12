@@ -56,7 +56,7 @@ function isPositiveNumber(value: number | null | undefined): value is number {
 
 function compactValue(label: string, value: string, secondary?: string) {
   return (
-    <div className="min-w-[88px] rounded-md border border-border bg-surface/90 px-2.5 py-2">
+    <div className="min-w-0 rounded-md border border-border bg-surface/90 px-2.5 py-2">
       <div className="text-[10px] uppercase tracking-wide text-muted">{label}</div>
       <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
       {secondary ? <div className="mt-0.5 text-[10px] text-muted">{secondary}</div> : null}
@@ -130,12 +130,16 @@ export default function AnalysisDecisionStrip({
   const visibleSourceItems = sourceItems.filter(
     (item): item is readonly [typeof item[0], DataSourceHealth] => Boolean(item[1])
   );
+  const nextStep = summary?.tradePlan.triggerNote
+    ?? (summary?.action === 'WAIT_FOR_BREAKOUT'
+      ? 'Wait for confirmed breakout evidence before entering.'
+      : summary?.whatToDo);
 
   return (
     <div className="sticky top-0 z-10 rounded-xl border border-border bg-surface/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-surface/85">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
+          <div className="max-w-3xl space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-semibold text-foreground">{ticker}</h2>
               {summary ? <Badge variant="primary">{actionLabel(summary.action)}</Badge> : null}
@@ -152,28 +156,32 @@ export default function AnalysisDecisionStrip({
                 ?? candidate?.recommendation?.reasonsShort?.[0]
                 ?? 'Review the current setup, risk, and execution plan before acting.'}
             </p>
+            {nextStep ? (
+              <p className="text-sm font-medium text-foreground">
+                <span className="text-muted">Next step: </span>{nextStep}
+              </p>
+            ) : null}
           </div>
-          <div className="flex flex-col items-end gap-2">
-            {(onWatch || onUnwatch) && (
-              <button
-                type="button"
-                onClick={isWatched ? onUnwatch : onWatch}
-                disabled={isPendingWatch}
-                className="rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface disabled:opacity-50"
-              >
-                {isPendingWatch ? '…' : isWatched ? 'Unwatch' : 'Watch'}
-              </button>
-            )}
-            <div className="grid grid-cols-4 gap-2 md:grid-cols-7">
-              {compactValue(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}
-              {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
-              {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
-              {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
-              {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
-              {compactValue('Risk %', riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
-              {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
-            </div>
-          </div>
+          {(onWatch || onUnwatch) && (
+            <button
+              type="button"
+              onClick={isWatched ? onUnwatch : onWatch}
+              disabled={isPendingWatch}
+              className="rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface disabled:opacity-50"
+            >
+              {isPendingWatch ? '…' : isWatched ? 'Unwatch' : 'Watch'}
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+          {compactValue(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}
+          {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
+          {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
+          {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
+          {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
+          {compactValue('Risk %', riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
+          {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
         </div>
 
         {summary?.action === 'BUY_NOW' && onPrepareOrder && (

@@ -18,6 +18,14 @@ SignalLabel = Literal["strong", "neutral", "weak"]
 ValuationLabel = Literal["cheap", "fair", "expensive", "unknown"]
 CatalystLabel = Literal["active", "neutral", "weak", "unknown"]
 FairValueMethod = Literal["earnings_multiple", "sales_multiple", "book_multiple", "not_available"]
+EntryCondition = Literal[
+    "buy_now",
+    "pullback_to_price",
+    "breakout_above_price",
+    "wait_for_confirmation",
+    "no_entry",
+    "manage_position",
+]
 
 
 class DecisionTradePlan(BaseModel):
@@ -25,6 +33,12 @@ class DecisionTradePlan(BaseModel):
     stop: float | None = None
     target: float | None = None
     rr: float | None = None
+    # `entry` is a risk-plan price and is not always an executable trigger. Keep
+    # the user-facing action condition explicit so WAIT_FOR_BREAKOUT cannot be
+    # rendered as an unrelated pullback instruction.
+    entry_condition: EntryCondition = "no_entry"
+    trigger_price: float | None = None
+    trigger_note: str | None = None
 
 
 class DecisionValuationContext(BaseModel):

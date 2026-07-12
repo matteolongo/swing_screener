@@ -12,6 +12,7 @@ import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCa
 import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
 import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
 import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
+import IntelligenceDecisionBrief from '@/components/domain/workspace/IntelligenceDecisionBrief';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
 import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
@@ -88,10 +89,8 @@ export default function SymbolAnalysisContent({
   const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
-  const [intelSubView, setIntelSubView] = useState<'analysis' | 'trace'>('analysis');
   const currentTickerRef = useRef(ticker.toUpperCase());
   const tabsId = useId();
-  const intelligenceTabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
   const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
   const hasNarrative = Boolean(!isIntelligenceLoading && displayedIntelligence?.narrative?.trim());
@@ -148,7 +147,6 @@ export default function SymbolAnalysisContent({
 
   useEffect(() => {
     setIntelligenceResult(null);
-    setIntelSubView('analysis');
     intelligenceMutation.reset();
   }, [ticker]);
 
@@ -221,24 +219,6 @@ export default function SymbolAnalysisContent({
     onTabChange(tabs[nextIndex].id);
     document.getElementById(`${tabsId}-tab-${tabs[nextIndex].id}`)?.focus();
   };
-  const intelligenceViews = ['analysis', 'trace'] as const;
-  const handleIntelligenceTabKeyDown = (
-    event: KeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) => {
-    const lastIndex = intelligenceViews.length - 1;
-    let nextIndex: number | null = null;
-    if (event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
-    if (event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
-    if (event.key === 'Home') nextIndex = 0;
-    if (event.key === 'End') nextIndex = lastIndex;
-    if (nextIndex == null) return;
-
-    event.preventDefault();
-    setIntelSubView(intelligenceViews[nextIndex]);
-    document.getElementById(`${intelligenceTabsId}-tab-${intelligenceViews[nextIndex]}`)?.focus();
-  };
-
   return (
     <>
       <div
@@ -363,81 +343,64 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'intelligence' && (
           <>
-            {!isIntelligenceLoading && hasNarrative && (
-              <div
-                className="flex w-fit items-center gap-1 rounded-lg border border-border bg-surface p-1"
-                role="tablist"
-              >
-                {intelligenceViews.map((view, index) => {
-                  const isActive = intelSubView === view;
-                  return (
-                    <button
-                      key={view}
-                      id={`${intelligenceTabsId}-tab-${view}`}
-                      type="button"
-                      role="tab"
-                      aria-selected={isActive}
-                      aria-controls={`${intelligenceTabsId}-panel-${view}`}
-                      tabIndex={isActive ? 0 : -1}
-                      onClick={() => setIntelSubView(view)}
-                      onKeyDown={(event) => handleIntelligenceTabKeyDown(event, index)}
-                      className={cn(
-                        'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                        isActive ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
-                      )}
-                    >
-                      {view === 'analysis'
-                        ? t('workspacePage.panels.analysis.intelligence.agentTrace.analysisTab')
-                        : t('workspacePage.panels.analysis.intelligence.agentTrace.tab')}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {!isIntelligenceLoading && hasNarrative && intelSubView === 'trace' ? (
-              <div
-                id={`${intelligenceTabsId}-panel-trace`}
-                role="tabpanel"
-                aria-labelledby={`${intelligenceTabsId}-tab-trace`}
-              >
-                <AgentTracePanel runId={displayedIntelligence?.runId ?? null} />
+            {isIntelligenceLoading ? (
+              <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
+                {t('workspacePage.panels.analysis.intelligence.analyzingAction')}
               </div>
             ) : (
-              <div
-                id={`${intelligenceTabsId}-panel-analysis`}
-                role="tabpanel"
-                aria-labelledby={`${intelligenceTabsId}-tab-analysis`}
-              >
-                {isIntelligenceLoading ? (
-                  <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
-                    {t('workspacePage.panels.analysis.intelligence.analyzingAction')}
-                  </div>
-                ) : hasNarrative && displayedIntelligence ? (
+              <>
+                <IntelligenceDecisionBrief candidate={candidate} intelligence={displayedIntelligence} />
+
+                {hasNarrative && displayedIntelligence ? (
                   <>
-                    <PositionReviewPanel ticker={ticker} position={position} />
-                    <StrategicReviewPanel ticker={ticker} />
-                    <NarrativeAnalysisCard
-                      intelligence={displayedIntelligence}
-                      candidate={candidate}
-                      isPosition={Boolean(position)}
-                    />
-                    <IntelligenceChatPanel
-                      ticker={ticker}
-                      intelligence={displayedIntelligence}
-                      candidate={candidate}
-                      position={position}
-                    />
+                    <div className="grid gap-3 xl:grid-cols-2">
+                      <PositionReviewPanel ticker={ticker} position={position} />
+                      <StrategicReviewPanel ticker={ticker} />
+                    </div>
+
+                    <details className="rounded-lg border border-border bg-surface p-3">
+                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Full intelligence report</summary>
+                      <div className="mt-3">
+                        <NarrativeAnalysisCard
+                          intelligence={displayedIntelligence}
+                          candidate={candidate}
+                          isPosition={Boolean(position)}
+                        />
+                      </div>
+                    </details>
+
+                    <details className="rounded-lg border border-border bg-surface p-3">
+                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Ask about this decision</summary>
+                      <div className="mt-3">
+                        <IntelligenceChatPanel
+                          ticker={ticker}
+                          intelligence={displayedIntelligence}
+                          candidate={candidate}
+                          position={position}
+                        />
+                      </div>
+                    </details>
+
+                    <details className="rounded-lg border border-border bg-surface p-3">
+                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Technical details</summary>
+                      <div className="mt-3">
+                        <AgentTracePanel runId={displayedIntelligence.runId ?? null} />
+                      </div>
+                    </details>
                   </>
                 ) : (
                   <>
-                    <PositionReviewPanel ticker={ticker} position={position} />
                     {renderAnalyzePrompt(
-                      t('workspacePage.panels.analysis.intelligence.emptyState'),
-                      Boolean(candidate || position)
+                      'Generate a company and setup review first, then use the optional checks below when you need more context.',
+                      Boolean(candidate || position),
                     )}
+                    <div className="grid gap-3 xl:grid-cols-2">
+                      <PositionReviewPanel ticker={ticker} position={position} />
+                      <StrategicReviewPanel ticker={ticker} />
+                    </div>
                   </>
                 )}
+
                 {hasNarrative && (
                   <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
                     <Button
@@ -449,12 +412,11 @@ export default function SymbolAnalysisContent({
                     >
                       {intelligenceMutation.isPending
                         ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                        : t('workspacePage.panels.analysis.intelligence.refreshAction')}
+                        : 'Refresh decision and intelligence'}
                     </Button>
                     {displayedIntelligence && !intelligenceMutation.isPending && (
                       <span className="text-xs text-muted">
-                        {t('workspacePage.panels.analysis.intelligence.lastAnalyzed')}:{' '}
-                        {new Date(displayedIntelligence.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        Last analyzed: {new Date(displayedIntelligence.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     )}
                     {intelligenceMutation.isError && (
@@ -466,7 +428,7 @@ export default function SymbolAnalysisContent({
                     )}
                   </div>
                 )}
-              </div>
+              </>
             )}
           </>
         )}

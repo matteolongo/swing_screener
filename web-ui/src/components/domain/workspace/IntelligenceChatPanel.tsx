@@ -31,6 +31,11 @@ export default function IntelligenceChatPanel({
   const messages = chat && chat.analysisGeneratedAt === intelligence?.generatedAt
     ? chat.messages
     : [];
+  const suggestedQuestions = [
+    'What confirms the entry?',
+    'What would invalidate this setup?',
+    'Why is valuation a risk?',
+  ];
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,6 +70,20 @@ export default function IntelligenceChatPanel({
       </div>
 
       <div className="max-h-72 min-h-36 overflow-y-auto px-3 py-3">
+        {!disabled && messages.length === 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {suggestedQuestions.map((question) => (
+              <button
+                key={question}
+                type="button"
+                onClick={() => setMessage(question)}
+                className="rounded-full border border-border px-2.5 py-1 text-xs text-muted hover:border-primary/40 hover:text-foreground"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        )}
         {chatQuery.isLoading ? (
           <p className="text-sm text-muted">{t('workspacePage.panels.analysis.intelligence.timeline.loading')}</p>
         ) : chatQuery.isError ? (
@@ -139,7 +158,7 @@ export default function IntelligenceChatPanel({
             disabled={disabled || sendMutation.isPending}
             onChange={(event) => setRefreshSources(event.target.checked)}
           />
-          {t('workspacePage.panels.analysis.intelligence.chat.refreshSources')}
+          Use latest sources (slower)
         </label>
         <div className="mt-2 flex gap-2">
           <input

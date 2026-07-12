@@ -48,6 +48,9 @@ export interface IntelligenceRequestPayload {
   valuation_label?: string | null;
   decision_action?: string | null;
   decision_conviction?: string | null;
+  decision_entry_condition?: string | null;
+  decision_trigger_price?: number | null;
+  decision_trigger_note?: string | null;
   technical_label?: string | null;
   fundamentals_label?: string | null;
   days_to_earnings?: number | null;
@@ -96,6 +99,9 @@ export function candidateToPayload(
     payload.valuation_label = candidate.decisionSummary?.valuationLabel ?? null;
     payload.decision_action = candidate.decisionSummary?.action ?? null;
     payload.decision_conviction = candidate.decisionSummary?.conviction ?? null;
+    payload.decision_entry_condition = candidate.decisionSummary?.tradePlan?.entryCondition ?? null;
+    payload.decision_trigger_price = candidate.decisionSummary?.tradePlan?.triggerPrice ?? null;
+    payload.decision_trigger_note = candidate.decisionSummary?.tradePlan?.triggerNote ?? null;
     payload.technical_label = candidate.decisionSummary?.technicalLabel ?? null;
     payload.fundamentals_label = candidate.decisionSummary?.fundamentalsLabel ?? null;
     payload.days_to_earnings = candidate.daysToEarnings ?? null;

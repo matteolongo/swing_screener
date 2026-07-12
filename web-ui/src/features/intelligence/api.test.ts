@@ -158,7 +158,7 @@ describe('candidateToPayload', () => {
     expect(payload!.near_52w_high).toBe(true);
   });
 
-  it('maps decision_action, decision_conviction, valuation_label, technical_label, fundamentals_label from decisionSummary', () => {
+  it('maps canonical decision and entry-condition context from decisionSummary', () => {
     const payload = candidateToPayload({
       ...baseCandidate,
       decisionSummary: {
@@ -172,13 +172,24 @@ describe('candidateToPayload', () => {
         whyNow: 'Breakout.',
         whatToDo: 'Buy.',
         mainRisk: 'Risk.',
-        tradePlan: { entry: 152, stop: 143, target: 170, rr: 2.5 },
+        tradePlan: {
+          entry: 152,
+          stop: 143,
+          target: 170,
+          rr: 2.5,
+          entryCondition: 'buy_now',
+          triggerPrice: 152,
+          triggerNote: 'Eligible now near the planned entry.',
+        },
         valuationContext: { method: 'earnings_multiple' },
         drivers: { positives: [], negatives: [], warnings: [] },
       },
     });
     expect(payload!.decision_action).toBe('BUY_NOW');
     expect(payload!.decision_conviction).toBe('high');
+    expect(payload!.decision_entry_condition).toBe('buy_now');
+    expect(payload!.decision_trigger_price).toBe(152);
+    expect(payload!.decision_trigger_note).toBe('Eligible now near the planned entry.');
     expect(payload!.valuation_label).toBe('fair');
     expect(payload!.technical_label).toBe('strong');
     expect(payload!.fundamentals_label).toBe('neutral');
@@ -226,6 +237,9 @@ describe('candidateToPayload', () => {
     expect(payload!.valuation_label).toBeNull();
     expect(payload!.decision_action).toBeNull();
     expect(payload!.decision_conviction).toBeNull();
+    expect(payload!.decision_entry_condition).toBeNull();
+    expect(payload!.decision_trigger_price).toBeNull();
+    expect(payload!.decision_trigger_note).toBeNull();
     expect(payload!.technical_label).toBeNull();
     expect(payload!.fundamentals_label).toBeNull();
   });

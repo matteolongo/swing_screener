@@ -94,12 +94,22 @@ export type DecisionSignalLabel = 'strong' | 'neutral' | 'weak';
 export type DecisionValuationLabel = 'cheap' | 'fair' | 'expensive' | 'unknown';
 export type DecisionCatalystLabel = 'active' | 'neutral' | 'weak' | 'unknown';
 export type FairValueMethod = 'earnings_multiple' | 'sales_multiple' | 'book_multiple' | 'not_available';
+export type DecisionEntryCondition =
+  | 'buy_now'
+  | 'pullback_to_price'
+  | 'breakout_above_price'
+  | 'wait_for_confirmation'
+  | 'no_entry'
+  | 'manage_position';
 
 export interface DecisionTradePlan {
   entry?: number;
   stop?: number;
   target?: number;
   rr?: number;
+  entryCondition?: DecisionEntryCondition;
+  triggerPrice?: number;
+  triggerNote?: string;
 }
 
 export interface DecisionValuationContext {
@@ -230,6 +240,9 @@ export interface DecisionTradePlanAPI {
   stop?: number;
   target?: number;
   rr?: number;
+  entry_condition?: DecisionEntryCondition;
+  trigger_price?: number | null;
+  trigger_note?: string | null;
 }
 
 export interface DecisionValuationContextAPI {
@@ -470,6 +483,9 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       stop: apiSummary.trade_plan?.stop ?? undefined,
       target: apiSummary.trade_plan?.target ?? undefined,
       rr: apiSummary.trade_plan?.rr ?? undefined,
+      entryCondition: apiSummary.trade_plan?.entry_condition ?? undefined,
+      triggerPrice: apiSummary.trade_plan?.trigger_price ?? undefined,
+      triggerNote: apiSummary.trade_plan?.trigger_note ?? undefined,
     },
     valuationContext: {
       method: apiSummary.valuation_context?.method ?? 'not_available',
