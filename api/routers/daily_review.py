@@ -55,6 +55,12 @@ def get_daily_review(
         default=None,
         description="JSON-encoded TaxonomyFilter mirroring the screener selection.",
     ),
+    include_candidates: bool = Query(
+        default=True,
+        description=(
+            "Run screener discovery candidates. Set false for a portfolio-only review."
+        ),
+    ),
     service: DailyReviewService = Depends(get_daily_review_service),
 ) -> DailyReview:
     """
@@ -76,7 +82,11 @@ def get_daily_review(
         except (ValueError, TypeError):
             parsed_filter = None
     return service.generate_daily_review(
-        top_n=top_n, universe=universe, preset=preset, taxonomy_filter=parsed_filter
+        top_n=top_n,
+        universe=universe,
+        preset=preset,
+        taxonomy_filter=parsed_filter,
+        include_candidates=include_candidates,
     )
 
 
@@ -94,4 +104,5 @@ def compute_daily_review(
         universe=request.universe,
         preset=request.preset,
         taxonomy_filter=request.taxonomy_filter,
+        include_candidates=request.include_candidates,
     )

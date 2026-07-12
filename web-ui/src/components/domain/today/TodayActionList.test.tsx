@@ -1,12 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import TodayActionList from './TodayActionList';
+import { useScreenerStore, type TodayRunSnapshot } from '@/stores/screenerStore';
 
 // Minimal daily-review payload: one open position that is NO_ACTION (hold).
 vi.mock('@/features/dailyReview/api', () => ({
-  useDailyReview: () => ({
+  usePortfolioReview: () => ({
     data: {
       summary: { reviewDate: '2026-06-26', newCandidates: 0, updateStop: 0, closePositions: 0 },
       watchlistNearTrigger: [],
@@ -14,7 +15,7 @@ vi.mock('@/features/dailyReview/api', () => ({
       positionsUpdateStop: [],
       positionsExitSignal: [],
       pendingOrdersReview: [],
-      newCandidates: [],
+      newCandidates: [{ ticker: 'UNPINNED' }],
       positionsAddOnCandidates: [],
       positionsHold: [{ ticker: 'LRCX', positionId: 'POS-1', trimSuggestion: null }],
     },
@@ -37,10 +38,57 @@ vi.mock('@/features/portfolio/hooks', async (orig) => {
 });
 
 describe('TodayActionList holdings', () => {
+  beforeEach(() => {
+    useScreenerStore.setState({
+      lastResult: null,
+      lastRunContext: null,
+      todayRun: null,
+      todayRunInitialized: true,
+    });
+  });
+
   it('shows held positions under Open Positions and renders no separate Holding section', () => {
     renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
     expect(screen.getByText(new RegExp(t('todayPage.actionList.openPositions')))).toBeInTheDocument();
     expect(screen.queryByText(t('todayPage.actionList.holding'))).not.toBeInTheDocument();
     expect(screen.getAllByText('LRCX')).toHaveLength(1);
+  });
+
+  it('renders opportunities from the pinned run, not candidate rows returned by portfolio refresh', () => {
+    useScreenerStore.setState({
+      todayRun: {
+        request: { preset: 'us_large_cap_equities' },
+        displayFilters: { recommendedOnly: true, actionFilter: 'all' },
+        completedAt: '2026-07-10T20:00:00Z',
+        result: {
+          asofDate: '2026-07-10',
+          candidates: [{
+            ticker: 'PINNED',
+            currency: 'USD',
+            close: 100,
+            sma20: null,
+            sma50: null,
+            sma200: null,
+            atr: 1,
+            momentum6m: 0,
+            momentum12m: 0,
+            relStrength: 0,
+            score: 1,
+            confidence: 90,
+            rank: 1,
+            rr: 2,
+            recommendation: { verdict: 'RECOMMENDED' },
+          }],
+          totalScreened: 1,
+          dataFreshness: 'final_close',
+        },
+      } as unknown as TodayRunSnapshot,
+    });
+
+    renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
+
+    expect(screen.getByText('PINNED')).toBeInTheDocument();
+    expect(screen.queryByText('UNPINNED')).not.toBeInTheDocument();
+    expect(screen.getByText(/Opportunities from us_large_cap_equities/i)).toBeInTheDocument();
   });
 });

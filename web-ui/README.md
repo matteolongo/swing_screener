@@ -6,7 +6,7 @@ React 18 + TypeScript frontend for Swing Screener.
 
 | Page | Route | Purpose |
 | --- | --- | --- |
-| Today | `/today` | Screener candidates (Last Run tab), open positions and daily review (Today tab), Watchlist tab; symbol analysis canvas on the right |
+| Today | `/today` | A pinned screener-run subset, open-position review, watchlist, and symbol-analysis canvas. Exploratory scans stay in Last Run until explicitly used for Today. |
 | Calendar | `/calendar` | Earnings calendar and upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management; trade journal; performance analytics; weekly review |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery |

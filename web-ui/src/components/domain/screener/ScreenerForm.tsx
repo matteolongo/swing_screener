@@ -50,6 +50,9 @@ interface ScreenerFormProps {
   onToggleCollapsed?: () => void;
   forceRefresh: boolean;
   setForceRefresh: (value: boolean) => void;
+  /** Whether this completed scan becomes the candidate source for Today. */
+  useForToday?: boolean;
+  setUseForToday?: (value: boolean) => void;
 }
 
 export default function ScreenerForm({
@@ -81,6 +84,8 @@ export default function ScreenerForm({
   onToggleCollapsed,
   forceRefresh,
   setForceRefresh,
+  useForToday = true,
+  setUseForToday,
 }: ScreenerFormProps) {
   const handleTopNChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const parsed = parseInt(e.target.value) || 20;
@@ -166,6 +171,11 @@ export default function ScreenerForm({
           {recommendedOnly && (
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
               {t('screener.controls.recommendedOnlyShort')}
+            </span>
+          )}
+          {useForToday && setUseForToday && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-success/10 text-success">
+              {t('screener.controls.useForTodayShort')}
             </span>
           )}
         </div>
@@ -331,6 +341,19 @@ export default function ScreenerForm({
                 <span className="text-xs text-warning">{t('screener.controls.forceRefreshWarning')}</span>
               )}
             </label>
+            {setUseForToday && (
+              <label className="flex min-h-11 items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useForToday}
+                  onChange={(e) => setUseForToday(e.target.checked)}
+                  aria-label={t('screener.controls.useForToday')}
+                  className="w-5 h-5 text-primary border-border rounded focus:ring-primary"
+                  disabled={isLoading}
+                />
+                <span className="text-sm font-medium text-muted">{t('screener.controls.useForToday')}</span>
+              </label>
+            )}
           </div>
 
           <Field label={t('screener.controls.actionFilter')} className="w-full md:max-w-xs">

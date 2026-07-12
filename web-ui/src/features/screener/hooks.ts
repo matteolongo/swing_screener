@@ -6,12 +6,12 @@ import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
 
 export function useRunScreenerMutation(
-  onSuccess?: (data: ScreenerResponse) => void,
+  onSuccess?: (data: ScreenerResponse, request: ScreenerRequest) => void,
   onError?: (error: unknown) => void,
 ) {
   return useMutation({
     mutationFn: (request: ScreenerRequest) => runScreener(request),
-    onSuccess,
+    onSuccess: (data, request) => onSuccess?.(data, request),
     onError,
   });
 }

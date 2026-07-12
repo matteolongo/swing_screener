@@ -7,6 +7,7 @@ import {
   type DecisionSummary,
   type DecisionSummaryAPI,
   type SameSymbolCandidateContext,
+  type ScreenerCandidate,
 } from '@/features/screener/types';
 import { type WatchItem, type WatchItemAPI, transformWatchItem } from '@/features/watchlist/types';
 
@@ -173,6 +174,44 @@ export interface DailyReviewCandidate {
   recommendation?: Recommendation;
   decisionSummary?: DecisionSummary;
   sameSymbol?: SameSymbolCandidateContext;
+}
+
+/**
+ * Today renders opportunities from the exact saved screener response. This
+ * adapter lets it reuse the existing candidate row without asking the backend
+ * to run a second screener solely to reshape the data.
+ */
+export function dailyReviewCandidateFromScreener(candidate: ScreenerCandidate): DailyReviewCandidate {
+  return {
+    ticker: candidate.ticker,
+    currency: candidate.currency,
+    rank: candidate.rank,
+    priorityRank: candidate.priorityRank,
+    confidence: candidate.confidence,
+    signal: candidate.signal ?? 'UNKNOWN',
+    close: candidate.close,
+    score: candidate.score,
+    atr: candidate.atr,
+    sma20: candidate.sma20 ?? undefined,
+    sma50: candidate.sma50 ?? undefined,
+    sma200: candidate.sma200 ?? undefined,
+    momentum6m: candidate.momentum6m,
+    momentum12m: candidate.momentum12m,
+    relStrength: candidate.relStrength,
+    entry: candidate.entry ?? 0,
+    stop: candidate.stop ?? 0,
+    shares: candidate.shares ?? 0,
+    rReward: candidate.rr ?? 0,
+    name: candidate.name ?? null,
+    sector: candidate.sector ?? null,
+    volumeRatio: candidate.volumeRatio,
+    suggestedOrderType: candidate.suggestedOrderType,
+    suggestedOrderPrice: candidate.suggestedOrderPrice,
+    executionNote: candidate.executionNote,
+    recommendation: candidate.recommendation,
+    decisionSummary: candidate.decisionSummary,
+    sameSymbol: candidate.sameSymbol,
+  };
 }
 
 export interface TrimSuggestion {

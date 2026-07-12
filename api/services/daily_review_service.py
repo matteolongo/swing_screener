@@ -125,6 +125,7 @@ class DailyReviewService:
         universe: str | None = None,
         preset: str | None = None,
         taxonomy_filter: "TaxonomyFilter | None" = None,
+        include_candidates: bool = True,
     ) -> DailyReview:
         """
         Generate comprehensive daily review.
@@ -138,18 +139,20 @@ class DailyReviewService:
         Returns:
             DailyReview with new candidates and position actions categorized
         """
-        # 1. Run screener to get new candidates, mirroring the screener's
-        # taxonomy selection so the daily review covers the same pool the user
-        # is screening.
-        selected_universe = universe.strip() if isinstance(universe, str) else None
-        screener_request = ScreenerRequest(
-            top=top_n,
-            universe=selected_universe or None,
-            preset=preset or None,
-            taxonomy_filter=taxonomy_filter,
-        )
-        screener_result = self.screener.run_screener(screener_request)
-        candidates = screener_result.candidates[:top_n]
+        # Candidate discovery remains available for the legacy combined review,
+        # but Today uses the portfolio-only mode. That mode must never trigger a
+        # second screener run with a subtly different request than Last Run.
+        candidates = []
+        if include_candidates:
+            selected_universe = universe.strip() if isinstance(universe, str) else None
+            screener_request = ScreenerRequest(
+                top=top_n,
+                universe=selected_universe or None,
+                preset=preset or None,
+                taxonomy_filter=taxonomy_filter,
+            )
+            screener_result = self.screener.run_screener(screener_request)
+            candidates = screener_result.candidates[:top_n]
 
         # Re-entries are fresh buy decisions (no open position), so rank them
         # among new opportunities by screener priority. Add-ons / scale-backs
@@ -495,33 +498,36 @@ class DailyReviewService:
         universe: str | None = None,
         preset: str | None = None,
         taxonomy_filter: "TaxonomyFilter | None" = None,
+        include_candidates: bool = True,
     ) -> DailyReview:
         """Compute daily review from client-provided strategy/portfolio state."""
         _ = orders  # Reserved for future order-aware categorization logic.
 
-        selected_universe = universe.strip() if isinstance(universe, str) else None
-        signals = strategy.get("signals", {}) if isinstance(strategy, dict) else {}
-        universe_cfg = (
-            strategy.get("universe", {}) if isinstance(strategy, dict) else {}
-        )
-        filt_cfg = (
-            universe_cfg.get("filt", {}) if isinstance(universe_cfg, dict) else {}
-        )
+        candidates = []
+        if include_candidates:
+            selected_universe = universe.strip() if isinstance(universe, str) else None
+            signals = strategy.get("signals", {}) if isinstance(strategy, dict) else {}
+            universe_cfg = (
+                strategy.get("universe", {}) if isinstance(strategy, dict) else {}
+            )
+            filt_cfg = (
+                universe_cfg.get("filt", {}) if isinstance(universe_cfg, dict) else {}
+            )
 
-        screener_request = ScreenerRequest(
-            top=top_n,
-            universe=selected_universe or None,
-            preset=preset or None,
-            taxonomy_filter=taxonomy_filter,
-            breakout_lookback=signals.get("breakout_lookback"),
-            pullback_ma=signals.get("pullback_ma"),
-            min_history=signals.get("min_history"),
-            currencies=filt_cfg.get("currencies"),
-        )
-        screener_result = self.screener.run_screener(
-            screener_request, strategy_override=strategy
-        )
-        candidates = screener_result.candidates[:top_n]
+            screener_request = ScreenerRequest(
+                top=top_n,
+                universe=selected_universe or None,
+                preset=preset or None,
+                taxonomy_filter=taxonomy_filter,
+                breakout_lookback=signals.get("breakout_lookback"),
+                pullback_ma=signals.get("pullback_ma"),
+                min_history=signals.get("min_history"),
+                currencies=filt_cfg.get("currencies"),
+            )
+            screener_result = self.screener.run_screener(
+                screener_request, strategy_override=strategy
+            )
+            candidates = screener_result.candidates[:top_n]
 
         # Re-entries are fresh buy decisions (no open position), so rank them
         # among new opportunities by screener priority. Add-ons / scale-backs

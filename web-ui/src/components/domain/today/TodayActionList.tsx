@@ -4,13 +4,15 @@ import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
-import { useDailyReview } from '@/features/dailyReview/api';
-import { readScreenerSelection } from '@/features/screener/selectionStorage';
+import { usePortfolioReview } from '@/features/dailyReview/api';
+import { dailyReviewCandidateFromScreener } from '@/features/dailyReview/types';
+import { filterCandidates, prioritizeCandidates } from '@/features/screener/prioritization';
 import {
   usePositions,
   useOpenPositionsIntelligence,
 } from '@/features/portfolio/hooks';
 import { useTodayActions } from './useTodayActions';
+import { useScreenerStore } from '@/stores/screenerStore';
 import {
   CloseItem,
   UpdateStopItem,
@@ -26,10 +28,40 @@ interface TodayActionListProps {
 }
 
 export default function TodayActionList({ onTickerSelect }: TodayActionListProps) {
-  // Mirror the screener's persisted taxonomy selection so the daily review
-  // covers the same pool the user is screening.
-  const selection = readScreenerSelection();
-  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(200, selection);
+  const {
+    todayRun,
+    setTodayRunDisplayFilters,
+  } = useScreenerStore();
+  const { data: review, isLoading, error, refetch, isFetching } = usePortfolioReview();
+
+  const sourceOpportunities = useMemo(() => {
+    const sourceCandidates = todayRun
+      ? prioritizeCandidates(todayRun.result.candidates)
+      : [];
+    const visibleCandidates = todayRun
+      ? filterCandidates(sourceCandidates, todayRun.displayFilters)
+      : [];
+    const isNewOpportunity = (mode?: string) =>
+      mode == null || mode === 'NEW_ENTRY' || mode === 'RE_ENTRY';
+    const isAddOn = (mode?: string) => mode === 'ADD_ON' || mode === 'SCALE_BACK';
+
+    return {
+      newCandidates: visibleCandidates
+        .filter((candidate) => isNewOpportunity(candidate.sameSymbol?.mode))
+        .map(dailyReviewCandidateFromScreener),
+      addOnCandidates: visibleCandidates
+        .filter((candidate) => isAddOn(candidate.sameSymbol?.mode))
+        .map(dailyReviewCandidateFromScreener),
+      sourceTickers: new Set(sourceCandidates.map((candidate) => candidate.ticker.toUpperCase())),
+    };
+  }, [todayRun]);
+
+  const watchlistNearTrigger = useMemo(
+    () => (review?.watchlistNearTrigger ?? []).filter(
+      (item) => !sourceOpportunities.sourceTickers.has(item.ticker.toUpperCase()),
+    ),
+    [review?.watchlistNearTrigger, sourceOpportunities.sourceTickers],
+  );
 
   const { data: intelligenceSummaries } = useOpenPositionsIntelligence();
   const intelligenceByTicker = useMemo(
@@ -46,15 +78,15 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
 
   const flatItems = useMemo(
     () => [
-      ...(review?.watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}` })) ?? []),
+      ...watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}` })),
       ...(review?.positionsClose.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.positionsExitSignal.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.pendingOrdersReview?.map((i) => ({ ticker: i.ticker, id: `pending-${i.orderId}` })) ?? []),
-      ...(review?.newCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })) ?? []),
-      ...(review?.positionsAddOnCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })) ?? []),
+      ...sourceOpportunities.newCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })),
+      ...sourceOpportunities.addOnCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })),
     ],
-    [review],
+    [review, sourceOpportunities, watchlistNearTrigger],
   );
 
   const {
@@ -77,8 +109,8 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
   const requiresActionCount =
     (review?.positionsClose.length ?? 0) + (review?.positionsUpdateStop.length ?? 0);
   const exitSignalCount = review?.positionsExitSignal.length ?? 0;
-  const watchlistNearTriggerCount = review?.watchlistNearTrigger.length ?? 0;
-  const opportunitiesCount = (review?.newCandidates.length ?? 0) + (review?.positionsAddOnCandidates.length ?? 0);
+  const watchlistNearTriggerCount = watchlistNearTrigger.length;
+  const opportunitiesCount = sourceOpportunities.newCandidates.length + sourceOpportunities.addOnCandidates.length;
 
   if (isLoading) {
     return (
@@ -141,6 +173,53 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
           )}
         </div>
       )}
+
+      <div className="mx-2 mt-2 rounded border border-border bg-surface/60 px-3 py-2 text-xs">
+        {todayRun ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-muted">
+              {t('todayPage.actionList.sourceRun', {
+                source: todayRun.request.preset ?? t('todayPage.actionList.customRun'),
+                date: todayRun.result.asofDate,
+              })}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setTodayRunDisplayFilters({
+                  ...todayRun.displayFilters,
+                  recommendedOnly: true,
+                })}
+                className={cn(
+                  'rounded px-2 py-1',
+                  todayRun.displayFilters.recommendedOnly
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted hover:bg-foreground/5',
+                )}
+              >
+                {t('todayPage.actionList.recommendedFilter')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTodayRunDisplayFilters({
+                  ...todayRun.displayFilters,
+                  recommendedOnly: false,
+                })}
+                className={cn(
+                  'rounded px-2 py-1',
+                  !todayRun.displayFilters.recommendedOnly
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted hover:bg-foreground/5',
+                )}
+              >
+                {t('todayPage.actionList.allSourceCandidates')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <span className="text-muted">{t('todayPage.actionList.noSourceRun')}</span>
+        )}
+      </div>
 
       {/* Action list */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
@@ -266,7 +345,7 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
               {t('watchlist.pipeline.dailyReviewSubtitle', { count: String(watchlistNearTriggerCount) })}
             </p>
             <div className="space-y-0.5">
-              {review?.watchlistNearTrigger.map((item) => {
+              {watchlistNearTrigger.map((item) => {
                 const idx = flatItems.findIndex((fi) => fi.id === `watch-${item.ticker}`);
                 return (
                   <WatchlistNearTriggerItem
@@ -287,7 +366,7 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
               {t('todayPage.actionList.opportunities')} · {opportunitiesCount}
             </div>
             <div className="space-y-0.5">
-              {review?.newCandidates.map((item) => {
+              {sourceOpportunities.newCandidates.map((item) => {
                 const idx = flatItems.findIndex((fi) => fi.id === item.ticker);
                 return (
                   <CandidateItem
@@ -298,7 +377,7 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
                   />
                 );
               })}
-              {review?.positionsAddOnCandidates.map((item) => {
+              {sourceOpportunities.addOnCandidates.map((item) => {
                 const idx = flatItems.findIndex((fi) => fi.id === item.ticker + '-addon');
                 return (
                   <CandidateItem

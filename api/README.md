@@ -88,8 +88,8 @@ Portfolio (`/api/portfolio`):
 - `DELETE /api/portfolio/orders/{order_id}`
 
 Daily Review (`/api/daily-review`):
-- `GET /api/daily-review` — accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) so the review mirrors the screener's taxonomy selection (plus the deprecated `universe` alias).
-- `POST /api/daily-review/compute` — same `preset` / `taxonomy_filter` fields on the request body for local-persistence mode.
+- `GET /api/daily-review` — accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) for the legacy combined review. Pass `include_candidates=false` for a portfolio/watchlist-only review that does not run the screener.
+- `POST /api/daily-review/compute` — supports the same `include_candidates` switch for local-persistence mode.
 
 Intelligence (`/api/intelligence`):
 - `POST /api/intelligence/{ticker}?force=false` — enriches with full data (fundamentals + Finnhub + earnings + SEC evidence, server-side blocking) then runs the two-call LLM analysis. Same-day cache is returned unless `force=true`. Responses carry nullable `pre_open_outlook` (US pre-market) and `thesis_delta` (when prior analyses exist), plus a `news` list (`{headline, url, date, sentiment}`, additive; defaults to `[]` for pre-existing cached results). Responses also expose additive `classified_catalysts` (typed, already-happened cited catalysts) and nullable `evidence_ledger` (advisory bull/bear evidence balance; never changes `action` or `conviction`). Returns 503 when `llm.analyzer_enabled: false` or `OPENAI_API_KEY` is unset.

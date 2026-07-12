@@ -161,3 +161,10 @@ class DailyReviewComputeRequest(BaseModel):
     universe: Optional[str] = None
     preset: Optional[str] = None
     taxonomy_filter: Optional[TaxonomyFilter] = None
+    include_candidates: bool = Field(
+        default=True,
+        description=(
+            "Whether to run the screener and include discovery candidates. "
+            "Portfolio-only reviews set this to false."
+        ),
+    )

@@ -20,6 +20,7 @@ class StubDailyReviewService:
         universe=None,
         preset=None,
         taxonomy_filter=None,
+        include_candidates=True,
     ):
         self.received = {
             "strategy": strategy,
@@ -29,6 +30,7 @@ class StubDailyReviewService:
             "universe": universe,
             "preset": preset,
             "taxonomy_filter": taxonomy_filter,
+            "include_candidates": include_candidates,
         }
         return DailyReview(
             new_candidates=[],
@@ -58,6 +60,7 @@ def test_daily_review_compute_endpoint():
             "/api/daily-review/compute",
             json={
                 "top_n": 7,
+                "include_candidates": False,
                 "universe": "usd_all",
                 "strategy": active_strategy,
                 "positions": [
@@ -109,6 +112,7 @@ def test_daily_review_compute_endpoint():
 
         assert stub_service.received is not None
         assert stub_service.received["top_n"] == 7
+        assert stub_service.received["include_candidates"] is False
         assert stub_service.received["universe"] == "usd_all"
         assert stub_service.received["strategy"]["id"] == active_strategy["id"]
         assert len(stub_service.received["positions"]) == 1
