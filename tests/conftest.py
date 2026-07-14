@@ -1,5 +1,11 @@
 """Pytest configuration and shared fixtures for all tests."""
 
+import os
+import sys
+
+os.environ.setdefault("APP_ENV", "test")
+os.environ.setdefault("AUTH_MODE", "disabled")
+
 import pytest
 
 
@@ -12,7 +18,10 @@ def reset_intelligence_analyzer_singleton():
     class) would be ineffective because _get_analyzer() returns the cached
     instance and never calls the patched constructor.
     """
-    import api.routers.intelligence as intel_router
-    intel_router._analyzer = None
+    intel_router = sys.modules.get("api.routers.intelligence")
+    if intel_router is not None:
+        intel_router._analyzer = None
     yield
-    intel_router._analyzer = None
+    intel_router = sys.modules.get("api.routers.intelligence")
+    if intel_router is not None:
+        intel_router._analyzer = None

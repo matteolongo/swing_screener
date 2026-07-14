@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 
@@ -15,7 +17,12 @@ def _isolate_review_queue(tmp_path_factory):
     dependency so each test session uses a throwaway file. The committed
     ``symbol_pool.json`` is read-only, so it needs no isolation.
     """
-    from api.main import app
+    main_module = sys.modules.get("api.main")
+    if main_module is None:
+        yield
+        return
+
+    app = main_module.app
     from api.dependencies import get_review_queue_repo
     from api.repositories.review_queue_repo import ReviewQueueRepository
 
