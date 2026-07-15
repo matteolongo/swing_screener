@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { closePosition, fillOrder, partialClosePosition } from '@/features/portfolio/api';
+import { closePosition, createOrder, fillOrder, partialClosePosition } from '@/features/portfolio/api';
 
 describe('portfolio api', () => {
   beforeEach(() => {
@@ -30,6 +30,23 @@ describe('portfolio api', () => {
         stopPrice: 20.33,
       }),
     ).rejects.toThrow('REP.MC: open position already exists.');
+  });
+
+  it('rejects an API entry order without an approval token before fetching', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      createOrder({
+        ticker: 'AAPL',
+        orderType: 'BUY_LIMIT',
+        quantity: 2,
+        limitPrice: 100,
+        stopPrice: 95,
+        targetPrice: 110,
+      }),
+    ).rejects.toThrow('approval token');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('serializes close FX rate for backend close requests', async () => {

@@ -9,6 +9,7 @@ import json
 import math
 import time
 import uuid
+from typing import Mapping
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -28,6 +29,7 @@ class ApprovalTokenClaims(BaseModel):
     data_status: str
     data_asof: str
     strategy_id: str
+    strategy_revision: str
     account_currency: str
     quote_currency: str
     account_to_quote_rate: float
@@ -62,6 +64,11 @@ def _canonical(value: dict) -> bytes:
     return json.dumps(
         value, sort_keys=True, separators=(",", ":"), ensure_ascii=True
     ).encode("utf-8")
+
+
+def strategy_revision(strategy: Mapping[str, object]) -> str:
+    """Return a stable revision that changes whenever strategy policy changes."""
+    return hashlib.sha256(_canonical(dict(strategy))).hexdigest()
 
 
 def _encode(value: bytes) -> str:

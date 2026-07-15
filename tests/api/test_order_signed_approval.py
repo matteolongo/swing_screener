@@ -6,6 +6,7 @@ from api.models.portfolio import CreateOrderRequest
 from api.services.order_approval_token import (
     ApprovalTokenClaims,
     OrderApprovalTokenSigner,
+    strategy_revision,
 )
 from api.services.orders_service import OrdersService
 from swing_screener.errors import UnprocessableError
@@ -36,6 +37,7 @@ class _Strategies:
     def get_active_strategy(self):
         return {
             "id": self.strategy_id,
+            "updated_at": "2026-07-15T10:00:00",
             "risk": {
                 "account_size": 10_000,
                 "risk_pct": 0.01,
@@ -54,6 +56,7 @@ SIGNER = OrderApprovalTokenSigner(b"k" * 32, ttl_seconds=100)
 
 
 def _token(**updates) -> str:
+    active_strategy = _Strategies().get_active_strategy()
     values = {
         "ticker": "AAPL",
         "order_type": "BUY_LIMIT",
@@ -63,6 +66,7 @@ def _token(**updates) -> str:
         "data_status": "current",
         "data_asof": "2026-07-15",
         "strategy_id": "momentum-v1",
+        "strategy_revision": strategy_revision(active_strategy),
         "account_currency": "EUR",
         "quote_currency": "EUR",
         "account_to_quote_rate": 1,
@@ -130,3 +134,26 @@ def test_ticker_mismatch_and_active_strategy_change_block_entry():
 def test_submitted_quantity_and_prices_are_recomputed_not_overwritten():
     with pytest.raises(UnprocessableError, match="trade_risk"):
         _service().create_order(_request(quantity=30))
+
+
+def test_entry_order_fails_closed_when_signer_is_not_configured():
+    service = OrdersService(_Orders(), _Positions(), strategy_repo=_Strategies())
+
+    with pytest.raises(UnprocessableError, match="signer"):
+        service.create_order(_request())
+
+
+def test_strategy_update_with_same_id_invalidates_token():
+    strategies = _Strategies()
+    original_get = strategies.get_active_strategy
+
+    def changed_strategy():
+        value = original_get()
+        value["updated_at"] = "2026-07-15T11:00:00"
+        value["risk"]["risk_pct"] = 0.005
+        return value
+
+    strategies.get_active_strategy = changed_strategy
+
+    with pytest.raises(UnprocessableError, match="strategy"):
+        _service(strategies).create_order(_request())

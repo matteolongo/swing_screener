@@ -55,6 +55,9 @@ def country_from_ticker(ticker: str) -> str:
         "ST": "SE",
         "CO": "DK",
         "OL": "NO",
+        "BR": "BE",
+        "LS": "PT",
+        "HE": "FI",
     }.get(suffix, "US")
 
 
@@ -100,6 +103,12 @@ def _line(
     account_currency: str,
 ) -> ExposureLine:
     ticker = str(row.get("ticker") or "").upper()
+    persisted_account = str(row.get("account_currency") or "").upper()
+    if persisted_account and persisted_account != account_currency.upper():
+        raise ExposureContextError(
+            "ACCOUNT_CURRENCY_MISMATCH: "
+            f"{ticker} was approved in {persisted_account}, not {account_currency.upper()}"
+        )
     quantity_field = "shares" if source == "position" else "quantity"
     entry_field = "entry_price" if source == "position" else "limit_price"
     quantity = _decimal(row.get(quantity_field), quantity_field)

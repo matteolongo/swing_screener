@@ -23,6 +23,7 @@ def _context(**updates) -> VerifiedApprovalToken:
         "data_status": "current",
         "data_asof": "2026-07-15",
         "strategy_id": "momentum-v1",
+        "strategy_revision": "revision-1",
         "account_currency": "EUR",
         "quote_currency": "EUR",
         "account_to_quote_rate": 1,

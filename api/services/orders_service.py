@@ -37,6 +37,7 @@ from api.services.order_approval_token import (
     ApprovalTokenError,
     OrderApprovalTokenSigner,
     VerifiedApprovalToken,
+    strategy_revision,
 )
 from api.services.order_exposure import (
     ExposureContextError,
@@ -137,7 +138,12 @@ class OrdersService:
             getter = getattr(self._strategy_repo, "get_active_strategy_id", None)
             if callable(getter):
                 active_strategy_id = str(getter())
-        if not active_strategy_id or context.strategy_id != active_strategy_id:
+        active_strategy_revision = strategy_revision(strategy)
+        if (
+            not active_strategy_id
+            or context.strategy_id != active_strategy_id
+            or context.strategy_revision != active_strategy_revision
+        ):
             raise UnprocessableError("Order blocked: approval token strategy is stale.")
 
         entry = Decimal(str(self._entry_price(request)))
@@ -394,13 +400,13 @@ class OrdersService:
                 raise ConflictError(
                     f"{ticker}: open position already exists. Create this as an ADD_ON order instead.",
                 )
-            if self._approval_signer is not None:
-                approval, verified_context = self._approve_signed_entry_order(
-                    request, orders, positions
+            if self._approval_signer is None:
+                raise UnprocessableError(
+                    "Order blocked: approval token signer is not configured."
                 )
-            else:
-                approval = self._approve_entry_order(request, orders, positions)
-                verified_context = None
+            approval, verified_context = self._approve_signed_entry_order(
+                request, orders, positions
+            )
         else:
             approval = None
             verified_context = None
@@ -529,6 +535,31 @@ class OrdersService:
                         old_shares = int(pos.get("shares", 0))
                         old_entry = float(pos.get("entry_price", 0.0))
                         new_shares = old_shares + add_shares
+                        position_quote = str(pos.get("quote_currency") or "").upper()
+                        position_account = str(
+                            pos.get("account_currency") or ""
+                        ).upper()
+                        order_quote = str(order.get("quote_currency") or "").upper()
+                        order_account = str(order.get("account_currency") or "").upper()
+                        if (
+                            not position_quote
+                            or not position_account
+                            or position_quote != order_quote
+                            or position_account != order_account
+                        ):
+                            raise UnprocessableError(
+                                "Add-on currency context does not match the open position."
+                            )
+                        old_rate = float(pos.get("entry_fx_rate") or 0.0)
+                        new_rate = float(
+                            request.fill_fx_rate or order.get("approval_fx_rate") or 0.0
+                        )
+                        if position_quote == position_account:
+                            old_rate = new_rate = 1.0
+                        if old_rate <= 0 or new_rate <= 0:
+                            raise UnprocessableError(
+                                "Add-on FX context must contain positive persisted rates."
+                            )
                         existing_stop = float(pos.get("stop_price", 0.0))
                         if existing_stop <= 0:
                             raise UnprocessableError(
@@ -546,6 +577,18 @@ class OrdersService:
                             )
                         pos["entry_price"] = round(new_entry, 6)
                         pos["shares"] = new_shares
+                        combined_quote_cost = (
+                            old_entry * old_shares + request.filled_price * add_shares
+                        )
+                        combined_account_cost = (
+                            old_entry * old_shares / old_rate
+                            + request.filled_price * add_shares / new_rate
+                        )
+                        pos["entry_fx_rate"] = (
+                            combined_quote_cost / combined_account_cost
+                        )
+                        pos["quote_currency"] = position_quote
+                        pos["account_currency"] = position_account
                         pos["initial_risk"] = round(
                             pos["entry_price"] - existing_stop, 4
                         )

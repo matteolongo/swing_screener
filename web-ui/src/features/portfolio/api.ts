@@ -217,6 +217,9 @@ export async function createOrder(request: CreateOrderRequest): Promise<void> {
     createOrderLocal(request);
     return;
   }
+  if ((request.orderKind ?? 'entry') === 'entry' && !request.approvalToken) {
+    throw new Error('Entry order approval token is required. Refresh the screener candidate and try again.');
+  }
   await fetchJson<void>(API_ENDPOINTS.orders, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

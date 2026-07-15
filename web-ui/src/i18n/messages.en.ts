@@ -369,6 +369,8 @@ export const messagesEn = {
       liquiditySlippageWarning: 'Order size is {{pct}}% of avg daily volume — expect slippage.',
       overrideConfirm: 'I understand this differs from guidance and want to continue.',
       overrideRequired: 'Please confirm the override before submitting this order.',
+      approvalTokenRequired: 'This candidate has no current server approval. Refresh the screener before submitting an entry order.',
+      approvalOrderTypeMismatch: 'The selected order type differs from the signed candidate approval. Use the suggested order type or refresh the screener.',
       buyStopHint: 'Buy Stop entries may appear as "Stop Loss" on the buy side in some brokers.',
       buyStopTerminologyTooltip: 'A Buy Stop entry can appear as "Stop Loss" under Buy orders in some brokers.',
       buyStopAboveMarketError: 'Buy Stop trigger must be above current price ({{currentPrice}}).',

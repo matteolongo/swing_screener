@@ -76,8 +76,13 @@ def evaluate_order_approval(
         "Signed decision or freshness permission does not pass.",
     )
 
+    finite_plan = all(
+        value.is_finite()
+        for value in (submitted.entry, submitted.stop, submitted.target)
+    )
     coherent = (
-        submitted.quantity > 0
+        finite_plan
+        and submitted.quantity > 0
         and submitted.stop > 0
         and submitted.stop < submitted.entry < submitted.target
     )

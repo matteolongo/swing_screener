@@ -32,6 +32,7 @@ from api.services.portfolio_service import PortfolioService
 from api.services.order_approval_token import (
     ApprovalTokenClaims,
     OrderApprovalTokenSigner,
+    strategy_revision,
 )
 from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
 from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
@@ -179,7 +180,7 @@ def _account_currency_from_strategy(strategy: dict) -> str:
 
 
 def _approval_claims_for_candidate(
-    candidate: object, strategy_id: str
+    candidate: object, strategy_id: str, strategy_revision_value: str
 ) -> ApprovalTokenClaims | None:
     recommendation = getattr(candidate, "recommendation", None)
     if (
@@ -243,6 +244,7 @@ def _approval_claims_for_candidate(
         data_status="current",
         data_asof=data_asof,
         strategy_id=strategy_id,
+        strategy_revision=strategy_revision_value,
         account_currency=account_currency,
         quote_currency=quote_currency,
         account_to_quote_rate=float(values[3]),
@@ -1454,9 +1456,12 @@ class ScreenerService:
                     or request.strategy_id
                     or self._strategy_repo.get_active_strategy_id()
                 )
+                active_strategy_revision = strategy_revision(ctx.strategy)
                 signed_candidates: list[ScreenerCandidate] = []
                 for candidate in candidates:
-                    claims = _approval_claims_for_candidate(candidate, strategy_id)
+                    claims = _approval_claims_for_candidate(
+                        candidate, strategy_id, active_strategy_revision
+                    )
                     token = self._approval_signer.issue(claims) if claims else None
                     signed_candidates.append(
                         candidate.model_copy(update={"approval_token": token})

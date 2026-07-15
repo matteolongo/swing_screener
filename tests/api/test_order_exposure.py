@@ -126,3 +126,30 @@ def test_missing_legacy_cross_currency_fx_fails_closed():
 
     with pytest.raises(ExposureContextError, match="FX_CONTEXT_MISSING"):
         build_exposure_snapshot(positions, [], proposed)
+
+
+def test_existing_exposure_with_different_account_currency_fails_closed():
+    proposed = ProposedExposure(
+        ticker="SAP.DE",
+        quantity=1,
+        entry=Decimal("100"),
+        stop=Decimal("95"),
+        account_currency="GBP",
+        quote_currency="EUR",
+        account_to_quote_rate=Decimal("1.16"),
+    )
+    positions = [
+        {
+            "ticker": "AAPL",
+            "status": "open",
+            "entry_price": 100,
+            "stop_price": 95,
+            "shares": 10,
+            "account_currency": "EUR",
+            "quote_currency": "USD",
+            "entry_fx_rate": 1.1,
+        }
+    ]
+
+    with pytest.raises(ExposureContextError, match="ACCOUNT_CURRENCY_MISMATCH"):
+        build_exposure_snapshot(positions, [], proposed)

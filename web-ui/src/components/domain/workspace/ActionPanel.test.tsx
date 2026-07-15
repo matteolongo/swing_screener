@@ -72,6 +72,7 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
           rank: 1,
           lastBar: '2026-03-02',
           dataStatus: 'current',
+          approvalToken: 'signed-candidate-token',
           daysToEarnings: 20,
           signal: 'breakout',
           entry: 100.5,
@@ -162,7 +163,7 @@ describe('ActionPanel', () => {
     expect(screen.getByText(/Breakout already occurred/i)).toBeInTheDocument();
   });
 
-  it('requires override confirmation before submitting a mismatch order type', async () => {
+  it('does not allow a signed candidate order type to be overridden in API mode', async () => {
     const user = userEvent.setup();
     setCandidate({
       suggestedOrderType: 'BUY_STOP',
@@ -177,7 +178,7 @@ describe('ActionPanel', () => {
     expect(submit).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox'));
-    expect(submit).toBeEnabled();
+    expect(submit).toBeDisabled();
   });
 
   it('does not require override confirmation when verdict is recommended but backend guidance is SKIP', () => {

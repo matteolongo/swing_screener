@@ -61,6 +61,8 @@ class Position(BaseModel):
         default=None,
         description="FX rate (EURUSD) at position entry — used for FX-adjusted R display",
     )
+    quote_currency: Optional[str] = None
+    account_currency: Optional[str] = None
     trail_method: TrailMethod = Field(
         default="sma20",
         description="Trail stop method: sma20 | atr | fixed_pct | manual",
@@ -255,6 +257,24 @@ class CreatePositionRequest(BaseModel):
     fee_eur: Optional[float] = Field(
         default=None, ge=0, description="Entry fee in EUR (optional)"
     )
+    quote_currency: Optional[str] = None
+    account_currency: Optional[str] = None
+    entry_fx_rate: Optional[float] = Field(default=None, gt=0)
+
+    @field_validator(
+        "entry_price", "stop_price", "target_price", "fee_eur", "entry_fx_rate"
+    )
+    @classmethod
+    def validate_finite_position_values(cls, value: Optional[float]) -> Optional[float]:
+        if value is not None and not math.isfinite(value):
+            raise ValueError("position financial values must be finite")
+        return value
+
+    @field_validator("quote_currency", "account_currency")
+    @classmethod
+    def normalize_position_currency(cls, value: Optional[str]) -> Optional[str]:
+        normalized = str(value or "").strip().upper()
+        return normalized or None
 
     @field_validator("ticker")
     @classmethod
@@ -289,7 +309,7 @@ class CreateOrderRequest(BaseModel):
         default=None, gt=0, description="Planned price target (optional)"
     )
     notes: str = ""
-    order_kind: str = "entry"
+    order_kind: Literal["entry", "stop", "take_profit"] = "entry"
     position_id: Optional[str] = None
     entry_mode: str = "NEW_ENTRY"
     isin: Optional[str] = None
@@ -323,8 +343,29 @@ class CreateOrderRequest(BaseModel):
     def validate_order_type(cls, v: str) -> str:
         return v.strip().upper()
 
+    @field_validator(
+        "limit_price",
+        "stop_price",
+        "target_price",
+        "account_to_quote_rate",
+    )
+    @classmethod
+    def validate_finite_order_values(cls, value: Optional[float]) -> Optional[float]:
+        if value is not None and not math.isfinite(value):
+            raise ValueError("order financial values must be finite")
+        return value
+
     @model_validator(mode="after")
     def validate_stop_below_limit(self):
+        valid_types = {
+            "entry": {"BUY_LIMIT", "BUY_STOP", "BUY_MARKET"},
+            "stop": {"SELL_STOP"},
+            "take_profit": {"SELL_LIMIT", "SELL_MARKET"},
+        }
+        if self.order_type not in valid_types[self.order_kind]:
+            raise ValueError(
+                f"order_kind {self.order_kind!r} is incompatible with order_type {self.order_type!r}"
+            )
         # Long entry orders require stop below the limit entry. A protective SELL
         # stop-limit legitimately has stop_price >= limit_price, so skip sells.
         is_sell = self.order_type.upper().startswith("SELL")

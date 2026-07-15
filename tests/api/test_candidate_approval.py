@@ -37,11 +37,12 @@ def _candidate(**updates):
 
 
 def test_actionable_candidate_produces_complete_signed_claims():
-    claims = _approval_claims_for_candidate(_candidate(), "momentum-v1")
+    claims = _approval_claims_for_candidate(_candidate(), "momentum-v1", "revision-1")
 
     assert claims is not None
     assert claims.ticker == "AAPL"
     assert claims.strategy_id == "momentum-v1"
+    assert claims.strategy_revision == "revision-1"
     assert claims.account_to_quote_rate == 1.1
     assert claims.target_source == "structural"
 
@@ -56,14 +57,18 @@ def test_actionable_candidate_produces_complete_signed_claims():
     ],
 )
 def test_incomplete_candidate_receives_no_claims(candidate):
-    assert _approval_claims_for_candidate(candidate, "momentum-v1") is None
+    assert (
+        _approval_claims_for_candidate(candidate, "momentum-v1", "revision-1") is None
+    )
 
 
 def test_nonpassing_decision_gate_receives_no_claims():
     candidate = _candidate()
     candidate.recommendation.decision_gates.trigger.status = "WAIT"
 
-    assert _approval_claims_for_candidate(candidate, "momentum-v1") is None
+    assert (
+        _approval_claims_for_candidate(candidate, "momentum-v1", "revision-1") is None
+    )
 
 
 def test_same_currency_candidate_uses_identity_without_provider_fx():
@@ -71,7 +76,7 @@ def test_same_currency_candidate_uses_identity_without_provider_fx():
     candidate.recommendation.risk.currency = "EUR"
     candidate.recommendation.risk.account_to_quote_rate = None
 
-    claims = _approval_claims_for_candidate(candidate, "momentum-v1")
+    claims = _approval_claims_for_candidate(candidate, "momentum-v1", "revision-1")
 
     assert claims is not None
     assert claims.account_to_quote_rate == 1
