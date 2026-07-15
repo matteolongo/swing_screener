@@ -69,13 +69,23 @@ class FixedWindowRateLimiter:
             return RateLimitDecision(True, 0, max(0, limit - window.count))
 
 
-def rate_policy(path: str, method: str, settings: AuthSettings) -> int:
+def rate_policy_name(path: str, method: str) -> str:
     if path == "/api/intelligence/sweep":
-        return settings.rate_limit_sweep_per_minute
-    if path.startswith(
+        return "sweep"
+    if method.upper() not in {"GET", "HEAD", "OPTIONS"} and path.startswith(
         ("/api/screener", "/api/backtest", "/api/intelligence")
     ):
-        return settings.rate_limit_expensive_per_minute
+        return "expensive"
     if method.upper() not in {"GET", "HEAD", "OPTIONS"}:
-        return settings.rate_limit_mutation_per_minute
-    return settings.rate_limit_default_per_minute
+        return "mutation"
+    return "default"
+
+
+def rate_policy(path: str, method: str, settings: AuthSettings) -> int:
+    name = rate_policy_name(path, method)
+    return {
+        "sweep": settings.rate_limit_sweep_per_minute,
+        "expensive": settings.rate_limit_expensive_per_minute,
+        "mutation": settings.rate_limit_mutation_per_minute,
+        "default": settings.rate_limit_default_per_minute,
+    }[name]

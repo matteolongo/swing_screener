@@ -90,7 +90,11 @@ class AuthSettings:
         )
         auth_default = "oidc" if app_env == "production" else "disabled"
         auth_mode = _enum(env, "AUTH_MODE", auth_default, {"disabled", "oidc"})
-        default_secret = "development-only-session-secret-change-me"
+        default_secret = (
+            "development-only-session-secret-change-me"
+            if auth_mode == "disabled"
+            else ""
+        )
         return cls(
             app_env=app_env,  # type: ignore[arg-type]
             auth_mode=auth_mode,  # type: ignore[arg-type]

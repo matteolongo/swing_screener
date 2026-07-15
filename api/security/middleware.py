@@ -8,7 +8,11 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from api.security.context import principal_from_session
-from api.security.rate_limit import FixedWindowRateLimiter, rate_policy
+from api.security.rate_limit import (
+    FixedWindowRateLimiter,
+    rate_policy,
+    rate_policy_name,
+)
 from api.security.settings import AuthSettings
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -21,6 +25,8 @@ def is_public_path(path: str) -> bool:
 
 
 def is_protected_path(path: str) -> bool:
+    if path == "/api/auth/logout":
+        return True
     return (
         path == "/api"
         or path.startswith("/api/")
@@ -57,7 +63,8 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
         request.state.principal = principal
 
         if request.method not in SAFE_METHODS:
-            if principal.role != "admin":
+            is_logout = path == "/api/auth/logout"
+            if not is_logout and principal.role != "admin":
                 return _error(
                     403,
                     "Administrator access is required.",
@@ -111,8 +118,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             or request.url.path.startswith("/assets/")
         ):
             return await call_next(request)
+        policy_name = rate_policy_name(request.url.path, request.method)
         limit = rate_policy(request.url.path, request.method, self._settings)
-        decision = self._limiter.check(self._key(request), limit)
+        key = f"{self._key(request)}:policy:{policy_name}"
+        decision = self._limiter.check(key, limit)
         if not decision.allowed:
             response = _error(
                 429,

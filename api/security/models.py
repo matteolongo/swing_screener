@@ -28,3 +28,5 @@ class AuthSessionResponse(BaseModel):
     user: AuthUserResponse | None = None
     role: Role | None = None
     csrf_token: str | None = None
+    issued_at: int | None = None
+    expires_at: int | None = None

@@ -11,4 +11,6 @@ export interface AuthSessionResponse {
   user?: AuthUser;
   role?: AuthRole;
   csrf_token?: string | null;
+  issued_at?: number | null;
+  expires_at?: number | null;
 }

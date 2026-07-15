@@ -72,6 +72,23 @@ def test_production_requires_long_session_secret_after_oidc_fields():
         settings.validate_runtime()
 
 
+def test_oidc_mode_never_uses_the_development_fallback_secret():
+    settings = AuthSettings.from_env(
+        {
+            "APP_ENV": "development",
+            "AUTH_MODE": "oidc",
+            "OIDC_DISCOVERY_URL": "https://id.example.test/.well-known/openid-configuration",
+            "OIDC_CLIENT_ID": "client",
+            "OIDC_CLIENT_SECRET": "provider-secret",
+            "OIDC_REDIRECT_URI": "http://localhost:8000/api/auth/callback",
+        }
+    )
+
+    assert settings.session_secret == ""
+    with pytest.raises(SecurityConfigurationError, match="SESSION_SECRET"):
+        settings.validate_runtime()
+
+
 def test_production_rejects_insecure_session_cookie():
     settings = AuthSettings.from_env(
         {

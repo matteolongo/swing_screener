@@ -109,6 +109,8 @@ async def session(request: Request) -> AuthSessionResponse | JSONResponse:
     if principal is None:
         return JSONResponse({"authenticated": False})
     csrf = request.session.get("csrf_token") if settings.auth_mode == "oidc" else None
+    issued_at = request.session.get("issued_at")
+    expires_at = request.session.get("expires_at")
     return AuthSessionResponse(
         authenticated=True,
         user=AuthUserResponse(
@@ -118,6 +120,8 @@ async def session(request: Request) -> AuthSessionResponse | JSONResponse:
         ),
         role=principal.role,
         csrf_token=csrf if isinstance(csrf, str) else None,
+        issued_at=issued_at if isinstance(issued_at, int) else None,
+        expires_at=expires_at if isinstance(expires_at, int) else None,
     )
 
 

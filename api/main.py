@@ -173,23 +173,6 @@ if isinstance(_raw_allow_origins, list):
 else:
     _allow_origins = _DEFAULT_ALLOW_ORIGINS
 
-# CORS middleware - allow web UI to connect
-# Security: Use explicit allowed methods and headers instead of wildcards
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_allow_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit instead of ["*"]
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "Accept",
-        "Origin",
-        "User-Agent",
-        "X-Requested-With",
-        "X-CSRF-Token",
-    ],  # Explicit instead of ["*"]
-)
 app.add_middleware(RateLimitMiddleware, settings=AUTH_SETTINGS)
 app.add_middleware(SecurityBoundaryMiddleware, settings=AUTH_SETTINGS)
 app.add_middleware(
@@ -199,6 +182,22 @@ app.add_middleware(
     max_age=AUTH_SETTINGS.session_ttl_seconds,
     same_site="lax",
     https_only=AUTH_SETTINGS.session_cookie_secure,
+)
+# Register CORS last so browser-visible headers cover security/rate-limit errors.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allow_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "X-Requested-With",
+        "X-CSRF-Token",
+    ],
 )
 
 

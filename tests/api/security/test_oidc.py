@@ -228,6 +228,7 @@ def test_callback_establishes_minimal_application_session():
     }
     assert session.json()["role"] == "viewer"
     assert len(session.json()["csrf_token"]) >= 32
+    assert session.json()["expires_at"] > session.json()["issued_at"]
     assert "access_token" not in session.text
 
 
@@ -296,4 +297,6 @@ def test_disabled_mode_session_bootstraps_local_admin():
         },
         "role": "admin",
         "csrf_token": None,
+        "issued_at": None,
+        "expires_at": None,
     }

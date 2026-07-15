@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from api.security.middleware import SecurityBoundaryMiddleware
@@ -54,6 +55,10 @@ def _client() -> TestClient:
     async def auth_session():
         return {"authenticated": False}
 
+    @app.post("/api/auth/logout", status_code=204)
+    async def logout(request: Request):
+        request.session.clear()
+
     @app.get("/api/auth/test-login/{role}")
     async def test_login(request: Request, role: str):
         request.session.clear()
@@ -76,6 +81,13 @@ def _client() -> TestClient:
         secret_key=settings.session_secret,
         https_only=False,
         same_site="lax",
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
     install_security_openapi(app, cookie_name="swing_session")
     return TestClient(app)
@@ -133,6 +145,29 @@ def test_admin_mutation_requires_matching_csrf():
     assert missing.json()["code"] == "CSRF_INVALID"
     assert invalid.status_code == 403
     assert valid.status_code == 200
+
+
+def test_logout_requires_session_csrf_but_not_admin_role():
+    client = _client()
+    csrf = _login(client, "viewer")
+
+    missing = client.post("/api/auth/logout")
+    valid = client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    assert missing.status_code == 403
+    assert missing.json()["code"] == "CSRF_INVALID"
+    assert valid.status_code == 204
+
+
+def test_security_errors_include_cors_headers():
+    client = _client()
+
+    response = client.get(
+        "/api/data", headers={"Origin": "http://localhost:5173"}
+    )
+
+    assert response.status_code == 401
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
 def test_expired_session_is_denied_and_cookie_is_cleared():

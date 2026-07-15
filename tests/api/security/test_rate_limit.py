@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from starlette.middleware.sessions import SessionMiddleware
 
 from api.security.middleware import RateLimitMiddleware, SecurityBoundaryMiddleware
-from api.security.rate_limit import FixedWindowRateLimiter, rate_policy
+from api.security.rate_limit import FixedWindowRateLimiter, rate_policy, rate_policy_name
 from api.security.settings import AuthSettings
 
 
@@ -75,6 +75,9 @@ def test_route_policy_uses_most_specific_limit():
     assert rate_policy("/api/screener/run", "POST", settings) == 5
     assert rate_policy("/api/config", "PUT", settings) == 60
     assert rate_policy("/api/config", "GET", settings) == 120
+    assert rate_policy("/api/screener/run/job-1", "GET", settings) == 120
+    assert rate_policy_name("/api/intelligence/sweep", "POST") == "sweep"
+    assert rate_policy_name("/api/config", "GET") == "default"
 
 
 def _client(*, trust_proxy: bool = False) -> TestClient:
