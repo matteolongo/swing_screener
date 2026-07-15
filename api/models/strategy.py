@@ -1,4 +1,5 @@
 """Strategy models."""
+
 from __future__ import annotations
 
 from typing import Optional, Literal
@@ -69,6 +70,7 @@ class StrategyRisk(BaseModel):
     rr_target: float = Field(gt=0, default=2.0)
     commission_pct: float = Field(ge=0, default=0.0)
     max_fee_risk_pct: float = Field(ge=0, le=1, default=0.2)
+    max_portfolio_heat_pct: float = Field(gt=0, le=1, default=0.06)
     account_size_mode: Literal["base", "equity"] = "equity"
     regime_enabled: bool = False
     regime_trend_sma: int = Field(gt=1, default=200)
@@ -120,9 +122,14 @@ class StrategyIntelligenceOpportunity(BaseModel):
 class StrategyMarketIntelligence(BaseModel):
     enabled: bool = False
     llm: StrategyIntelligenceLLM = Field(default_factory=StrategyIntelligenceLLM)
-    catalyst: StrategyIntelligenceCatalyst = Field(default_factory=StrategyIntelligenceCatalyst)
+    catalyst: StrategyIntelligenceCatalyst = Field(
+        default_factory=StrategyIntelligenceCatalyst
+    )
     theme: StrategyIntelligenceTheme = Field(default_factory=StrategyIntelligenceTheme)
-    opportunity: StrategyIntelligenceOpportunity = Field(default_factory=StrategyIntelligenceOpportunity)
+    opportunity: StrategyIntelligenceOpportunity = Field(
+        default_factory=StrategyIntelligenceOpportunity
+    )
+
 
 class StrategyBase(BaseModel):
     name: str
@@ -133,7 +140,9 @@ class StrategyBase(BaseModel):
     signals: StrategySignals
     risk: StrategyRisk
     manage: StrategyManage
-    market_intelligence: StrategyMarketIntelligence = Field(default_factory=StrategyMarketIntelligence)
+    market_intelligence: StrategyMarketIntelligence = Field(
+        default_factory=StrategyMarketIntelligence
+    )
 
 
 class StrategyCreateRequest(StrategyBase):
@@ -159,14 +168,18 @@ class ValidationWarningModel(BaseModel):
     """Validation warning for a strategy parameter."""
 
     parameter: str = Field(..., description="Parameter name that triggered warning")
-    level: Literal["danger", "warning", "info"] = Field(..., description="Warning severity")
+    level: Literal["danger", "warning", "info"] = Field(
+        ..., description="Warning severity"
+    )
     message: str = Field(..., description="Human-readable warning message")
 
 
 class StrategyValidationResult(BaseModel):
     """Result payload for strategy validation."""
 
-    is_valid: bool = Field(..., description="True if no danger-level warnings are present")
+    is_valid: bool = Field(
+        ..., description="True if no danger-level warnings are present"
+    )
     warnings: list[ValidationWarningModel] = Field(default_factory=list)
     safety_score: int = Field(..., ge=0, le=100)
     safety_level: Literal["beginner-safe", "requires-discipline", "expert-only"]

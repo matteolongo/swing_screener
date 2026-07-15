@@ -1,4 +1,5 @@
 """Portfolio models (positions and orders)."""
+
 from __future__ import annotations
 
 import math
@@ -112,11 +113,18 @@ class UpdateTrailMethodRequest(BaseModel):
 
 class PartialCloseEvent(BaseModel):
     """A single partial-close event stored on the position."""
+
     date: str = Field(..., description="Date of partial close (YYYY-MM-DD)")
-    shares_closed: int = Field(..., gt=0, description="Number of shares closed in this leg")
+    shares_closed: int = Field(
+        ..., gt=0, description="Number of shares closed in this leg"
+    )
     price: float = Field(..., gt=0, description="Exit price for this leg")
-    r_at_close: float = Field(..., description="R-multiple at the time of this partial close")
-    fee_eur: Optional[float] = Field(default=None, ge=0, description="Fee for this leg in EUR")
+    r_at_close: float = Field(
+        ..., description="R-multiple at the time of this partial close"
+    )
+    fee_eur: Optional[float] = Field(
+        default=None, ge=0, description="Fee for this leg in EUR"
+    )
     fx_rate: Optional[float] = Field(
         default=None,
         gt=0,
@@ -135,9 +143,12 @@ class PartialCloseEvent(BaseModel):
 
 class PartialCloseRequest(BaseModel):
     """Request to partially close an open position."""
+
     shares_closed: int = Field(..., gt=0, description="Number of shares to close")
     price: float = Field(..., gt=0, description="Exit price for this leg")
-    fee_eur: Optional[float] = Field(default=None, ge=0, description="Fee in EUR (optional)")
+    fee_eur: Optional[float] = Field(
+        default=None, ge=0, description="Fee in EUR (optional)"
+    )
     fx_rate: Optional[float] = Field(
         default=None,
         gt=0,
@@ -167,8 +178,12 @@ class ClosePositionRequest(BaseModel):
         description="EURUSD rate at exit execution (optional)",
     )
     reason: str = Field(default="", description="Reason for closing")
-    lesson: Optional[str] = Field(default=None, description="Lesson / reflection (optional)")
-    tags: list[str] = Field(default_factory=list, description="Structured tags for this trade")
+    lesson: Optional[str] = Field(
+        default=None, description="Lesson / reflection (optional)"
+    )
+    tags: list[str] = Field(
+        default_factory=list, description="Structured tags for this trade"
+    )
 
     @field_validator("exit_price")
     @classmethod
@@ -231,11 +246,15 @@ class CreatePositionRequest(BaseModel):
     stop_price: float = Field(gt=0, description="Initial stop-loss price")
     shares: int = Field(gt=0, description="Number of shares")
     entry_date: str = Field(description="Entry date (YYYY-MM-DD)")
-    target_price: Optional[float] = Field(default=None, gt=0, description="Planned price target (optional)")
+    target_price: Optional[float] = Field(
+        default=None, gt=0, description="Planned price target (optional)"
+    )
     thesis: Optional[str] = None
     isin: Optional[str] = None
     notes: str = ""
-    fee_eur: Optional[float] = Field(default=None, ge=0, description="Entry fee in EUR (optional)")
+    fee_eur: Optional[float] = Field(
+        default=None, ge=0, description="Entry fee in EUR (optional)"
+    )
 
     @field_validator("ticker")
     @classmethod
@@ -246,7 +265,9 @@ class CreatePositionRequest(BaseModel):
         if len(v) > 10:
             raise ValueError("Ticker must be 10 characters or less")
         if not re.fullmatch(r"[A-Z0-9][A-Z0-9.-]*", v):
-            raise ValueError("Ticker must contain only letters, numbers, dots, or hyphens")
+            raise ValueError(
+                "Ticker must contain only letters, numbers, dots, or hyphens"
+            )
         return v
 
     @model_validator(mode="after")
@@ -264,7 +285,9 @@ class CreateOrderRequest(BaseModel):
     quantity: int = Field(gt=0, description="Number of shares")
     limit_price: Optional[float] = Field(default=None, ge=0)
     stop_price: Optional[float] = Field(default=None, gt=0)
-    target_price: Optional[float] = Field(default=None, gt=0, description="Planned price target (optional)")
+    target_price: Optional[float] = Field(
+        default=None, gt=0, description="Planned price target (optional)"
+    )
     notes: str = ""
     order_kind: str = "entry"
     position_id: Optional[str] = None
@@ -275,12 +298,15 @@ class CreateOrderRequest(BaseModel):
     trigger_status: Literal["PASS", "WAIT", "BLOCK", "UNKNOWN"] = "UNKNOWN"
     data_status: Literal["current", "stale", "intraday", "unknown"] = "unknown"
     data_asof: Optional[str] = None
-    target_source: Literal["structural", "manual", "unknown", "unvalidated_r_multiple"] = "unknown"
+    target_source: Literal[
+        "structural", "manual", "unknown", "unvalidated_r_multiple"
+    ] = "unknown"
     sector: Optional[str] = None
     currency: Optional[str] = None
     account_to_quote_rate: Optional[float] = Field(default=None, gt=0)
     days_to_earnings: Optional[int] = None
     strategy_id: Optional[str] = None
+    approval_token: Optional[str] = None
 
     @field_validator("ticker")
     @classmethod
@@ -308,12 +334,14 @@ class CreateOrderRequest(BaseModel):
             and self.limit_price is not None
             and self.stop_price >= self.limit_price
         ):
-            raise ValueError("stop_price must be below limit_price for a long entry order")
+            raise ValueError(
+                "stop_price must be below limit_price for a long entry order"
+            )
         return self
 
 
 class PortfolioApprovalGate(BaseModel):
-    status: Literal["PASS", "BLOCK"]
+    status: Literal["PASS", "WARN", "BLOCK"]
     explanation: str
     current: Optional[float] = None
     projected: Optional[float] = None
@@ -322,21 +350,43 @@ class PortfolioApprovalGate(BaseModel):
 
 class PortfolioOrderApproval(BaseModel):
     approved: bool
+    decision: Optional[PortfolioApprovalGate] = None
+    coherence: Optional[PortfolioApprovalGate] = None
+    reward_risk: Optional[PortfolioApprovalGate] = None
+    trade_risk: Optional[PortfolioApprovalGate] = None
+    position: Optional[PortfolioApprovalGate] = None
     cash: PortfolioApprovalGate
     heat: PortfolioApprovalGate
+    fees: Optional[PortfolioApprovalGate] = None
+    fx: Optional[PortfolioApprovalGate] = None
     concentration: PortfolioApprovalGate
     event: PortfolioApprovalGate
     projected_risk: float
     projected_notional: float
+    estimated_fees: float = 0.0
+    current_exposure: dict[str, float] = Field(default_factory=dict)
+    projected_exposure: dict[str, float] = Field(default_factory=dict)
+    policy_version: str = "order-risk-v1"
+    policy_values: dict[str, float | str] = Field(default_factory=dict)
+    token_id: Optional[str] = None
+    plan_fingerprint: Optional[str] = None
+    verified_context: dict = Field(default_factory=dict)
 
 
 class FillOrderRequest(BaseModel):
     """Request to manually mark a pending order as filled."""
+
     filled_price: float = Field(gt=0, description="Actual fill price")
     filled_date: str = Field(description="Fill date (YYYY-MM-DD)")
-    stop_price: Optional[float] = Field(default=None, gt=0, description="Override stop price from order")
-    fee_eur: Optional[float] = Field(default=None, ge=0, description="Execution fee in EUR")
-    fill_fx_rate: Optional[float] = Field(default=None, gt=0, description="FX rate at fill")
+    stop_price: Optional[float] = Field(
+        default=None, gt=0, description="Override stop price from order"
+    )
+    fee_eur: Optional[float] = Field(
+        default=None, ge=0, description="Execution fee in EUR"
+    )
+    fill_fx_rate: Optional[float] = Field(
+        default=None, gt=0, description="FX rate at fill"
+    )
 
     @field_validator("filled_price")
     @classmethod
@@ -349,6 +399,7 @@ class FillOrderRequest(BaseModel):
     @classmethod
     def validate_filled_date(cls, v: str) -> str:
         import re
+
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
             raise ValueError("filled_date must be in YYYY-MM-DD format")
         return v
@@ -361,9 +412,15 @@ class FillOrderResponse(BaseModel):
 
 class EarningsProximityResponse(BaseModel):
     ticker: str
-    next_earnings_date: Optional[str] = Field(default=None, description="Next earnings date as YYYY-MM-DD")
-    days_until: Optional[int] = Field(default=None, description="Calendar days until next earnings")
-    warning: bool = Field(default=False, description="True when earnings are within the warning window")
+    next_earnings_date: Optional[str] = Field(
+        default=None, description="Next earnings date as YYYY-MM-DD"
+    )
+    days_until: Optional[int] = Field(
+        default=None, description="Calendar days until next earnings"
+    )
+    warning: bool = Field(
+        default=False, description="True when earnings are within the warning window"
+    )
 
 
 class RegimeStats(BaseModel):
@@ -383,8 +440,12 @@ class ConcentrationGroup(BaseModel):
     country: str = Field(..., description="Derived country or market group")
     risk_amount: float = Field(..., description="Open risk amount in this group")
     risk_pct: float = Field(..., description="Share of total open risk as a percentage")
-    position_count: int = Field(..., description="Number of open positions in this group")
-    warning: bool = Field(..., description="True when concentration exceeds configured threshold")
+    position_count: int = Field(
+        ..., description="Number of open positions in this group"
+    )
+    warning: bool = Field(
+        ..., description="True when concentration exceeds configured threshold"
+    )
 
 
 class PositionsResponse(BaseModel):
@@ -396,13 +457,21 @@ class PositionWithMetrics(Position):
     """Position with precomputed financial metrics."""
 
     pnl: float = Field(..., description="Absolute profit/loss in dollars")
-    fees_eur: float = Field(default=0.0, description="Accumulated execution fees in EUR")
+    fees_eur: float = Field(
+        default=0.0, description="Accumulated execution fees in EUR"
+    )
     pnl_percent: float = Field(..., description="P&L as percentage")
     r_now: float = Field(..., description="Current R-multiple")
-    entry_value: float = Field(..., description="Total entry value (shares × entry_price)")
-    current_value: float = Field(..., description="Current market value (shares × current_price)")
+    entry_value: float = Field(
+        ..., description="Total entry value (shares × entry_price)"
+    )
+    current_value: float = Field(
+        ..., description="Current market value (shares × current_price)"
+    )
     per_share_risk: float = Field(..., description="Risk per share in dollars")
-    total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+    total_risk: float = Field(
+        ..., description="Total position risk (per_share_risk × shares)"
+    )
     days_open: int = Field(default=0, description="Calendar days since entry date")
     time_stop_warning: bool = Field(
         default=False,
@@ -432,13 +501,21 @@ class PositionMetrics(BaseModel):
 
     ticker: str = Field(..., description="Stock ticker symbol")
     pnl: float = Field(..., description="Absolute profit/loss in dollars")
-    fees_eur: float = Field(default=0.0, description="Accumulated execution fees in EUR")
+    fees_eur: float = Field(
+        default=0.0, description="Accumulated execution fees in EUR"
+    )
     pnl_percent: float = Field(..., description="P&L as percentage")
     r_now: float = Field(..., description="Current R-multiple")
-    entry_value: float = Field(..., description="Total entry value (shares × entry_price)")
-    current_value: float = Field(..., description="Current market value (shares × current_price)")
+    entry_value: float = Field(
+        ..., description="Total entry value (shares × entry_price)"
+    )
+    current_value: float = Field(
+        ..., description="Current market value (shares × current_price)"
+    )
     per_share_risk: float = Field(..., description="Risk per share in dollars")
-    total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+    total_risk: float = Field(
+        ..., description="Total position risk (per_share_risk × shares)"
+    )
     partial_closes: list[PartialCloseEvent] = Field(
         default_factory=list,
         description="Partial-close events recorded on this position",
@@ -465,16 +542,30 @@ class PortfolioSummary(BaseModel):
     """Portfolio-level aggregations."""
 
     total_positions: int = Field(..., description="Number of open positions")
-    total_value: float = Field(..., description="Total market value of all open positions")
-    total_cost_basis: float = Field(..., description="Total entry value of all open positions")
-    total_pnl: float = Field(..., description="Total unrealized P&L across open positions")
-    total_fees_eur: float = Field(default=0.0, description="Total execution fees across open positions (EUR)")
-    total_pnl_percent: float = Field(..., description="Portfolio unrealized P&L percentage")
+    total_value: float = Field(
+        ..., description="Total market value of all open positions"
+    )
+    total_cost_basis: float = Field(
+        ..., description="Total entry value of all open positions"
+    )
+    total_pnl: float = Field(
+        ..., description="Total unrealized P&L across open positions"
+    )
+    total_fees_eur: float = Field(
+        default=0.0, description="Total execution fees across open positions (EUR)"
+    )
+    total_pnl_percent: float = Field(
+        ..., description="Portfolio unrealized P&L percentage"
+    )
     open_risk: float = Field(..., description="Total open risk (sum of position risks)")
     open_risk_percent: float = Field(..., description="Open risk as % of account size")
     account_size: float = Field(..., description="Account size from strategy config")
-    available_capital: float = Field(..., description="Account size minus total position value")
-    largest_position_value: float = Field(..., description="Value of largest single position")
+    available_capital: float = Field(
+        ..., description="Account size minus total position value"
+    )
+    largest_position_value: float = Field(
+        ..., description="Value of largest single position"
+    )
     largest_position_ticker: str = Field(..., description="Ticker of largest position")
     best_performer_ticker: str = Field(..., description="Ticker with highest P&L %")
     best_performer_pnl_pct: float = Field(..., description="Best P&L percentage")
@@ -485,7 +576,9 @@ class PortfolioSummary(BaseModel):
     positions_losing: int = Field(..., description="Number of positions at loss")
     win_rate: float = Field(..., description="Percentage of positions profitable")
     concentration: list[ConcentrationGroup] = Field(default_factory=list)
-    realized_pnl: float = Field(default=0.0, description="Total realized P&L from closed positions")
+    realized_pnl: float = Field(
+        default=0.0, description="Total realized P&L from closed positions"
+    )
     effective_account_size: float = Field(
         default=0.0,
         description="Account size adjusted for realized P&L when mode=equity",

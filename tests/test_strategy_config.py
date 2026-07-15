@@ -18,3 +18,9 @@ def test_build_risk_config_ignores_account_size_mode() -> None:
     assert cfg.account_size == 1000.0
     assert cfg.risk_pct == 0.015
     assert not hasattr(cfg, "account_size_mode")
+
+
+def test_build_risk_config_exposes_explicit_portfolio_heat_limit() -> None:
+    cfg = build_risk_config({"risk": {"max_portfolio_heat_pct": 0.045}})
+
+    assert cfg.max_portfolio_heat_pct == 0.045
