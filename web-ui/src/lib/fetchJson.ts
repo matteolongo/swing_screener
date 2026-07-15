@@ -1,4 +1,4 @@
-import { apiUrl } from './api';
+import { apiFetch } from './apiFetch';
 
 export interface FetchJsonInit extends RequestInit {
   /** Fallback error message when the response has no `detail` field. */
@@ -13,7 +13,7 @@ export interface FetchJsonInit extends RequestInit {
  */
 export async function fetchJson<T>(endpoint: string, init: FetchJsonInit = {}): Promise<T> {
   const { errorMessage, ...requestInit } = init;
-  const response = await fetch(apiUrl(endpoint), requestInit);
+  const response = await apiFetch(endpoint, requestInit);
 
   if (!response.ok) {
     let detail: string | undefined;

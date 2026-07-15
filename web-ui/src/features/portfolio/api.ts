@@ -1,4 +1,5 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { apiFetch } from '@/lib/apiFetch';
 import { fetchJson } from '@/lib/fetchJson';
 import type { OrderApiResponse } from '@/types/order';
 import type { PositionUpdateApiResponse } from '@/types/position';
@@ -358,7 +359,7 @@ export async function fetchEarningsProximity(ticker: string): Promise<EarningsPr
     return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.earningsProximity(normalizedTicker)));
+  const response = await apiFetch(API_ENDPOINTS.earningsProximity(normalizedTicker));
   if (!response.ok) {
     return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
   }

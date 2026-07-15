@@ -12,11 +12,14 @@ import {
   useStrategiesQuery,
 } from '@/features/strategy/hooks';
 import { cn } from '@/utils/cn';
+import { LogOut } from 'lucide-react';
+import { useAuth } from '@/features/auth/AuthProvider';
 
 export default function Header() {
   const now = new Date();
   const { locale, t } = useI18n();
   const [reviewOpen, setReviewOpen] = useState(false);
+  const { user, role, logout } = useAuth();
   const reviewQueueQuery = useReviewQueue();
   const reviewCount = reviewQueueQuery.data?.length ?? 0;
 
@@ -90,6 +93,19 @@ export default function Header() {
         <div className="flex items-center gap-1.5 text-[12px] text-muted">
           <span>{dateStr}</span>
           <span className="font-mono">{timeStr}</span>
+        </div>
+        <div className="flex items-center gap-2 border-l border-border pl-3 text-[12px] text-muted">
+          <span className="max-w-36 truncate">{user?.display_name || user?.email || user?.subject}</span>
+          <Badge variant={role === 'admin' ? 'success' : 'default'}>{role}</Badge>
+          <button
+            type="button"
+            title="Sign out"
+            aria-label="Sign out"
+            onClick={() => { void logout(); }}
+            className="grid h-7 w-7 place-items-center rounded text-muted hover:bg-surface-hover hover:text-foreground"
+          >
+            <LogOut size={15} aria-hidden="true" />
+          </button>
         </div>
       </div>
     </header>

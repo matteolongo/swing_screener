@@ -1,4 +1,5 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { apiFetch } from '@/lib/apiFetch';
 import { fetchJson } from '@/lib/fetchJson';
 import { toTaxonomyFilterPayload } from '@/features/pool/types';
 import {
@@ -37,7 +38,7 @@ export function toScreenerRequestPayload(request: ScreenerRequest): Record<strin
 export async function runScreener(request: ScreenerRequest): Promise<ScreenerResponse> {
   const apiRequest = toScreenerRequestPayload(request);
 
-  const res = await fetch(apiUrl(API_ENDPOINTS.screenerRun), {
+  const res = await apiFetch(API_ENDPOINTS.screenerRun, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(apiRequest),

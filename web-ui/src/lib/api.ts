@@ -3,6 +3,11 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const API_ENDPOINTS = {
+  // Authentication
+  authLogin: '/api/auth/login',
+  authSession: '/api/auth/session',
+  authLogout: '/api/auth/logout',
+
   // Config
   config: '/api/config',
   configDefaults: '/api/config/defaults',
