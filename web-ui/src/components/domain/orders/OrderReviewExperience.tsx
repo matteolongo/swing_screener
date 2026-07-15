@@ -384,8 +384,13 @@ export default function OrderReviewExperience({
 
         {!decisionReady ? (
           <div className="mb-4 rounded border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-            Order creation is locked until setup, observed trigger, reconciled plan, and current as-of data all pass.
-            {' '}Setup: {decisionGates?.setup.status ?? 'UNKNOWN'} · Trigger: {decisionGates?.trigger.status ?? 'UNKNOWN'} · Plan: {decisionGates?.plan.status ?? 'UNKNOWN'} · Data: {context.dataStatus ?? 'unknown'}.
+            {t('order.review.decisionLocked')}{' '}
+            {t('order.review.decisionGateStatus', {
+              setup: decisionGates?.setup.status ?? 'UNKNOWN',
+              trigger: decisionGates?.trigger.status ?? 'UNKNOWN',
+              plan: decisionGates?.plan.status ?? 'UNKNOWN',
+              data: context.dataStatus ?? 'unknown',
+            })}
           </div>
         ) : null}
 

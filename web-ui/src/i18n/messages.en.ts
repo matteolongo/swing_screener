@@ -312,6 +312,9 @@ export const messagesEn = {
       riskFallback: 'No structured risk or invalidation notes are available for this setup yet.',
       formTitle: 'Order ticket',
       formDescription: 'Review the setup above, then enter the order details and broker setup below.',
+      decisionLocked:
+        'Order creation is locked until setup, observed trigger, reconciled plan, and current as-of data all pass.',
+      decisionGateStatus: 'Setup: {{setup}} · Trigger: {{trigger}} · Plan: {{plan}} · Data: {{data}}.',
       title: 'Review the trade before sending the order',
       subtitle: 'Keep the key numbers in view, then use the tabs to inspect setup quality and invalidation.',
       hardInvalidationTitle: 'Hard invalidation',
