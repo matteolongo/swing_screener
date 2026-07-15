@@ -7,8 +7,14 @@ from typing import Any, Mapping
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from swing_screener.errors import ConflictError
 
-from api.db.models import OrderRow, PositionRow
+from api.db.models import (
+    IdempotencyRecordRow,
+    LegacyImportRow,
+    OrderRow,
+    PositionRow,
+)
 from api.utils.files import get_today_str
 
 
@@ -123,7 +129,12 @@ class SqlOrdersRepository:
         if status:
             statement = statement.where(OrderRow.status == status)
         rows = self.session.scalars(statement).all()
-        asof = max((row.order_date for row in rows), default=get_today_str())
+        ledger = self.session.get(LegacyImportRow, 1)
+        asof = (
+            ledger.orders_asof
+            if ledger is not None and ledger.orders_asof
+            else max((row.order_date for row in rows), default=get_today_str())
+        )
         return [_serialize(row, ORDER_FIELDS) for row in rows], asof
 
     def get_order(self, order_id: str, *, for_update: bool = False) -> dict | None:
@@ -141,6 +152,31 @@ class SqlOrdersRepository:
         return _serialize(row, ORDER_FIELDS)
 
     append_order = add_order
+
+    def update_order(self, order_id: str, updates: Mapping[str, object]) -> dict | None:
+        row = self.session.scalar(
+            select(OrderRow).where(OrderRow.order_id == order_id).with_for_update()
+        )
+        if row is None:
+            return None
+        _apply(row, updates, ORDER_FIELDS)
+        row.version += 1
+        self.session.flush()
+        return _serialize(row, ORDER_FIELDS)
+
+    def submit_order(self, order_id: str) -> dict | None:
+        row = self.get_order(order_id, for_update=True)
+        if row is None or row["status"] != "pending":
+            return row
+        return self.transition(order_id, {"pending"}, {"status": "submitted"})
+
+    def cancel_order(self, order_id: str) -> dict | None:
+        row = self.get_order(order_id, for_update=True)
+        if row is None or row["status"] not in {"pending", "submitted"}:
+            return row
+        return self.transition(
+            order_id, {"pending", "submitted"}, {"status": "cancelled"}
+        )
 
     def transition(
         self,
@@ -168,8 +204,17 @@ class SqlPositionsRepository:
         if status:
             statement = statement.where(PositionRow.status == status)
         rows = self.session.scalars(statement).all()
-        asof = max((row.entry_date for row in rows), default=get_today_str())
+        ledger = self.session.get(LegacyImportRow, 1)
+        asof = (
+            ledger.positions_asof
+            if ledger is not None and ledger.positions_asof
+            else max((row.entry_date for row in rows), default=get_today_str())
+        )
         return [_serialize(row, POSITION_FIELDS) for row in rows], asof
+
+    def read(self) -> dict:
+        positions, asof = self.list_positions()
+        return {"positions": positions, "asof": asof}
 
     def get_position(
         self, position_id: str, *, for_update: bool = False
@@ -204,3 +249,67 @@ class SqlPositionsRepository:
         row.version += 1
         self.session.flush()
         return _serialize(row, POSITION_FIELDS)
+
+    def update(self, modify_fn) -> dict:
+        positions, asof = self.list_positions()
+        current_versions = {
+            item["position_id"]: int(item["version"]) for item in positions
+        }
+        data = modify_fn({"positions": positions, "asof": asof})
+        for position in data.get("positions", []):
+            position_id = position.get("position_id")
+            if position_id in current_versions:
+                updated = self.replace_position(
+                    position_id, current_versions[position_id], position
+                )
+                if updated is None:
+                    raise ConflictError(f"Concurrent position update: {position_id}")
+            else:
+                self.add_position(position)
+        return data
+
+
+class SqlIdempotencyRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def get(self, operation: str, key: str) -> IdempotencyRecordRow | None:
+        return self.session.scalar(
+            select(IdempotencyRecordRow)
+            .where(
+                IdempotencyRecordRow.operation == operation,
+                IdempotencyRecordRow.key == key,
+            )
+            .with_for_update()
+        )
+
+    def add(
+        self,
+        *,
+        operation: str,
+        key: str,
+        request_hash: str,
+        subject: str,
+        resource: str,
+        status_code: int,
+        response: dict,
+    ) -> IdempotencyRecordRow:
+        row = IdempotencyRecordRow(
+            operation=operation,
+            key=key,
+            request_hash=request_hash,
+            subject=subject,
+            resource=resource,
+            status_code=status_code,
+            response=_json_value(response),
+        )
+        self.session.add(row)
+        self.session.flush()
+        return row
+
+    def complete(
+        self, row: IdempotencyRecordRow, *, status_code: int, response: dict
+    ) -> None:
+        row.status_code = status_code
+        row.response = _json_value(response)
+        self.session.flush()

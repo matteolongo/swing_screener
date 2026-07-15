@@ -140,6 +140,8 @@ def upgrade() -> None:
         sa.Column("positions_sha256", sa.String(64), nullable=False),
         sa.Column("order_count", sa.Integer(), nullable=False),
         sa.Column("position_count", sa.Integer(), nullable=False),
+        sa.Column("orders_asof", sa.String(32)),
+        sa.Column("positions_asof", sa.String(32)),
         sa.Column(
             "imported_at",
             sa.DateTime(timezone=True),

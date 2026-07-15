@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import uuid
+import hashlib
+import json
 import logging
 import math
 import time
 from decimal import Decimal
 from typing import Callable, Optional
+
+from sqlalchemy.exc import IntegrityError
 
 from swing_screener.errors import (
     NotFoundError,
@@ -44,6 +48,7 @@ from api.services.order_exposure import (
     ProposedExposure,
     build_exposure_snapshot,
 )
+from api.db.unit_of_work import PortfolioUnitOfWork
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +66,7 @@ class OrdersService:
         strategy_repo: StrategyRepository | None = None,
         approval_signer: OrderApprovalTokenSigner | None = None,
         approval_now: Callable[[], int] | None = None,
+        uow: PortfolioUnitOfWork | None = None,
     ) -> None:
         self._orders_repo = orders_repo
         self._positions_repo = positions_repo
@@ -68,6 +74,7 @@ class OrdersService:
         self._strategy_repo = strategy_repo
         self._approval_signer = approval_signer
         self._approval_now = approval_now or (lambda: int(time.time()))
+        self._uow = uow
 
     @staticmethod
     def _country(ticker: str) -> str:
@@ -372,7 +379,86 @@ class OrdersService:
             )
         return approval
 
-    def create_order(self, request: CreateOrderRequest) -> dict:
+    @staticmethod
+    def _idempotency_hash(
+        *, subject: str, operation: str, resource: str, body: dict
+    ) -> str:
+        canonical = json.dumps(
+            {
+                "subject": subject,
+                "operation": operation,
+                "resource": resource,
+                "body": body,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8")
+        return hashlib.sha256(canonical).hexdigest()
+
+    def _recover_idempotency_race(
+        self, operation: str, idempotency_key: str, request_hash: str
+    ):
+        assert self._uow is not None
+        self._uow.session.rollback()
+        self._uow.write_started = False
+        existing = self._uow.idempotency.get(operation, idempotency_key)
+        if existing is None:
+            raise ConflictError("Concurrent idempotent request could not be replayed.")
+        if existing.request_hash != request_hash:
+            raise ConflictError(
+                "Idempotency-Key was already used for a different request."
+            )
+        return existing
+
+    def create_order(
+        self,
+        request: CreateOrderRequest,
+        *,
+        idempotency_key: str | None = None,
+        subject: str = "local",
+    ) -> dict:
+        if self._uow is None:
+            return self._create_order_impl(request)
+        if not idempotency_key:
+            raise UnprocessableError("Idempotency-Key is required.")
+        self._uow.begin_write()
+        operation = "create_order"
+        request_hash = self._idempotency_hash(
+            subject=subject,
+            operation=operation,
+            resource="orders",
+            body=request.model_dump(mode="json"),
+        )
+        existing = self._uow.idempotency.get(operation, idempotency_key)
+        if existing is not None:
+            if existing.request_hash != request_hash:
+                raise ConflictError(
+                    "Idempotency-Key was already used for a different request."
+                )
+            return dict(existing.response)
+        try:
+            reservation = self._uow.idempotency.add(
+                operation=operation,
+                key=idempotency_key,
+                request_hash=request_hash,
+                subject=subject,
+                resource="orders",
+                status_code=0,
+                response={},
+            )
+        except IntegrityError:
+            existing = self._recover_idempotency_race(
+                operation, idempotency_key, request_hash
+            )
+            return dict(existing.response)
+        response = self._create_order_impl(request)
+        self._uow.idempotency.complete(
+            reservation, status_code=201, response=response
+        )
+        return response
+
+    def _create_order_impl(self, request: CreateOrderRequest) -> dict:
         ticker = request.ticker.upper()
         orders, _ = self._orders_repo.list_orders()
 
@@ -474,6 +560,8 @@ class OrdersService:
         return {"orders": orders, "asof": asof}
 
     def submit_order(self, order_id: str) -> dict:
+        if self._uow is not None:
+            self._uow.begin_write()
         order = self._orders_repo.submit_order(order_id)
         if order is None:
             raise NotFoundError(f"Order {order_id} not found")
@@ -482,6 +570,8 @@ class OrdersService:
         return {"order_id": order_id, "status": "submitted"}
 
     def cancel_order(self, order_id: str) -> dict:
+        if self._uow is not None:
+            self._uow.begin_write()
         order = self._orders_repo.cancel_order(order_id)
         if order is None:
             raise NotFoundError(f"Order {order_id} not found")
@@ -489,8 +579,62 @@ class OrdersService:
             raise ConflictError(f"Order {order_id} is already {order.get('status')}")
         return {"order_id": order_id, "status": "cancelled"}
 
-    def fill_order(self, order_id: str, request: FillOrderRequest) -> FillOrderResponse:
-        order = self._orders_repo.get_order(order_id)
+    def fill_order(
+        self,
+        order_id: str,
+        request: FillOrderRequest,
+        *,
+        idempotency_key: str | None = None,
+        subject: str = "local",
+    ) -> FillOrderResponse:
+        if self._uow is None:
+            return self._fill_order_impl(order_id, request)
+        if not idempotency_key:
+            raise UnprocessableError("Idempotency-Key is required.")
+        self._uow.begin_write()
+        operation = "fill_order"
+        request_hash = self._idempotency_hash(
+            subject=subject,
+            operation=operation,
+            resource=order_id,
+            body=request.model_dump(mode="json"),
+        )
+        existing = self._uow.idempotency.get(operation, idempotency_key)
+        if existing is not None:
+            if existing.request_hash != request_hash:
+                raise ConflictError(
+                    "Idempotency-Key was already used for a different request."
+                )
+            return FillOrderResponse.model_validate(existing.response)
+        try:
+            reservation = self._uow.idempotency.add(
+                operation=operation,
+                key=idempotency_key,
+                request_hash=request_hash,
+                subject=subject,
+                resource=order_id,
+                status_code=0,
+                response={},
+            )
+        except IntegrityError:
+            existing = self._recover_idempotency_race(
+                operation, idempotency_key, request_hash
+            )
+            return FillOrderResponse.model_validate(existing.response)
+        response = self._fill_order_impl(order_id, request)
+        self._uow.idempotency.complete(
+            reservation,
+            status_code=201,
+            response=response.model_dump(mode="json"),
+        )
+        return response
+
+    def _fill_order_impl(
+        self, order_id: str, request: FillOrderRequest
+    ) -> FillOrderResponse:
+        order = self._orders_repo.get_order(
+            order_id, for_update=True
+        ) if self._uow is not None else self._orders_repo.get_order(order_id)
         if order is None:
             raise NotFoundError(f"Order {order_id} not found")
         if order.get("status") not in ("pending", "submitted"):
@@ -515,8 +659,6 @@ class OrdersService:
             "fill_fx_rate": request.fill_fx_rate,
             "stop_price": stop_price,
         }
-        self._orders_repo.update_order(order_id, updates)
-
         add_shares = int(order["quantity"])
         target_position_id = order.get("position_id")
 
@@ -605,6 +747,7 @@ class OrdersService:
                 )
 
             self._positions_repo.update(_merge)
+            self._orders_repo.update_order(order_id, updates)
             return FillOrderResponse(
                 order_id=order_id, position=Position(**merged["position"])
             )
@@ -641,5 +784,6 @@ class OrdersService:
             return data
 
         self._positions_repo.update(_append)
+        self._orders_repo.update_order(order_id, updates)
 
         return FillOrderResponse(order_id=order_id, position=Position(**new_position))

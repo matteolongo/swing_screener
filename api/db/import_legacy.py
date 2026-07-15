@@ -38,6 +38,14 @@ class LegacyImportReport:
     positions_sha256: str | None = None
 
 
+@dataclass(frozen=True)
+class LegacySourceReport:
+    order_count: int
+    position_count: int
+    orders_sha256: str
+    positions_sha256: str
+
+
 UowFactory = Callable[[], PortfolioUnitOfWork]
 
 
@@ -65,6 +73,16 @@ def _document(raw: bytes, collection: str) -> list[dict]:
     return value.get(collection, [])
 
 
+def _asof(raw: bytes) -> str | None:
+    if not raw.strip():
+        return None
+    value = json.loads(raw)
+    if not isinstance(value, dict):
+        return None
+    asof = str(value.get("asof") or "").strip()
+    return asof or None
+
+
 def _validate_orders(raw: bytes) -> list[dict]:
     result: list[dict] = []
     for index, item in enumerate(_document(raw, "orders")):
@@ -89,6 +107,31 @@ def _validate_positions(raw: bytes) -> list[dict]:
                 f"Legacy position {identifier or f'row {index}'} is invalid: {exc}"
             ) from exc
     return result
+
+
+def validate_legacy_sources(
+    orders_path: Path, positions_path: Path
+) -> LegacySourceReport:
+    """Validate both source documents without changing files or SQL state."""
+    orders_raw = _read(orders_path)
+    positions_raw = _read(positions_path)
+    orders_sha = hashlib.sha256(orders_raw).hexdigest()
+    positions_sha = hashlib.sha256(positions_raw).hexdigest()
+    orders = _validate_orders(orders_raw)
+    positions = _validate_positions(positions_raw)
+    if (
+        hashlib.sha256(_read(orders_path)).hexdigest() != orders_sha
+        or hashlib.sha256(_read(positions_path)).hexdigest() != positions_sha
+    ):
+        raise LegacyImportStateError(
+            "Legacy source checksum changed during validation; retry the dry run"
+        )
+    return LegacySourceReport(
+        order_count=len(orders),
+        position_count=len(positions),
+        orders_sha256=orders_sha,
+        positions_sha256=positions_sha,
+    )
 
 
 def import_legacy_portfolio(
@@ -148,6 +191,8 @@ def import_legacy_portfolio(
                 positions_sha256=positions_sha,
                 order_count=len(orders),
                 position_count=len(positions),
+                orders_asof=_asof(orders_raw),
+                positions_asof=_asof(positions_raw),
             )
         )
 

@@ -10,6 +10,7 @@ from api.db.import_legacy import (
     LegacyImportStateError,
     classify_import_state,
     import_legacy_portfolio,
+    validate_legacy_sources,
 )
 from api.db.models import LegacyImportRow
 from api.db.unit_of_work import PortfolioUnitOfWork
@@ -137,3 +138,20 @@ def test_blank_legacy_files_create_zero_count_ledger(runtime, tmp_path):
     assert report.position_count == 0
     with _factory(runtime)() as uow:
         assert classify_import_state(uow.session) is LegacyImportState.COMPLETE
+
+
+def test_source_validation_reports_counts_and_checksums_without_mutation(tmp_path):
+    orders_path, positions_path = _write_pair(
+        tmp_path, orders=[_order()], positions=[_position()]
+    )
+    original_orders = orders_path.read_bytes()
+    original_positions = positions_path.read_bytes()
+
+    report = validate_legacy_sources(orders_path, positions_path)
+
+    assert report.order_count == 1
+    assert report.position_count == 1
+    assert report.orders_sha256 == hashlib.sha256(original_orders).hexdigest()
+    assert report.positions_sha256 == hashlib.sha256(original_positions).hexdigest()
+    assert orders_path.read_bytes() == original_orders
+    assert positions_path.read_bytes() == original_positions

@@ -20,6 +20,7 @@ TrailMethod = Literal["sma20", "atr", "fixed_pct", "manual"]
 
 
 class Position(BaseModel):
+    version: int = Field(default=1, ge=1)
     ticker: str
     status: PositionStatus
     entry_date: str

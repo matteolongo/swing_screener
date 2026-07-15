@@ -127,6 +127,8 @@ class LegacyImportRow(Base):
     positions_sha256: Mapped[str] = mapped_column(String(64))
     order_count: Mapped[int] = mapped_column(Integer)
     position_count: Mapped[int] = mapped_column(Integer)
+    orders_asof: Mapped[str | None] = mapped_column(String(32))
+    positions_asof: Mapped[str | None] = mapped_column(String(32))
     imported_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

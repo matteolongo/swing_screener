@@ -7,7 +7,11 @@ from typing import Self
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
+from api.db.repositories import (
+    SqlIdempotencyRepository,
+    SqlOrdersRepository,
+    SqlPositionsRepository,
+)
 
 
 class PortfolioUnitOfWork:
@@ -16,17 +20,21 @@ class PortfolioUnitOfWork:
         self.session: Session
         self.orders: SqlOrdersRepository
         self.positions: SqlPositionsRepository
+        self.idempotency: SqlIdempotencyRepository
         self.write_started = False
 
     def __enter__(self) -> Self:
         self.session = self._session_factory()
         self.orders = SqlOrdersRepository(self.session)
         self.positions = SqlPositionsRepository(self.session)
+        self.idempotency = SqlIdempotencyRepository(self.session)
         return self
 
     def begin_write(self) -> None:
         if self.write_started:
             return
+        if self.session.in_transaction():
+            self.session.rollback()
         if self.session.bind is not None and self.session.bind.dialect.name == "sqlite":
             self.session.connection().exec_driver_sql("BEGIN IMMEDIATE")
         else:
