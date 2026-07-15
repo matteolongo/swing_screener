@@ -132,6 +132,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
     dataAsOf: candidate?.dataAsOf ?? candidate?.lastBar,
     daysToEarnings: candidate?.daysToEarnings ?? null,
     strategyId: activeStrategyQuery.data?.id,
+    approvalToken: candidate?.approvalToken,
   };
 
   return (

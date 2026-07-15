@@ -178,6 +178,7 @@ export interface CandidateDataSourceSummary {
 
 export interface ScreenerCandidate {
   ticker: string;
+  approvalToken?: string;
   currency: string;
   exchangeMic?: string;
   instrumentType?: 'equity' | 'etf' | string;
@@ -301,6 +302,7 @@ export interface DecisionSummaryAPI {
 // API response format (snake_case)
 export interface ScreenerCandidateAPI {
   ticker: string;
+  approval_token?: string | null;
   currency?: string;
   exchange_mic?: string;
   instrument_type?: string;
@@ -572,6 +574,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
   return {
     candidates: apiResponse.candidates.map(c => ({
       ticker: c.ticker,
+      approvalToken: c.approval_token ?? undefined,
       currency: c.currency ?? 'UNKNOWN',
       exchangeMic: c.exchange_mic,
       instrumentType: c.instrument_type,

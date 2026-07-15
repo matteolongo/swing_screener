@@ -57,6 +57,7 @@ export interface OrderReviewContext {
   dataAsOf?: string;
   daysToEarnings?: number | null;
   strategyId?: string;
+  approvalToken?: string;
 }
 
 interface OrderReviewExperienceProps {
@@ -305,6 +306,7 @@ export default function OrderReviewExperience({
         currency: context.currency,
         daysToEarnings: context.daysToEarnings,
         strategyId: context.strategyId,
+        approvalToken: context.approvalToken,
       });
       setSubmitSucceeded(true);
       onSuccess?.();

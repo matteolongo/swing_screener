@@ -25,6 +25,17 @@ and 2 intelligence sweeps/minute by default. Sweeps also reject more than
 multi-worker deployment requires a shared limiter before increasing
 `WEB_CONCURRENCY`.
 
+## Entry Approval Tokens
+
+Actionable screener candidates carry a short-lived HMAC approval token. Entry
+orders must return that opaque token; the API verifies its ticker, active
+strategy, signed decision gates, freshness, currency, FX, target source, and
+earnings context, then recomputes quantity, price, reward/risk, trade risk,
+position cap, cash, heat, and fees from the submitted order. Country
+concentration is a risk-share warning and does not block an otherwise valid
+trade. Configure a separate 32-byte `ORDER_APPROVAL_SIGNING_KEY` in production;
+rotation invalidates outstanding tokens.
+
 FastAPI service that exposes the Swing Screener backend as a REST API.
 
 ## Run
