@@ -69,7 +69,9 @@ class AuthSettings:
     oidc_viewer_values: frozenset[str]
     session_secret: str = field(repr=False)
     session_ttl_seconds: int
+    session_cookie_name: str
     session_cookie_secure: bool
+    api_docs_enabled: bool
     trust_proxy_headers: bool
     rate_limit_default_per_minute: int
     rate_limit_mutation_per_minute: int
@@ -103,8 +105,14 @@ class AuthSettings:
             session_ttl_seconds=_positive_int(
                 env, "SESSION_TTL_SECONDS", 8 * 60 * 60
             ),
+            session_cookie_name=env.get(
+                "SESSION_COOKIE_NAME", "swing_session"
+            ).strip(),
             session_cookie_secure=_boolean(
                 env, "SESSION_COOKIE_SECURE", app_env == "production"
+            ),
+            api_docs_enabled=_boolean(
+                env, "API_DOCS_ENABLED", app_env != "production"
             ),
             trust_proxy_headers=_boolean(env, "AUTH_TRUST_PROXY_HEADERS", False),
             rate_limit_default_per_minute=_positive_int(
@@ -130,6 +138,8 @@ class AuthSettings:
     def validate_runtime(self) -> None:
         if not self.oidc_role_claim:
             raise SecurityConfigurationError("OIDC_ROLE_CLAIM must not be empty")
+        if not self.session_cookie_name:
+            raise SecurityConfigurationError("SESSION_COOKIE_NAME must not be empty")
         if not self.oidc_admin_values:
             raise SecurityConfigurationError("OIDC_ADMIN_VALUES must not be empty")
         if not self.oidc_viewer_values:

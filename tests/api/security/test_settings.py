@@ -30,6 +30,19 @@ def test_test_mode_allows_disabled_auth_and_resolves_limits():
     assert settings.session_cookie_secure is False
     assert settings.rate_limit_max_buckets == 10_000
     assert settings.intelligence_sweep_max_symbols == 20
+    assert settings.session_cookie_name == "swing_session"
+    assert settings.api_docs_enabled is True
+
+
+def test_production_disables_docs_by_default():
+    settings = AuthSettings.from_env({"APP_ENV": "production"})
+
+    assert settings.api_docs_enabled is False
+
+    enabled = AuthSettings.from_env(
+        {"APP_ENV": "production", "API_DOCS_ENABLED": "true"}
+    )
+    assert enabled.api_docs_enabled is True
 
 
 @pytest.mark.parametrize(

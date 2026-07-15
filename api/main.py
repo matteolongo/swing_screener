@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 from contextlib import asynccontextmanager
 from swing_screener.errors import DomainError
 from swing_screener.settings import get_settings_manager
@@ -17,6 +18,7 @@ from swing_screener.runtime_env import ensure_runtime_env_loaded
 
 # Import routers
 from api.routers import (
+    auth,
     backtest,
     calendar,
     cache as cache_router,
@@ -35,6 +37,9 @@ from api.routers import (
     watchlist,
     weekly_reviews,
 )
+from api.security.middleware import RateLimitMiddleware, SecurityBoundaryMiddleware
+from api.security.openapi import install_security_openapi
+from api.security.settings import get_auth_settings
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
@@ -49,6 +54,7 @@ logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 ensure_runtime_env_loaded()
+AUTH_SETTINGS = get_auth_settings()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _USER_DOC = get_settings_manager().load_user_document()
@@ -109,6 +115,7 @@ def _resolve_spa_file(path: str) -> Path | None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
+    AUTH_SETTINGS.validate_runtime()
     try:
         migration_actions = migrate_legacy_config_to_yaml()
         for action in migration_actions:
@@ -150,7 +157,11 @@ app = FastAPI(
     description="REST API for the Swing Screener trading system",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url="/docs" if AUTH_SETTINGS.api_docs_enabled else None,
+    redoc_url="/redoc" if AUTH_SETTINGS.api_docs_enabled else None,
+    openapi_url="/openapi.json" if AUTH_SETTINGS.api_docs_enabled else None,
 )
+app.state.auth_settings = AUTH_SETTINGS
 register_domain_error_handler(app)
 
 _DEFAULT_ALLOW_ORIGINS = ["http://localhost:5173", "http://localhost:5174"]
@@ -176,7 +187,18 @@ app.add_middleware(
         "Origin",
         "User-Agent",
         "X-Requested-With",
+        "X-CSRF-Token",
     ],  # Explicit instead of ["*"]
+)
+app.add_middleware(RateLimitMiddleware, settings=AUTH_SETTINGS)
+app.add_middleware(SecurityBoundaryMiddleware, settings=AUTH_SETTINGS)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=AUTH_SETTINGS.session_secret,
+    session_cookie=AUTH_SETTINGS.session_cookie_name,
+    max_age=AUTH_SETTINGS.session_ttl_seconds,
+    same_site="lax",
+    https_only=AUTH_SETTINGS.session_cookie_secure,
 )
 
 
@@ -247,7 +269,14 @@ async def api_root():
     }
 
 
+@app.get("/health/live")
+async def liveness():
+    """Return process liveness without touching protected dependencies."""
+    return {"status": "alive"}
+
+
 @app.get("/health")
+@app.get("/health/ready")
 async def health_check():
     """
     Health check endpoint for monitoring and load balancers.
@@ -305,6 +334,7 @@ async def metrics():
 
 
 # Include routers
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(calendar.router, prefix="/api", tags=["calendar"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
@@ -322,6 +352,8 @@ app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["w
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
 app.include_router(cache_router.router, prefix="/api/cache", tags=["cache"])
 app.include_router(pool_router.router, prefix="/api/pool", tags=["pool"])
+
+install_security_openapi(app, cookie_name=AUTH_SETTINGS.session_cookie_name)
 
 
 @app.api_route(

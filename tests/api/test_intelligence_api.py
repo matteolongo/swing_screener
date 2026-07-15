@@ -157,6 +157,28 @@ def test_sweep_returns_503_without_api_key(monkeypatch):
     assert response.status_code == 503
 
 
+def test_sweep_rejects_symbol_count_before_analyzer_work(monkeypatch):
+    from api.routers import intelligence as r
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    analyzer = MagicMock()
+    monkeypatch.setattr(r, "_get_analyzer", analyzer)
+    payload = {
+        "symbols": [
+            {
+                "ticker": f"TEST{index}",
+                "request": {"close": 100.0, "signal": "breakout"},
+            }
+            for index in range(21)
+        ]
+    }
+
+    response = client.post("/api/intelligence/sweep", json=payload)
+
+    assert response.status_code == 422
+    analyzer.assert_not_called()
+
+
 def test_analyze_returns_cache_unless_force(tmp_path, monkeypatch):
     from api.routers import intelligence as r
     from swing_screener.intelligence.models import SymbolIntelligence
