@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from decimal import Decimal
 from typing import Any, Mapping
 
@@ -149,6 +150,7 @@ class SqlOrdersRepository:
         row = OrderRow(**core, payload=payload)
         self.session.add(row)
         self.session.flush()
+        self._touch_asof()
         return _serialize(row, ORDER_FIELDS)
 
     append_order = add_order
@@ -162,6 +164,7 @@ class SqlOrdersRepository:
         _apply(row, updates, ORDER_FIELDS)
         row.version += 1
         self.session.flush()
+        self._touch_asof()
         return _serialize(row, ORDER_FIELDS)
 
     def submit_order(self, order_id: str) -> dict | None:
@@ -192,7 +195,13 @@ class SqlOrdersRepository:
         _apply(row, updates, ORDER_FIELDS)
         row.version += 1
         self.session.flush()
+        self._touch_asof()
         return _serialize(row, ORDER_FIELDS)
+
+    def _touch_asof(self) -> None:
+        ledger = self.session.get(LegacyImportRow, 1)
+        if ledger is not None:
+            ledger.orders_asof = get_today_str()
 
 
 class SqlPositionsRepository:
@@ -230,6 +239,7 @@ class SqlPositionsRepository:
         row = PositionRow(**core, payload=payload)
         self.session.add(row)
         self.session.flush()
+        self._touch_asof()
         return _serialize(row, POSITION_FIELDS)
 
     def replace_position(
@@ -248,25 +258,37 @@ class SqlPositionsRepository:
         _apply(row, value, POSITION_FIELDS)
         row.version += 1
         self.session.flush()
+        self._touch_asof()
         return _serialize(row, POSITION_FIELDS)
 
     def update(self, modify_fn) -> dict:
         positions, asof = self.list_positions()
+        original_positions = {
+            item["position_id"]: deepcopy(item) for item in positions
+        }
         current_versions = {
             item["position_id"]: int(item["version"]) for item in positions
         }
         data = modify_fn({"positions": positions, "asof": asof})
-        for position in data.get("positions", []):
+        for index, position in enumerate(data.get("positions", [])):
             position_id = position.get("position_id")
             if position_id in current_versions:
+                if position == original_positions[position_id]:
+                    continue
                 updated = self.replace_position(
                     position_id, current_versions[position_id], position
                 )
                 if updated is None:
                     raise ConflictError(f"Concurrent position update: {position_id}")
+                data["positions"][index] = updated
             else:
-                self.add_position(position)
+                data["positions"][index] = self.add_position(position)
         return data
+
+    def _touch_asof(self) -> None:
+        ledger = self.session.get(LegacyImportRow, 1)
+        if ledger is not None:
+            ledger.positions_asof = get_today_str()
 
 
 class SqlIdempotencyRepository:

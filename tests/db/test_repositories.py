@@ -103,3 +103,25 @@ def test_duplicate_source_order_is_rejected(runtime):
             uow.begin_write()
             uow.positions.add_position(_position("POS-1", "ORD-1"))
             uow.positions.add_position(_position("POS-2", "ORD-1"))
+
+
+def test_callback_update_only_versions_the_changed_position(runtime):
+    with PortfolioUnitOfWork(runtime.session_factory) as uow:
+        uow.begin_write()
+        uow.positions.add_position(_position("POS-1"))
+        uow.positions.add_position(_position("POS-2"))
+
+    with PortfolioUnitOfWork(runtime.session_factory) as uow:
+        uow.begin_write()
+
+        def change_one(data):
+            data["positions"][0]["stop_price"] = 96
+            return data
+
+        result = uow.positions.update(change_one)
+
+    versions = {
+        position["position_id"]: position["version"]
+        for position in result["positions"]
+    }
+    assert versions == {"POS-1": 2, "POS-2": 1}

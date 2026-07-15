@@ -665,8 +665,6 @@ class OrdersService:
         # ADD_ON fill: merge into the referenced open position (weighted-average
         # entry, keep the existing stop) instead of creating a duplicate lot.
         if target_position_id:
-            merged: dict = {}
-
             def _merge(data: dict) -> dict:
                 for pos in data.get("positions", []):
                     if pos.get("position_id") == target_position_id:
@@ -740,16 +738,20 @@ class OrdersService:
                                 request.fee_eur
                             )
                         data["asof"] = get_today_str()
-                        merged["position"] = dict(pos)
                         return data
                 raise NotFoundError(
                     f"Position not found for add-on: {target_position_id}"
                 )
 
-            self._positions_repo.update(_merge)
+            updated_positions = self._positions_repo.update(_merge)
             self._orders_repo.update_order(order_id, updates)
+            updated_position = next(
+                position
+                for position in updated_positions["positions"]
+                if position.get("position_id") == target_position_id
+            )
             return FillOrderResponse(
-                order_id=order_id, position=Position(**merged["position"])
+                order_id=order_id, position=Position(**updated_position)
             )
 
         isin = order.get("isin") or _resolve_isin(ticker)
