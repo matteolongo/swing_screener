@@ -101,9 +101,7 @@ class PositionRow(Base):
 
 class IdempotencyRecordRow(Base):
     __tablename__ = "idempotency_records"
-    __table_args__ = (
-        UniqueConstraint("operation", "key", name="uq_idempotency_operation_key"),
-    )
+    __table_args__ = (UniqueConstraint("key", name="uq_idempotency_key"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     operation: Mapped[str] = mapped_column(String(64))

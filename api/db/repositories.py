@@ -295,13 +295,10 @@ class SqlIdempotencyRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def get(self, operation: str, key: str) -> IdempotencyRecordRow | None:
+    def get(self, key: str) -> IdempotencyRecordRow | None:
         return self.session.scalar(
             select(IdempotencyRecordRow)
-            .where(
-                IdempotencyRecordRow.operation == operation,
-                IdempotencyRecordRow.key == key,
-            )
+            .where(IdempotencyRecordRow.key == key)
             .with_for_update()
         )
 

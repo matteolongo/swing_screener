@@ -4,6 +4,7 @@ import hashlib
 import json
 
 import pytest
+from sqlalchemy import delete
 
 from api.db.import_legacy import (
     LegacyImportState,
@@ -12,7 +13,7 @@ from api.db.import_legacy import (
     import_legacy_portfolio,
     validate_legacy_sources,
 )
-from api.db.models import LegacyImportRow
+from api.db.models import LegacyImportRow, PositionRow
 from api.db.unit_of_work import PortfolioUnitOfWork
 
 
@@ -155,3 +156,28 @@ def test_source_validation_reports_counts_and_checksums_without_mutation(tmp_pat
     assert report.positions_sha256 == hashlib.sha256(original_positions).hexdigest()
     assert orders_path.read_bytes() == original_orders
     assert positions_path.read_bytes() == original_positions
+
+
+def test_missing_imported_rows_or_wrong_revision_is_partial(runtime, tmp_path):
+    orders_path, positions_path = _write_pair(
+        tmp_path, orders=[_order()], positions=[_position()]
+    )
+    import_legacy_portfolio(
+        _factory(runtime), orders_path, positions_path, "20260715_0001"
+    )
+
+    with _factory(runtime)() as uow:
+        uow.begin_write()
+        uow.session.execute(delete(PositionRow))
+
+    with _factory(runtime)() as uow:
+        assert classify_import_state(uow.session) is LegacyImportState.PARTIAL
+
+    with _factory(runtime)() as uow:
+        uow.begin_write()
+        uow.positions.add_position(_position())
+        ledger = uow.session.get(LegacyImportRow, 1)
+        ledger.schema_revision = "unexpected"
+
+    with _factory(runtime)() as uow:
+        assert classify_import_state(uow.session) is LegacyImportState.PARTIAL

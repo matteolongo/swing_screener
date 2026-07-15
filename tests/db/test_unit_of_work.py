@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
+from sqlalchemy.dialects import postgresql
 
+from api.db.models import LegacyImportRow
 from api.db.unit_of_work import PortfolioUnitOfWork
 from tests.db.test_repositories import _order, _position
 
@@ -37,3 +40,15 @@ def test_sqlite_begin_write_is_immediate(runtime):
         uow.begin_write()
         assert uow.session.in_transaction()
         assert uow.write_started is True
+
+
+def test_portfolio_state_lock_compiles_for_postgres():
+    statement = (
+        select(LegacyImportRow)
+        .where(LegacyImportRow.id == 1)
+        .with_for_update()
+    )
+
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+
+    assert "FOR UPDATE" in sql

@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from sqlalchemy import text
 
 from api.db.import_legacy import import_legacy_portfolio
-from api.db.readiness import check_database_readiness
+from api.db.readiness import (
+    DatabaseSchemaError,
+    check_database_readiness,
+    require_database_schema_at_head,
+)
 from api.db.unit_of_work import PortfolioUnitOfWork
 
 
@@ -57,3 +62,5 @@ def test_readiness_rejects_stale_migration(runtime, tmp_path: Path):
         result.details["migration"]
         == "Database schema is not at the expected revision."
     )
+    with pytest.raises(DatabaseSchemaError, match="expected revision"):
+        require_database_schema_at_head(runtime)

@@ -5,8 +5,10 @@ from __future__ import annotations
 from types import TracebackType
 from typing import Self
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from api.db.models import LegacyImportRow
 from api.db.repositories import (
     SqlIdempotencyRepository,
     SqlOrdersRepository,
@@ -40,6 +42,15 @@ class PortfolioUnitOfWork:
         else:
             self.session.begin()
         self.write_started = True
+
+    def lock_portfolio_state(self) -> None:
+        ledger = self.session.scalar(
+            select(LegacyImportRow)
+            .where(LegacyImportRow.id == 1)
+            .with_for_update()
+        )
+        if ledger is None:
+            raise RuntimeError("Portfolio import ledger is missing.")
 
     def __exit__(
         self,

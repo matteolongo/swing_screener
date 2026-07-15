@@ -24,6 +24,10 @@ class DatabaseReadiness:
     details: dict[str, str] = field(default_factory=dict)
 
 
+class DatabaseSchemaError(RuntimeError):
+    """Raised before import when the database is unavailable or not at head."""
+
+
 def _expected_revision() -> str:
     root = Path(__file__).resolve().parents[2]
     config = Config(str(root / "alembic.ini"))
@@ -31,6 +35,20 @@ def _expected_revision() -> str:
     if revision is None:
         raise RuntimeError("Alembic has no head revision")
     return revision
+
+
+def require_database_schema_at_head(runtime: DatabaseRuntime) -> None:
+    try:
+        with runtime.engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+            current_revision = MigrationContext.configure(
+                connection
+            ).get_current_revision()
+        expected_revision = _expected_revision()
+    except Exception:
+        raise DatabaseSchemaError("Database schema could not be validated.") from None
+    if current_revision != expected_revision:
+        raise DatabaseSchemaError("Database schema is not at the expected revision.")
 
 
 def check_database_readiness(runtime: DatabaseRuntime) -> DatabaseReadiness:

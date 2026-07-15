@@ -397,12 +397,12 @@ class OrdersService:
         return hashlib.sha256(canonical).hexdigest()
 
     def _recover_idempotency_race(
-        self, operation: str, idempotency_key: str, request_hash: str
+        self, idempotency_key: str, request_hash: str
     ):
         assert self._uow is not None
         self._uow.session.rollback()
         self._uow.write_started = False
-        existing = self._uow.idempotency.get(operation, idempotency_key)
+        existing = self._uow.idempotency.get(idempotency_key)
         if existing is None:
             raise ConflictError("Concurrent idempotent request could not be replayed.")
         if existing.request_hash != request_hash:
@@ -430,7 +430,7 @@ class OrdersService:
             resource="orders",
             body=request.model_dump(mode="json"),
         )
-        existing = self._uow.idempotency.get(operation, idempotency_key)
+        existing = self._uow.idempotency.get(idempotency_key)
         if existing is not None:
             if existing.request_hash != request_hash:
                 raise ConflictError(
@@ -449,10 +449,16 @@ class OrdersService:
             )
         except IntegrityError:
             existing = self._recover_idempotency_race(
-                operation, idempotency_key, request_hash
+                idempotency_key, request_hash
             )
             return dict(existing.response)
-        response = self._create_order_impl(request)
+        self._uow.lock_portfolio_state()
+        try:
+            response = self._create_order_impl(request)
+        except IntegrityError as exc:
+            raise ConflictError(
+                "Order conflicts with concurrently committed portfolio state."
+            ) from exc
         self._uow.idempotency.complete(
             reservation, status_code=201, response=response
         )
@@ -599,7 +605,7 @@ class OrdersService:
             resource=order_id,
             body=request.model_dump(mode="json"),
         )
-        existing = self._uow.idempotency.get(operation, idempotency_key)
+        existing = self._uow.idempotency.get(idempotency_key)
         if existing is not None:
             if existing.request_hash != request_hash:
                 raise ConflictError(
@@ -618,7 +624,7 @@ class OrdersService:
             )
         except IntegrityError:
             existing = self._recover_idempotency_race(
-                operation, idempotency_key, request_hash
+                idempotency_key, request_hash
             )
             return FillOrderResponse.model_validate(existing.response)
         response = self._fill_order_impl(order_id, request)

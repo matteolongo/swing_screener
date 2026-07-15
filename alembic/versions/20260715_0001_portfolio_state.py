@@ -130,7 +130,7 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.UniqueConstraint("operation", "key", name="uq_idempotency_operation_key"),
+        sa.UniqueConstraint("key", name="uq_idempotency_key"),
     )
     op.create_table(
         "legacy_imports",

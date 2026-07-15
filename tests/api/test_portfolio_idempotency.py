@@ -134,3 +134,32 @@ def test_concurrent_identical_fill_replays_one_atomic_mutation(client):
     assert responses[0].json() == responses[1].json()
     positions = client.get("/api/portfolio/positions").json()["positions"]
     assert len(positions) == 1
+
+
+def test_reusing_key_for_another_operation_returns_conflict(client):
+    key = {"Idempotency-Key": "cross-operation-key"}
+    created = client.post(
+        "/api/portfolio/orders",
+        json={
+            "ticker": "AAPL",
+            "order_type": "SELL_STOP",
+            "order_kind": "stop",
+            "quantity": 2,
+            "limit_price": 94,
+            "stop_price": 95,
+        },
+        headers=key,
+    )
+    assert created.status_code == 201
+
+    fill = client.post(
+        "/api/portfolio/orders/ORD-AAPL-001/fill",
+        json={
+            "filled_price": 100,
+            "filled_date": "2026-07-15",
+            "fill_fx_rate": 1.1,
+        },
+        headers=key,
+    )
+
+    assert fill.status_code == 409

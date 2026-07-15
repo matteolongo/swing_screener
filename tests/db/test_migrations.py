@@ -87,6 +87,11 @@ def test_upgrade_downgrade_upgrade_creates_relational_schema(tmp_path):
         "account_currency",
         "payload",
     } <= set(position_columns)
+    idempotency_uniques = inspector.get_unique_constraints("idempotency_records")
+    assert any(
+        constraint["column_names"] == ["key"]
+        for constraint in idempotency_uniques
+    )
 
     command.downgrade(config, "base")
     assert "portfolio_orders" not in inspect(engine).get_table_names()

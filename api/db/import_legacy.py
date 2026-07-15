@@ -47,15 +47,23 @@ class LegacySourceReport:
 
 
 UowFactory = Callable[[], PortfolioUnitOfWork]
+LEGACY_IMPORT_SCHEMA_REVISION = "20260715_0001"
 
 
 def classify_import_state(session: Session) -> LegacyImportState:
     orders = session.scalar(select(func.count()).select_from(OrderRow)) or 0
     positions = session.scalar(select(func.count()).select_from(PositionRow)) or 0
-    ledgers = session.scalar(select(func.count()).select_from(LegacyImportRow)) or 0
-    if ledgers == 1:
+    ledger_rows = session.scalars(select(LegacyImportRow)).all()
+    if len(ledger_rows) == 1:
+        ledger = ledger_rows[0]
+        if (
+            ledger.schema_revision != LEGACY_IMPORT_SCHEMA_REVISION
+            or orders < ledger.order_count
+            or positions < ledger.position_count
+        ):
+            return LegacyImportState.PARTIAL
         return LegacyImportState.COMPLETE
-    if orders == 0 and positions == 0 and ledgers == 0:
+    if orders == 0 and positions == 0 and not ledger_rows:
         return LegacyImportState.EMPTY
     return LegacyImportState.PARTIAL
 

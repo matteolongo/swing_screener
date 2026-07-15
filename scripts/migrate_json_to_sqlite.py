@@ -16,6 +16,7 @@ from alembic.runtime.migration import MigrationContext  # noqa: E402
 from alembic.script import ScriptDirectory  # noqa: E402
 
 from api.db.import_legacy import (  # noqa: E402
+    LEGACY_IMPORT_SCHEMA_REVISION,
     classify_import_state,
     import_legacy_portfolio,
     validate_legacy_sources,
@@ -63,7 +64,7 @@ def main() -> None:
             )
             return
         report = import_legacy_portfolio(
-            factory, args.orders, args.positions, "20260715_0001"
+            factory, args.orders, args.positions, LEGACY_IMPORT_SCHEMA_REVISION
         )
         print(
             f"state={report.state.value} imported={report.imported} "

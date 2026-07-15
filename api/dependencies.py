@@ -36,8 +36,9 @@ from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
 from swing_screener.settings import data_dir, get_settings_manager
 from swing_screener.runtime_env import get_env_value
-from api.db.import_legacy import import_legacy_portfolio
+from api.db.import_legacy import LEGACY_IMPORT_SCHEMA_REVISION, import_legacy_portfolio
 from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
+from api.db.readiness import require_database_schema_at_head
 from api.db.session import DatabaseRuntime, create_database_runtime
 from api.db.settings import DatabaseSettings
 from api.db.unit_of_work import PortfolioUnitOfWork
@@ -166,6 +167,11 @@ def get_database_runtime() -> DatabaseRuntime:
                 if auto_migrate:
                     _alembic_upgrade(url)
                 runtime = create_database_runtime(url)
+                try:
+                    require_database_schema_at_head(runtime)
+                except Exception:
+                    runtime.engine.dispose()
+                    raise
 
                 def factory() -> PortfolioUnitOfWork:
                     return PortfolioUnitOfWork(runtime.session_factory)
@@ -175,7 +181,7 @@ def get_database_runtime() -> DatabaseRuntime:
                         factory,
                         orders_path,
                         positions_path,
-                        "20260715_0001",
+                        LEGACY_IMPORT_SCHEMA_REVISION,
                     )
                 except Exception:
                     runtime.engine.dispose()
