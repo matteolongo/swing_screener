@@ -16,6 +16,12 @@ def _boolean(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def normalize_database_url(url: str) -> str:
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url.removeprefix("postgresql://")
+    return url
+
+
 @dataclass(frozen=True)
 class DatabaseSettings:
     url: str
@@ -31,8 +37,7 @@ class DatabaseSettings:
             raise DatabaseConfigurationError(f"Unsupported APP_ENV: {app_env}")
         configured = str(env.get("DATABASE_URL", "")).strip()
         url = configured or "sqlite:///data/swing_screener.db"
-        if url.startswith("postgresql://"):
-            url = "postgresql+psycopg://" + url.removeprefix("postgresql://")
+        url = normalize_database_url(url)
         return cls(
             url=url,
             app_env=app_env,  # type: ignore[arg-type]

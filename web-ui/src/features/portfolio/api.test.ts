@@ -49,6 +49,56 @@ describe('portfolio api', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('sends a fresh idempotency key for each create submission', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(new Response(null, { status: 201 })));
+    const randomUUID = vi
+      .fn()
+      .mockReturnValueOnce('11111111-1111-4111-8111-111111111111')
+      .mockReturnValueOnce('22222222-2222-4222-8222-222222222222');
+    vi.stubGlobal('crypto', { randomUUID });
+    vi.stubGlobal('fetch', fetchMock);
+    const request = {
+      ticker: 'AAPL',
+      orderType: 'BUY_LIMIT' as const,
+      quantity: 2,
+      limitPrice: 100,
+      stopPrice: 95,
+      targetPrice: 110,
+      approvalToken: 'approval-token',
+    };
+
+    await createOrder(request);
+    await createOrder(request);
+
+    expect(randomUUID).toHaveBeenCalledTimes(2);
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Idempotency-Key')).toBe(
+      '11111111-1111-4111-8111-111111111111',
+    );
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Idempotency-Key')).toBe(
+      '22222222-2222-4222-8222-222222222222',
+    );
+  });
+
+  it('sends one idempotency key for a fill submission', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
+    const randomUUID = vi.fn().mockReturnValue('33333333-3333-4333-8333-333333333333');
+    vi.stubGlobal('crypto', { randomUUID });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fillOrder('ORD-AAPL-1', {
+      filledPrice: 100,
+      filledDate: '2026-07-15',
+      fillFxRate: 1.1,
+    });
+
+    expect(randomUUID).toHaveBeenCalledTimes(1);
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Idempotency-Key')).toBe(
+      '33333333-3333-4333-8333-333333333333',
+    );
+  });
+
   it('serializes close FX rate for backend close requests', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);

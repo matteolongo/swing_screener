@@ -5,11 +5,35 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
 
-from api.db.import_legacy import classify_import_state, import_legacy_portfolio
-from api.db.session import create_database_runtime
-from api.db.settings import get_database_settings
-from api.db.unit_of_work import PortfolioUnitOfWork
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from alembic.config import Config  # noqa: E402
+from alembic.runtime.migration import MigrationContext  # noqa: E402
+from alembic.script import ScriptDirectory  # noqa: E402
+
+from api.db.import_legacy import (  # noqa: E402
+    classify_import_state,
+    import_legacy_portfolio,
+    validate_legacy_sources,
+)
+from api.db.session import create_database_runtime  # noqa: E402
+from api.db.settings import get_database_settings, normalize_database_url  # noqa: E402
+from api.db.unit_of_work import PortfolioUnitOfWork  # noqa: E402
+
+
+def _require_alembic_head(runtime) -> None:
+    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    expected = ScriptDirectory.from_config(config).get_current_head()
+    with runtime.engine.connect() as connection:
+        current = MigrationContext.configure(connection).get_current_revision()
+    if current != expected:
+        raise RuntimeError(
+            "Database schema is not at Alembic head; run 'alembic upgrade head' first"
+        )
 
 
 def main() -> None:
@@ -20,15 +44,23 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    runtime = create_database_runtime(args.database_url)
+    runtime = create_database_runtime(normalize_database_url(args.database_url))
 
     def factory() -> PortfolioUnitOfWork:
         return PortfolioUnitOfWork(runtime.session_factory)
 
     try:
+        _require_alembic_head(runtime)
         if args.dry_run:
             with factory() as uow:
-                print(f"state={classify_import_state(uow.session).value}")
+                state = classify_import_state(uow.session)
+            sources = validate_legacy_sources(args.orders, args.positions)
+            print(
+                f"state={state.value} orders={sources.order_count} "
+                f"positions={sources.position_count} "
+                f"orders_sha256={sources.orders_sha256} "
+                f"positions_sha256={sources.positions_sha256}"
+            )
             return
         report = import_legacy_portfolio(
             factory, args.orders, args.positions, "20260715_0001"
