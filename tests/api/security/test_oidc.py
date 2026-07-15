@@ -1,7 +1,14 @@
 from __future__ import annotations
 
-from starlette.requests import Request
+from collections.abc import Mapping
 
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.requests import Request
+from starlette.responses import RedirectResponse, Response
+
+from api.routers.auth import get_oidc_client, router as auth_router
 from api.security.context import (
     establish_session,
     principal_from_session,
@@ -141,3 +148,152 @@ def test_disabled_mode_resolves_local_admin_without_session():
         display_name="Local Development",
         role="admin",
     )
+
+
+class _FakeOIDCClient:
+    def __init__(self) -> None:
+        self.claims: Mapping[str, object] = {
+            "sub": "u-1",
+            "email": "u@example.test",
+            "name": "Example User",
+            "roles": ["viewer"],
+        }
+        self.failure: Exception | None = None
+        self.login_nonce: str | None = None
+        self.callback_nonce: str | None = None
+
+    async def authorization_redirect(
+        self, request: Request, redirect_uri: str, nonce: str
+    ) -> Response:
+        self.login_nonce = nonce
+        return RedirectResponse(
+            f"https://id.example.test/authorize?redirect_uri={redirect_uri}",
+            status_code=302,
+        )
+
+    async def authorize_access_token(
+        self, request: Request, nonce: str
+    ) -> Mapping[str, object]:
+        self.callback_nonce = nonce
+        if self.failure:
+            raise self.failure
+        return self.claims
+
+
+def _auth_client(
+    settings: AuthSettings | None = None,
+) -> tuple[TestClient, _FakeOIDCClient]:
+    selected = settings or _settings()
+    fake = _FakeOIDCClient()
+    app = FastAPI()
+    app.state.auth_settings = selected
+    app.include_router(auth_router, prefix="/api/auth")
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=selected.session_secret,
+        https_only=False,
+        same_site="lax",
+    )
+    app.dependency_overrides[get_oidc_client] = lambda: fake
+    return TestClient(app), fake
+
+
+def test_login_creates_nonce_and_redirects_to_provider():
+    client, fake = _auth_client()
+
+    response = client.get("/api/auth/login", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["location"].startswith("https://id.example.test/")
+    assert fake.login_nonce is not None
+    assert len(fake.login_nonce) >= 32
+
+
+def test_callback_establishes_minimal_application_session():
+    client, fake = _auth_client()
+    client.get("/api/auth/login", follow_redirects=False)
+
+    response = client.get("/api/auth/callback?code=x&state=y", follow_redirects=False)
+    session = client.get("/api/auth/session")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+    assert fake.callback_nonce == fake.login_nonce
+    assert session.status_code == 200
+    assert session.json()["authenticated"] is True
+    assert session.json()["user"] == {
+        "subject": "u-1",
+        "email": "u@example.test",
+        "display_name": "Example User",
+    }
+    assert session.json()["role"] == "viewer"
+    assert len(session.json()["csrf_token"]) >= 32
+    assert "access_token" not in session.text
+
+
+def test_callback_denies_identity_without_allowed_role():
+    client, fake = _auth_client()
+    fake.claims = {"sub": "u-1", "roles": ["unknown"]}
+    client.get("/api/auth/login", follow_redirects=False)
+
+    response = client.get("/api/auth/callback?code=x&state=y")
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "OIDC_ROLE_DENIED"
+    assert client.get("/api/auth/session").json() == {"authenticated": False}
+
+
+def test_callback_rejects_missing_nonce_or_subject():
+    client, _ = _auth_client()
+    response = client.get("/api/auth/callback?code=x&state=y")
+    assert response.status_code == 401
+    assert response.json()["code"] == "OIDC_FLOW_INVALID"
+
+    client, fake = _auth_client()
+    fake.claims = {"roles": ["viewer"]}
+    client.get("/api/auth/login", follow_redirects=False)
+    response = client.get("/api/auth/callback?code=x&state=y")
+    assert response.status_code == 401
+    assert response.json()["code"] == "OIDC_IDENTITY_INVALID"
+
+
+def test_provider_failure_is_sanitized_and_creates_no_session():
+    client, fake = _auth_client()
+    fake.failure = RuntimeError("provider response contained secret-token")
+    client.get("/api/auth/login", follow_redirects=False)
+
+    response = client.get("/api/auth/callback?code=x&state=y")
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "OIDC_AUTHENTICATION_FAILED"
+    assert "secret-token" not in response.text
+    assert client.get("/api/auth/session").json() == {"authenticated": False}
+
+
+def test_logout_clears_session():
+    client, _ = _auth_client()
+    client.get("/api/auth/login", follow_redirects=False)
+    client.get("/api/auth/callback?code=x&state=y", follow_redirects=False)
+
+    response = client.post("/api/auth/logout")
+
+    assert response.status_code == 204
+    assert client.get("/api/auth/session").json() == {"authenticated": False}
+
+
+def test_disabled_mode_session_bootstraps_local_admin():
+    settings = AuthSettings.from_env({"APP_ENV": "test", "AUTH_MODE": "disabled"})
+    client, _ = _auth_client(settings)
+
+    response = client.get("/api/auth/session")
+
+    assert response.json() == {
+        "authenticated": True,
+        "user": {
+            "subject": "local-development",
+            "email": None,
+            "display_name": "Local Development",
+        },
+        "role": "admin",
+        "csrf_token": None,
+    }
