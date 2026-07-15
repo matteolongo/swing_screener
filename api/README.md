@@ -1,5 +1,30 @@
 # Swing Screener API
 
+## Authentication Boundary
+
+Production uses an OIDC authorization-code flow and a signed, HTTP-only
+`swing_session` cookie. Configure `APP_ENV=production`, `AUTH_MODE=oidc`, the
+four `OIDC_*` provider values, role claim/value mappings, and a random
+`SESSION_SECRET` of at least 32 bytes. Production refuses to start with disabled
+or incomplete authentication.
+
+`GET /api/auth/login` begins login, `/api/auth/callback` completes it,
+`GET /api/auth/session` bootstraps the UI, and `POST /api/auth/logout` clears the
+session. Viewer identities may read business APIs. Unsafe business methods
+require an admin identity and the session's `X-CSRF-Token`.
+
+Static UI files, auth flow endpoints, and `GET /health/live` are public.
+`/api/**`, `/health`, `/health/ready`, `/metrics`, and enabled API docs require a
+session. CORS only controls browser interoperability; it is not an access
+control boundary.
+
+The single-worker deployment uses a bounded in-memory fixed-window limiter:
+120 reads/minute, 60 mutations/minute, 5 expensive analysis requests/minute,
+and 2 intelligence sweeps/minute by default. Sweeps also reject more than
+`INTELLIGENCE_SWEEP_MAX_SYMBOLS` items before analyzer/provider work. A
+multi-worker deployment requires a shared limiter before increasing
+`WEB_CONCURRENCY`.
+
 FastAPI service that exposes the Swing Screener backend as a REST API.
 
 ## Run
