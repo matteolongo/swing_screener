@@ -1,8 +1,10 @@
 """Typed, fail-closed security configuration."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import lru_cache
+import hashlib
 from os import environ as process_environ
 from typing import Literal, Mapping
 
@@ -14,9 +16,7 @@ class SecurityConfigurationError(RuntimeError):
     """Raised when the security environment is invalid."""
 
 
-def _enum(
-    env: Mapping[str, str], name: str, default: str, allowed: set[str]
-) -> str:
+def _enum(env: Mapping[str, str], name: str, default: str, allowed: set[str]) -> str:
     value = env.get(name, default).strip().lower()
     if value not in allowed:
         choices = ", ".join(sorted(allowed))
@@ -52,7 +52,9 @@ def _positive_int(
 
 def _values(env: Mapping[str, str], name: str, default: str) -> frozenset[str]:
     return frozenset(
-        part.strip().lower() for part in env.get(name, default).split(",") if part.strip()
+        part.strip().lower()
+        for part in env.get(name, default).split(",")
+        if part.strip()
     )
 
 
@@ -79,11 +81,11 @@ class AuthSettings:
     rate_limit_sweep_per_minute: int
     rate_limit_max_buckets: int
     intelligence_sweep_max_symbols: int
+    order_approval_signing_key: bytes = field(repr=False)
+    order_approval_ttl_seconds: int = 28_800
 
     @classmethod
-    def from_env(
-        cls, environ: Mapping[str, str] | None = None
-    ) -> "AuthSettings":
+    def from_env(cls, environ: Mapping[str, str] | None = None) -> "AuthSettings":
         env = process_environ if environ is None else environ
         app_env = _enum(
             env, "APP_ENV", "development", {"development", "test", "production"}
@@ -95,6 +97,13 @@ class AuthSettings:
             if auth_mode == "disabled"
             else ""
         )
+        session_secret = env.get("SESSION_SECRET", default_secret)
+        raw_approval_key = env.get("ORDER_APPROVAL_SIGNING_KEY", "")
+        approval_key = raw_approval_key.encode("utf-8")
+        if not approval_key and app_env != "production":
+            approval_key = hashlib.sha256(
+                f"order-approval:{session_secret}".encode("utf-8")
+            ).digest()
         return cls(
             app_env=app_env,  # type: ignore[arg-type]
             auth_mode=auth_mode,  # type: ignore[arg-type]
@@ -105,19 +114,13 @@ class AuthSettings:
             oidc_role_claim=env.get("OIDC_ROLE_CLAIM", "roles").strip(),
             oidc_admin_values=_values(env, "OIDC_ADMIN_VALUES", "admin"),
             oidc_viewer_values=_values(env, "OIDC_VIEWER_VALUES", "viewer"),
-            session_secret=env.get("SESSION_SECRET", default_secret),
-            session_ttl_seconds=_positive_int(
-                env, "SESSION_TTL_SECONDS", 8 * 60 * 60
-            ),
-            session_cookie_name=env.get(
-                "SESSION_COOKIE_NAME", "swing_session"
-            ).strip(),
+            session_secret=session_secret,
+            session_ttl_seconds=_positive_int(env, "SESSION_TTL_SECONDS", 8 * 60 * 60),
+            session_cookie_name=env.get("SESSION_COOKIE_NAME", "swing_session").strip(),
             session_cookie_secure=_boolean(
                 env, "SESSION_COOKIE_SECURE", app_env == "production"
             ),
-            api_docs_enabled=_boolean(
-                env, "API_DOCS_ENABLED", app_env != "production"
-            ),
+            api_docs_enabled=_boolean(env, "API_DOCS_ENABLED", app_env != "production"),
             trust_proxy_headers=_boolean(env, "AUTH_TRUST_PROXY_HEADERS", False),
             rate_limit_default_per_minute=_positive_int(
                 env, "RATE_LIMIT_DEFAULT_PER_MINUTE", 120
@@ -131,11 +134,13 @@ class AuthSettings:
             rate_limit_sweep_per_minute=_positive_int(
                 env, "RATE_LIMIT_SWEEP_PER_MINUTE", 2
             ),
-            rate_limit_max_buckets=_positive_int(
-                env, "RATE_LIMIT_MAX_BUCKETS", 10_000
-            ),
+            rate_limit_max_buckets=_positive_int(env, "RATE_LIMIT_MAX_BUCKETS", 10_000),
             intelligence_sweep_max_symbols=_positive_int(
                 env, "INTELLIGENCE_SWEEP_MAX_SYMBOLS", 20, maximum=100
+            ),
+            order_approval_signing_key=approval_key,
+            order_approval_ttl_seconds=_positive_int(
+                env, "ORDER_APPROVAL_TTL_SECONDS", 28_800
             ),
         )
 
@@ -171,6 +176,14 @@ class AuthSettings:
             if not self.session_cookie_secure:
                 raise SecurityConfigurationError(
                     "SESSION_COOKIE_SECURE must be enabled in production"
+                )
+            if len(self.order_approval_signing_key) < 32:
+                raise SecurityConfigurationError(
+                    "ORDER_APPROVAL_SIGNING_KEY must contain at least 32 bytes in production"
+                )
+            if self.order_approval_ttl_seconds > 86_400:
+                raise SecurityConfigurationError(
+                    "ORDER_APPROVAL_TTL_SECONDS must not exceed 86400 in production"
                 )
 
 
