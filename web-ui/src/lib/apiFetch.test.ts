@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { apiUrl } from './api';
 import { apiFetch, setCsrfToken, subscribeAuthExpired } from './apiFetch';
 
 afterEach(() => {
@@ -13,7 +14,7 @@ describe('apiFetch', () => {
 
     await apiFetch('/api/data', { credentials: 'omit' });
 
-    expect(spy).toHaveBeenCalledWith('/api/data', expect.objectContaining({ credentials: 'include' }));
+    expect(spy).toHaveBeenCalledWith(apiUrl('/api/data'), expect.objectContaining({ credentials: 'include' }));
   });
 
   it('adds CSRF only to unsafe methods and preserves caller headers', async () => {

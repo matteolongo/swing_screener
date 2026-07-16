@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
+import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { AuthProvider } from './AuthProvider';
 import { LoginGate } from './LoginGate';
 
@@ -16,7 +17,10 @@ it('shows OIDC login while anonymous and children while authenticated', async ()
       <AuthProvider><LoginGate><div>Private app</div></LoginGate></AuthProvider>
     </QueryClientProvider>,
   );
-  expect(await screen.findByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/api/auth/login');
+  expect(await screen.findByRole('link', { name: /sign in/i })).toHaveAttribute(
+    'href',
+    apiUrl(API_ENDPOINTS.authLogin),
+  );
   expect(screen.queryByText('Private app')).not.toBeInTheDocument();
   first.unmount();
 
