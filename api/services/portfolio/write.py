@@ -1,4 +1,5 @@
 """Write-model: create/close/update positions."""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +10,7 @@ from typing import Optional
 import pandas as pd
 
 from swing_screener.errors import NotFoundError, ValidationError
+from swing_screener.data.currency import detect_currency
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 
 from api.models.portfolio import (
@@ -20,6 +22,7 @@ from api.models.portfolio import (
     UpdateTrailMethodRequest,
 )
 from api.repositories.positions_repo import PositionsRepository
+from api.repositories.config_repo import ConfigRepository
 from api.utils.files import get_today_str
 
 logger = logging.getLogger(__name__)
@@ -36,9 +39,11 @@ class PortfolioWriteService:
         self,
         positions_repo: PositionsRepository,
         provider: Optional[MarketDataProvider] = None,
+        config_repo: Optional[ConfigRepository] = None,
     ) -> None:
         self._positions_repo = positions_repo
         self._provider = provider or get_default_provider()
+        self._config_repo = config_repo or ConfigRepository()
 
     def create_position(self, request: CreatePositionRequest) -> Position:
         """Register a position directly (after manual fill at DeGiro)."""
@@ -46,6 +51,19 @@ class PortfolioWriteService:
         position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
         initial_risk = round(request.entry_price - request.stop_price, 4)
         isin = request.isin
+        quote_currency = str(
+            request.quote_currency or detect_currency(ticker) or "UNKNOWN"
+        ).upper()
+        account_currency = str(
+            request.account_currency or self._config_repo.get().risk.account_currency
+        ).upper()
+        entry_fx_rate = request.entry_fx_rate
+        if quote_currency == account_currency:
+            entry_fx_rate = 1.0
+        elif entry_fx_rate is None:
+            raise ValidationError(
+                f"FX rate is required for {quote_currency}/{account_currency} positions"
+            )
 
         new_position: dict = {
             "position_id": position_id,
@@ -62,6 +80,9 @@ class PortfolioWriteService:
             "notes": request.notes,
             "broker": "manual",
             "entry_fee_eur": request.fee_eur,
+            "quote_currency": quote_currency,
+            "account_currency": account_currency,
+            "entry_fx_rate": entry_fx_rate,
         }
 
         def _modify(data: dict) -> dict:
@@ -75,7 +96,9 @@ class PortfolioWriteService:
 
         return Position(**new_position)
 
-    def update_position_stop(self, position_id: str, request: UpdateStopRequest) -> dict:
+    def update_position_stop(
+        self, position_id: str, request: UpdateStopRequest
+    ) -> dict:
         new_stop = _round_price(request.new_stop)
 
         # Validate against a snapshot first (the price fetch is network I/O and must
@@ -96,8 +119,12 @@ class PortfolioWriteService:
         current_price = None
         try:
             end_date = get_today_str()
-            start_date = (pd.Timestamp(end_date) - pd.Timedelta(days=5)).strftime("%Y-%m-%d")
-            ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=end_date)
+            start_date = (pd.Timestamp(end_date) - pd.Timedelta(days=5)).strftime(
+                "%Y-%m-%d"
+            )
+            ohlcv = self._provider.fetch_ohlcv(
+                [ticker], start_date=start_date, end_date=end_date
+            )
             if not ohlcv.empty and ticker in ohlcv.columns.get_level_values(1):
                 latest_close = ohlcv[("Close", ticker)].iloc[-1]
                 if not pd.isna(latest_close):
@@ -119,7 +146,9 @@ class PortfolioWriteService:
                     pos["stop_price"] = new_stop
                     if request.reason:
                         current_notes = pos.get("notes", "")
-                        pos["notes"] = f"{current_notes}\nStop updated to {new_stop}: {request.reason}".strip()
+                        pos["notes"] = (
+                            f"{current_notes}\nStop updated to {new_stop}: {request.reason}".strip()
+                        )
                     data["asof"] = get_today_str()
                     return data
             raise NotFoundError(f"Position not found: {position_id}")
@@ -147,7 +176,9 @@ class PortfolioWriteService:
                     pos["exit_fx_rate"] = request.exit_fx_rate
                     if request.reason:
                         current_notes = pos.get("notes", "")
-                        pos["notes"] = f"{current_notes}\nClosed: {request.reason}".strip()
+                        pos["notes"] = (
+                            f"{current_notes}\nClosed: {request.reason}".strip()
+                        )
                     if request.lesson is not None:
                         pos["lesson"] = request.lesson
                     pos["tags"] = list(request.tags)
@@ -165,7 +196,9 @@ class PortfolioWriteService:
             "exit_fx_rate": request.exit_fx_rate,
         }
 
-    def partial_close_position(self, position_id: str, request: PartialCloseRequest) -> dict:
+    def partial_close_position(
+        self, position_id: str, request: PartialCloseRequest
+    ) -> dict:
         """Close a subset of shares on an open position, recording a partial-close event."""
         result: dict = {}
 
@@ -189,7 +222,11 @@ class PortfolioWriteService:
                     per_share_risk = float(initial_risk)
                 else:
                     per_share_risk = entry_price - float(pos.get("stop_price", 0.0))
-                r_at_close = (request.price - entry_price) / per_share_risk if per_share_risk != 0 else 0.0
+                r_at_close = (
+                    (request.price - entry_price) / per_share_risk
+                    if per_share_risk != 0
+                    else 0.0
+                )
 
                 event = {
                     "date": get_today_str(),
@@ -223,7 +260,9 @@ class PortfolioWriteService:
             "fx_rate": request.fx_rate,
         }
 
-    def update_trail_method(self, position_id: str, request: UpdateTrailMethodRequest) -> dict:
+    def update_trail_method(
+        self, position_id: str, request: UpdateTrailMethodRequest
+    ) -> dict:
         def _modify(data: dict) -> dict:
             for pos in data.get("positions", []):
                 if pos.get("position_id") == position_id:

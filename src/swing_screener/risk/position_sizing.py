@@ -16,23 +16,68 @@ def _risk_defaults() -> dict:
 
 @dataclass(frozen=True)
 class RiskConfig:
-    account_size: float = field(default_factory=lambda: float(_risk_defaults().get("account_size", 500.0)))
-    account_currency: str = field(default_factory=lambda: str(_risk_defaults().get("account_currency", "EUR")).upper())
-    risk_pct: float = field(default_factory=lambda: float(_risk_defaults().get("risk_pct", 0.01)))
-    k_atr: float = field(default_factory=lambda: float(_risk_defaults().get("k_atr", 2.0)))
-    max_position_pct: float = field(default_factory=lambda: float(_risk_defaults().get("max_position_pct", 0.60)))
-    min_shares: int = field(default_factory=lambda: int(_risk_defaults().get("min_shares", 1)))
-    min_rr: float = field(default_factory=lambda: float(_risk_defaults().get("min_rr", 2.0)))
-    rr_target: float = field(default_factory=lambda: float(_risk_defaults().get("rr_target", 2.0)))
-    commission_pct: float = field(default_factory=lambda: float(_risk_defaults().get("commission_pct", 0.0)))
-    max_fee_risk_pct: float = field(default_factory=lambda: float(_risk_defaults().get("max_fee_risk_pct", 0.20)))
+    account_size: float = field(
+        default_factory=lambda: float(_risk_defaults().get("account_size", 500.0))
+    )
+    account_currency: str = field(
+        default_factory=lambda: str(
+            _risk_defaults().get("account_currency", "EUR")
+        ).upper()
+    )
+    risk_pct: float = field(
+        default_factory=lambda: float(_risk_defaults().get("risk_pct", 0.01))
+    )
+    k_atr: float = field(
+        default_factory=lambda: float(_risk_defaults().get("k_atr", 2.0))
+    )
+    max_position_pct: float = field(
+        default_factory=lambda: float(_risk_defaults().get("max_position_pct", 0.60))
+    )
+    min_shares: int = field(
+        default_factory=lambda: int(_risk_defaults().get("min_shares", 1))
+    )
+    min_rr: float = field(
+        default_factory=lambda: float(_risk_defaults().get("min_rr", 2.0))
+    )
+    rr_target: float = field(
+        default_factory=lambda: float(_risk_defaults().get("rr_target", 2.0))
+    )
+    commission_pct: float = field(
+        default_factory=lambda: float(_risk_defaults().get("commission_pct", 0.0))
+    )
+    max_fee_risk_pct: float = field(
+        default_factory=lambda: float(_risk_defaults().get("max_fee_risk_pct", 0.20))
+    )
+    max_portfolio_heat_pct: float = field(
+        default_factory=lambda: float(
+            _risk_defaults().get("max_portfolio_heat_pct", 0.06)
+        )
+    )
     # Regime-aware risk scaling (optional)
-    regime_enabled: bool = field(default_factory=lambda: bool(_risk_defaults().get("regime_enabled", False)))
-    regime_trend_sma: int = field(default_factory=lambda: int(_risk_defaults().get("regime_trend_sma", 200)))
-    regime_trend_multiplier: float = field(default_factory=lambda: float(_risk_defaults().get("regime_trend_multiplier", 0.5)))
-    regime_vol_atr_window: int = field(default_factory=lambda: int(_risk_defaults().get("regime_vol_atr_window", 14)))
-    regime_vol_atr_pct_threshold: float = field(default_factory=lambda: float(_risk_defaults().get("regime_vol_atr_pct_threshold", 6.0)))
-    regime_vol_multiplier: float = field(default_factory=lambda: float(_risk_defaults().get("regime_vol_multiplier", 0.5)))
+    regime_enabled: bool = field(
+        default_factory=lambda: bool(_risk_defaults().get("regime_enabled", False))
+    )
+    regime_trend_sma: int = field(
+        default_factory=lambda: int(_risk_defaults().get("regime_trend_sma", 200))
+    )
+    regime_trend_multiplier: float = field(
+        default_factory=lambda: float(
+            _risk_defaults().get("regime_trend_multiplier", 0.5)
+        )
+    )
+    regime_vol_atr_window: int = field(
+        default_factory=lambda: int(_risk_defaults().get("regime_vol_atr_window", 14))
+    )
+    regime_vol_atr_pct_threshold: float = field(
+        default_factory=lambda: float(
+            _risk_defaults().get("regime_vol_atr_pct_threshold", 6.0)
+        )
+    )
+    regime_vol_multiplier: float = field(
+        default_factory=lambda: float(
+            _risk_defaults().get("regime_vol_multiplier", 0.5)
+        )
+    )
 
 
 def _normalize_currency(value: object, fallback: str = "EUR") -> str:

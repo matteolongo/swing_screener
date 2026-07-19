@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
@@ -22,6 +23,8 @@ from api.repositories.watchlist_repo import WatchlistRepository
 from api.repositories.weekly_reviews_repo import WeeklyReviewsRepository
 from api.services.fundamentals_service import FundamentalsService
 from api.services.orders_service import OrdersService
+from api.services.order_approval_token import OrderApprovalTokenSigner
+from api.security.settings import get_auth_settings
 from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.screener_service import ScreenerService
@@ -36,6 +39,15 @@ from swing_screener.fundamentals import FundamentalsAnalysisService as _Fundamen
 _finnhub_client: FinnhubEnrichmentClient | None = None
 _finnhub_client_api_key: str | None = None
 _finnhub_client_lock = threading.Lock()
+
+
+@lru_cache(maxsize=1)
+def get_order_approval_signer() -> OrderApprovalTokenSigner:
+    settings = get_auth_settings()
+    return OrderApprovalTokenSigner(
+        settings.order_approval_signing_key,
+        ttl_seconds=settings.order_approval_ttl_seconds,
+    )
 
 
 def get_finnhub_client() -> FinnhubEnrichmentClient | None:
@@ -143,12 +155,14 @@ def get_orders_service(
     positions_repo: PositionsRepository = Depends(get_positions_repo),
     config_repo: ConfigRepository = Depends(get_config_repo),
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+    approval_signer: OrderApprovalTokenSigner = Depends(get_order_approval_signer),
 ) -> OrdersService:
     return OrdersService(
         orders_repo=orders_repo,
         positions_repo=positions_repo,
         config_repo=config_repo,
         strategy_repo=strategy_repo,
+        approval_signer=approval_signer,
     )
 
 
@@ -185,6 +199,7 @@ def get_screener_service(
     orders_service: OrdersService = Depends(get_orders_service),
     pool_repo: SymbolPoolRepository = Depends(get_symbol_pool_repo),
     review_repo: ReviewQueueRepository = Depends(get_review_queue_repo),
+    approval_signer: OrderApprovalTokenSigner = Depends(get_order_approval_signer),
 ) -> ScreenerService:
     return ScreenerService(
         strategy_repo=strategy_repo,
@@ -192,6 +207,7 @@ def get_screener_service(
         orders_service=orders_service,
         pool_repo=pool_repo,
         review_repo=review_repo,
+        approval_signer=approval_signer,
     )
 
 
