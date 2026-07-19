@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 import logging
+import math
 from typing import Optional
 
 from swing_screener.errors import (
@@ -16,7 +17,11 @@ from api.models.portfolio import (
     FillOrderRequest,
     FillOrderResponse,
     Position,
+    PortfolioApprovalGate,
+    PortfolioOrderApproval,
 )
+from api.repositories.config_repo import ConfigRepository
+from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.utils.files import get_today_str
@@ -33,9 +38,151 @@ class OrdersService:
         self,
         orders_repo: OrdersRepository,
         positions_repo: PositionsRepository,
+        config_repo: ConfigRepository | None = None,
+        strategy_repo: StrategyRepository | None = None,
     ) -> None:
         self._orders_repo = orders_repo
         self._positions_repo = positions_repo
+        self._config_repo = config_repo
+        self._strategy_repo = strategy_repo
+
+    @staticmethod
+    def _country(ticker: str) -> str:
+        suffix = ticker.upper().rsplit(".", 1)[-1] if "." in ticker else "US"
+        return {
+            "AS": "NL", "DE": "DE", "PA": "FR", "MI": "IT", "MC": "ES",
+            "L": "UK", "SW": "CH", "ST": "SE", "CO": "DK", "OL": "NO",
+        }.get(suffix, "US")
+
+    def _risk_policy(self) -> dict:
+        strategy = self._strategy_repo.get_active_strategy() if self._strategy_repo else {}
+        risk = dict(strategy.get("risk") or {})
+        if self._config_repo is not None:
+            configured = self._config_repo.get().risk
+            risk.setdefault("account_size", configured.account_size)
+            risk.setdefault("risk_pct", configured.risk_pct)
+            risk.setdefault("max_concentration_pct", configured.max_concentration_pct)
+        risk.setdefault("account_size", 0.0)
+        risk.setdefault("risk_pct", 0.01)
+        risk.setdefault("min_rr", 2.0)
+        risk.setdefault("max_portfolio_heat_pct", 0.06)
+        risk.setdefault("max_concentration_pct", 60.0)
+        return risk
+
+    @staticmethod
+    def _entry_price(request: CreateOrderRequest) -> float:
+        price = request.limit_price
+        if price is None or not math.isfinite(price) or price <= 0:
+            raise UnprocessableError("A finite planned entry price is required for portfolio approval.")
+        return float(price)
+
+    def _approve_entry_order(
+        self, request: CreateOrderRequest, orders: list[dict], positions: list[dict]
+    ) -> PortfolioOrderApproval:
+        if request.setup_status != "PASS" or request.trigger_status != "PASS":
+            raise UnprocessableError("Order blocked: setup and observed entry-trigger gates must both pass.")
+        if request.data_status != "current" or not request.data_asof:
+            raise UnprocessableError("Order blocked: critical market data is stale, intraday, or unknown.")
+        if request.target_source not in {"structural", "manual"}:
+            raise UnprocessableError("Order blocked: target is not independently validated.")
+
+        entry = self._entry_price(request)
+        stop = request.stop_price
+        target = request.target_price
+        if stop is None or target is None or stop >= entry or target <= entry:
+            raise UnprocessableError("Order blocked: entry, stop, and target do not form a coherent long plan.")
+
+        policy = self._risk_policy()
+        min_rr = float(policy["min_rr"])
+        rr = (target - entry) / (entry - stop)
+        if rr < min_rr:
+            raise UnprocessableError(f"Order blocked: structural reward/risk {rr:.2f} is below {min_rr:.2f}.")
+
+        rate = request.account_to_quote_rate or 1.0
+        notional = request.quantity * entry / rate
+        risk = request.quantity * (entry - stop) / rate
+        account_size = float(policy["account_size"])
+
+        position_notional = sum(
+            float(p.get("entry_price") or 0) * int(p.get("shares") or 0)
+            for p in positions if p.get("status") == "open"
+        )
+        position_risk = sum(
+            max(0.0, float(p.get("entry_price") or 0) - float(p.get("stop_price") or 0))
+            * int(p.get("shares") or 0)
+            for p in positions if p.get("status") == "open"
+        )
+        pending = [
+            order for order in orders
+            if order.get("status") in {"pending", "submitted"} and order.get("order_kind") == "entry"
+        ]
+        pending_notional = sum(float(o.get("limit_price") or 0) * int(o.get("quantity") or 0) for o in pending)
+        pending_risk = sum(
+            max(0.0, float(o.get("limit_price") or 0) - float(o.get("stop_price") or 0))
+            * int(o.get("quantity") or 0) for o in pending
+        )
+
+        available = account_size - position_notional - pending_notional
+        cash_pass = notional <= available + 1e-9
+        heat_limit = account_size * float(policy["max_portfolio_heat_pct"])
+        projected_heat = position_risk + pending_risk + risk
+        heat_pass = projected_heat <= heat_limit + 1e-9
+
+        country = self._country(request.ticker)
+        country_notional = sum(
+            float(p.get("entry_price") or 0) * int(p.get("shares") or 0)
+            for p in positions
+            if p.get("status") == "open" and self._country(str(p.get("ticker") or "")) == country
+        ) + sum(
+            float(o.get("limit_price") or 0) * int(o.get("quantity") or 0)
+            for o in pending if self._country(str(o.get("ticker") or "")) == country
+        )
+        projected_concentration = (
+            (country_notional + notional) / account_size * 100.0 if account_size > 0 else 100.0
+        )
+        concentration_limit = float(policy["max_concentration_pct"])
+        concentration_pass = projected_concentration <= concentration_limit + 1e-9
+
+        event_pass = request.days_to_earnings is not None and request.days_to_earnings > 3
+        approval = PortfolioOrderApproval(
+            approved=cash_pass and heat_pass and concentration_pass and event_pass,
+            cash=PortfolioApprovalGate(
+                status="PASS" if cash_pass else "BLOCK",
+                explanation="Sufficient unreserved capital." if cash_pass else "Insufficient capital after open and pending exposure.",
+                current=round(available, 2), projected=round(available - notional, 2), limit=0.0,
+            ),
+            heat=PortfolioApprovalGate(
+                status="PASS" if heat_pass else "BLOCK",
+                explanation="Projected portfolio heat is within policy." if heat_pass else "Projected portfolio heat exceeds policy.",
+                current=round(position_risk + pending_risk, 2), projected=round(projected_heat, 2), limit=round(heat_limit, 2),
+            ),
+            concentration=PortfolioApprovalGate(
+                status="PASS" if concentration_pass else "BLOCK",
+                explanation=f"Projected {country} risk concentration is within policy." if concentration_pass else f"Projected {country} risk concentration exceeds policy.",
+                projected=round(projected_concentration, 2), limit=round(concentration_limit, 2),
+            ),
+            event=PortfolioApprovalGate(
+                status="PASS" if event_pass else "BLOCK",
+                explanation=(
+                    f"Earnings are {request.days_to_earnings} days away."
+                    if request.days_to_earnings is not None and event_pass
+                    else "Earnings are inside the three-day risk window."
+                    if request.days_to_earnings is not None
+                    else "Earnings status is unknown."
+                ),
+            ),
+            projected_risk=round(risk, 2),
+            projected_notional=round(notional, 2),
+        )
+        if not approval.approved:
+            blockers = [
+                name for name, gate in (
+                    ("cash", approval.cash), ("heat", approval.heat),
+                    ("concentration", approval.concentration), ("event", approval.event),
+                ) if gate.status == "BLOCK"
+            ]
+            raise UnprocessableError("Order blocked by portfolio approval: " + ", ".join(blockers))
+        return approval
 
     def create_order(self, request: CreateOrderRequest) -> dict:
         ticker = request.ticker.upper()
@@ -61,6 +208,9 @@ class OrdersService:
                 raise ConflictError(
                     f"{ticker}: open position already exists. Create this as an ADD_ON order instead.",
                 )
+            approval = self._approve_entry_order(request, orders, positions)
+        else:
+            approval = None
 
         existing_ids = {o.get("order_id", "") for o in orders}
         base = f"ORD-{ticker}"
@@ -92,6 +242,15 @@ class OrdersService:
             "fill_fx_rate": None,
             "isin": isin,
             "thesis": request.thesis,
+            "decision_context": {
+                "setup_status": request.setup_status,
+                "trigger_status": request.trigger_status,
+                "data_status": request.data_status,
+                "data_asof": request.data_asof,
+                "target_source": request.target_source,
+                "strategy_id": request.strategy_id,
+            },
+            "portfolio_approval": approval.model_dump(mode="json") if approval else None,
         }
         self._orders_repo.append_order(order)
         return order

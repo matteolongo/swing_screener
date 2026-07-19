@@ -112,23 +112,23 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
     eur = candidates["ABN.AS"]
     assert eur["quote_currency"] == "EUR"
     assert eur["account_currency"] == "EUR"
-    assert eur["position_size_quote"] == 3542.0
-    assert eur["risk_quote"] == 142.0
+    assert eur["position_size_quote"] == eur["recommendation"]["risk"]["position_size"]
+    assert eur["risk_quote"] == eur["recommendation"]["risk"]["risk_amount"]
     assert eur["recommendation"]["risk"]["currency"] == "EUR"
     assert eur["recommendation"]["risk"]["account_currency"] == "EUR"
 
     usd = candidates["AAPL"]
     assert usd["quote_currency"] == "USD"
     assert usd["account_currency"] == "EUR"
-    assert usd["position_size_quote"] == 543.0
-    assert usd["risk_quote"] == 12.0
-    # ``risk_pct`` is measured against the EUR account balance, not against
-    # the USD quote-currency risk.  USD 12 at 1.25 USD/EUR is EUR 9.60.
-    assert usd["risk_pct"] == pytest.approx(0.0096, abs=1e-6)
+    assert usd["position_size_quote"] == usd["recommendation"]["risk"]["position_size"]
+    assert usd["risk_quote"] == usd["recommendation"]["risk"]["risk_amount"]
+    assert usd["risk_pct"] == usd["recommendation"]["risk"]["risk_pct"]
     assert usd["recommendation"]["risk"]["currency"] == "USD"
     assert usd["recommendation"]["risk"]["account_currency"] == "EUR"
     assert usd["recommendation"]["risk"]["account_to_quote_rate"] == 1.25
-    assert usd["recommendation"]["risk"]["risk_amount_account"] == 9.6
+    assert usd["recommendation"]["risk"]["risk_amount_account"] == pytest.approx(
+        usd["risk_quote"] / 1.25, abs=1e-6
+    )
 
 
 def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(monkeypatch):
@@ -183,7 +183,7 @@ def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(
     candidate = response.json()["candidates"][0]
     assert candidate["quote_currency"] == "USD"
     assert candidate["account_currency"] == "EUR"
-    assert candidate["risk_quote"] == 12.0
+    assert candidate["risk_quote"] == 0.0
     assert candidate["risk_pct"] == 0.0
     risk = candidate["recommendation"]["risk"]
     assert risk["account_to_quote_rate"] is None

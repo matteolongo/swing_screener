@@ -32,6 +32,8 @@ def test_validate_strategy_safe(monkeypatch, tmp_path):
     payload["signals"]["pullback_ma"] = 20
     payload["risk"]["min_rr"] = 2.5
     payload["risk"]["risk_pct"] = 0.01
+    payload["risk"]["max_position_pct"] = 0.2
+    payload["risk"]["commission_pct"] = 0.001
     payload["universe"]["filt"]["max_atr_pct"] = 15
     payload["manage"]["max_holding_days"] = 20
 
@@ -63,9 +65,9 @@ def test_validate_strategy_dangerous(monkeypatch, tmp_path):
     assert res.status_code == 200
     data = res.json()
     assert data["is_valid"] is False
-    assert data["total_warnings"] == 6
-    assert data["danger_count"] == 4
-    assert data["warning_count"] == 2
+    assert data["total_warnings"] == 8
+    assert data["danger_count"] == 5
+    assert data["warning_count"] == 3
     assert data["info_count"] == 0
     assert data["safety_level"] == "expert-only"
 

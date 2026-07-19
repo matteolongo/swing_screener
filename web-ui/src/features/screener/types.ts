@@ -94,12 +94,22 @@ export type DecisionSignalLabel = 'strong' | 'neutral' | 'weak';
 export type DecisionValuationLabel = 'cheap' | 'fair' | 'expensive' | 'unknown';
 export type DecisionCatalystLabel = 'active' | 'neutral' | 'weak' | 'unknown';
 export type FairValueMethod = 'earnings_multiple' | 'sales_multiple' | 'book_multiple' | 'not_available';
+export type DecisionEntryCondition =
+  | 'buy_now'
+  | 'pullback_to_price'
+  | 'breakout_above_price'
+  | 'wait_for_confirmation'
+  | 'no_entry'
+  | 'manage_position';
 
 export interface DecisionTradePlan {
   entry?: number;
   stop?: number;
   target?: number;
   rr?: number;
+  entryCondition?: DecisionEntryCondition;
+  triggerPrice?: number;
+  triggerNote?: string;
 }
 
 export interface DecisionValuationContext {
@@ -175,6 +185,9 @@ export interface ScreenerCandidate {
   name?: string;
   sector?: string;
   lastBar?: string;
+  dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+  dataAsOf?: string;
+  degradedReasons?: string[];
   close: number;
   sma20: number | null;
   sma50: number | null;
@@ -190,6 +203,7 @@ export interface ScreenerCandidate {
   priorityRank?: number;
   fundamentalsCoverageStatus?: string;
   fundamentalsFreshnessStatus?: string;
+  fundamentalsAsOf?: string;
   fundamentalsSummary?: string;
   signal?: string;
   entry?: number;
@@ -230,6 +244,9 @@ export interface DecisionTradePlanAPI {
   stop?: number;
   target?: number;
   rr?: number;
+  entry_condition?: DecisionEntryCondition;
+  trigger_price?: number | null;
+  trigger_note?: string | null;
 }
 
 export interface DecisionValuationContextAPI {
@@ -291,6 +308,9 @@ export interface ScreenerCandidateAPI {
   name?: string;
   sector?: string;
   last_bar?: string;
+  data_status?: 'current' | 'stale' | 'intraday' | 'unknown';
+  data_asof?: string | null;
+  degraded_reasons?: string[];
   close: number;
   sma_20: number | null;
   sma_50: number | null;
@@ -306,6 +326,7 @@ export interface ScreenerCandidateAPI {
   priority_rank?: number;
   fundamentals_coverage_status?: string;
   fundamentals_freshness_status?: string;
+  fundamentals_asof?: string;
   fundamentals_summary?: string;
   signal?: string;
   entry?: number;
@@ -470,6 +491,9 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       stop: apiSummary.trade_plan?.stop ?? undefined,
       target: apiSummary.trade_plan?.target ?? undefined,
       rr: apiSummary.trade_plan?.rr ?? undefined,
+      entryCondition: apiSummary.trade_plan?.entry_condition ?? undefined,
+      triggerPrice: apiSummary.trade_plan?.trigger_price ?? undefined,
+      triggerNote: apiSummary.trade_plan?.trigger_note ?? undefined,
     },
     valuationContext: {
       method: apiSummary.valuation_context?.method ?? 'not_available',
@@ -555,6 +579,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       name: c.name,
       sector: c.sector,
       lastBar: c.last_bar,
+      dataStatus: c.data_status ?? 'unknown',
+      dataAsOf: c.data_asof ?? undefined,
+      degradedReasons: c.degraded_reasons ?? [],
       close: c.close,
       sma20: c.sma_20,
       sma50: c.sma_50,
@@ -570,6 +597,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       priorityRank: c.priority_rank ?? undefined,
       fundamentalsCoverageStatus: c.fundamentals_coverage_status,
       fundamentalsFreshnessStatus: c.fundamentals_freshness_status,
+      fundamentalsAsOf: c.fundamentals_asof,
       fundamentalsSummary: c.fundamentals_summary,
       signal: c.signal,
       entry: c.entry,

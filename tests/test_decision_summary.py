@@ -127,6 +127,30 @@ def test_decision_summary_round_trip() -> None:
     assert restored.valuation_context.method == "earnings_multiple"
 
 
+def test_wait_for_breakout_without_buy_stop_does_not_claim_the_risk_entry_is_a_breakout_trigger() -> None:
+    summary = build_decision_summary(
+        _candidate(suggested_order_type="BUY_LIMIT", suggested_order_price=178.18),
+        opportunity=_opportunity(technical_readiness=0.55),
+        fundamentals=_snapshot(),
+    )
+
+    assert summary.action == "WAIT_FOR_BREAKOUT"
+    assert summary.trade_plan.entry_condition == "wait_for_confirmation"
+    assert summary.trade_plan.trigger_price is None
+
+
+def test_wait_for_breakout_uses_buy_stop_price_as_the_explicit_trigger() -> None:
+    summary = build_decision_summary(
+        _candidate(suggested_order_type="BUY_STOP", suggested_order_price=181.25),
+        opportunity=_opportunity(technical_readiness=0.55),
+        fundamentals=_snapshot(),
+    )
+
+    assert summary.action == "WAIT_FOR_BREAKOUT"
+    assert summary.trade_plan.entry_condition == "breakout_above_price"
+    assert summary.trade_plan.trigger_price == pytest.approx(181.25)
+
+
 def test_strong_technical_and_fundamentals_with_earnings_fair_value_maps_to_buy_now() -> None:
     summary = build_decision_summary(_candidate(), opportunity=_opportunity(), fundamentals=_snapshot())
 

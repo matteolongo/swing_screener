@@ -100,6 +100,14 @@ def _candidate_req() -> SymbolIntelligenceRequest:
         insider_net_shares_90d=15000,
         analyst_upgrade_downgrade_net_30d=2,
         valuation_label="fair",
+        price_source="test",
+        price_asof="2026-07-03",
+        price_status="current",
+        fundamentals_source="test",
+        fundamentals_asof="2026-07-03",
+        fundamentals_status="current",
+        evidence_asof="2026-07-03T15:00:00Z",
+        evidence_status="current",
     )
 
 
@@ -117,6 +125,14 @@ def _position_req() -> SymbolIntelligenceRequest:
         sma_50=97.0,
         sma_200=90.0,
         momentum_6m=10.0,
+        price_source="test",
+        price_asof="2026-07-03",
+        price_status="current",
+        fundamentals_source="test",
+        fundamentals_asof="2026-07-03",
+        fundamentals_status="current",
+        evidence_asof="2026-07-03T15:00:00Z",
+        evidence_status="current",
     )
 
 
@@ -136,6 +152,9 @@ def _mock_openai(monkeypatch):
         client.responses.create.return_value = SimpleNamespace(
             output_text=_SEARCH_TEXT,
             usage=SimpleNamespace(total_tokens=1000),
+            model_dump=lambda mode="json": {
+                "output": [{"annotations": [{"type": "url_citation", "url": "https://example.com/a"}]}]
+            },
         )
 
         def _parse(model, instructions, input, text_format):
@@ -160,6 +179,13 @@ def _strip_dynamic(result):
     dumped = result.model_dump(mode="json")
     dumped.pop("generated_at", None)
     dumped.pop("run_id", None)
+    for key in (
+        "claim_grounding", "data_status", "data_provenance", "degraded_reasons",
+        "context_fingerprint", "strategy_id", "config_signature",
+    ):
+        dumped.pop(key, None)
+    dumped.get("inputs_used", {}).pop("data_provenance", None)
+    dumped.get("inputs_used", {}).get("technical", {}).pop("price_source", None)
     return dumped
 
 
@@ -330,7 +356,7 @@ _EXPECTED_STABLE_BY_CASE = {
         "conviction": "medium",
         "catalyst_urgency": "low",
         "summary_line": "Manage the existing position.",
-        "narrative": "What to do: hold and manage risk. Watch for: SMA20 loss.",
+        "narrative": "**Position management only — do not initiate a new entry.**\n\n**Current instruction: HOLD.** Thesis remains intact while price holds above stop.\n\n**Review trigger:** Review on SMA20 loss or fresh earnings news. Thesis status: intact.\n\n**Risks to monitor:**\n- Earnings in 12 days.",
         "upcoming_events": [],
         "position_signal": {
             "action": "HOLD",

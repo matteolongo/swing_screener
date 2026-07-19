@@ -48,6 +48,9 @@ export interface IntelligenceRequestPayload {
   valuation_label?: string | null;
   decision_action?: string | null;
   decision_conviction?: string | null;
+  decision_entry_condition?: string | null;
+  decision_trigger_price?: number | null;
+  decision_trigger_note?: string | null;
   technical_label?: string | null;
   fundamentals_label?: string | null;
   days_to_earnings?: number | null;
@@ -56,6 +59,11 @@ export interface IntelligenceRequestPayload {
   next_dividend_date?: string | null;
   next_dividend_amount?: number | null;
   recent_patterns?: string[] | null;
+  price_source?: string | null;
+  price_asof?: string | null;
+  price_status?: 'current' | 'stale' | 'intraday' | 'unknown';
+  fundamentals_asof?: string | null;
+  fundamentals_status?: 'current' | 'stale' | 'intraday' | 'unknown';
 }
 
 export function candidateToPayload(
@@ -81,6 +89,15 @@ export function candidateToPayload(
       momentum_12m: candidate.momentum12m ?? null,
       sector: candidate.sector ?? null,
       currency: candidate.currency ?? 'USD',
+      price_source: 'screener_market_data',
+      price_asof: candidate.lastBar ?? null,
+      price_status: candidate.dataStatus ?? 'unknown',
+      fundamentals_asof: candidate.fundamentalsAsOf ?? null,
+      fundamentals_status: (
+        candidate.fundamentalsFreshnessStatus === 'current' || candidate.fundamentalsFreshnessStatus === 'stale'
+          ? candidate.fundamentalsFreshnessStatus
+          : 'unknown'
+      ),
     };
     payload.rr = candidate.rr ?? null;
     payload.rel_strength = candidate.relStrength ?? null;
@@ -96,6 +113,9 @@ export function candidateToPayload(
     payload.valuation_label = candidate.decisionSummary?.valuationLabel ?? null;
     payload.decision_action = candidate.decisionSummary?.action ?? null;
     payload.decision_conviction = candidate.decisionSummary?.conviction ?? null;
+    payload.decision_entry_condition = candidate.decisionSummary?.tradePlan?.entryCondition ?? null;
+    payload.decision_trigger_price = candidate.decisionSummary?.tradePlan?.triggerPrice ?? null;
+    payload.decision_trigger_note = candidate.decisionSummary?.tradePlan?.triggerNote ?? null;
     payload.technical_label = candidate.decisionSummary?.technicalLabel ?? null;
     payload.fundamentals_label = candidate.decisionSummary?.fundamentalsLabel ?? null;
     payload.days_to_earnings = candidate.daysToEarnings ?? null;

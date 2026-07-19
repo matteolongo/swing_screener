@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 
 RecommendationVerdict = Literal["RECOMMENDED", "NOT_RECOMMENDED"]
+DecisionGateStatus = Literal["PASS", "WAIT", "BLOCK", "UNKNOWN"]
 ReasonSeverity = Literal["info", "warn", "block"]
 
 
@@ -21,6 +22,8 @@ class RecommendationRisk(BaseModel):
     entry: float
     stop: Optional[float] = None
     target: Optional[float] = None
+    desired_target: Optional[float] = None
+    target_source: str = "unvalidated_r_multiple"
     rr: Optional[float] = None
     risk_amount: float
     risk_amount_account: Optional[float] = Field(
@@ -64,6 +67,29 @@ class ChecklistGate(BaseModel):
     rule: Optional[str] = None
 
 
+class DecisionGateModel(BaseModel):
+    status: DecisionGateStatus
+    explanation: str
+
+
+class DecisionGateStateModel(BaseModel):
+    setup: DecisionGateModel
+    trigger: DecisionGateModel
+    plan: DecisionGateModel
+    portfolio: DecisionGateModel
+    ready_to_order: bool = False
+
+
+def _unknown_decision_gates() -> DecisionGateStateModel:
+    unknown = lambda text: DecisionGateModel(status="UNKNOWN", explanation=text)
+    return DecisionGateStateModel(
+        setup=unknown("Setup gate was not evaluated."),
+        trigger=unknown("Trigger gate was not evaluated."),
+        plan=unknown("Plan gate was not evaluated."),
+        portfolio=unknown("Portfolio gate was not evaluated."),
+    )
+
+
 class RecommendationEducation(BaseModel):
     common_bias_warning: str
     what_to_learn: str
@@ -77,5 +103,6 @@ class Recommendation(BaseModel):
     risk: RecommendationRisk
     costs: RecommendationCosts
     checklist: list[ChecklistGate]
+    decision_gates: DecisionGateStateModel = Field(default_factory=_unknown_decision_gates)
     education: RecommendationEducation
     thesis: Optional[dict] = None  # Trade Thesis (structured explanation, includes beginner_explanation + education_generated)

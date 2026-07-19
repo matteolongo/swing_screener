@@ -247,7 +247,7 @@ export default function StrategyPage() {
             return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
           })()}
 
-          {/* Safety Score - Provides feedback on configuration quality */}
+          {/* Configuration readiness; order safety is enforced separately at order time. */}
           <StrategySafetyScore
             validation={validationResult}
             isLoading={strategyValidationQuery.isLoading || strategyValidationQuery.isFetching}

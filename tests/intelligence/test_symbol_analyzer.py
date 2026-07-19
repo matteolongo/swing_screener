@@ -153,11 +153,13 @@ def test_symbol_analyzer_returns_intelligence():
 
     assert isinstance(result, SymbolIntelligence)
     assert result.symbol == "APAM"
-    assert result.action == "BUY_NOW"
+    assert result.action == "WATCH"
     assert result.conviction == "high"
     assert result.summary_line == "Cyclical recovery with strong EBITDA momentum."
     assert "Aperam" in result.narrative
-    assert result.sources == ["https://aperam.com/q1-2026"]
+    assert result.sources == []
+    assert result.claim_grounding is not None
+    assert result.claim_grounding.status == "grounded"
 
 
 def test_symbol_analyzer_fills_news_dates_from_source_evidence():
@@ -721,7 +723,7 @@ def test_analyze_writes_to_cache(tmp_path, monkeypatch):
     assert len(cache_files) == 1
     data = json.loads(cache_files[0].read_text())
     assert "AAPL" in data
-    assert data["AAPL"]["action"] == "BUY_NOW"
+    assert data["AAPL"]["action"] == "WATCH"
 
 
 def test_llm_analysis_strict_schema_has_no_open_objects():
@@ -772,6 +774,7 @@ def test_analyze_round_trips_news_into_intelligence():
         analyzer = SymbolAnalyzer()
         result = analyzer.analyze("APAM", request)
 
-    assert [n.headline for n in result.news] == ["Q4 beat", "Buyback authorized"]
-    assert result.news[0].sentiment == "bullish"
-    assert result.news[1].url is None
+    assert result.news == []
+    assert result.claim_grounding is not None
+    assert result.claim_grounding.status == "unsupported"
+    assert len(result.claim_grounding.unsupported_claims) == 2

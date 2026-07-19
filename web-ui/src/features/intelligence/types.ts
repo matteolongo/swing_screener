@@ -235,6 +235,14 @@ export interface SymbolIntelligenceAPI {
   thesis_delta?: ThesisDeltaAPI | null;
   evidence_ledger?: EvidenceLedgerAPI | null;
   classified_catalysts?: ClassifiedCatalystAPI[];
+  data_status?: 'current' | 'stale' | 'intraday' | 'unknown';
+  degraded_reasons?: string[];
+  claim_grounding?: {
+    status: 'grounded' | 'partial' | 'unsupported';
+    grounded_claims: number;
+    unsupported_claims: string[];
+    grounded_urls: string[];
+  } | null;
 }
 
 export interface SymbolIntelligence {
@@ -262,6 +270,9 @@ export interface SymbolIntelligence {
   thesisDelta?: ThesisDelta | null;
   evidenceLedger: EvidenceLedger | null;
   classifiedCatalysts: ClassifiedCatalyst[];
+  dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+  degradedReasons?: string[];
+  claimGrounding?: SymbolIntelligenceAPI['claim_grounding'];
 }
 
 function transformPreOpenOutlook(api: PreOpenOutlookAPI | null | undefined): PreOpenOutlook | null {
@@ -362,6 +373,9 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     thesisDelta: transformThesisDelta(api.thesis_delta),
     evidenceLedger: transformEvidenceLedger(api.evidence_ledger),
     classifiedCatalysts: (api.classified_catalysts ?? []).map(transformClassifiedCatalyst),
+    dataStatus: api.data_status ?? 'unknown',
+    degradedReasons: api.degraded_reasons ?? [],
+    claimGrounding: api.claim_grounding ?? null,
   };
 }
 

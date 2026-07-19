@@ -264,6 +264,64 @@ export function createOrderLocal(request: CreateOrderRequest): void {
     );
 
     if (orderKind === 'entry') {
+      if (
+        request.setupStatus !== 'PASS'
+        || request.triggerStatus !== 'PASS'
+        || request.dataStatus !== 'current'
+        || !request.dataAsOf
+        || !['structural', 'manual'].includes(request.targetSource ?? '')
+      ) {
+        throw new Error('Order blocked: setup, trigger, coherent-plan, and current-data gates must pass.');
+      }
+      if (request.daysToEarnings == null || request.daysToEarnings <= 3) {
+        throw new Error('Order blocked: earnings status is unknown or inside the three-day risk window.');
+      }
+      const entry = request.limitPrice ?? 0;
+      const stop = request.stopPrice ?? 0;
+      const target = request.targetPrice ?? 0;
+      if (entry <= 0 || stop <= 0 || stop >= entry || target <= entry) {
+        throw new Error('Order blocked: entry, stop, and structural target are incoherent.');
+      }
+      const active = store.strategies.find((strategy) => strategy.id === store.activeStrategyId);
+      const accountSize = active?.risk.accountSize ?? 0;
+      const minRr = active?.risk.minRr ?? 2;
+      if ((target - entry) / (entry - stop) < minRr) {
+        throw new Error('Order blocked: structural reward/risk is below policy.');
+      }
+      const openNotional = store.positions
+        .filter((position) => position.status === 'open')
+        .reduce((sum, position) => sum + position.entryPrice * position.shares, 0);
+      const pendingNotional = store.orders
+        .filter((order) => order.status === 'pending' && inferOrderKind(order) === 'entry')
+        .reduce((sum, order) => sum + (order.limitPrice ?? 0) * order.quantity, 0);
+      if (entry * request.quantity > accountSize - openNotional - pendingNotional) {
+        throw new Error('Order blocked: insufficient unreserved capital.');
+      }
+      const openRisk = store.positions
+        .filter((position) => position.status === 'open')
+        .reduce((sum, position) => sum + Math.max(0, position.entryPrice - position.stopPrice) * position.shares, 0);
+      const pendingRisk = store.orders
+        .filter((order) => order.status === 'pending' && inferOrderKind(order) === 'entry')
+        .reduce(
+          (sum, order) => sum + Math.max(0, (order.limitPrice ?? 0) - (order.stopPrice ?? 0)) * order.quantity,
+          0,
+        );
+      const projectedRisk = openRisk + pendingRisk + (entry - stop) * request.quantity;
+      if (projectedRisk > accountSize * 0.06) {
+        throw new Error('Order blocked: projected portfolio heat exceeds 6% of account equity.');
+      }
+      const country = countryFromTicker(ticker);
+      const countryOpenNotional = store.positions
+        .filter((position) => position.status === 'open' && countryFromTicker(position.ticker) === country)
+        .reduce((sum, position) => sum + position.entryPrice * position.shares, 0);
+      const countryPendingNotional = store.orders
+        .filter(
+          (order) => order.status === 'pending' && inferOrderKind(order) === 'entry' && countryFromTicker(order.ticker) === country,
+        )
+        .reduce((sum, order) => sum + (order.limitPrice ?? 0) * order.quantity, 0);
+      if (countryOpenNotional + countryPendingNotional + entry * request.quantity > accountSize * 0.6) {
+        throw new Error(`Order blocked: projected ${country} concentration exceeds 60% of account equity.`);
+      }
       const pendingSameSymbolEntry = store.orders.some(
         (order) =>
           order.status === 'pending' &&

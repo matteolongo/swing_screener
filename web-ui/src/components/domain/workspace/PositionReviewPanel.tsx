@@ -117,7 +117,7 @@ function ReviewResult({ review }: { review: PositionReview }) {
         </div>
       )}
 
-      <ReviewCard title="Macro/geopolitical overlay">
+      <ReviewCard title="Context note">
         <div className="grid gap-2 sm:grid-cols-3">
           <ReviewMetric label="Risk" value={formatLabel(review.macroOverlay.riskLevel)} />
           <ReviewMetric label="Technical reliability" value={formatLabel(review.macroOverlay.technicalReliability)} />
@@ -179,20 +179,17 @@ export default function PositionReviewPanel({ ticker, position = null }: Positio
 
   return (
     <section className="rounded-lg border border-border bg-surface">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-3 py-2">
+      <div className="border-b border-border px-3 py-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {isHeld ? 'Manual position review' : 'Manual symbol review'}
+            {isHeld ? 'Review this position' : 'Review this setup'}
           </p>
           <p className="mt-1 text-xs text-muted">
             {isHeld
-              ? 'Explain the move, protect open profit, adjust stop logic, and check macro/geopolitical overrides.'
-              : 'Assess the setup thesis, what confirms or invalidates entry, and check macro/geopolitical overrides.'}
+              ? 'Recheck the thesis, protect open profit, and decide whether risk management needs to change.'
+              : 'Recheck entry conditions and company-specific evidence before acting on this setup.'}
           </p>
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={handleRun} disabled={isCurrentMutation && mutation.isPending}>
-          {isCurrentMutation && mutation.isPending ? 'Reviewing...' : isHeld ? 'Run position review' : 'Run symbol review'}
-        </Button>
       </div>
       <div className="px-3 py-3">
         <label className="flex items-center gap-2 text-xs text-muted">
@@ -202,8 +199,18 @@ export default function PositionReviewPanel({ ticker, position = null }: Positio
             disabled={isCurrentMutation && mutation.isPending}
             onChange={(event) => setRefreshSources(event.target.checked)}
           />
-          Refresh app sources first
+          Use latest sources (slower)
         </label>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="mt-3"
+          onClick={handleRun}
+          disabled={isCurrentMutation && mutation.isPending}
+        >
+          {isCurrentMutation && mutation.isPending ? 'Reviewing...' : isHeld ? 'Review position' : 'Review setup'}
+        </Button>
         {isCurrentMutation && mutation.isError && (
           <p className="mt-2 text-sm text-danger">
             {mutation.error instanceof Error ? mutation.error.message : 'Failed to run position review'}
@@ -217,7 +224,7 @@ export default function PositionReviewPanel({ ticker, position = null }: Positio
           <p className="mt-3 text-sm text-muted">
             {isHeld
               ? 'Run this manually when you want to understand an intraday move, protect a winner, or reassess the thesis.'
-              : 'Run this manually to reassess the setup thesis and entry conditions before acting.'}
+              : 'Use this when you want a deeper company and setup check before acting.'}
           </p>
         )}
       </div>

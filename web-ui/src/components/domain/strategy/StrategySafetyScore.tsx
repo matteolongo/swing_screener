@@ -1,6 +1,6 @@
 /**
- * StrategySafetyScore - Displays the safety score for the current strategy configuration
- * Provides visual feedback on configuration risk level
+ * Configuration readiness summary. The legacy numeric score is intentionally
+ * not displayed: it does not prove portfolio, event, or execution safeguards.
  */
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import type { StrategyValidationResult } from '@/features/strategy/api';
@@ -16,8 +16,7 @@ export default function StrategySafetyScore({
   isLoading = false,
   isError = false,
 }: StrategySafetyScoreProps) {
-  const score = validation?.safetyScore ?? 100;
-  const level = validation?.safetyLevel ?? 'beginner-safe';
+  const level = validation?.safetyLevel ?? 'expert-only';
   const warnings = validation?.warnings ?? [];
 
   const levelConfig = {
@@ -26,24 +25,24 @@ export default function StrategySafetyScore({
       bgColor: 'bg-success/10',
       borderColor: 'border-success/40',
       icon: '🟢',
-      label: 'Beginner Safe',
-      message: 'This configuration follows conservative best practices.',
+      label: 'Configuration checks passed',
+      message: 'The configured parameter checks passed. Order-time portfolio approval is still required.',
     },
     'requires-discipline': {
       color: 'text-warning',
       bgColor: 'bg-warning/10',
       borderColor: 'border-warning/40',
       icon: '🟡',
-      label: 'Requires Discipline',
-      message: 'This configuration requires consistent execution and emotional control.',
+      label: 'Review required',
+      message: 'One or more configured parameters need review before relying on this strategy.',
     },
     'expert-only': {
       color: 'text-danger',
       bgColor: 'bg-danger/10',
       borderColor: 'border-danger/40',
       icon: '🔴',
-      label: 'Expert Only',
-      message: 'This configuration has elevated risk. Only use with extensive experience.',
+      label: 'Configuration blocked',
+      message: 'Critical configuration checks failed. Do not treat this strategy as order-ready.',
     },
   };
 
@@ -52,12 +51,18 @@ export default function StrategySafetyScore({
   const regularWarnings = warnings.filter((w) => w.level === 'warning');
   const infoWarnings = warnings.filter((w) => w.level === 'info');
 
+  if (isLoading && !validation) {
+    return <Card variant="bordered"><CardContent><div className="text-sm text-muted">Validating current parameters...</div></CardContent></Card>;
+  }
+  if (isError || !validation) {
+    return <Card variant="bordered"><CardContent><div className="text-sm text-danger">Configuration readiness unavailable. No safety conclusion can be made.</div></CardContent></Card>;
+  }
+
   return (
     <Card variant="bordered" className={`${config.borderColor} ${config.bgColor}`}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span className={config.color}>Strategy Safety Score</span>
-          <span className="text-2xl font-bold">{score} / 100</span>
+          <span className={config.color}>Configuration Readiness</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -65,12 +70,6 @@ export default function StrategySafetyScore({
           {isLoading && (
             <div className="text-sm text-muted">
               Validating current parameters...
-            </div>
-          )}
-
-          {isError && (
-            <div className="text-sm text-danger">
-              Validation service unavailable. Showing last known result.
             </div>
           )}
 
@@ -125,7 +124,7 @@ export default function StrategySafetyScore({
 
           {warnings.length === 0 && (
             <div className="text-sm text-success">
-              ✅ All parameters are within recommended ranges.
+              All currently implemented configuration checks passed. This is not an order approval.
             </div>
           )}
         </div>

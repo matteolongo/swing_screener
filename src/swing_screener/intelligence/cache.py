@@ -9,7 +9,7 @@ from swing_screener.intelligence.models import SymbolIntelligence
 from swing_screener.settings.paths import data_dir
 from swing_screener.utils.file_lock import FileLockTimeoutError, open_locked_text, read_json_with_lock
 
-_CACHE_SCHEMA_VERSION = 2
+_CACHE_SCHEMA_VERSION = 3
 
 
 def _cache_path(for_date: date) -> Path:
@@ -69,7 +69,12 @@ def write_to_cache(ticker: str, result: SymbolIntelligence, for_date: date | Non
         _write_cache_mapping(fh, existing)
 
 
-def read_from_cache(ticker: str, for_date: date | None = None) -> SymbolIntelligence | None:
+def read_from_cache(
+    ticker: str,
+    for_date: date | None = None,
+    *,
+    expected_fingerprint: str | None = None,
+) -> SymbolIntelligence | None:
     target_date = for_date or datetime.now(timezone.utc).date()
     path = _cache_path(target_date)
     if not path.exists():
@@ -81,7 +86,10 @@ def read_from_cache(ticker: str, for_date: date | None = None) -> SymbolIntellig
             return None
         if not _is_current_cache_entry(entry):
             return None
-        return SymbolIntelligence.model_validate(entry)
+        result = SymbolIntelligence.model_validate(entry)
+        if expected_fingerprint is not None and result.context_fingerprint != expected_fingerprint:
+            return None
+        return result
     except (FileLockTimeoutError, json.JSONDecodeError, OSError, ValueError):
         return None
 

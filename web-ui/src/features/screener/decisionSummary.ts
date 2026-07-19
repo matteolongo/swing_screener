@@ -600,6 +600,72 @@ function mainRisk(
   return 'The trade still needs disciplined risk management because no single input guarantees follow-through.';
 }
 
+function deriveTradePlan(candidate: ScreenerCandidate, action: DecisionAction): DecisionSummary['tradePlan'] {
+  const executionNote = candidate.executionNote;
+
+  if (action === 'MANAGE_ONLY') {
+    return {
+      entry: candidate.entry,
+      stop: candidate.stop,
+      target: candidate.target,
+      rr: candidate.rr,
+      entryCondition: 'manage_position',
+      triggerNote: 'Manage the existing position; do not create a new entry.',
+    };
+  }
+  if (action === 'BUY_NOW') {
+    return {
+      entry: candidate.entry,
+      stop: candidate.stop,
+      target: candidate.target,
+      rr: candidate.rr,
+      entryCondition: 'buy_now',
+      triggerPrice: candidate.entry,
+      triggerNote: executionNote,
+    };
+  }
+  if (action === 'BUY_ON_PULLBACK') {
+    return {
+      entry: candidate.entry,
+      stop: candidate.stop,
+      target: candidate.target,
+      rr: candidate.rr,
+      entryCondition: 'pullback_to_price',
+      triggerPrice: candidate.suggestedOrderPrice ?? candidate.entry,
+      triggerNote: executionNote ?? 'Wait for price to return to the planned entry area.',
+    };
+  }
+  if (action === 'WAIT_FOR_BREAKOUT') {
+    if (candidate.suggestedOrderType === 'BUY_STOP' && candidate.suggestedOrderPrice != null) {
+      return {
+        entry: candidate.entry,
+        stop: candidate.stop,
+        target: candidate.target,
+        rr: candidate.rr,
+        entryCondition: 'breakout_above_price',
+        triggerPrice: candidate.suggestedOrderPrice,
+        triggerNote: executionNote ?? 'Wait for a confirmed breakout above the trigger price.',
+      };
+    }
+    return {
+      entry: candidate.entry,
+      stop: candidate.stop,
+      target: candidate.target,
+      rr: candidate.rr,
+      entryCondition: 'wait_for_confirmation',
+      triggerNote: 'Wait for a confirmed breakout. No precise trigger price is available in this screen yet.',
+    };
+  }
+  return {
+    entry: candidate.entry,
+    stop: candidate.stop,
+    target: candidate.target,
+    rr: candidate.rr,
+    entryCondition: 'no_entry',
+    triggerNote: executionNote,
+  };
+}
+
 export function buildFundamentalsSummary(snapshot: FundamentalSnapshot): string | undefined {
   return snapshot.highlights[0] || snapshot.redFlags[0] || snapshot.error || undefined;
 }
@@ -654,12 +720,7 @@ export function rebuildDecisionSummaryWithFundamentals(
     whyNow,
     whatToDo: ACTION_WHAT_TO_DO[action],
     mainRisk: mainRisk(snapshot, technicalLabel, fundamentalsLabel, valuationLabel, candidate.sameSymbol?.mode),
-    tradePlan: {
-      entry: candidate.entry,
-      stop: candidate.stop,
-      target: candidate.target,
-      rr: candidate.rr,
-    },
+    tradePlan: deriveTradePlan(candidate, action),
     valuationContext,
     drivers,
   };

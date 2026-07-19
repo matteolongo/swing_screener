@@ -44,6 +44,16 @@ export interface CreateOrderRequest {
   entryMode?: EntryMode;
   isin?: string;
   thesis?: string;
+  setupStatus?: 'PASS' | 'BLOCK' | 'UNKNOWN';
+  triggerStatus?: 'PASS' | 'WAIT' | 'BLOCK' | 'UNKNOWN';
+  dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+  dataAsOf?: string;
+  targetSource?: 'structural' | 'manual' | 'unknown' | 'unvalidated_r_multiple';
+  sector?: string;
+  currency?: string;
+  accountToQuoteRate?: number;
+  daysToEarnings?: number | null;
+  strategyId?: string;
 }
 
 export interface CreateOrderRequestApi {
@@ -59,6 +69,16 @@ export interface CreateOrderRequestApi {
   entry_mode: EntryMode;
   isin: string | null;
   thesis: string | null;
+  setup_status: 'PASS' | 'BLOCK' | 'UNKNOWN';
+  trigger_status: 'PASS' | 'WAIT' | 'BLOCK' | 'UNKNOWN';
+  data_status: 'current' | 'stale' | 'intraday' | 'unknown';
+  data_asof: string | null;
+  target_source: 'structural' | 'manual' | 'unknown' | 'unvalidated_r_multiple';
+  sector: string | null;
+  currency: string | null;
+  account_to_quote_rate: number | null;
+  days_to_earnings: number | null;
+  strategy_id: string | null;
 }
 
 export interface FillOrderRequest {
@@ -264,5 +284,15 @@ export function transformCreateOrderRequest(req: CreateOrderRequest): CreateOrde
     entry_mode: req.entryMode || 'NEW_ENTRY',
     isin: req.isin ?? null,
     thesis: req.thesis ?? null,
+    setup_status: req.setupStatus ?? 'UNKNOWN',
+    trigger_status: req.triggerStatus ?? 'UNKNOWN',
+    data_status: req.dataStatus ?? 'unknown',
+    data_asof: req.dataAsOf ?? null,
+    target_source: req.targetSource ?? 'unknown',
+    sector: req.sector ?? null,
+    currency: req.currency ?? null,
+    account_to_quote_rate: req.accountToQuoteRate ?? null,
+    days_to_earnings: req.daysToEarnings ?? null,
+    strategy_id: req.strategyId ?? null,
   };
 }

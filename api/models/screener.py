@@ -56,6 +56,9 @@ class ScreenerCandidate(BaseModel):
     name: Optional[str] = None
     sector: Optional[str] = None
     last_bar: Optional[str] = None
+    data_status: Literal["current", "stale", "intraday", "unknown"] = "unknown"
+    data_asof: Optional[str] = None
+    degraded_reasons: list[str] = Field(default_factory=list)
     close: float
     sma_20: Optional[float] = None
     sma_50: Optional[float] = None

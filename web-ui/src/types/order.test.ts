@@ -187,6 +187,16 @@ describe('Order Type Transformations', () => {
         position_id: undefined,
         isin: null,
         thesis: null,
+        setup_status: 'UNKNOWN',
+        trigger_status: 'UNKNOWN',
+        data_status: 'unknown',
+        data_asof: null,
+        target_source: 'unknown',
+        sector: null,
+        currency: null,
+        account_to_quote_rate: null,
+        days_to_earnings: null,
+        strategy_id: null,
       })
     })
 

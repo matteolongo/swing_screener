@@ -32,3 +32,8 @@ class AnalyzerState(TypedDict, total=False):
     _recorder: Any
     _search_usage: Any
     _parse_usage: Any
+    search_citation_urls: list[str]
+    claim_grounding: Any
+    data_status: str
+    degraded_reasons: list[str]
+    context_fingerprint: str

@@ -7,6 +7,7 @@ from typing import Optional
 import datetime as dt
 from datetime import datetime
 import logging
+import math
 import os
 
 import pandas as pd
@@ -50,6 +51,7 @@ from swing_screener.recommendation.priority import (
     CombinedPriorityConfig,
     compute_combined_priority,
 )
+from swing_screener.recommendation import build_decision_summary
 from swing_screener.settings import get_settings_manager
 from swing_screener.strategy.config import (
     build_entry_config,
@@ -77,7 +79,6 @@ from api.services.decision_context import (
     apply_decision_priority_ranking,
     apply_decision_summary_context,
     load_fundamentals_snapshots,
-    rebuild_recommendations_with_decision_action,
 )
 from swing_screener.selection.universe import UniverseConfig as SelectionUniverseConfig
 from swing_screener.selection.ranking import RankingConfig
@@ -94,6 +95,37 @@ from swing_screener.selection.screening_window import (
 from api.services.screener_run_manager import get_screener_run_manager
 
 logger = logging.getLogger(__name__)
+
+
+def _structural_target_from_history(
+    history: list[dict], *, entry: float, lookback: int = 60
+) -> float | None:
+    """Return the nearest prior pivot-high resistance above entry.
+
+    This is deliberately independent from the configured R multiple. If price is
+    already above every recent structural high, the target stays unknown rather
+    than manufacturing a passing reward/risk value.
+    """
+    highs: list[float] = []
+    for point in history[-(lookback + 1) : -1]:
+        raw = point.get("high", point.get("close"))
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value) and value > 0:
+            highs.append(value)
+    if len(highs) < 5:
+        return None
+    pivots = [
+        highs[index]
+        for index in range(2, len(highs) - 2)
+        if highs[index] >= max(highs[index - 2 : index])
+        and highs[index] >= max(highs[index + 1 : index + 3])
+        and highs[index] > entry
+    ]
+    candidates = pivots or [value for value in highs if value > entry]
+    return round(min(candidates), 4) if candidates else None
 
 
 def _min_days_to_earnings_default() -> int:
@@ -899,6 +931,22 @@ class ScreenerService:
             info = ticker_info.get(ticker_str, {})
             instrument = get_instrument_record(ticker_str) or {}
             last_bar = last_bar_map.get(ticker_str) or overall_last_bar
+            last_bar_date = str(last_bar or "")[:10]
+            if not last_bar_date:
+                candidate_data_status = "unknown"
+            elif last_bar_date != ctx.asof_str:
+                candidate_data_status = "stale"
+            elif ctx.data_freshness != "final_close":
+                candidate_data_status = "intraday"
+            else:
+                candidate_data_status = "current"
+            degraded_reasons = (
+                []
+                if candidate_data_status == "current"
+                else [
+                    f"Market data is {candidate_data_status}: last bar {last_bar_date or 'unknown'}, expected {ctx.asof_str}."
+                ]
+            )
             currency = _normalize_quote_currency_value(
                 info.get("currency")
                 if isinstance(info, dict)
@@ -921,25 +969,31 @@ class ScreenerService:
                         getattr(risk_cfg, "k_atr", 2.0), default=2.0
                     )
                     stop_val = round(entry_val - atr_multiplier * atr_val, 4)
-            shares_val = safe_optional_int(row.get("shares"))
-            position_size = safe_optional_float(row.get("position_value"))
-            risk_usd = safe_optional_float(row.get("realized_risk"))
-            risk_account = safe_optional_float(row.get("realized_risk_account"))
             account_to_quote_rate = safe_optional_float(row.get("account_to_quote_rate"))
-            risk_pct = None
-            if risk_cfg.account_size:
-                if risk_account is not None:
-                    risk_pct = risk_account / risk_cfg.account_size
 
-            # Anchor the entry stop to the setup's structural invalidation when a
-            # tighter pattern stop is available, so 1R reflects the real risk level
-            # instead of a wide ATR multiple. Target/R:R/risk are recomputed from the
-            # new stop by the risk engine below; share count is kept unchanged.
+            candidate_history = price_history_by_ticker.get(ticker_str, [])
+            suggested_order_type = (
+                str(row.get("suggested_order_type")).upper()
+                if not is_na_scalar(row.get("suggested_order_type"))
+                else None
+            )
+            suggested_order_price = safe_optional_float(row.get("suggested_order_price"))
+            # The price shown in the order form owns every dependent number. A
+            # conditional BUY_LIMIT/BUY_STOP is not an observed entry trigger.
+            plan_entry = (
+                suggested_order_price
+                if suggested_order_type in {"BUY_LIMIT", "BUY_STOP"}
+                and suggested_order_price is not None
+                else entry_val
+            )
+            # Stop derivation must use the exact order-plan entry. Otherwise a
+            # limit/stop trigger change can leave the displayed stop, target and
+            # reward/risk based on three different plans.
             pattern_stop_val, pattern_stop_reason = (None, None)
-            if exec_cfg.pattern_stop_enabled and entry_val:
+            if exec_cfg.pattern_stop_enabled and plan_entry:
                 pattern_stop_val, pattern_stop_reason = apply_pattern_stop(
                     ticker=ticker_str,
-                    entry=entry_val,
+                    entry=plan_entry,
                     current_stop=stop_val,
                     atr=safe_optional_float(row.get(atr_col)),
                     patterns=patterns_map,
@@ -948,23 +1002,33 @@ class ScreenerService:
                 )
             if pattern_stop_val is not None:
                 stop_val = pattern_stop_val
-                position_size = None
-                risk_usd = None
-                risk_account = None
-                risk_pct = None
-
+            evaluation_signal = (
+                "BUY_ON_PULLBACK"
+                if suggested_order_type == "BUY_LIMIT"
+                else "WAIT_FOR_BREAKOUT"
+                if suggested_order_type == "BUY_STOP"
+                else str(signal) if not is_na_scalar(signal) else None
+            )
+            structural_target = (
+                _structural_target_from_history(candidate_history, entry=plan_entry)
+                if plan_entry is not None
+                else None
+            )
             rr_target = safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
             commission_pct = safe_float(
                 getattr(risk_cfg, "commission_pct", 0.0), default=0.0
             )
 
             rec_payload = evaluate_recommendation(
-                signal=str(signal) if not is_na_scalar(signal) else None,
-                entry=entry_val,
+                signal=evaluation_signal,
+                entry=plan_entry,
                 stop=stop_val,
-                shares=shares_val,
+                shares=None,
                 risk_cfg=risk_cfg,
                 rr_target=rr_target,
+                target=structural_target,
+                target_source="structural" if structural_target is not None else "unknown",
+                data_status=candidate_data_status,
                 costs=RiskEngineConfig(
                     commission_pct=commission_pct,
                     slippage_bps=5.0,
@@ -988,7 +1052,6 @@ class ScreenerService:
             )
             recommendation = Recommendation.model_validate(asdict(rec_payload))
             rec_risk = recommendation.risk
-            candidate_history = price_history_by_ticker.get(ticker_str, [])
             symbol_change_pct = price_history_change_pct(candidate_history)
             benchmark_price_history = aligned_benchmark_price_history(
                 candidate_history, benchmark_history
@@ -1025,6 +1088,9 @@ class ScreenerService:
                     name=info.get("name"),
                     sector=info.get("sector"),
                     last_bar=last_bar,
+                    data_status=candidate_data_status,
+                    data_asof=last_bar,
+                    degraded_reasons=degraded_reasons,
                     close=last_price,
                     sma_20=sma20,
                     sma_50=sma50,
@@ -1079,36 +1145,22 @@ class ScreenerService:
                     stop=rec_risk.stop if stop_val is not None else None,
                     target=rec_risk.target,
                     rr=rec_risk.rr,
-                    shares=shares_val if shares_val is not None else rec_risk.shares,
+                    shares=rec_risk.shares,
                     quote_currency=currency,
                     account_currency=account_currency,
-                    position_size_quote=(
-                        position_size
-                        if position_size is not None
-                        else rec_risk.position_size
-                    ),
-                    risk_quote=risk_usd if risk_usd is not None else rec_risk.risk_amount,
-                    position_size_usd=(
-                        position_size
-                        if position_size is not None
-                        else rec_risk.position_size
-                    ),
-                    risk_usd=risk_usd if risk_usd is not None else rec_risk.risk_amount,
-                    risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
+                    position_size_quote=rec_risk.position_size,
+                    risk_quote=rec_risk.risk_amount,
+                    position_size_usd=rec_risk.position_size,
+                    risk_usd=rec_risk.risk_amount,
+                    risk_pct=rec_risk.risk_pct,
                     recommendation=recommendation,
                     price_history=price_history_by_ticker.get(ticker_str, []),
                     benchmark_price_history=benchmark_price_history,
                     patterns=cand_patterns,
                     pattern_stop=pattern_stop_val,
                     pattern_stop_reason=pattern_stop_reason,
-                    suggested_order_type=(
-                        str(row.get("suggested_order_type"))
-                        if not is_na_scalar(row.get("suggested_order_type"))
-                        else None
-                    ),
-                    suggested_order_price=safe_optional_float(
-                        row.get("suggested_order_price")
-                    ),
+                    suggested_order_type=suggested_order_type,
+                    suggested_order_price=suggested_order_price,
                     execution_note=(
                         str(row.get("execution_note"))
                         if not is_na_scalar(row.get("execution_note"))
@@ -1166,6 +1218,14 @@ class ScreenerService:
                 closed_positions=portfolio_closed,
                 reentry_lookback_days=reentry_lookback,
             )
+            if same_symbol.mode == "MANAGE_ONLY":
+                # Same-symbol state is discovered after the first decision pass.
+                # Rebuild now so a held row cannot retain a stale entry action.
+                candidate.same_symbol = same_symbol
+                candidate.decision_summary = build_decision_summary(
+                    candidate,
+                    fundamentals=candidate.fundamentals_snapshot,
+                )
             if same_symbol.mode in ("ADD_ON", "SCALE_BACK"):
                 same_symbol_add_on_count += 1
             if same_symbol.mode == "MANAGE_ONLY":
@@ -1243,14 +1303,9 @@ class ScreenerService:
         # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
         candidates = compute_combined_priority(candidates, cfg=combined_priority_cfg)
         candidates = candidates[:requested_top]
-        candidates = rebuild_recommendations_with_decision_action(
-            candidates,
-            risk_cfg=risk_cfg,
-            rr_target=safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0),
-            commission_pct=safe_float(
-                getattr(risk_cfg, "commission_pct", 0.0), default=0.0
-            ),
-        )
+        # Decision summaries may explain or demote a setup, but must never turn a
+        # conditional action label into an observed market trigger. The original
+        # recommendation gate state therefore remains authoritative.
         candidates = apply_decision_priority_ranking(candidates)
         if same_symbol_suppressed_count > 0:
             warnings.append(

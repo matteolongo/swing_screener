@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   closePositionLocal,
-  createOrderLocal,
+  createOrderLocal as createOrderWithApproval,
   fillOrderLocal,
   listOrdersLocal,
   listPositionsLocal,
@@ -10,6 +10,20 @@ import {
   resetTradingStore,
   updatePositionStopLocal,
 } from '@/features/persistence';
+import type { CreateOrderRequest } from '@/types/order';
+
+function createOrderLocal(request: CreateOrderRequest): void {
+  createOrderWithApproval({
+    setupStatus: 'PASS',
+    triggerStatus: 'PASS',
+    dataStatus: 'current',
+    dataAsOf: '2026-02-26',
+    targetSource: 'structural',
+    targetPrice: (request.limitPrice ?? 0) + 2 * ((request.limitPrice ?? 0) - (request.stopPrice ?? 0)),
+    daysToEarnings: 20,
+    ...request,
+  });
+}
 
 describe('portfolio local persistence service', () => {
   beforeEach(() => {

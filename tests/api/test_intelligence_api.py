@@ -129,7 +129,7 @@ def test_sweep_returns_analyzed_and_failed(tmp_path, monkeypatch):
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.side_effect = fake_analyze
         monkeypatch.setattr(r, "_get_analyzer", lambda: mock_analyzer)
-        monkeypatch.setattr(r, "read_from_cache", lambda t: None)
+        monkeypatch.setattr(r, "read_from_cache", lambda t, *a, **k: None)
 
         payload = {
             "symbols": [
@@ -177,6 +177,8 @@ def test_analyze_returns_cache_unless_force(tmp_path, monkeypatch):
 
     def _fake_get_analyzer():
         class _A:
+            def context_fingerprint(self, *a, **k):
+                return "test-fingerprint"
             def analyze(self, *a, **k):
                 raise AssertionError("analyzer was called — should have returned cache")
         return _A()
@@ -220,7 +222,7 @@ def test_sweep_enriches_uncached_symbol(tmp_path, monkeypatch):
 
         monkeypatch.setattr(r, "_get_analyzer", lambda: MagicMock(analyze=fake_analyze))
         # no cache → enrich must be called
-        monkeypatch.setattr(r, "read_from_cache", lambda t: None)
+        monkeypatch.setattr(r, "read_from_cache", lambda t, *a, **k: None)
 
         payload = {"symbols": [{"ticker": "TSLA", "request": {"close": 200.0, "signal": "breakout"}}]}
         response = client.post("/api/intelligence/sweep", json=payload)
@@ -272,7 +274,7 @@ def test_analyze_force_bypasses_cache(tmp_path, monkeypatch):
         summary_line="fresh", narrative="n",
     )
 
-    monkeypatch.setattr(r, "read_from_cache", lambda t: cached)
+    monkeypatch.setattr(r, "read_from_cache", lambda t, *a, **k: cached)
     monkeypatch.setattr(r, "enrich_intelligence_request", lambda ticker, req, **kwargs: req)
 
     mock_analyzer = MagicMock()
@@ -292,8 +294,8 @@ def test_analyze_force_bypasses_cache(tmp_path, monkeypatch):
         _app.dependency_overrides.pop(get_portfolio_service, None)
 
 
-def test_sweep_cache_hit_skips_enrichment(tmp_path, monkeypatch):
-    """Cached ticker skipped for enrichment/analysis; uncached ticker enriched+analyzed."""
+def test_sweep_cache_hit_is_verified_after_enrichment(tmp_path, monkeypatch):
+    """Every ticker is enriched before its input/config fingerprint is checked."""
     from api.routers import intelligence as r
     from api.main import app as _app
     from swing_screener.intelligence.models import SymbolIntelligence
@@ -312,7 +314,7 @@ def test_sweep_cache_hit_skips_enrichment(tmp_path, monkeypatch):
         summary_line="fresh", narrative="Text.", sources=[],
     )
 
-    monkeypatch.setattr(r, "read_from_cache", lambda t: cached if t == "AAPL" else None)
+    monkeypatch.setattr(r, "read_from_cache", lambda t, *a, **k: cached if t == "AAPL" else None)
 
     enrich_calls: list[str] = []
 
@@ -342,8 +344,7 @@ def test_sweep_cache_hit_skips_enrichment(tmp_path, monkeypatch):
         assert "AAPL" in data["analyzed"]
         assert "TSLA" in data["analyzed"]
         assert data["failed"] == []
-        assert "AAPL" not in enrich_calls, "cached ticker must not be enriched"
-        assert "TSLA" in enrich_calls, "uncached ticker must be enriched"
+        assert enrich_calls == ["AAPL", "TSLA"]
         assert mock_analyzer.analyze.call_count == 1, "analyzer called only for uncached ticker"
     finally:
         from api.dependencies import get_positions_repo, get_fundamentals_service, get_portfolio_service

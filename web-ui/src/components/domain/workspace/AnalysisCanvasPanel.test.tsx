@@ -20,6 +20,7 @@ vi.mock('@/features/fundamentals/hooks', () => ({
 }));
 
 vi.mock('@/features/intelligence/hooks', () => ({
+  useRunTrace: () => ({ data: undefined, isLoading: false, isError: false }),
   useIntelligenceAnalysisMutation: vi.fn(),
   useIntelligenceLatestQuery: vi.fn(),
   useIntelligenceHistoryQuery: vi.fn(() => ({ data: [], isLoading: false })),

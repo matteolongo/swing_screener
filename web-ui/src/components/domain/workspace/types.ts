@@ -23,6 +23,10 @@ export interface SymbolAnalysisCandidate {
   score?: number;
   confidence?: number;
   rank?: number;
+  fundamentalsFreshnessStatus?: string;
+  fundamentalsAsOf?: string;
+  lastBar?: string;
+  dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
   atr?: number;
   sma20?: number | null;
   sma50?: number | null;

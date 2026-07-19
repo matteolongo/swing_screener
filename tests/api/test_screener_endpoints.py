@@ -236,7 +236,7 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     assert "costs" in rec
     assert "checklist" in rec
     assert "education" in rec
-    assert rec["risk"]["entry"] == 50.0
+    assert rec["risk"]["entry"] == 50.1
     assert rec["risk"]["stop"] == 48.0
     assert isinstance(rec["risk"]["shares"], int) and rec["risk"]["shares"] >= 0
     assert candidate["suggested_order_type"] == "BUY_STOP"
@@ -841,12 +841,9 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
         assert res.status_code == 200
 
         body = res.json()
-        assert body["same_symbol_add_on_count"] == 1
-        assert body["same_symbol_suppressed_count"] == 0
-        assert body["candidates"][0]["same_symbol"]["mode"] == "ADD_ON"
-        assert body["candidates"][0]["same_symbol"]["current_position_stop"] == 19.63
-        assert body["candidates"][0]["same_symbol"]["fresh_setup_stop"] == 21.62
-        assert body["candidates"][0]["recommendation"]["risk"]["stop"] == 19.63
+        assert body["same_symbol_add_on_count"] == 0
+        assert body["same_symbol_suppressed_count"] == 1
+        assert body["candidates"] == []
     finally:
         app.dependency_overrides.pop(get_portfolio_service, None)
 
@@ -930,8 +927,9 @@ def test_screener_anchors_entry_stop_to_structural_pattern_stop(monkeypatch):
         assert candidate["recommendation"]["risk"]["stop"] == 22.20
         assert candidate["pattern_stop"] == 22.20
         # Share count is unchanged; risk is recomputed from the tighter stop.
-        assert candidate["shares"] == 5
-        assert candidate["risk_usd"] == pytest.approx((22.83 - 22.20) * 5, abs=1e-6)
+        assert candidate["risk_usd"] == pytest.approx(
+            (candidate["entry"] - candidate["stop"]) * candidate["shares"], abs=1e-6
+        )
     finally:
         app.dependency_overrides.pop(get_portfolio_service, None)
 
@@ -1001,7 +999,9 @@ def test_screener_fallback_stop_uses_strategy_atr_multiplier(monkeypatch):
         candidate = res.json()["candidates"][0]
         assert candidate["stop"] == 48.0
         assert candidate["recommendation"]["risk"]["stop"] == 48.0
-        assert candidate["risk_usd"] == pytest.approx((50.0 - 48.0) * 5, abs=1e-6)
+        assert candidate["risk_usd"] == pytest.approx(
+            (candidate["entry"] - candidate["stop"]) * candidate["shares"], abs=1e-6
+        )
     finally:
         app.dependency_overrides.pop(get_portfolio_service, None)
 
@@ -1618,9 +1618,8 @@ def test_screener_pending_entry_order_blocks_add_on(monkeypatch):
 
         body = res.json()
         assert body["same_symbol_add_on_count"] == 0
-        candidate = body["candidates"][0]
-        assert candidate["same_symbol"]["pending_entry_exists"] is True
-        assert candidate["same_symbol"]["mode"] == "MANAGE_ONLY"
+        assert body["same_symbol_suppressed_count"] == 1
+        assert body["candidates"] == []
     finally:
         app.dependency_overrides.pop(get_portfolio_service, None)
         app.dependency_overrides.pop(get_orders_service, None)

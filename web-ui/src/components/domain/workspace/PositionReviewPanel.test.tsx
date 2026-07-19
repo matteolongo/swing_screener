@@ -91,8 +91,8 @@ describe('PositionReviewPanel', () => {
 
     const { user } = renderWithProviders(<PositionReviewPanel ticker="MNST" position={position} />);
 
-    await user.click(screen.getByLabelText('Refresh app sources first'));
-    await user.click(screen.getByRole('button', { name: 'Run position review' }));
+    await user.click(screen.getByLabelText('Use latest sources (slower)'));
+    await user.click(screen.getByRole('button', { name: 'Review position' }));
 
     await waitFor(() => {
       expect(mutate).toHaveBeenCalledWith({
@@ -117,7 +117,7 @@ describe('PositionReviewPanel', () => {
     expect(screen.getByText('Why it moved')).toBeInTheDocument();
     expect(screen.getByText('Protect profit')).toBeInTheDocument();
     expect(screen.getByText('Stop advice')).toBeInTheDocument();
-    expect(screen.getByText('Macro/geopolitical overlay')).toBeInTheDocument();
+    expect(screen.getByText('Context note')).toBeInTheDocument();
     expect(screen.getByText('Evidence used')).toBeInTheDocument();
     expect(screen.getByText('Earnings beat supports the move.')).toBeInTheDocument();
     expect(screen.getByText('2.25R')).toBeInTheDocument();
@@ -153,14 +153,14 @@ describe('PositionReviewPanel', () => {
 
     const { user } = renderWithProviders(<PositionReviewPanel ticker="GOOG" />);
 
-    expect(screen.getByText('Manual symbol review')).toBeInTheDocument();
+    expect(screen.getByText('Review this setup')).toBeInTheDocument();
     expect(screen.getByText('Entry plan')).toBeInTheDocument();
     expect(screen.getByText('What confirms entry')).toBeInTheDocument();
     expect(screen.getByText(/A close below the planned stop invalidates the setup\./)).toBeInTheDocument();
     expect(screen.queryByText('Protect profit')).not.toBeInTheDocument();
     expect(screen.queryByText('Stop advice')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Run symbol review' }));
+    await user.click(screen.getByRole('button', { name: 'Review setup' }));
     await waitFor(() => {
       expect(mutate).toHaveBeenCalledWith({ ticker: 'GOOG', positionId: null, refreshSources: false });
     });

@@ -10,6 +10,15 @@ describe('t', () => {
     expect(t('order.candidateModal.title', { ticker: 'VALE' })).toBe('Create Order - VALE')
   })
 
+  it('interpolates the order decision gate statuses', () => {
+    expect(t('order.review.decisionGateStatus', {
+      setup: 'PASS',
+      trigger: 'WAIT',
+      plan: 'BLOCK',
+      data: 'stale',
+    })).toBe('Setup: PASS · Trigger: WAIT · Plan: BLOCK · Data: stale.')
+  })
+
   it('falls back to key when missing', () => {
     expect(t('missing.path' as never)).toBe('missing.path')
   })

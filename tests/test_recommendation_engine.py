@@ -12,6 +12,8 @@ def test_recommendation_happy_path():
         rr_target=2.0,
         commission_pct=0.0,
         slippage_bps=0.0,
+        target=110.0,
+        target_source="structural",
     )
 
     assert rec.verdict == "RECOMMENDED"
@@ -35,6 +37,8 @@ def test_recommendation_sizes_quote_currency_from_account_currency_budget():
         currency="USD",
         account_currency="EUR",
         account_to_quote_rate=1.25,
+        target=104.0,
+        target_source="structural",
     )
 
     assert rec.risk.shares == 6
@@ -63,6 +67,8 @@ def test_recommendation_uses_identity_rate_for_same_currency():
         currency="EUR",
         account_currency="EUR",
         account_to_quote_rate=1.25,
+        target=104.0,
+        target_source="structural",
     )
 
     assert rec.risk.shares == 5
@@ -186,10 +192,31 @@ def test_recommendation_rejects_low_rr():
         risk_pct_target=0.01,
         rr_target=1.0,
         min_rr=2.0,
+        target=102.0,
+        target_source="structural",
     )
 
     assert rec.verdict == "NOT_RECOMMENDED"
     assert any(r.code == "RR_TOO_LOW" for r in rec.reasons_detailed)
+
+
+def test_conditional_setup_is_never_ready_to_order():
+    rec = build_recommendation(
+        signal="BUY_ON_PULLBACK",
+        entry=100.0,
+        stop=95.0,
+        target=110.0,
+        target_source="structural",
+        shares=10,
+        account_size=10000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+    )
+
+    assert rec.decision_gates.setup.status == "PASS"
+    assert rec.decision_gates.trigger.status == "WAIT"
+    assert rec.decision_gates.ready_to_order is False
+    assert rec.verdict == "NOT_RECOMMENDED"
 
 
 def test_recommendation_blocks_fee_drag():

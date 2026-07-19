@@ -817,6 +817,80 @@ def _build_explanation_contract(
     )
 
 
+def _trade_plan(*, candidate: Any, action: DecisionAction) -> DecisionTradePlan:
+    """Build the execution-facing part of a decision without overloading entry.
+
+    The screener's risk-plan `entry` can be a stop/target anchor even when the
+    current action is to wait. Execution guidance is the only source that can
+    safely claim a concrete breakout or pullback trigger.
+    """
+
+    entry = _safe_float(_get_value(candidate, "entry"))
+    stop = _safe_float(_get_value(candidate, "stop"))
+    target = _safe_float(_get_value(candidate, "target"))
+    rr = _safe_float(_get_value(candidate, "rr"))
+    suggested_order_type = str(_get_value(candidate, "suggested_order_type", "") or "").upper()
+    suggested_order_price = _safe_float(_get_value(candidate, "suggested_order_price"))
+    execution_note = str(_get_value(candidate, "execution_note", "") or "").strip() or None
+
+    if action == "MANAGE_ONLY":
+        return DecisionTradePlan(
+            entry=entry,
+            stop=stop,
+            target=target,
+            rr=rr,
+            entry_condition="manage_position",
+            trigger_note="Manage the existing position; do not create a new entry.",
+        )
+    if action == "BUY_NOW":
+        return DecisionTradePlan(
+            entry=entry,
+            stop=stop,
+            target=target,
+            rr=rr,
+            entry_condition="buy_now",
+            trigger_price=entry,
+            trigger_note=execution_note,
+        )
+    if action == "BUY_ON_PULLBACK":
+        return DecisionTradePlan(
+            entry=entry,
+            stop=stop,
+            target=target,
+            rr=rr,
+            entry_condition="pullback_to_price",
+            trigger_price=suggested_order_price or entry,
+            trigger_note=execution_note or "Wait for price to return to the planned entry area.",
+        )
+    if action == "WAIT_FOR_BREAKOUT":
+        if suggested_order_type == "BUY_STOP" and suggested_order_price is not None:
+            return DecisionTradePlan(
+                entry=entry,
+                stop=stop,
+                target=target,
+                rr=rr,
+                entry_condition="breakout_above_price",
+                trigger_price=suggested_order_price,
+                trigger_note=execution_note or "Wait for a confirmed breakout above the trigger price.",
+            )
+        return DecisionTradePlan(
+            entry=entry,
+            stop=stop,
+            target=target,
+            rr=rr,
+            entry_condition="wait_for_confirmation",
+            trigger_note="Wait for a confirmed breakout. No precise trigger price is available in this screen yet.",
+        )
+    return DecisionTradePlan(
+        entry=entry,
+        stop=stop,
+        target=target,
+        rr=rr,
+        entry_condition="no_entry",
+        trigger_note=execution_note,
+    )
+
+
 def build_decision_summary(
     candidate: Any,
     opportunity: Any | None = None,
@@ -891,12 +965,7 @@ def build_decision_summary(
         why_now=why_now,
         what_to_do=_ACTION_WHAT_TO_DO[action],
         main_risk=main_risk_text,
-        trade_plan=DecisionTradePlan(
-            entry=_safe_float(_get_value(candidate, "entry")),
-            stop=_safe_float(_get_value(candidate, "stop")),
-            target=_safe_float(_get_value(candidate, "target")),
-            rr=_safe_float(_get_value(candidate, "rr")),
-        ),
+        trade_plan=_trade_plan(candidate=candidate, action=action),
         valuation_context=valuation_context,
         drivers=DecisionDrivers(
             positives=drivers.positives,
