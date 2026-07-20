@@ -25,6 +25,11 @@ def test_database_settings_default_and_postgres_normalization():
     )
     assert settings.url == "postgresql+psycopg://u:p@db/app"
     settings.validate_runtime()
+    legacy_settings = DatabaseSettings.from_env(
+        {"APP_ENV": "production", "DATABASE_URL": "postgres://u:p@db/app"}
+    )
+    assert legacy_settings.url == "postgresql+psycopg://u:p@db/app"
+    legacy_settings.validate_runtime()
 
 
 def test_production_requires_database_url_and_rejects_sqlite_by_default():
@@ -57,6 +62,7 @@ def test_upgrade_downgrade_upgrade_creates_relational_schema(tmp_path):
         "portfolio_positions",
         "idempotency_records",
         "legacy_imports",
+        "legacy_import_lock",
         "alembic_version",
     } <= set(inspector.get_table_names())
 

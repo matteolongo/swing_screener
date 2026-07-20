@@ -8,7 +8,7 @@ from typing import Self
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from api.db.models import LegacyImportRow
+from api.db.models import LegacyImportLockRow, LegacyImportRow
 from api.db.repositories import (
     SqlIdempotencyRepository,
     SqlOrdersRepository,
@@ -51,6 +51,16 @@ class PortfolioUnitOfWork:
         )
         if ledger is None:
             raise RuntimeError("Portfolio import ledger is missing.")
+
+    def lock_legacy_import(self) -> None:
+        """Serialize legacy import before inspecting or changing portfolio state."""
+        lock = self.session.scalar(
+            select(LegacyImportLockRow)
+            .where(LegacyImportLockRow.id == 1)
+            .with_for_update()
+        )
+        if lock is None:
+            raise RuntimeError("Portfolio import lock is missing.")
 
     def __exit__(
         self,

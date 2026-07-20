@@ -42,6 +42,7 @@ from api.security.openapi import install_security_openapi
 from api.security.settings import get_auth_settings
 from api.db.readiness import check_database_readiness
 from api.dependencies import get_database_runtime
+from api.monitoring import HealthChecker
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
@@ -175,7 +176,7 @@ def register_domain_error_handler(target_app) -> None:
 app = FastAPI(
     title="Swing Screener API",
     description="REST API for the Swing Screener trading system",
-    version="0.1.0",
+    version="3.0.0",
     lifespan=lifespan,
     docs_url="/docs" if AUTH_SETTINGS.api_docs_enabled else None,
     redoc_url="/redoc" if AUTH_SETTINGS.api_docs_enabled else None,
@@ -270,7 +271,7 @@ async def root():
     return {
         "status": "ok",
         "service": "swing-screener-api",
-        "version": "0.1.0",
+        "version": "3.0.0",
         "api": "/api",
         "health": "/health",
         "docs": "/docs",
@@ -283,7 +284,7 @@ async def api_root():
     return {
         "status": "ok",
         "service": "swing-screener-api",
-        "version": "0.1.0",
+        "version": "3.0.0",
         "health": "/health",
         "docs": "/docs",
     }
@@ -298,10 +299,11 @@ async def liveness():
 @app.get("/health")
 @app.get("/health/ready")
 async def health_check():
-    """Return readiness for the database, migration, and legacy import."""
+    """Return readiness for SQL state and the frozen legacy source files."""
     from api.monitoring import get_metrics_collector
 
     metrics = get_metrics_collector().get_metrics()
+    legacy_state = HealthChecker.check_file_access()
     try:
         readiness = check_database_readiness(get_database_runtime())
     except Exception as exc:
@@ -317,19 +319,34 @@ async def health_check():
                         "connectivity": "error",
                         "migration": "unknown",
                         "legacy_import": "unknown",
-                    }
+                    },
+                    "legacy_state": legacy_state,
                 },
-                "details": {"database": "Portfolio database is unavailable."},
+                "details": {
+                    "database": "Portfolio database is unavailable.",
+                    **(
+                        {"legacy_state": "; ".join(legacy_state["issues"])}
+                        if legacy_state["issues"]
+                        else {}
+                    ),
+                },
                 "metrics": metrics,
             },
         )
 
+    healthy = readiness.healthy and legacy_state["status"] == "healthy"
+    details = dict(readiness.details)
+    if legacy_state["issues"]:
+        details["legacy_state"] = "; ".join(legacy_state["issues"])
     return JSONResponse(
-        status_code=200 if readiness.healthy else 503,
+        status_code=200 if healthy else 503,
         content={
-            "status": "healthy" if readiness.healthy else "unhealthy",
-            "checks": {"database": readiness.checks},
-            "details": readiness.details or None,
+            "status": "healthy" if healthy else "unhealthy",
+            "checks": {
+                "database": readiness.checks,
+                "legacy_state": legacy_state,
+            },
+            "details": details or None,
             "metrics": metrics,
         },
     )

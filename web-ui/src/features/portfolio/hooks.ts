@@ -36,6 +36,21 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateDailyReviewQueries, invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
 
+const mutationIdempotencyKeys = new WeakMap<object, string>();
+
+function idempotencyKeyForMutation(variables: object): string {
+  const existing = mutationIdempotencyKeys.get(variables);
+  if (existing) {
+    return existing;
+  }
+  if (!globalThis.crypto?.randomUUID) {
+    throw new Error('Secure idempotency key generation is unavailable in this browser.');
+  }
+  const key = globalThis.crypto.randomUUID();
+  mutationIdempotencyKeys.set(variables, key);
+  return key;
+}
+
 export function useOrders(status: OrderFilterStatus) {
   return useQuery({
     queryKey: queryKeys.orders(status),
@@ -46,7 +61,8 @@ export function useOrders(status: OrderFilterStatus) {
 export function useCreateOrderMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (request: CreateOrderRequest) => createOrder(request),
+    mutationFn: (request: CreateOrderRequest) =>
+      createOrder(request, idempotencyKeyForMutation(request)),
     onSuccess: async () => {
       await invalidateOrderQueries(queryClient);
       onSuccess?.();
@@ -57,8 +73,12 @@ export function useCreateOrderMutation(onSuccess?: () => void) {
 export function useFillOrderMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ orderId, request }: { orderId: string; request: FillOrderRequest }) =>
-      fillOrder(orderId, request),
+    mutationFn: (variables: { orderId: string; request: FillOrderRequest }) =>
+      fillOrder(
+        variables.orderId,
+        variables.request,
+        idempotencyKeyForMutation(variables),
+      ),
     onSuccess: async () => {
       await Promise.all([
         invalidateOrderQueries(queryClient),
@@ -167,8 +187,12 @@ export function useEarningsProximity(ticker?: string) {
 export function useUpdateStopMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ positionId, request }: { positionId: string; request: UpdateStopRequest }) =>
-      updatePositionStop(positionId, request),
+    mutationFn: (variables: { positionId: string; request: UpdateStopRequest }) =>
+      updatePositionStop(
+        variables.positionId,
+        variables.request,
+        idempotencyKeyForMutation(variables),
+      ),
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       await invalidateOrderQueries(queryClient);
@@ -181,13 +205,14 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
 export function useUpdateTrailMethodMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      positionId,
-      request,
-    }: {
+    mutationFn: (variables: {
       positionId: string;
       request: UpdateTrailMethodRequest;
-    }) => updatePositionTrailMethod(positionId, request),
+    }) => updatePositionTrailMethod(
+      variables.positionId,
+      variables.request,
+      idempotencyKeyForMutation(variables),
+    ),
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       await invalidateDailyReviewQueries(queryClient);
@@ -223,8 +248,12 @@ export function usePositionStopPreviewQuery(
 export function useClosePositionMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ positionId, request }: { positionId: string; request: ClosePositionRequest }) =>
-      closePosition(positionId, request),
+    mutationFn: (variables: { positionId: string; request: ClosePositionRequest }) =>
+      closePosition(
+        variables.positionId,
+        variables.request,
+        idempotencyKeyForMutation(variables),
+      ),
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       await invalidateDailyReviewQueries(queryClient);
@@ -236,8 +265,12 @@ export function useClosePositionMutation(onSuccess?: () => void) {
 export function usePartialClosePositionMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ positionId, request }: { positionId: string; request: PartialCloseRequest }) =>
-      partialClosePosition(positionId, request),
+    mutationFn: (variables: { positionId: string; request: PartialCloseRequest }) =>
+      partialClosePosition(
+        variables.positionId,
+        variables.request,
+        idempotencyKeyForMutation(variables),
+      ),
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       await invalidateDailyReviewQueries(queryClient);

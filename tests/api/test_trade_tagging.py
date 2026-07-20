@@ -40,6 +40,7 @@ def test_close_with_tags_stores_tags(client_with_open_position):
             "exit_price": 110.0,
             "tags": ["breakout", "stop_hit"],
         },
+        headers={"Idempotency-Key": "close-tagged-position"},
     )
     assert response.status_code == 200
 
@@ -52,6 +53,7 @@ def test_close_without_tags_stores_empty_list(client_with_open_position):
     response = client_with_open_position.post(
         "/api/portfolio/positions/POS-TAG-001/close",
         json={"exit_price": 110.0},
+        headers={"Idempotency-Key": "close-untagged-position"},
     )
     assert response.status_code == 200
 

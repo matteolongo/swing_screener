@@ -56,9 +56,17 @@ Docs:
   and position mutation commit or roll back together.
 - `data/orders.json` and `data/positions.json` are import-only legacy sources.
   They are validated and imported once into an empty schema, recorded with row
-  counts and SHA-256 checksums, and are never changed or dual-written.
-- Order create and fill require `Idempotency-Key`. Replaying the same request
-  returns its stored response; reusing a key for different input returns `409`.
+  counts and SHA-256 checksums, and are never changed or dual-written. A
+  migration-created singleton lock serializes import classification and writes
+  across application instances, so concurrent startup returns the committed
+  import report instead of attempting a second import.
+- Order create/fill and every persisted position write require `Idempotency-Key`.
+  Replaying the same request returns its stored response; reusing a key for
+  different input returns `409`. Stop-price market-data validation runs before
+  the idempotent write transaction, then the persisted update is rechecked and
+  reserved atomically.
+- `DATABASE_URL` accepts `postgres://` and `postgresql://`; both are normalized
+  to SQLAlchemy's `postgresql+psycopg://` dialect URL.
 
 ## Database Operations
 
@@ -91,7 +99,9 @@ counts against the JSON documents and verify `/health/ready` reports
 `connectivity=ok`, `migration=ok`, and `legacy_import=complete`. Startup refuses
 to serve when the schema is stale or the import ledger is incomplete.
 
-If readiness reports a partial import state, stop the application. Restore the
+`/health` and `/health/ready` also check that the frozen legacy JSON files and
+their parent directory remain readable and writable. `/health/live` remains a
+dependency-free process liveness check. If readiness reports a partial import state, stop the application. Restore the
 database backup, confirm that all portfolio and import-ledger tables reflect the
 same point in time, rerun `alembic upgrade head`, and retry the importer. Do not
 manually add a ledger row to populated tables. Returning to a release that

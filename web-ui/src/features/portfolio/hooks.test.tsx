@@ -99,7 +99,7 @@ describe('portfolio hooks', () => {
       await result.current.mutateAsync(request)
     })
 
-    expect(mockedCreateOrder).toHaveBeenCalledWith(request)
+    expect(mockedCreateOrder).toHaveBeenCalledWith(request, expect.any(String))
     expect(mockedInvalidateOrderQueries).toHaveBeenCalledWith(queryClient)
     expect(onSuccess).toHaveBeenCalledTimes(1)
   })
@@ -124,7 +124,11 @@ describe('portfolio hooks', () => {
       await result.current.mutateAsync(payload)
     })
 
-    expect(mockedUpdatePositionStop).toHaveBeenCalledWith(payload.positionId, payload.request)
+    expect(mockedUpdatePositionStop).toHaveBeenCalledWith(
+      payload.positionId,
+      payload.request,
+      expect.any(String),
+    )
     expect(mockedInvalidatePositionQueries).toHaveBeenCalledWith(queryClient)
     expect(mockedInvalidateOrderQueries).toHaveBeenCalledWith(queryClient)
     expect(mockedInvalidateDailyReviewQueries).toHaveBeenCalledWith(queryClient)

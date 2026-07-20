@@ -126,6 +126,38 @@ class TestHealthCheck:
         assert response.json()["status"] == "unhealthy"
 
 
+    def test_readiness_reports_unhealthy_legacy_state_files(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr("api.main.get_database_runtime", lambda: object())
+        monkeypatch.setattr(
+            "api.main.check_database_readiness",
+            lambda _runtime: DatabaseReadiness(
+                healthy=True,
+                checks={
+                    "connectivity": "ok",
+                    "migration": "ok",
+                    "legacy_import": "complete",
+                },
+            ),
+        )
+        monkeypatch.setattr(
+            HealthChecker,
+            "check_file_access",
+            lambda: {
+                "status": "unhealthy",
+                "positions_file": "error",
+                "orders_file": "ok",
+                "issues": ["data/positions.json: permission denied"],
+            },
+        )
+
+        response = client.get("/health/ready")
+
+        assert response.status_code == 503
+        assert response.json()["checks"]["legacy_state"]["status"] == "unhealthy"
+
+
 class TestMetrics:
     """Test metrics endpoint."""
 

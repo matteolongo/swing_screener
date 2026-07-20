@@ -142,6 +142,17 @@ def validate_legacy_sources(
     )
 
 
+def _report_from_ledger(ledger: LegacyImportRow) -> LegacyImportReport:
+    return LegacyImportReport(
+        state=LegacyImportState.COMPLETE,
+        imported=False,
+        order_count=ledger.order_count,
+        position_count=ledger.position_count,
+        orders_sha256=ledger.orders_sha256,
+        positions_sha256=ledger.positions_sha256,
+    )
+
+
 def import_legacy_portfolio(
     uow_factory: UowFactory,
     orders_path: Path,
@@ -153,14 +164,7 @@ def import_legacy_portfolio(
         if state is LegacyImportState.COMPLETE:
             ledger = uow.session.scalar(select(LegacyImportRow))
             assert ledger is not None
-            return LegacyImportReport(
-                state=state,
-                imported=False,
-                order_count=ledger.order_count,
-                position_count=ledger.position_count,
-                orders_sha256=ledger.orders_sha256,
-                positions_sha256=ledger.positions_sha256,
-            )
+            return _report_from_ledger(ledger)
         if state is LegacyImportState.PARTIAL:
             raise LegacyImportStateError(
                 "Legacy import state is partial; restore a database backup or clear all portfolio tables and retry"
@@ -175,7 +179,12 @@ def import_legacy_portfolio(
 
     with uow_factory() as uow:
         uow.begin_write()
+        uow.lock_legacy_import()
         state = classify_import_state(uow.session)
+        if state is LegacyImportState.COMPLETE:
+            ledger = uow.session.scalar(select(LegacyImportRow))
+            assert ledger is not None
+            return _report_from_ledger(ledger)
         if state is not LegacyImportState.EMPTY:
             raise LegacyImportStateError(
                 f"Legacy import state changed to {state.value}; no rows were imported"

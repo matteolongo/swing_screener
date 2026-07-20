@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Callable, Optional
 
@@ -30,6 +31,14 @@ logger = logging.getLogger(__name__)
 
 def _round_price(value: float) -> float:
     return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+@dataclass(frozen=True)
+class PreparedStopUpdate:
+    position_id: str
+    request: UpdateStopRequest
+    old_stop: float
+    new_stop: float
 
 
 class PortfolioWriteService:
@@ -99,9 +108,10 @@ class PortfolioWriteService:
 
         return Position(**new_position)
 
-    def update_position_stop(
+    def prepare_position_stop(
         self, position_id: str, request: UpdateStopRequest
-    ) -> dict:
+    ) -> PreparedStopUpdate:
+        """Validate a stop update before acquiring the portfolio write lock."""
         new_stop = _round_price(request.new_stop)
 
         # Validate against a snapshot first (the price fetch is network I/O and must
@@ -141,6 +151,20 @@ class PortfolioWriteService:
                 f"({current_price}) for long positions",
             )
 
+        return PreparedStopUpdate(
+            position_id=position_id,
+            request=request,
+            old_stop=old_stop,
+            new_stop=new_stop,
+        )
+
+    def apply_position_stop(self, prepared: PreparedStopUpdate) -> dict:
+        """Persist a previously validated stop update under the write lock."""
+        position_id = prepared.position_id
+        request = prepared.request
+        old_stop = prepared.old_stop
+        new_stop = prepared.new_stop
+
         result: dict[str, float] = {}
 
         def _modify(data: dict) -> dict:
@@ -177,6 +201,11 @@ class PortfolioWriteService:
             "new_stop": new_stop,
             "old_stop": result["old_stop"],
         }
+
+    def update_position_stop(
+        self, position_id: str, request: UpdateStopRequest
+    ) -> dict:
+        return self.apply_position_stop(self.prepare_position_stop(position_id, request))
 
     def close_position(self, position_id: str, request: ClosePositionRequest) -> dict:
         def _modify(data: dict) -> dict:

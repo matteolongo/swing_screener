@@ -136,6 +136,54 @@ def test_concurrent_identical_fill_replays_one_atomic_mutation(client):
     assert len(positions) == 1
 
 
+def _manual_position_payload():
+    return {
+        "ticker": "MSFT",
+        "entry_price": 100,
+        "stop_price": 95,
+        "shares": 10,
+        "entry_date": "2026-07-15",
+        "quote_currency": "USD",
+        "account_currency": "EUR",
+        "entry_fx_rate": 1.1,
+    }
+
+
+def test_position_writes_require_an_idempotency_key(client):
+    response = client.post("/api/portfolio/positions", json=_manual_position_payload())
+
+    assert response.status_code == 422
+
+
+def test_identical_partial_close_retry_replays_without_second_share_reduction(client):
+    created = client.post(
+        "/api/portfolio/positions",
+        json=_manual_position_payload(),
+        headers={"Idempotency-Key": "create-msft-position"},
+    )
+    assert created.status_code == 200
+    position_id = created.json()["position_id"]
+    payload = {"shares_closed": 3, "price": 110, "fee_eur": 0.5, "fx_rate": 1.1}
+    headers = {"Idempotency-Key": "partial-close-msft"}
+
+    first = client.post(
+        f"/api/portfolio/positions/{position_id}/partial-close",
+        json=payload,
+        headers=headers,
+    )
+    second = client.post(
+        f"/api/portfolio/positions/{position_id}/partial-close",
+        json=payload,
+        headers=headers,
+    )
+
+    assert first.status_code == second.status_code == 200
+    assert first.json() == second.json()
+    position = client.get(f"/api/portfolio/positions/{position_id}").json()
+    assert position["shares"] == 7
+    assert len(position["partial_closes"]) == 1
+
+
 def test_reusing_key_for_another_operation_returns_conflict(client):
     key = {"Idempotency-Key": "cross-operation-key"}
     created = client.post(
