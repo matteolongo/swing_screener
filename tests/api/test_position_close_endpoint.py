@@ -59,10 +59,13 @@ def test_close_position_persists_optional_fee(monkeypatch, tmp_path):
     assert response.status_code == 200
     assert response.json()["fee_eur"] == 4.90
 
-    positions = json.loads(positions_path.read_text(encoding="utf-8"))["positions"]
-    assert len(positions) == 1
-    position = positions[0]
+    position_response = client.get("/api/portfolio/positions/POS-ENGI-1")
+    assert position_response.status_code == 200
+    position = position_response.json()
     assert position["status"] == "closed"
     assert position["exit_price"] == 26.92
     assert position["exit_fee_eur"] == 4.90
     assert "Stop loss executed on broker" in position["notes"]
+
+    legacy_position = json.loads(positions_path.read_text(encoding="utf-8"))["positions"][0]
+    assert legacy_position["status"] == "open"

@@ -5,18 +5,20 @@ import os
 
 from fastapi import APIRouter, Depends, Query
 
+from api.dependencies import DATA_DIR, get_positions_repo
+from api.db.repositories import SqlPositionsRepository
 from api.models.calendar import CalendarEventsResponse
 from api.services.calendar_service import CalendarService
 
 router = APIRouter()
 
 
-def get_calendar_service() -> CalendarService:
+def get_calendar_service(
+    positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
+) -> CalendarService:
     """Dependency: inject CalendarService with injected PositionsRepository."""
-    from api.dependencies import DATA_DIR, get_positions_repo
-
     return CalendarService(
-        positions_repo=get_positions_repo(),
+        positions_repo=positions_repo,
         data_dir=DATA_DIR,
         finnhub_api_key=os.environ.get("FINNHUB_API_KEY"),
     )

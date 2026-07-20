@@ -21,6 +21,7 @@ from api.models.portfolio import (
 )
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.positions_repo import PositionsRepository
+from api.db.unit_of_work import PortfolioUnitOfWork
 from api.services.portfolio import (
     PositionPricingService,
     PortfolioReadService,
@@ -40,17 +41,22 @@ class PortfolioService:
         positions_repo: PositionsRepository,
         provider: Optional[MarketDataProvider] = None,
         config_repo: Optional[ConfigRepository] = None,
+        uow: PortfolioUnitOfWork | None = None,
     ) -> None:
         self._positions_repo = positions_repo
         self._provider = provider or get_default_provider()
         self._config_repo = config_repo or ConfigRepository()
+        self._uow = uow
 
         self._pricing = PositionPricingService(self._provider)
         self._read = PortfolioReadService(
             self._positions_repo, self._pricing, self._config_repo
         )
         self._write = PortfolioWriteService(
-            self._positions_repo, self._provider, self._config_repo
+            self._positions_repo,
+            self._provider,
+            self._config_repo,
+            begin_write=self._uow.begin_write if self._uow is not None else None,
         )
         self._advisor = PositionStopAdvisor(
             self._positions_repo, self._provider, self._config_repo

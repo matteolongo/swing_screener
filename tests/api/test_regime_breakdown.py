@@ -127,14 +127,14 @@ def test_endpoint_returns_empty_when_no_closed_positions(tmp_path, monkeypatch):
 def test_endpoint_returns_regime_stats(tmp_path, monkeypatch):
     positions = [
         {
-            "id": "a", "ticker": "AAPL", "status": "closed",
+                "position_id": "a", "ticker": "AAPL", "status": "closed",
             "entry_date": "2024-06-15", "exit_date": "2024-07-01",
             "entry_price": 100.0, "exit_price": 120.0,
             "shares": 10, "initial_risk": 10.0,
             "stop_price": 90.0,
         },
         {
-            "id": "b", "ticker": "MSFT", "status": "closed",
+                "position_id": "b", "ticker": "MSFT", "status": "closed",
             "entry_date": "2024-06-15", "exit_date": "2024-07-10",
             "entry_price": 200.0, "exit_price": 180.0,
             "shares": 5, "initial_risk": 10.0,
@@ -167,7 +167,7 @@ def test_endpoint_returns_regime_stats(tmp_path, monkeypatch):
 def test_endpoint_yfinance_failure_returns_empty(tmp_path, monkeypatch):
     positions = [
         {
-            "id": "c", "ticker": "AAPL", "status": "closed",
+                "position_id": "c", "ticker": "AAPL", "status": "closed",
             "entry_date": "2024-06-15", "exit_date": "2024-07-01",
             "entry_price": 100.0, "exit_price": 120.0,
             "shares": 10, "initial_risk": 10.0,

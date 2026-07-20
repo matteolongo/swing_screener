@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir api --reload-dir src
+    command: sh -c "alembic upgrade head && exec uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir api --reload-dir src"
     ports:
       - "8000:8000"
     volumes:
@@ -11,6 +11,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - APP_ENV=development
+      - DATABASE_URL=sqlite:////app/data/swing_screener.db
       - AUTH_MODE=disabled
       - SESSION_COOKIE_SECURE=false
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -35,6 +36,7 @@ services:
     environment:
       - VITE_PROXY_TARGET=http://api:8000
       - VITE_PERSISTENCE_MODE=api
+      - VITE_ENABLE_LOCAL_PERSISTENCE=false
       - CHOKIDAR_USEPOLLING=true
     depends_on:
       - api

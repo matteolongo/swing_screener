@@ -48,9 +48,55 @@ Docs:
 - `http://localhost:8000/openapi.json`
 
 ## Data + Concurrency
-- Primary persistence: JSON files in `data/` (orders, positions, strategies, config).
-- File access is guarded by `api/utils/file_lock.py` to avoid concurrent write races.
-- Database module exists but is not wired by default (see `docs/engineering/DATABASE_MIGRATION.md`).
+- Orders, positions, and idempotency records use one SQL database. Development
+  defaults to `sqlite:///data/swing_screener.db`; production requires
+  `DATABASE_URL` and is expected to use PostgreSQL.
+- Each portfolio request owns one SQLAlchemy unit of work. SQLite writes begin
+  with `BEGIN IMMEDIATE`; PostgreSQL lifecycle reads use row locks. Order fill
+  and position mutation commit or roll back together.
+- `data/orders.json` and `data/positions.json` are import-only legacy sources.
+  They are validated and imported once into an empty schema, recorded with row
+  counts and SHA-256 checksums, and are never changed or dual-written.
+- Order create and fill require `Idempotency-Key`. Replaying the same request
+  returns its stored response; reusing a key for different input returns `409`.
+
+## Database Operations
+
+Before the first deployment, back up both the target database and the two
+legacy JSON files. For PostgreSQL, use a provider snapshot or:
+
+```bash
+pg_dump "$DATABASE_URL" --format=custom --file swing-screener-before-import.dump
+cp data/orders.json data/orders.before-sql.json
+cp data/positions.json data/positions.before-sql.json
+```
+
+For SQLite, stop application writers and use `sqlite3`'s online backup command:
+
+```bash
+sqlite3 data/swing_screener.db ".backup data/swing_screener.before-import.db"
+```
+
+Apply the schema, inspect the empty import state, and execute the same importer
+used at application startup:
+
+```bash
+alembic upgrade head
+python scripts/migrate_json_to_sqlite.py --dry-run
+python scripts/migrate_json_to_sqlite.py
+```
+
+The execute command prints imported order and position counts. Verify those
+counts against the JSON documents and verify `/health/ready` reports
+`connectivity=ok`, `migration=ok`, and `legacy_import=complete`. Startup refuses
+to serve when the schema is stale or the import ledger is incomplete.
+
+If readiness reports a partial import state, stop the application. Restore the
+database backup, confirm that all portfolio and import-ledger tables reflect the
+same point in time, rerun `alembic upgrade head`, and retry the importer. Do not
+manually add a ledger row to populated tables. Returning to a release that
+writes JSON is an explicit operator rollback decision: restore the frozen JSON
+backup first and ensure no SQL-only fills or position changes would be lost.
 
 ## API Surface (by router)
 Health:

@@ -40,6 +40,8 @@ from api.routers import (
 from api.security.middleware import RateLimitMiddleware, SecurityBoundaryMiddleware
 from api.security.openapi import install_security_openapi
 from api.security.settings import get_auth_settings
+from api.db.readiness import check_database_readiness
+from api.dependencies import get_database_runtime
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
@@ -122,6 +124,21 @@ async def lifespan(app: FastAPI):
             logger.info("Config migration: %s", action)
     except Exception:
         logger.exception("Failed to migrate legacy JSON configuration to YAML")
+    try:
+        database_runtime = get_database_runtime()
+        database_readiness = check_database_readiness(database_runtime)
+    except Exception as exc:
+        logger.error(
+            "Portfolio database startup failed: exception=%s", type(exc).__name__
+        )
+        raise RuntimeError("Portfolio database startup failed.") from None
+    if not database_readiness.healthy:
+        logger.error(
+            "Portfolio database is not ready: checks=%s",
+            database_readiness.checks,
+        )
+        raise RuntimeError("Portfolio database is not ready.")
+    app.state.database_runtime = database_runtime
     logger.info("Swing Screener API starting up...")
     logger.info("API docs available at: http://localhost:8000/docs")
     logger.info("OpenAPI schema: http://localhost:8000/openapi.json")
@@ -140,8 +157,11 @@ async def lifespan(app: FastAPI):
             "SERVE_WEB_UI is enabled but %s is missing; API-only mode is active.",
             WEB_UI_INDEX_FILE,
         )
-    yield
-    logger.info("Shutting down...")
+    try:
+        yield
+    finally:
+        database_runtime.engine.dispose()
+        logger.info("Shutting down...")
 
 
 def register_domain_error_handler(target_app) -> None:
@@ -197,6 +217,7 @@ app.add_middleware(
         "User-Agent",
         "X-Requested-With",
         "X-CSRF-Token",
+        "Idempotency-Key",
     ],
 )
 
@@ -277,41 +298,38 @@ async def liveness():
 @app.get("/health")
 @app.get("/health/ready")
 async def health_check():
-    """
-    Health check endpoint for monitoring and load balancers.
-    
-    Returns:
-        - status: overall health (healthy, degraded, unhealthy)
-        - checks: individual component checks
-        - uptime: time since API started
-    """
-    from api.monitoring import HealthChecker, get_metrics_collector
+    """Return readiness for the database, migration, and legacy import."""
+    from api.monitoring import get_metrics_collector
 
-    file_check = HealthChecker.check_file_access()
-    data_check = HealthChecker.check_data_directory()
     metrics = get_metrics_collector().get_metrics()
-
-    # Determine overall status
-    if file_check["status"] == "unhealthy" or data_check["status"] == "error":
-        overall_status = "unhealthy"
-        status_code = 503
-    elif file_check["status"] == "degraded" or data_check["status"] == "warning":
-        overall_status = "degraded"
-        status_code = 200
-    else:
-        overall_status = "healthy"
-        status_code = 200
-
-    from fastapi.responses import JSONResponse
+    try:
+        readiness = check_database_readiness(get_database_runtime())
+    except Exception as exc:
+        logger.warning(
+            "Portfolio database readiness failed: exception=%s", type(exc).__name__
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "checks": {
+                    "database": {
+                        "connectivity": "error",
+                        "migration": "unknown",
+                        "legacy_import": "unknown",
+                    }
+                },
+                "details": {"database": "Portfolio database is unavailable."},
+                "metrics": metrics,
+            },
+        )
 
     return JSONResponse(
-        status_code=status_code,
+        status_code=200 if readiness.healthy else 503,
         content={
-            "status": overall_status,
-            "checks": {
-                "files": file_check,
-                "data_directory": data_check,
-            },
+            "status": "healthy" if readiness.healthy else "unhealthy",
+            "checks": {"database": readiness.checks},
+            "details": readiness.details or None,
             "metrics": metrics,
         },
     )

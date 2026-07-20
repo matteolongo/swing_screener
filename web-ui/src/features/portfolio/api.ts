@@ -201,6 +201,13 @@ export interface DegiroStatus {
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
+function createIdempotencyKey(): string {
+  if (!globalThis.crypto?.randomUUID) {
+    throw new Error('Secure idempotency key generation is unavailable in this browser.');
+  }
+  return globalThis.crypto.randomUUID();
+}
+
 export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
   if (isLocalPersistenceMode()) {
     return listOrdersLocal(status);
@@ -222,7 +229,10 @@ export async function createOrder(request: CreateOrderRequest): Promise<void> {
   }
   await fetchJson<void>(API_ENDPOINTS.orders, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': createIdempotencyKey(),
+    },
     body: JSON.stringify(transformCreateOrderRequest(request)),
     errorMessage: 'Failed to create order',
   });
@@ -249,7 +259,10 @@ export async function fillOrder(orderId: string, request: FillOrderRequest): Pro
 
   await fetchJson<void>(API_ENDPOINTS.orderFill(orderId), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': createIdempotencyKey(),
+    },
     body: JSON.stringify(payload),
     errorMessage: 'Failed to fill order',
   });

@@ -1,255 +1,77 @@
 #!/usr/bin/env python
-"""
-One-time migration script to convert JSON-based state files to SQLite database.
+"""Validate or execute the legacy portfolio import."""
 
-Usage:
-    python scripts/migrate_json_to_sqlite.py [--orders-path PATH] [--positions-path PATH] [--db-path PATH]
-
-This script:
-1. Reads all data from positions.json and orders.json
-2. Creates a new SQLite database with the appropriate schema
-3. Inserts all data into the database tables
-4. Validates that relationships are maintained
-"""
+from __future__ import annotations
 
 import argparse
-import json
-import sys
 from pathlib import Path
+import sys
 
-# Add src to path so we can import modules
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from swing_screener.db import Database, PositionModel, OrderModel, position_to_model, order_to_model
-from swing_screener.portfolio.state import Position
-from swing_screener.execution.orders import Order
+from alembic.config import Config  # noqa: E402
+from alembic.runtime.migration import MigrationContext  # noqa: E402
+from alembic.script import ScriptDirectory  # noqa: E402
 
-
-def load_json_positions(path: Path) -> list[Position]:
-    """Load positions from JSON file using the old format."""
-    if not path.exists():
-        print(f"Warning: {path} does not exist, skipping positions")
-        return []
-    
-    data = json.loads(path.read_text(encoding="utf-8"))
-    positions = []
-    
-    for item in data.get("positions", []):
-        positions.append(
-            Position(
-                ticker=str(item["ticker"]).upper(),
-                status=item.get("status", "open"),
-                position_id=item.get("position_id", None),
-                source_order_id=item.get("source_order_id", None),
-                entry_date=item["entry_date"],
-                entry_price=float(item["entry_price"]),
-                stop_price=float(item["stop_price"]),
-                shares=int(item["shares"]),
-                initial_risk=(
-                    float(item["initial_risk"])
-                    if item.get("initial_risk") is not None
-                    else None
-                ),
-                max_favorable_price=(
-                    float(item["max_favorable_price"])
-                    if item.get("max_favorable_price") is not None
-                    else None
-                ),
-                exit_date=(
-                    str(item.get("exit_date")).strip()
-                    if item.get("exit_date")
-                    else None
-                ),
-                exit_price=(
-                    float(item["exit_price"])
-                    if item.get("exit_price") is not None
-                    else None
-                ),
-                notes=str(item.get("notes", "")),
-                exit_order_ids=(
-                    [str(x) for x in item.get("exit_order_ids", [])]
-                    if isinstance(item.get("exit_order_ids", None), list)
-                    else None
-                ),
-            )
-        )
-    
-    return positions
+from api.db.import_legacy import (  # noqa: E402
+    LEGACY_IMPORT_SCHEMA_REVISION,
+    classify_import_state,
+    import_legacy_portfolio,
+    validate_legacy_sources,
+)
+from api.db.session import create_database_runtime  # noqa: E402
+from api.db.settings import get_database_settings, normalize_database_url  # noqa: E402
+from api.db.unit_of_work import PortfolioUnitOfWork  # noqa: E402
 
 
-def load_json_orders(path: Path) -> list[Order]:
-    """Load orders from JSON file using the old format."""
-    if not path.exists():
-        print(f"Warning: {path} does not exist, skipping orders")
-        return []
-    
-    data = json.loads(path.read_text(encoding="utf-8"))
-    orders = []
-    
-    for idx, item in enumerate(data.get("orders", [])):
-        ticker = str(item.get("ticker", "")).strip().upper()
-        if not ticker:
-            continue
-        
-        order_id = str(item.get("order_id", "")).strip() or f"{ticker}-{idx + 1}"
-        status_raw = str(item.get("status", "pending")).strip().lower()
-        status = status_raw if status_raw in {"pending", "filled", "cancelled"} else "pending"
-        order_kind_raw = str(item.get("order_kind", "")).strip().lower()
-        order_kind = (
-            order_kind_raw
-            if order_kind_raw in {"entry", "stop", "take_profit"}
-            else None
+def _require_alembic_head(runtime) -> None:
+    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    expected = ScriptDirectory.from_config(config).get_current_head()
+    with runtime.engine.connect() as connection:
+        current = MigrationContext.configure(connection).get_current_revision()
+    if current != expected:
+        raise RuntimeError(
+            "Database schema is not at Alembic head; run 'alembic upgrade head' first"
         )
 
-        orders.append(
-            Order(
-                order_id=order_id,
-                ticker=ticker,
-                status=status,
-                order_type=str(item.get("order_type", "")).strip().upper(),
-                quantity=int(item.get("quantity", 0) or 0),
-                limit_price=(
-                    float(item["limit_price"])
-                    if item.get("limit_price") is not None
-                    else None
-                ),
-                stop_price=(
-                    float(item["stop_price"])
-                    if item.get("stop_price") is not None
-                    else None
-                ),
-                order_date=str(item.get("order_date", "")).strip(),
-                filled_date=str(item.get("filled_date", "")).strip(),
-                entry_price=(
-                    float(item["entry_price"])
-                    if item.get("entry_price") is not None
-                    else None
-                ),
-                notes=str(item.get("notes", "")).strip(),
-                order_kind=order_kind,
-                parent_order_id=item.get("parent_order_id", None),
-                position_id=item.get("position_id", None),
-                tif=item.get("tif", None),
-            )
-        )
-    
-    return orders
 
-
-def migrate(orders_path: Path, positions_path: Path, db_path: Path, force: bool = False):
-    """Migrate data from JSON files to SQLite database.
-    
-    Args:
-        orders_path: Path to orders.json
-        positions_path: Path to positions.json
-        db_path: Path to SQLite database file
-        force: If True, delete existing database before migration
-    """
-    # Check if database already exists
-    if db_path.exists() and not force:
-        print(f"Error: Database {db_path} already exists. Use --force to overwrite.")
-        sys.exit(1)
-    
-    if force and db_path.exists():
-        print(f"Removing existing database: {db_path}")
-        db_path.unlink()
-    
-    # Load data from JSON files
-    print(f"Loading positions from {positions_path}...")
-    positions = load_json_positions(positions_path)
-    print(f"  Loaded {len(positions)} positions")
-    
-    print(f"Loading orders from {orders_path}...")
-    orders = load_json_orders(orders_path)
-    print(f"  Loaded {len(orders)} orders")
-    
-    # Create database
-    print(f"Creating database at {db_path}...")
-    db = Database(db_path)
-    session = db.get_session()
-    
-    try:
-        # Insert positions first (they are referenced by orders)
-        print("Inserting positions into database...")
-        for pos in positions:
-            session.add(position_to_model(pos))
-        session.flush()  # Flush to DB but don't commit yet
-        print(f"  Inserted {len(positions)} positions")
-        
-        # Insert orders
-        print("Inserting orders into database...")
-        for order in orders:
-            session.add(order_to_model(order))
-        session.flush()
-        print(f"  Inserted {len(orders)} orders")
-        
-        # Commit transaction
-        session.commit()
-        print("Migration completed successfully!")
-        
-        # Verify the data
-        print("\nVerifying data...")
-        pos_count = session.query(PositionModel).count()
-        order_count = session.query(OrderModel).count()
-        print(f"  Positions in database: {pos_count}")
-        print(f"  Orders in database: {order_count}")
-        
-        if pos_count != len(positions):
-            print(f"  WARNING: Position count mismatch! Expected {len(positions)}, got {pos_count}")
-        
-        if order_count != len(orders):
-            print(f"  WARNING: Order count mismatch! Expected {len(orders)}, got {order_count}")
-        
-    except Exception as e:
-        session.rollback()
-        print(f"Error during migration: {e}")
-        raise
-    finally:
-        session.close()
-        db.close()
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Migrate JSON state files to SQLite database"
-    )
-    parser.add_argument(
-        "--orders-path",
-        type=Path,
-        default=Path("data/orders.json"),
-        help="Path to orders.json (default: data/orders.json)"
-    )
-    parser.add_argument(
-        "--positions-path",
-        type=Path,
-        default=Path("data/positions.json"),
-        help="Path to positions.json (default: data/positions.json)"
-    )
-    parser.add_argument(
-        "--db-path",
-        type=Path,
-        default=Path("data/swing_screener.db"),
-        help="Path to SQLite database (default: data/swing_screener.db)"
-    )
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force migration even if database exists (will delete existing database)"
-    )
-    
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--database-url", default=get_database_settings().url)
+    parser.add_argument("--orders", type=Path, default=Path("data/orders.json"))
+    parser.add_argument("--positions", type=Path, default=Path("data/positions.json"))
+    parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-    
-    print("=" * 60)
-    print("JSON to SQLite Migration Script")
-    print("=" * 60)
-    print(f"Orders JSON:    {args.orders_path}")
-    print(f"Positions JSON: {args.positions_path}")
-    print(f"Database:       {args.db_path}")
-    print(f"Force:          {args.force}")
-    print("=" * 60)
-    print()
-    
-    migrate(args.orders_path, args.positions_path, args.db_path, args.force)
+
+    runtime = create_database_runtime(normalize_database_url(args.database_url))
+
+    def factory() -> PortfolioUnitOfWork:
+        return PortfolioUnitOfWork(runtime.session_factory)
+
+    try:
+        _require_alembic_head(runtime)
+        if args.dry_run:
+            with factory() as uow:
+                state = classify_import_state(uow.session)
+            sources = validate_legacy_sources(args.orders, args.positions)
+            print(
+                f"state={state.value} orders={sources.order_count} "
+                f"positions={sources.position_count} "
+                f"orders_sha256={sources.orders_sha256} "
+                f"positions_sha256={sources.positions_sha256}"
+            )
+            return
+        report = import_legacy_portfolio(
+            factory, args.orders, args.positions, LEGACY_IMPORT_SCHEMA_REVISION
+        )
+        print(
+            f"state={report.state.value} imported={report.imported} "
+            f"orders={report.order_count} positions={report.position_count}"
+        )
+    finally:
+        runtime.engine.dispose()
 
 
 if __name__ == "__main__":

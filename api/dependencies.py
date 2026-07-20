@@ -1,6 +1,8 @@
 """Shared dependencies for API routers."""
 from __future__ import annotations
 
+import hashlib
+import os
 import threading
 from functools import lru_cache
 from pathlib import Path
@@ -10,11 +12,11 @@ if TYPE_CHECKING:
     from api.services.backtest_service import BacktestService
 
 from fastapi import Depends
+from alembic import command
+from alembic.config import Config
 
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.fundamentals_config_repo import FundamentalsConfigRepository
-from api.repositories.orders_repo import OrdersRepository
-from api.repositories.positions_repo import PositionsRepository
 from api.repositories.review_queue_repo import ReviewQueueRepository
 from api.repositories.screener_history_repo import ScreenerHistoryRepository
 from api.repositories.strategy_repo import StrategyRepository
@@ -22,6 +24,8 @@ from api.repositories.symbol_pool_repo import SymbolPoolRepository
 from api.repositories.watchlist_repo import WatchlistRepository
 from api.repositories.weekly_reviews_repo import WeeklyReviewsRepository
 from api.services.fundamentals_service import FundamentalsService
+from api.services.cache_service import CacheService
+from api.services.datasources_service import DatasourcesService
 from api.services.orders_service import OrdersService
 from api.services.order_approval_token import OrderApprovalTokenSigner
 from api.security.settings import get_auth_settings
@@ -30,9 +34,14 @@ from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.screener_service import ScreenerService
 from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
-from api.utils.files import get_today_str
 from swing_screener.settings import data_dir, get_settings_manager
 from swing_screener.runtime_env import get_env_value
+from api.db.import_legacy import LEGACY_IMPORT_SCHEMA_REVISION, import_legacy_portfolio
+from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
+from api.db.readiness import require_database_schema_at_head
+from api.db.session import DatabaseRuntime, create_database_runtime
+from api.db.settings import DatabaseSettings
+from api.db.unit_of_work import PortfolioUnitOfWork
 from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
 from swing_screener.fundamentals import FundamentalsAnalysisService as _FundamentalsAnalysisService
 
@@ -74,6 +83,8 @@ def get_finnhub_client() -> FinnhubEnrichmentClient | None:
 DATA_DIR = data_dir()
 POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", DATA_DIR / "positions.json")
 ORDERS_FILE = DATA_DIR / "orders.json"
+_DEFAULT_POSITIONS_FILE = POSITIONS_FILE
+_DEFAULT_ORDERS_FILE = ORDERS_FILE
 WATCHLIST_FILE = get_settings_manager().resolve_runtime_path("watchlist_file", DATA_DIR / "watchlist.json")
 SYMBOL_POOL_FILE = get_settings_manager().resolve_runtime_path("symbol_pool_file", DATA_DIR / "symbol_pool.json")
 REVIEW_QUEUE_FILE = get_settings_manager().resolve_runtime_path("review_queue_file", DATA_DIR / "review_queue.json")
@@ -86,6 +97,8 @@ _orders_path: Optional[Path] = None
 # Global singleton config repository (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
 _config_repository_lock = threading.Lock()
+_database_runtime_lock = threading.Lock()
+_database_runtimes: dict[str, DatabaseRuntime] = {}
 
 
 def get_positions_path() -> Path:
@@ -99,21 +112,100 @@ def get_watchlist_path() -> Path:
     return WATCHLIST_FILE
 
 
-def get_positions_repo() -> PositionsRepository:
-    path = get_positions_path()
-    if not path.exists():
-        from api.utils.file_lock import locked_write_json
-        locked_write_json(path, {"asof": get_today_str(), "positions": []})
-    return PositionsRepository(path)
-
-
-def get_orders_repo() -> OrdersRepository:
+def get_orders_path() -> Path:
     import api.dependencies as _self
-    path = _self._orders_path if _self._orders_path is not None else ORDERS_FILE
-    if not path.exists():
-        from api.utils.file_lock import locked_write_json
-        locked_write_json(path, {"asof": get_today_str(), "orders": []})
-    return OrdersRepository(path)
+
+    return _self._orders_path if _self._orders_path is not None else ORDERS_FILE
+
+
+def _alembic_upgrade(url: str) -> None:
+    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    config.set_main_option("sqlalchemy.url", url)
+    command.upgrade(config, "head")
+
+
+def _database_context() -> tuple[str, Path, Path, bool]:
+    positions_path = get_positions_path()
+    orders_path = get_orders_path()
+    settings = DatabaseSettings.from_env()
+    test_override = (
+        _positions_path is not None
+        or _orders_path is not None
+        or positions_path != _DEFAULT_POSITIONS_FILE
+        or orders_path != _DEFAULT_ORDERS_FILE
+    )
+    if settings.app_env == "test" and not settings.database_url_configured:
+        if test_override:
+            digest = hashlib.sha256(
+                f"{orders_path.resolve()}|{positions_path.resolve()}".encode("utf-8")
+            ).hexdigest()[:20]
+            database_path = (
+                Path.home()
+                / ".cache"
+                / "swing-screener-tests"
+                / f"portfolio-{digest}-v2.db"
+            )
+        else:
+            database_path = (
+                Path.home()
+                / ".cache"
+                / f"swing-screener-test-{os.getpid()}-v2.db"
+            )
+        database_path.parent.mkdir(parents=True, exist_ok=True)
+        return f"sqlite:///{database_path}", orders_path, positions_path, True
+    settings.validate_runtime()
+    return settings.url, orders_path, positions_path, False
+
+
+def get_database_runtime() -> DatabaseRuntime:
+    url, orders_path, positions_path, auto_migrate = _database_context()
+    runtime = _database_runtimes.get(url)
+    if runtime is None:
+        with _database_runtime_lock:
+            runtime = _database_runtimes.get(url)
+            if runtime is None:
+                if auto_migrate:
+                    _alembic_upgrade(url)
+                runtime = create_database_runtime(url)
+                try:
+                    require_database_schema_at_head(runtime)
+                except Exception:
+                    runtime.engine.dispose()
+                    raise
+
+                def factory() -> PortfolioUnitOfWork:
+                    return PortfolioUnitOfWork(runtime.session_factory)
+
+                try:
+                    import_legacy_portfolio(
+                        factory,
+                        orders_path,
+                        positions_path,
+                        LEGACY_IMPORT_SCHEMA_REVISION,
+                    )
+                except Exception:
+                    runtime.engine.dispose()
+                    raise
+                _database_runtimes[url] = runtime
+    return runtime
+
+
+def get_portfolio_uow():
+    runtime = get_database_runtime()
+    with PortfolioUnitOfWork(runtime.session_factory) as uow:
+        yield uow
+
+
+def get_positions_repo(
+    uow: PortfolioUnitOfWork = Depends(get_portfolio_uow),
+) -> SqlPositionsRepository:
+    return uow.positions
+
+
+def get_orders_repo(
+    uow: PortfolioUnitOfWork = Depends(get_portfolio_uow),
+) -> SqlOrdersRepository:
+    return uow.orders
 
 
 def get_watchlist_repo() -> WatchlistRepository:
@@ -151,11 +243,12 @@ def get_config_repo() -> ConfigRepository:
 
 
 def get_orders_service(
-    orders_repo: OrdersRepository = Depends(get_orders_repo),
-    positions_repo: PositionsRepository = Depends(get_positions_repo),
+    orders_repo: SqlOrdersRepository = Depends(get_orders_repo),
+    positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
     config_repo: ConfigRepository = Depends(get_config_repo),
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
     approval_signer: OrderApprovalTokenSigner = Depends(get_order_approval_signer),
+    uow: PortfolioUnitOfWork = Depends(get_portfolio_uow),
 ) -> OrdersService:
     return OrdersService(
         orders_repo=orders_repo,
@@ -163,18 +256,22 @@ def get_orders_service(
         config_repo=config_repo,
         strategy_repo=strategy_repo,
         approval_signer=approval_signer,
+        uow=uow,
     )
 
 
 def get_portfolio_service(
-    positions_repo: PositionsRepository = Depends(get_positions_repo),
+    positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
     config_repo: ConfigRepository = Depends(get_config_repo),
+    uow: PortfolioUnitOfWork = Depends(get_portfolio_uow),
 ) -> PortfolioService:
-    return PortfolioService(positions_repo=positions_repo, config_repo=config_repo)
+    return PortfolioService(
+        positions_repo=positions_repo, config_repo=config_repo, uow=uow
+    )
 
 
 def get_regime_analytics_service(
-    positions_repo: PositionsRepository = Depends(get_positions_repo),
+    positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
 ) -> RegimeAnalyticsService:
     return RegimeAnalyticsService(positions_repo=positions_repo)
 
@@ -227,10 +324,6 @@ def get_fundamentals_service(
         analysis_service=_FundamentalsAnalysisService(finnhub_client=get_finnhub_client()),
     )
 
-
-
-from api.services.datasources_service import DatasourcesService
-
 _datasources_service: DatasourcesService | None = None
 
 
@@ -239,10 +332,6 @@ def get_datasources_service() -> DatasourcesService:
     if _datasources_service is None:
         _datasources_service = DatasourcesService()
     return _datasources_service
-
-
-from api.services.cache_service import CacheService
-
 _cache_service: CacheService | None = None
 
 

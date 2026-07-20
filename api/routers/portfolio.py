@@ -4,9 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 
 from api.models.portfolio import (
     Position,
@@ -38,7 +36,23 @@ from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
 from swing_screener.intelligence.cache import read_from_cache
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+def require_idempotency_key(
+    value: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
+) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise HTTPException(status_code=422, detail="Idempotency-Key must not be blank")
+    return normalized
+
+
+def _subject(request: Request) -> str:
+    principal = getattr(request.state, "principal", None)
+    return str(getattr(principal, "subject", "local"))
 
 
 # ===== Positions =====
@@ -251,10 +265,14 @@ async def get_regime_breakdown(
 @router.post("/orders", status_code=201)
 async def create_order(
     request: CreateOrderRequest,
+    http_request: Request,
+    idempotency_key: str = Depends(require_idempotency_key),
     service: OrdersService = Depends(get_orders_service),
 ):
     """Create a pending entry order."""
-    return service.create_order(request)
+    return service.create_order(
+        request, idempotency_key=idempotency_key, subject=_subject(http_request)
+    )
 
 
 @router.get("/orders/local")
@@ -288,10 +306,17 @@ async def cancel_order(
 async def fill_order(
     order_id: str,
     request: FillOrderRequest,
+    http_request: Request,
+    idempotency_key: str = Depends(require_idempotency_key),
     service: OrdersService = Depends(get_orders_service),
 ):
     """Mark a pending order as filled and create an open position."""
-    return service.fill_order(order_id, request)
+    return service.fill_order(
+        order_id,
+        request,
+        idempotency_key=idempotency_key,
+        subject=_subject(http_request),
+    )
 
 
 

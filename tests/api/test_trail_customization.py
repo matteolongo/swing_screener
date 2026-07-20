@@ -39,10 +39,12 @@ def test_patch_trail_method_persists(client, tmp_path):
     )
     assert response.status_code == 200
     assert response.json()["trail_method"] == "atr"
-    stored = json.loads(pos_file.read_text())
-    pos = stored["positions"][0]
+    stored_response = client.get("/api/portfolio/positions/POS-001")
+    assert stored_response.status_code == 200
+    pos = stored_response.json()
     assert pos["trail_method"] == "atr"
     assert pos["trail_param"] == 2.5
+    assert "trail_method" not in json.loads(pos_file.read_text())["positions"][0]
 
 
 def test_patch_trail_method_manual(client, tmp_path):
@@ -52,9 +54,12 @@ def test_patch_trail_method_manual(client, tmp_path):
         json={"trail_method": "manual", "trail_param": None},
     )
     assert response.status_code == 200
-    stored = json.loads(pos_file.read_text())
-    assert stored["positions"][0]["trail_method"] == "manual"
-    assert stored["positions"][0]["trail_param"] is None
+    stored_response = client.get("/api/portfolio/positions/POS-001")
+    assert stored_response.status_code == 200
+    stored = stored_response.json()
+    assert stored["trail_method"] == "manual"
+    assert stored["trail_param"] is None
+    assert "trail_method" not in json.loads(pos_file.read_text())["positions"][0]
 
 
 def test_patch_trail_method_invalid_value(client):

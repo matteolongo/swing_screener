@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 import uuid
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional
+from typing import Callable, Optional
 
 import pandas as pd
 
-from swing_screener.errors import NotFoundError, ValidationError
+from swing_screener.errors import ConflictError, NotFoundError, ValidationError
 from swing_screener.data.currency import detect_currency
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 
@@ -40,10 +40,12 @@ class PortfolioWriteService:
         positions_repo: PositionsRepository,
         provider: Optional[MarketDataProvider] = None,
         config_repo: Optional[ConfigRepository] = None,
+        begin_write: Callable[[], None] | None = None,
     ) -> None:
         self._positions_repo = positions_repo
         self._provider = provider or get_default_provider()
         self._config_repo = config_repo or ConfigRepository()
+        self._begin_write = begin_write or (lambda: None)
 
     def create_position(self, request: CreatePositionRequest) -> Position:
         """Register a position directly (after manual fill at DeGiro)."""
@@ -92,6 +94,7 @@ class PortfolioWriteService:
             data["asof"] = get_today_str()
             return data
 
+        self._begin_write()
         self._positions_repo.update(_modify)
 
         return Position(**new_position)
@@ -138,11 +141,22 @@ class PortfolioWriteService:
                 f"({current_price}) for long positions",
             )
 
+        result: dict[str, float] = {}
+
         def _modify(data: dict) -> dict:
             for pos in data.get("positions", []):
                 if pos.get("position_id") == position_id:
                     if pos.get("status") != "open":
                         raise ValidationError("Cannot update stop on closed position")
+                    locked_stop = _round_price(float(pos.get("stop_price")))
+                    if locked_stop != old_stop:
+                        raise ConflictError(
+                            "Position changed while the stop update was being validated."
+                        )
+                    if new_stop <= locked_stop:
+                        raise ValidationError(
+                            f"Cannot move stop down. Current: {locked_stop}, Requested: {new_stop}"
+                        )
                     pos["stop_price"] = new_stop
                     if request.reason:
                         current_notes = pos.get("notes", "")
@@ -150,16 +164,18 @@ class PortfolioWriteService:
                             f"{current_notes}\nStop updated to {new_stop}: {request.reason}".strip()
                         )
                     data["asof"] = get_today_str()
+                    result["old_stop"] = locked_stop
                     return data
             raise NotFoundError(f"Position not found: {position_id}")
 
+        self._begin_write()
         self._positions_repo.update(_modify)
 
         return {
             "status": "ok",
             "position_id": position_id,
             "new_stop": new_stop,
-            "old_stop": old_stop,
+            "old_stop": result["old_stop"],
         }
 
     def close_position(self, position_id: str, request: ClosePositionRequest) -> dict:
@@ -186,6 +202,7 @@ class PortfolioWriteService:
                     return data
             raise NotFoundError(f"Position not found: {position_id}")
 
+        self._begin_write()
         self._positions_repo.update(_modify)
 
         return {
@@ -248,6 +265,7 @@ class PortfolioWriteService:
 
             raise NotFoundError(f"Position not found: {position_id}")
 
+        self._begin_write()
         self._positions_repo.update(_modify)
 
         return {
@@ -276,6 +294,7 @@ class PortfolioWriteService:
                     return data
             raise NotFoundError(f"Position {position_id} not found")
 
+        self._begin_write()
         self._positions_repo.update(_modify)
         return {
             "status": "ok",

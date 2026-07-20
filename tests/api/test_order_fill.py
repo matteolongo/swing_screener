@@ -5,6 +5,10 @@ from fastapi.testclient import TestClient
 from api.main import app
 
 
+def _idempotency(key: str) -> dict[str, str]:
+    return {"Idempotency-Key": key}
+
+
 @pytest.fixture()
 def client_with_empty_order_book(tmp_path, monkeypatch):
     orders_path = tmp_path / "orders.json"
@@ -94,6 +98,7 @@ def test_fill_order_creates_position(client_with_pending_order):
     resp = client_with_pending_order.post(
         "/api/portfolio/orders/ORD-SBMO-001/fill",
         json={"filled_price": 12.34, "filled_date": "2026-04-26", "fee_eur": 2.10},
+        headers=_idempotency("fill-create-position"),
     )
     assert resp.status_code == 201
     pos = resp.json()["position"]
@@ -110,11 +115,13 @@ def test_fill_order_already_filled_returns_409(client_with_pending_order):
     first = client_with_pending_order.post(
         "/api/portfolio/orders/ORD-SBMO-001/fill",
         json={"filled_price": 12.34, "filled_date": "2026-04-26"},
+        headers=_idempotency("fill-first"),
     )
     assert first.status_code == 201
     resp = client_with_pending_order.post(
         "/api/portfolio/orders/ORD-SBMO-001/fill",
         json={"filled_price": 12.34, "filled_date": "2026-04-26"},
+        headers=_idempotency("fill-second"),
     )
     assert resp.status_code == 409
 
@@ -123,6 +130,7 @@ def test_fill_order_not_found_returns_404(client_with_pending_order):
     resp = client_with_pending_order.post(
         "/api/portfolio/orders/ORD-MISSING-001/fill",
         json={"filled_price": 12.34, "filled_date": "2026-04-26"},
+        headers=_idempotency("fill-missing"),
     )
     assert resp.status_code == 404
 
@@ -192,6 +200,7 @@ def test_fill_order_carries_target_price_to_position(client_with_target_order):
     resp = client_with_target_order.post(
         "/api/portfolio/orders/ORD-SBMO-001/fill",
         json={"filled_price": 12.34, "filled_date": "2026-04-26"},
+        headers=_idempotency("fill-with-target"),
     )
     assert resp.status_code == 201
     pos = resp.json()["position"]
@@ -274,6 +283,7 @@ def test_fill_addon_merges_into_existing_position(client_with_addon_order):
             "fee_eur": 1.5,
             "fill_fx_rate": 1.1,
         },
+        headers=_idempotency("fill-addon"),
     )
     assert resp.status_code == 201
     pos = resp.json()["position"]
@@ -364,6 +374,7 @@ def test_fill_addon_rejects_live_stop_above_blended_entry(
     resp = client_with_addon_order_below_live_stop.post(
         "/api/portfolio/orders/ORD-SBMO-003/fill",
         json={"filled_price": 8.00, "filled_date": "2026-04-26"},
+        headers=_idempotency("fill-invalid-addon"),
     )
 
     assert resp.status_code == 422
@@ -373,3 +384,7 @@ def test_fill_addon_rejects_live_stop_above_blended_entry(
     assert positions[0]["entry_price"] == 12.0
     assert positions[0]["stop_price"] == 11.0
     assert positions[0]["shares"] == 100
+    orders = client_with_addon_order_below_live_stop.get(
+        "/api/portfolio/orders/local"
+    ).json()["orders"]
+    assert orders[0]["status"] == "pending"
