@@ -5,6 +5,29 @@ import pytest
 from api.security.settings import AuthSettings, SecurityConfigurationError
 
 
+def test_post_login_redirect_uri_defaults_to_root():
+    settings = AuthSettings.from_env({"APP_ENV": "test", "AUTH_MODE": "disabled"})
+
+    assert settings.oidc_post_login_redirect_uri == "/"
+
+
+def test_post_login_redirect_uri_reads_environment_override():
+    settings = AuthSettings.from_env(
+        {
+            "APP_ENV": "test",
+            "AUTH_MODE": "oidc",
+            "OIDC_DISCOVERY_URL": "https://id.example.test/.well-known/openid-configuration",
+            "OIDC_CLIENT_ID": "client",
+            "OIDC_CLIENT_SECRET": "secret",
+            "OIDC_REDIRECT_URI": "http://localhost:8000/api/auth/callback",
+            "SESSION_SECRET": "x" * 32,
+            "OIDC_POST_LOGIN_REDIRECT_URI": "http://localhost:5173/",
+        }
+    )
+
+    assert settings.oidc_post_login_redirect_uri == "http://localhost:5173/"
+
+
 def test_production_defaults_to_oidc_and_requires_complete_configuration():
     settings = AuthSettings.from_env({"APP_ENV": "production"})
 
