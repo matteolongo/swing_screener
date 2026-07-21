@@ -96,7 +96,7 @@ async def callback(
         role=role,
     )
     establish_session(request, principal, settings)
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse(settings.oidc_post_login_redirect_uri, status_code=303)
 
 
 @router.get(

@@ -50,6 +50,15 @@ def test_production_requires_database_url_and_rejects_sqlite_by_default():
     ).validate_runtime()
 
 
+def test_procfile_release_phase_is_the_only_heroku_migration_runner():
+    repository_root = Path(__file__).parents[2]
+    startup_script = (repository_root / "scripts/heroku_start.sh").read_text()
+    procfile = (repository_root / "Procfile").read_text()
+
+    assert "alembic upgrade head" not in startup_script
+    assert "release: alembic upgrade head" in procfile
+
+
 def test_upgrade_downgrade_upgrade_creates_relational_schema(tmp_path):
     url = f"sqlite:///{tmp_path / 'portfolio.db'}"
     config = _config(url)

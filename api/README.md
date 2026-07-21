@@ -13,6 +13,14 @@ or incomplete authentication.
 session. Viewer identities may read business APIs. Unsafe business methods
 require an admin identity and the session's `X-CSRF-Token`.
 
+The post-login destination is configured independently from the provider
+callback: production keeps the default `OIDC_POST_LOGIN_REDIRECT_URI=/`, while
+a direct local OIDC run uses provider callback
+`http://localhost:8000/api/auth/callback`, post-login destination
+`http://localhost:5173/`, and `SESSION_COOKIE_SECURE=false`. Vite must run on
+exactly port 5173. Docker Compose continues to force disabled authentication by
+default, so explicitly override it for this local test flow.
+
 Static UI files, auth flow endpoints, and `GET /health/live` are public.
 `/api/**`, `/health`, `/health/ready`, `/metrics`, and enabled API docs require a
 session. CORS only controls browser interoperability; it is not an access

@@ -66,6 +66,7 @@ class AuthSettings:
     oidc_client_id: str
     oidc_client_secret: str = field(repr=False)
     oidc_redirect_uri: str
+    oidc_post_login_redirect_uri: str
     oidc_role_claim: str
     oidc_admin_values: frozenset[str]
     oidc_viewer_values: frozenset[str]
@@ -111,6 +112,10 @@ class AuthSettings:
             oidc_client_id=env.get("OIDC_CLIENT_ID", "").strip(),
             oidc_client_secret=env.get("OIDC_CLIENT_SECRET", "").strip(),
             oidc_redirect_uri=env.get("OIDC_REDIRECT_URI", "").strip(),
+            oidc_post_login_redirect_uri=env.get(
+                "OIDC_POST_LOGIN_REDIRECT_URI", "/"
+            ).strip()
+            or "/",
             oidc_role_claim=env.get("OIDC_ROLE_CLAIM", "roles").strip(),
             oidc_admin_values=_values(env, "OIDC_ADMIN_VALUES", "admin"),
             oidc_viewer_values=_values(env, "OIDC_VIEWER_VALUES", "viewer"),

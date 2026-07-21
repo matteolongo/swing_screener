@@ -210,14 +210,16 @@ def test_login_creates_nonce_and_redirects_to_provider():
 
 
 def test_callback_establishes_minimal_application_session():
-    client, fake = _auth_client()
+    client, fake = _auth_client(
+        _settings(OIDC_POST_LOGIN_REDIRECT_URI="http://localhost:5173/")
+    )
     client.get("/api/auth/login", follow_redirects=False)
 
     response = client.get("/api/auth/callback?code=x&state=y", follow_redirects=False)
     session = client.get("/api/auth/session")
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/"
+    assert response.headers["location"] == "http://localhost:5173/"
     assert fake.callback_nonce == fake.login_nonce
     assert session.status_code == 200
     assert session.json()["authenticated"] is True
