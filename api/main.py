@@ -15,6 +15,7 @@ from swing_screener.errors import DomainError
 from swing_screener.settings import get_settings_manager
 from swing_screener.settings.migration import migrate_legacy_config_to_yaml
 from swing_screener.runtime_env import ensure_runtime_env_loaded
+from swing_screener.version import get_version
 
 # Import routers
 from api.routers import (
@@ -176,7 +177,7 @@ def register_domain_error_handler(target_app) -> None:
 app = FastAPI(
     title="Swing Screener API",
     description="REST API for the Swing Screener trading system",
-    version="3.0.0",
+    version=get_version(),
     lifespan=lifespan,
     docs_url="/docs" if AUTH_SETTINGS.api_docs_enabled else None,
     redoc_url="/redoc" if AUTH_SETTINGS.api_docs_enabled else None,
