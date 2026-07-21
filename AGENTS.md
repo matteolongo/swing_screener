@@ -1,6 +1,7 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides contributor instructions for every coding agent working in
+this repository.
 
 ## What This Is
 
@@ -76,6 +77,35 @@ npx vitest -t "renders positions"      # by test name
 ```bash
 pytest -q && cd web-ui && npm test
 ```
+
+## Versioning and releases
+
+Swing Screener follows [Semantic Versioning](https://semver.org/). Use the
+smallest compatible bump that describes the release:
+
+- **Patch** (`X.Y.Z+1`) for backwards-compatible fixes, security fixes, and
+  documentation corrections.
+- **Minor** (`X.Y+1.0`) for backwards-compatible features, endpoints, config,
+  and workflow additions.
+- **Major** (`X+1.0.0`) for incompatible API, persisted-data, config, or
+  operational changes that require a consumer action or migration.
+
+`pyproject.toml` is the canonical application version. `web-ui/package.json`
+and both root version fields in `web-ui/package-lock.json` are required release
+mirrors. The FastAPI/OpenAPI version must use `swing_screener.version.get_version()`;
+do not add a second literal version there.
+
+Record unreleased user-facing changes in [`CHANGELOG.md`](CHANGELOG.md) under
+`Unreleased`. At release time, move them into `## [X.Y.Z] - YYYY-MM-DD` and
+synchronize all metadata. Before every release commit, run:
+
+```bash
+python scripts/check_release_version.py
+```
+
+Use the commit title `Release vX.Y.Z`. After the release PR is merged, create
+an annotated tag named `vX.Y.Z`, then create the GitHub release from the matching
+changelog section. Do not create a release tag for an unmerged PR.
 
 ## Architecture
 
@@ -165,9 +195,11 @@ When asked to document a module or write a module README:
 
 ## PR Delivery
 
-### GitHub CLI constraint
+### GitHub CLI access
 
-The `gh` CLI is authenticated as `mlwallapop` (Wallapop work account). It does **not** have write access to `matteolongo/swing_screener` PRs. Never use `gh pr create` or `gh pr edit` — both will return a permission error. PRs must always be created manually.
+Before a GitHub write, run `gh auth status` and confirm the active account has
+the required repository permission. Prefer the GitHub connector for PR metadata
+and write actions; use `gh` when the connector lacks the required capability.
 
 ### Compare URL format
 

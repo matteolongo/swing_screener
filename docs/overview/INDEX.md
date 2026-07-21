@@ -5,7 +5,8 @@
 ## Entry points
 
 - [`README.md`](/README.md) — product overview, setup, architecture links, principles
-- [`CLAUDE.md`](/CLAUDE.md) — model and contributor conventions (Claude Code)
+- [`AGENTS.md`](/AGENTS.md) — contributor conventions and release policy
+- [`CHANGELOG.md`](/CHANGELOG.md) — versioned release notes
 
 ---
 
@@ -22,6 +23,8 @@
 - [`docs/engineering/DATA_SOURCE_AUDIT_AND_PROVIDER_STRATEGY.md`](../engineering/DATA_SOURCE_AUDIT_AND_PROVIDER_STRATEGY.md) — provider tier strategy and gap analysis
 - [`docs/engineering/FRAGILE_DATA_ACQUISITION_PATTERNS_AND_SAFE_ALTERNATIVES.md`](../engineering/FRAGILE_DATA_ACQUISITION_PATTERNS_AND_SAFE_ALTERNATIVES.md) — allowed vs rejected data acquisition patterns
 - [`docs/engineering/ROADMAP.md`](../engineering/ROADMAP.md) — feature completion table and near-term focus
+- [`docs/engineering/specs/2026-07-21-lightweight-versioning-design.md`](../engineering/specs/2026-07-21-lightweight-versioning-design.md) — approved lightweight Semantic Versioning design
+- [`docs/engineering/plans/2026-07-21-lightweight-versioning.md`](../engineering/plans/2026-07-21-lightweight-versioning.md) — implementation plan for lightweight release versioning
 
 ---
 
