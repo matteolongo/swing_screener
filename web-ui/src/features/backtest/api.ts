@@ -1,4 +1,5 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { apiFetch } from '@/lib/apiFetch';
 import { fetchJson } from '@/lib/fetchJson';
 import {
   BacktestResult,
@@ -40,7 +41,7 @@ export async function runEventStudy(request: EventStudyRequest): Promise<Backtes
     config: serializeConfig(request.config),
   };
 
-  const res = await fetch(apiUrl(API_ENDPOINTS.backtestEventStudy), {
+  const res = await apiFetch(API_ENDPOINTS.backtestEventStudy, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(apiRequest),

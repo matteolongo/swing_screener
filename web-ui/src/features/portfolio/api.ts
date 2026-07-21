@@ -1,4 +1,5 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { apiFetch } from '@/lib/apiFetch';
 import { fetchJson } from '@/lib/fetchJson';
 import type { OrderApiResponse } from '@/types/order';
 import type { PositionUpdateApiResponse } from '@/types/position';
@@ -200,6 +201,17 @@ export interface DegiroStatus {
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
+function createIdempotencyKey(): string {
+  if (!globalThis.crypto?.randomUUID) {
+    throw new Error('Secure idempotency key generation is unavailable in this browser.');
+  }
+  return globalThis.crypto.randomUUID();
+}
+
+function resolveIdempotencyKey(idempotencyKey?: string): string {
+  return idempotencyKey ?? createIdempotencyKey();
+}
+
 export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
   if (isLocalPersistenceMode()) {
     return listOrdersLocal(status);
@@ -211,20 +223,33 @@ export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
   return (data.orders ?? []).map(transformOrder);
 }
 
-export async function createOrder(request: CreateOrderRequest): Promise<void> {
+export async function createOrder(
+  request: CreateOrderRequest,
+  idempotencyKey?: string,
+): Promise<void> {
   if (isLocalPersistenceMode()) {
     createOrderLocal(request);
     return;
   }
+  if ((request.orderKind ?? 'entry') === 'entry' && !request.approvalToken) {
+    throw new Error('Entry order approval token is required. Refresh the screener candidate and try again.');
+  }
   await fetchJson<void>(API_ENDPOINTS.orders, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': resolveIdempotencyKey(idempotencyKey),
+    },
     body: JSON.stringify(transformCreateOrderRequest(request)),
     errorMessage: 'Failed to create order',
   });
 }
 
-export async function fillOrder(orderId: string, request: FillOrderRequest): Promise<void> {
+export async function fillOrder(
+  orderId: string,
+  request: FillOrderRequest,
+  idempotencyKey?: string,
+): Promise<void> {
   if (isLocalPersistenceMode()) {
     fillOrderLocal(orderId, request);
     return;
@@ -245,7 +270,10 @@ export async function fillOrder(orderId: string, request: FillOrderRequest): Pro
 
   await fetchJson<void>(API_ENDPOINTS.orderFill(orderId), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': resolveIdempotencyKey(idempotencyKey),
+    },
     body: JSON.stringify(payload),
     errorMessage: 'Failed to fill order',
   });
@@ -358,7 +386,7 @@ export async function fetchEarningsProximity(ticker: string): Promise<EarningsPr
     return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.earningsProximity(normalizedTicker)));
+  const response = await apiFetch(API_ENDPOINTS.earningsProximity(normalizedTicker));
   if (!response.ok) {
     return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
   }
@@ -375,6 +403,7 @@ export async function fetchEarningsProximity(ticker: string): Promise<EarningsPr
 export async function updatePositionStop(
   positionId: string,
   request: UpdateStopRequest,
+  idempotencyKey?: string,
 ): Promise<void> {
   if (isLocalPersistenceMode()) {
     updatePositionStopLocal(positionId, request);
@@ -382,7 +411,10 @@ export async function updatePositionStop(
   }
   await fetchJson<void>(API_ENDPOINTS.positionStop(positionId), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': resolveIdempotencyKey(idempotencyKey),
+    },
     body: JSON.stringify({
       new_stop: request.newStop,
       reason: request.reason || '',
@@ -455,13 +487,17 @@ export async function fetchPositionStopPreview(
 export async function updatePositionTrailMethod(
   positionId: string,
   request: UpdateTrailMethodRequest,
+  idempotencyKey?: string,
 ): Promise<void> {
   if (isLocalPersistenceMode()) {
     throw new Error('Trail method update is not supported in local persistence mode');
   }
   await fetchJson<void>(API_ENDPOINTS.positionTrailMethod(positionId), {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': resolveIdempotencyKey(idempotencyKey),
+    },
     body: JSON.stringify({
       trail_method: request.trailMethod,
       trail_param: request.trailParam ?? null,
@@ -505,6 +541,7 @@ export async function computePositionStopSuggestion(
 export async function closePosition(
   positionId: string,
   request: ClosePositionRequest,
+  idempotencyKey?: string,
 ): Promise<void> {
   if (isLocalPersistenceMode()) {
     closePositionLocal(positionId, request);
@@ -512,7 +549,10 @@ export async function closePosition(
   }
   await fetchJson<void>(API_ENDPOINTS.positionClose(positionId), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': resolveIdempotencyKey(idempotencyKey),
+    },
     body: JSON.stringify({
       exit_price: request.exitPrice,
       fee_eur: request.feeEur,
@@ -528,10 +568,14 @@ export async function closePosition(
 export async function partialClosePosition(
   positionId: string,
   request: PartialCloseRequest,
+  idempotencyKey?: string,
 ): Promise<void> {
   await fetchJson<void>(API_ENDPOINTS.positionPartialClose(positionId), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': resolveIdempotencyKey(idempotencyKey),
+    },
     body: JSON.stringify({
       shares_closed: request.sharesClosed,
       price: request.price,

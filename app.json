@@ -11,20 +11,71 @@
     }
   ],
   "env": {
+    "APP_ENV": {
+      "value": "production"
+    },
+    "DATABASE_URL": {
+      "description": "PostgreSQL connection URL for transactional portfolio state",
+      "required": true
+    },
+    "AUTH_MODE": {
+      "value": "oidc"
+    },
+    "OIDC_DISCOVERY_URL": {
+      "description": "OIDC provider discovery URL",
+      "required": true
+    },
+    "OIDC_CLIENT_ID": {
+      "description": "OIDC application client ID",
+      "required": true
+    },
+    "OIDC_CLIENT_SECRET": {
+      "description": "OIDC application client secret",
+      "required": true
+    },
+    "OIDC_REDIRECT_URI": {
+      "description": "Public callback URL ending in /api/auth/callback",
+      "required": true
+    },
+    "OIDC_ROLE_CLAIM": {
+      "value": "roles"
+    },
+    "OIDC_ADMIN_VALUES": {
+      "value": "admin"
+    },
+    "OIDC_VIEWER_VALUES": {
+      "value": "viewer"
+    },
+    "SESSION_SECRET": {
+      "generator": "secret"
+    },
+    "SESSION_COOKIE_SECURE": {
+      "value": "true"
+    },
+    "ORDER_APPROVAL_SIGNING_KEY": {
+      "description": "Random secret of at least 32 bytes used only for candidate approvals",
+      "required": true
+    },
+    "ORDER_APPROVAL_TTL_SECONDS": {
+      "value": "28800"
+    },
     "SERVE_WEB_UI": {
       "value": "1"
     },
     "VITE_PERSISTENCE_MODE": {
-      "value": "local"
+      "value": "api"
     },
     "VITE_ENABLE_LOCAL_PERSISTENCE": {
-      "value": "true"
+      "value": "false"
     },
     "SCREENER_RUN_MODE": {
       "value": "async"
     },
     "WEB_CONCURRENCY": {
       "value": "1"
+    },
+    "INTELLIGENCE_SWEEP_MAX_SYMBOLS": {
+      "value": "20"
     }
   }
 }

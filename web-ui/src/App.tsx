@@ -5,6 +5,8 @@ import MainLayout from './components/layout/MainLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { registerTradingStoreSync } from '@/features/persistence';
 import { migrateRemovedUniverseIds } from '@/features/screener/universeStorage';
+import { AuthProvider } from '@/features/auth/AuthProvider';
+import { LoginGate } from '@/features/auth/LoginGate';
 
 migrateRemovedUniverseIds(localStorage);
 
@@ -36,11 +38,13 @@ function TradingStoreSyncBridge() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TradingStoreSyncBridge />
-      <BrowserRouter>
-        <ErrorBoundary>
-          <Suspense fallback={<div className="p-6 text-sm text-muted">Loading page...</div>}>
-            <Routes>
+      <AuthProvider>
+        <LoginGate>
+          <TradingStoreSyncBridge />
+          <BrowserRouter>
+            <ErrorBoundary>
+              <Suspense fallback={<div className="p-6 text-sm text-muted">Loading page...</div>}>
+                <Routes>
               <Route path="/" element={<MainLayout />}>
                 <Route index element={<Navigate to="/today" replace />} />
                 <Route path="today" element={<ErrorBoundary><Today /></ErrorBoundary>} />
@@ -53,10 +57,12 @@ function App() {
 
                 <Route path="*" element={<Navigate to="/today" replace />} />
               </Route>
-            </Routes>
-          </Suspense>
-        </ErrorBoundary>
-      </BrowserRouter>
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
+          </BrowserRouter>
+        </LoginGate>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

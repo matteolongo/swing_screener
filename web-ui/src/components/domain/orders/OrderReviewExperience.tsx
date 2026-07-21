@@ -21,6 +21,7 @@ import { candidateOrderSchema, type CandidateOrderFormValues } from '@/component
 import { getSetupExecutionGuidance } from '@/features/orders/setupGuidance';
 import { normalizeSuggestedOrderType, resolveDefaultOrderType } from '@/features/orders/executionDefaults';
 import { usePortfolioSummary } from '@/features/portfolio/hooks';
+import { isLocalPersistenceMode } from '@/features/persistence';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
 import type { SameSymbolCandidateContext } from '@/features/screener/types';
 import type { RiskConfig } from '@/types/config';
@@ -57,6 +58,7 @@ export interface OrderReviewContext {
   dataAsOf?: string;
   daysToEarnings?: number | null;
   strategyId?: string;
+  approvalToken?: string;
 }
 
 interface OrderReviewExperienceProps {
@@ -175,6 +177,8 @@ export default function OrderReviewExperience({
   const stopPrice = form.watch('stopPrice') ?? 0;
   const hasOrderTypeMismatch = hasSuggestedOrderType && orderType !== normalizedSuggestedOrderType;
   const needsOverrideConfirmation = hasOrderTypeMismatch || (hasSkipSuggestion && !isRecommended);
+  const apiApprovalMissing = !isLocalPersistenceMode() && !context.approvalToken;
+  const apiOrderTypeMismatch = !isLocalPersistenceMode() && hasOrderTypeMismatch;
   const invalidBuyStopPrice = orderType === 'BUY_STOP' && knownCurrentPrice != null && limitPrice <= knownCurrentPrice;
   const triggerPriceLabel =
     orderType === 'BUY_STOP' ? t('order.candidateModal.triggerPrice') : t('order.candidateModal.limitPrice');
@@ -261,6 +265,16 @@ export default function OrderReviewExperience({
       return;
     }
 
+    if (apiApprovalMissing) {
+      setSubmissionError(t('order.candidateModal.approvalTokenRequired'));
+      return;
+    }
+
+    if (apiOrderTypeMismatch) {
+      setSubmissionError(t('order.candidateModal.approvalOrderTypeMismatch'));
+      return;
+    }
+
     if (invalidBuyStopPrice) {
       setSubmissionError(
         t('order.candidateModal.buyStopAboveMarketError', {
@@ -305,6 +319,7 @@ export default function OrderReviewExperience({
         currency: context.currency,
         daysToEarnings: context.daysToEarnings,
         strategyId: context.strategyId,
+        approvalToken: context.approvalToken,
       });
       setSubmitSucceeded(true);
       onSuccess?.();
@@ -580,6 +595,8 @@ export default function OrderReviewExperience({
                       (needsOverrideConfirmation && !overrideConfirmed) ||
                       (enforceRecommendation && !isRecommended) ||
                       !decisionReady
+                      || apiApprovalMissing
+                      || apiOrderTypeMismatch
                     }
                     className="w-full sm:w-auto"
                   >

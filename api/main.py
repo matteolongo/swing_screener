@@ -9,14 +9,17 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 from contextlib import asynccontextmanager
 from swing_screener.errors import DomainError
 from swing_screener.settings import get_settings_manager
 from swing_screener.settings.migration import migrate_legacy_config_to_yaml
 from swing_screener.runtime_env import ensure_runtime_env_loaded
+from swing_screener.version import get_version
 
 # Import routers
 from api.routers import (
+    auth,
     backtest,
     calendar,
     cache as cache_router,
@@ -35,6 +38,12 @@ from api.routers import (
     watchlist,
     weekly_reviews,
 )
+from api.security.middleware import RateLimitMiddleware, SecurityBoundaryMiddleware
+from api.security.openapi import install_security_openapi
+from api.security.settings import get_auth_settings
+from api.db.readiness import check_database_readiness
+from api.dependencies import get_database_runtime
+from api.monitoring import HealthChecker
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
@@ -49,6 +58,7 @@ logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 ensure_runtime_env_loaded()
+AUTH_SETTINGS = get_auth_settings()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _USER_DOC = get_settings_manager().load_user_document()
@@ -109,12 +119,28 @@ def _resolve_spa_file(path: str) -> Path | None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
+    AUTH_SETTINGS.validate_runtime()
     try:
         migration_actions = migrate_legacy_config_to_yaml()
         for action in migration_actions:
             logger.info("Config migration: %s", action)
     except Exception:
         logger.exception("Failed to migrate legacy JSON configuration to YAML")
+    try:
+        database_runtime = get_database_runtime()
+        database_readiness = check_database_readiness(database_runtime)
+    except Exception as exc:
+        logger.error(
+            "Portfolio database startup failed: exception=%s", type(exc).__name__
+        )
+        raise RuntimeError("Portfolio database startup failed.") from None
+    if not database_readiness.healthy:
+        logger.error(
+            "Portfolio database is not ready: checks=%s",
+            database_readiness.checks,
+        )
+        raise RuntimeError("Portfolio database is not ready.")
+    app.state.database_runtime = database_runtime
     logger.info("Swing Screener API starting up...")
     logger.info("API docs available at: http://localhost:8000/docs")
     logger.info("OpenAPI schema: http://localhost:8000/openapi.json")
@@ -133,8 +159,11 @@ async def lifespan(app: FastAPI):
             "SERVE_WEB_UI is enabled but %s is missing; API-only mode is active.",
             WEB_UI_INDEX_FILE,
         )
-    yield
-    logger.info("Shutting down...")
+    try:
+        yield
+    finally:
+        database_runtime.engine.dispose()
+        logger.info("Shutting down...")
 
 
 def register_domain_error_handler(target_app) -> None:
@@ -148,9 +177,13 @@ def register_domain_error_handler(target_app) -> None:
 app = FastAPI(
     title="Swing Screener API",
     description="REST API for the Swing Screener trading system",
-    version="0.1.0",
+    version=get_version(),
     lifespan=lifespan,
+    docs_url="/docs" if AUTH_SETTINGS.api_docs_enabled else None,
+    redoc_url="/redoc" if AUTH_SETTINGS.api_docs_enabled else None,
+    openapi_url="/openapi.json" if AUTH_SETTINGS.api_docs_enabled else None,
 )
+app.state.auth_settings = AUTH_SETTINGS
 register_domain_error_handler(app)
 
 _DEFAULT_ALLOW_ORIGINS = ["http://localhost:5173", "http://localhost:5174"]
@@ -162,13 +195,22 @@ if isinstance(_raw_allow_origins, list):
 else:
     _allow_origins = _DEFAULT_ALLOW_ORIGINS
 
-# CORS middleware - allow web UI to connect
-# Security: Use explicit allowed methods and headers instead of wildcards
+app.add_middleware(RateLimitMiddleware, settings=AUTH_SETTINGS)
+app.add_middleware(SecurityBoundaryMiddleware, settings=AUTH_SETTINGS)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=AUTH_SETTINGS.session_secret,
+    session_cookie=AUTH_SETTINGS.session_cookie_name,
+    max_age=AUTH_SETTINGS.session_ttl_seconds,
+    same_site="lax",
+    https_only=AUTH_SETTINGS.session_cookie_secure,
+)
+# Register CORS last so browser-visible headers cover security/rate-limit errors.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allow_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit instead of ["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=[
         "Content-Type",
         "Authorization",
@@ -176,7 +218,9 @@ app.add_middleware(
         "Origin",
         "User-Agent",
         "X-Requested-With",
-    ],  # Explicit instead of ["*"]
+        "X-CSRF-Token",
+        "Idempotency-Key",
+    ],
 )
 
 
@@ -228,7 +272,7 @@ async def root():
     return {
         "status": "ok",
         "service": "swing-screener-api",
-        "version": "0.1.0",
+        "version": "3.0.0",
         "api": "/api",
         "health": "/health",
         "docs": "/docs",
@@ -241,49 +285,69 @@ async def api_root():
     return {
         "status": "ok",
         "service": "swing-screener-api",
-        "version": "0.1.0",
+        "version": "3.0.0",
         "health": "/health",
         "docs": "/docs",
     }
 
 
+@app.get("/health/live")
+async def liveness():
+    """Return process liveness without touching protected dependencies."""
+    return {"status": "alive"}
+
+
 @app.get("/health")
+@app.get("/health/ready")
 async def health_check():
-    """
-    Health check endpoint for monitoring and load balancers.
-    
-    Returns:
-        - status: overall health (healthy, degraded, unhealthy)
-        - checks: individual component checks
-        - uptime: time since API started
-    """
-    from api.monitoring import HealthChecker, get_metrics_collector
+    """Return readiness for SQL state and the frozen legacy source files."""
+    from api.monitoring import get_metrics_collector
 
-    file_check = HealthChecker.check_file_access()
-    data_check = HealthChecker.check_data_directory()
     metrics = get_metrics_collector().get_metrics()
-
-    # Determine overall status
-    if file_check["status"] == "unhealthy" or data_check["status"] == "error":
-        overall_status = "unhealthy"
-        status_code = 503
-    elif file_check["status"] == "degraded" or data_check["status"] == "warning":
-        overall_status = "degraded"
-        status_code = 200
-    else:
-        overall_status = "healthy"
-        status_code = 200
-
-    from fastapi.responses import JSONResponse
-
-    return JSONResponse(
-        status_code=status_code,
-        content={
-            "status": overall_status,
-            "checks": {
-                "files": file_check,
-                "data_directory": data_check,
+    legacy_state = HealthChecker.check_file_access()
+    try:
+        readiness = check_database_readiness(get_database_runtime())
+    except Exception as exc:
+        logger.warning(
+            "Portfolio database readiness failed: exception=%s", type(exc).__name__
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "checks": {
+                    "database": {
+                        "connectivity": "error",
+                        "migration": "unknown",
+                        "legacy_import": "unknown",
+                    },
+                    "legacy_state": legacy_state,
+                },
+                "details": {
+                    "database": "Portfolio database is unavailable.",
+                    **(
+                        {"legacy_state": "; ".join(legacy_state["issues"])}
+                        if legacy_state["issues"]
+                        else {}
+                    ),
+                },
+                "metrics": metrics,
             },
+        )
+
+    healthy = readiness.healthy and legacy_state["status"] == "healthy"
+    details = dict(readiness.details)
+    if legacy_state["issues"]:
+        details["legacy_state"] = "; ".join(legacy_state["issues"])
+    return JSONResponse(
+        status_code=200 if healthy else 503,
+        content={
+            "status": "healthy" if healthy else "unhealthy",
+            "checks": {
+                "database": readiness.checks,
+                "legacy_state": legacy_state,
+            },
+            "details": details or None,
             "metrics": metrics,
         },
     )
@@ -305,6 +369,7 @@ async def metrics():
 
 
 # Include routers
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(calendar.router, prefix="/api", tags=["calendar"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
@@ -322,6 +387,8 @@ app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["w
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
 app.include_router(cache_router.router, prefix="/api/cache", tags=["cache"])
 app.include_router(pool_router.router, prefix="/api/pool", tags=["pool"])
+
+install_security_openapi(app, cookie_name=AUTH_SETTINGS.session_cookie_name)
 
 
 @app.api_route(

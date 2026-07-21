@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
+from api.db.readiness import DatabaseReadiness
 from api.monitoring import HealthChecker
 
 client = TestClient(app)
@@ -75,17 +76,21 @@ class TestHealthCheck:
         data = response.json()
 
         assert "status" in data
-        assert data["status"] in ["healthy", "degraded", "unhealthy"]
+        assert data["status"] in ["healthy", "unhealthy"]
         assert "checks" in data
         assert "metrics" in data
 
-    def test_health_includes_file_checks(self):
+    def test_health_includes_database_checks(self):
         response = client.get("/health")
         data = response.json()
 
         assert "checks" in data
-        assert "files" in data["checks"]
-        assert "data_directory" in data["checks"]
+        assert "database" in data["checks"]
+        assert set(data["checks"]["database"]) == {
+            "connectivity",
+            "migration",
+            "legacy_import",
+        }
 
     def test_health_includes_metrics(self):
         response = client.get("/health")
@@ -96,7 +101,46 @@ class TestHealthCheck:
         assert "lock_contention_total" in data["metrics"]
         assert "validation_failures_total" in data["metrics"]
 
-    def test_unhealthy_file_check_returns_service_unavailable(self, monkeypatch: pytest.MonkeyPatch):
+    def test_unhealthy_database_returns_service_unavailable(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr("api.main.get_database_runtime", lambda: object())
+        monkeypatch.setattr(
+            "api.main.check_database_readiness",
+            lambda _runtime: DatabaseReadiness(
+                healthy=False,
+                checks={
+                    "connectivity": "ok",
+                    "migration": "stale",
+                    "legacy_import": "unknown",
+                },
+                details={
+                    "migration": "Database schema is not at the expected revision."
+                },
+            ),
+        )
+
+        response = client.get("/health")
+
+        assert response.status_code == 503
+        assert response.json()["status"] == "unhealthy"
+
+
+    def test_readiness_reports_unhealthy_legacy_state_files(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr("api.main.get_database_runtime", lambda: object())
+        monkeypatch.setattr(
+            "api.main.check_database_readiness",
+            lambda _runtime: DatabaseReadiness(
+                healthy=True,
+                checks={
+                    "connectivity": "ok",
+                    "migration": "ok",
+                    "legacy_import": "complete",
+                },
+            ),
+        )
         monkeypatch.setattr(
             HealthChecker,
             "check_file_access",
@@ -104,33 +148,14 @@ class TestHealthCheck:
                 "status": "unhealthy",
                 "positions_file": "error",
                 "orders_file": "ok",
-                "issues": ["positions: permission denied"],
+                "issues": ["data/positions.json: permission denied"],
             },
         )
-        monkeypatch.setattr(HealthChecker, "check_data_directory", lambda: {"status": "ok"})
 
-        response = client.get("/health")
+        response = client.get("/health/ready")
 
         assert response.status_code == 503
-        assert response.json()["status"] == "unhealthy"
-
-    def test_warning_file_check_returns_degraded_success(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setattr(
-            HealthChecker,
-            "check_file_access",
-            lambda: {
-                "status": "degraded",
-                "positions_file": "warning",
-                "orders_file": "ok",
-                "issues": ["positions: invalid JSON"],
-            },
-        )
-        monkeypatch.setattr(HealthChecker, "check_data_directory", lambda: {"status": "ok"})
-
-        response = client.get("/health")
-
-        assert response.status_code == 200
-        assert response.json()["status"] == "degraded"
+        assert response.json()["checks"]["legacy_state"]["status"] == "unhealthy"
 
 
 class TestMetrics:

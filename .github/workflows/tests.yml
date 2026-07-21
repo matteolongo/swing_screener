@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: ["main", "refactor/**", "feature/**", "codex/**", "copilot/**"]  # Only test main and feature branches
+    branches: ["main", "refactor/**", "feature/**", "feat/**", "codex/**", "copilot/**"]
   pull_request:
-    branches: ["main"]  # Only test PRs to main
+    branches: ["**"]
 
 jobs:
   pytest:
@@ -30,7 +30,7 @@ jobs:
 
       - name: Run backend tests in Docker
         run: |
-          docker compose run --rm --no-deps -e PYTHONPATH=/app api pytest --verbose --tb=short \
+          docker compose run --rm --no-deps -e APP_ENV=test -e DATABASE_URL= -e PYTHONPATH=/app api pytest --verbose --tb=short \
             --cov=swing_screener --cov=api --cov=mcp_server \
             --cov-report=term --cov-report=xml \
             --junit-xml=test-results.xml

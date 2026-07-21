@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { closePosition, fillOrder, partialClosePosition } from '@/features/portfolio/api';
+import { closePosition, createOrder, fillOrder, partialClosePosition } from '@/features/portfolio/api';
 
 describe('portfolio api', () => {
   beforeEach(() => {
@@ -30,6 +30,97 @@ describe('portfolio api', () => {
         stopPrice: 20.33,
       }),
     ).rejects.toThrow('REP.MC: open position already exists.');
+  });
+
+  it('rejects an API entry order without an approval token before fetching', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      createOrder({
+        ticker: 'AAPL',
+        orderType: 'BUY_LIMIT',
+        quantity: 2,
+        limitPrice: 100,
+        stopPrice: 95,
+        targetPrice: 110,
+      }),
+    ).rejects.toThrow('approval token');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('uses a fresh idempotency key for distinct create submissions', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(new Response(null, { status: 201 })));
+    const randomUUID = vi
+      .fn()
+      .mockReturnValueOnce('11111111-1111-4111-8111-111111111111')
+      .mockReturnValueOnce('22222222-2222-4222-8222-222222222222');
+    vi.stubGlobal('crypto', { randomUUID });
+    vi.stubGlobal('fetch', fetchMock);
+    const request = {
+      ticker: 'AAPL',
+      orderType: 'BUY_LIMIT' as const,
+      quantity: 2,
+      limitPrice: 100,
+      stopPrice: 95,
+      targetPrice: 110,
+      approvalToken: 'approval-token',
+    };
+
+    await createOrder(request);
+    await createOrder(request);
+
+    expect(randomUUID).toHaveBeenCalledTimes(2);
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Idempotency-Key')).toBe(
+      '11111111-1111-4111-8111-111111111111',
+    );
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Idempotency-Key')).toBe(
+      '22222222-2222-4222-8222-222222222222',
+    );
+  });
+
+  it('reuses a caller-supplied idempotency key for an order retry', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => new Response(null, { status: 201 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const request = {
+      ticker: 'AAPL',
+      orderType: 'BUY_LIMIT' as const,
+      quantity: 2,
+      limitPrice: 100,
+      stopPrice: 95,
+      targetPrice: 110,
+      approvalToken: 'approval-token',
+    };
+
+    await createOrder(request, 'create-aapl-retry');
+    await createOrder(request, 'create-aapl-retry');
+
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Idempotency-Key')).toBe(
+      'create-aapl-retry',
+    );
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Idempotency-Key')).toBe(
+      'create-aapl-retry',
+    );
+  });
+
+  it('sends one idempotency key for a fill submission', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
+    const randomUUID = vi.fn().mockReturnValue('33333333-3333-4333-8333-333333333333');
+    vi.stubGlobal('crypto', { randomUUID });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fillOrder('ORD-AAPL-1', {
+      filledPrice: 100,
+      filledDate: '2026-07-15',
+      fillFxRate: 1.1,
+    });
+
+    expect(randomUUID).toHaveBeenCalledTimes(1);
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Idempotency-Key')).toBe(
+      '33333333-3333-4333-8333-333333333333',
+    );
   });
 
   it('serializes close FX rate for backend close requests', async () => {

@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/lib/api';
+import { apiFetch } from '@/lib/apiFetch';
 
 export interface TickerRecurrence {
   ticker: string;
@@ -8,7 +8,7 @@ export interface TickerRecurrence {
 }
 
 export async function fetchScreenerRecurrence(): Promise<TickerRecurrence[]> {
-  const res = await fetch(`${API_BASE_URL}/api/screener/recurrence`);
+  const res = await apiFetch('/api/screener/recurrence');
   if (!res.ok) {
     throw new Error('Failed to fetch screener recurrence');
   }

@@ -42,3 +42,35 @@ def test_long_entry_stop_below_limit_is_valid():
         order_kind="entry",
     )
     assert order.stop_price == 95.0
+
+
+@pytest.mark.parametrize(
+    ("order_kind", "order_type"),
+    [
+        ("stop", "BUY_LIMIT"),
+        ("take_profit", "BUY_LIMIT"),
+        ("entry", "SELL_STOP"),
+    ],
+)
+def test_order_kind_cannot_bypass_side_validation(order_kind, order_type):
+    with pytest.raises(ValidationError, match="order_kind"):
+        CreateOrderRequest(
+            ticker="AAPL",
+            order_type=order_type,
+            quantity=10,
+            limit_price=100.0,
+            stop_price=95.0,
+            order_kind=order_kind,
+        )
+
+
+def test_entry_order_rejects_nonfinite_target():
+    with pytest.raises(ValidationError, match="finite"):
+        CreateOrderRequest(
+            ticker="AAPL",
+            order_type="BUY_LIMIT",
+            quantity=10,
+            limit_price=100.0,
+            stop_price=95.0,
+            target_price=float("inf"),
+        )

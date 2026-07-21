@@ -28,6 +28,13 @@ User-authored configuration no longer lives under `data/`. Shared configuration 
 
 ## positions.json schema notes
 
+### v3 transactional import compatibility
+
+`positions.json` is a frozen legacy import source once SQL portfolio storage is
+enabled. Some historical DeGiro records store broker fee debits as negative
+values. The one-time importer canonicalizes `entry_fee_eur` and `exit_fee_eur`
+to positive fee amounts in SQL while leaving this source file unchanged.
+
 New fields added in F13 (Trail Customization):
 - `trail_method`: `"sma20" | "atr" | "fixed_pct" | "manual"` — defaults to `"sma20"` when absent (backward-compatible)
 - `trail_param`: `float | null` — ATR multiplier for `atr`, percentage for `fixed_pct`; null for `sma20`/`manual`

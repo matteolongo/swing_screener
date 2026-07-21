@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "swing-screener"
-version = "0.1.0"
+version = "3.0.0"
 description = "Modular swing trading screener and ranking framework"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
@@ -33,7 +33,11 @@ dependencies = [
   "openai>=1.66",
   "langgraph>=0.2.0",
   "ta-lib (>=0.6.8,<0.7.0)",
-  "degiro-connector>=3.0.35"
+  "degiro-connector>=3.0.35",
+  "authlib>=1.3,<2",
+  "itsdangerous>=2.2,<3",
+  "alembic>=1.13,<2",
+  "psycopg[binary]>=3.2,<4"
 ]
 
 [project.optional-dependencies]

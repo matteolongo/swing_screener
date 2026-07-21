@@ -11,4 +11,5 @@ export SCREENER_RUN_MODE="${SCREENER_RUN_MODE:-async}"
 export WEB_CONCURRENCY=1
 export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
 
+alembic upgrade head
 exec uvicorn api.main:app --host 0.0.0.0 --port "${PORT:-8000}"

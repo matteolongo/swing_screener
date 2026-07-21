@@ -49,6 +49,7 @@ class SameSymbolCandidateContext(BaseModel):
 
 class ScreenerCandidate(BaseModel):
     ticker: str
+    approval_token: Optional[str] = None
     currency: str = "USD"
     exchange_mic: Optional[str] = None
     instrument_type: Optional[str] = None

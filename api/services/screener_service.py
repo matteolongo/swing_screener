@@ -29,6 +29,11 @@ from api.models.screener import (
 )
 from api.models.recommendation import Recommendation
 from api.services.portfolio_service import PortfolioService
+from api.services.order_approval_token import (
+    ApprovalTokenClaims,
+    OrderApprovalTokenSigner,
+    strategy_revision,
+)
 from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
 from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
 from swing_screener.indicators.candles import detect_patterns, CandleConfig
@@ -72,7 +77,6 @@ from swing_screener.utils.coerce import (
     is_na_scalar,
     safe_float,
     safe_optional_float,
-    safe_optional_int,
 )
 from api.services.decision_context import (
     apply_cached_fundamentals_context,
@@ -175,7 +179,86 @@ def _account_currency_from_strategy(strategy: dict) -> str:
     return str(raw_risk.get("account_currency") or "EUR").upper()
 
 
-def _normalize_quote_currency_value(*values: object, fallback_ticker: str | None = None) -> str:
+def _approval_claims_for_candidate(
+    candidate: object, strategy_id: str, strategy_revision_value: str
+) -> ApprovalTokenClaims | None:
+    recommendation = getattr(candidate, "recommendation", None)
+    if (
+        recommendation is None
+        or getattr(recommendation, "verdict", None) != "RECOMMENDED"
+    ):
+        return None
+    gates = getattr(recommendation, "decision_gates", None)
+    if gates is None or any(
+        getattr(getattr(gates, name, None), "status", None) != "PASS"
+        for name in ("setup", "trigger", "plan")
+    ):
+        return None
+    data_asof = getattr(candidate, "data_asof", None)
+    days_to_earnings = getattr(candidate, "days_to_earnings", None)
+    if (
+        getattr(candidate, "data_status", None) != "current"
+        or not isinstance(data_asof, str)
+        or not data_asof
+        or not isinstance(days_to_earnings, int)
+        or days_to_earnings <= 3
+        or not strategy_id
+    ):
+        return None
+    risk = getattr(recommendation, "risk", None)
+    if risk is None:
+        return None
+    target_source = str(getattr(risk, "target_source", ""))
+    account_currency = str(getattr(risk, "account_currency", "") or "").upper()
+    quote_currency = str(getattr(risk, "currency", "") or "").upper()
+    account_to_quote_rate = getattr(risk, "account_to_quote_rate", None)
+    if account_currency == quote_currency:
+        account_to_quote_rate = 1.0
+    values = (
+        getattr(risk, "entry", None),
+        getattr(risk, "stop", None),
+        getattr(risk, "target", None),
+        account_to_quote_rate,
+    )
+    if (
+        target_source not in {"structural", "manual"}
+        or account_currency in {"", "UNKNOWN"}
+        or quote_currency in {"", "UNKNOWN"}
+        or any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            or float(value) <= 0
+            for value in values
+        )
+    ):
+        return None
+    return ApprovalTokenClaims(
+        ticker=str(getattr(candidate, "ticker", "")).upper(),
+        order_type=str(
+            getattr(candidate, "suggested_order_type", None) or "BUY_LIMIT"
+        ).upper(),
+        setup_status="PASS",
+        trigger_status="PASS",
+        plan_status="PASS",
+        data_status="current",
+        data_asof=data_asof,
+        strategy_id=strategy_id,
+        strategy_revision=strategy_revision_value,
+        account_currency=account_currency,
+        quote_currency=quote_currency,
+        account_to_quote_rate=float(values[3]),
+        target_source=target_source,
+        days_to_earnings=days_to_earnings,
+        generated_entry=float(values[0]),
+        generated_stop=float(values[1]),
+        generated_target=float(values[2]),
+    )
+
+
+def _normalize_quote_currency_value(
+    *values: object, fallback_ticker: str | None = None
+) -> str:
     for value in values:
         if is_na_scalar(value):
             continue
@@ -254,11 +337,13 @@ class ScreenerService:
         eval_cache: Optional[EvalCache] = None,
         pool_repo=None,
         review_repo=None,
+        approval_signer: OrderApprovalTokenSigner | None = None,
     ) -> None:
         self._strategy_repo = strategy_repo
         self._portfolio_service = portfolio_service
         self._provider = provider or get_default_provider()
         self._orders_service = orders_service
+        self._approval_signer = approval_signer
         if eval_cache is not None:
             self._eval_cache: EvalCache = eval_cache
         else:
@@ -646,9 +731,7 @@ class ScreenerService:
             self._review_repo.apply_fetch_results(
                 ok, failed, ctx.asof_str, threshold, meta=meta
             )
-        except (
-            Exception
-        ) as exc:  # noqa: BLE001 - health tracking must never break a screen
+        except Exception as exc:  # noqa: BLE001 - health tracking must never break a screen
             logger.warning("Fetch-health tracking failed: %s", exc)
             ctx.warnings.append("Fetch-health tracking unavailable this run.")
 
@@ -842,11 +925,15 @@ class ScreenerService:
             eurusd_rate = _last_close_for_ticker(fx, "EURUSD=X")
         except Exception as exc:
             logger.warning("Failed to fetch EURUSD rate for screener sizing: %s", exc)
-            ctx.warnings.append("EURUSD FX rate unavailable; cross-currency sizing may be omitted.")
+            ctx.warnings.append(
+                "EURUSD FX rate unavailable; cross-currency sizing may be omitted."
+            )
             return {}, {}
 
         if eurusd_rate is None or eurusd_rate <= 0:
-            ctx.warnings.append("EURUSD FX rate unavailable; cross-currency sizing may be omitted.")
+            ctx.warnings.append(
+                "EURUSD FX rate unavailable; cross-currency sizing may be omitted."
+            )
             return {}, {}
 
         account_to_quote_rates: dict[str, float] = {}
@@ -869,7 +956,8 @@ class ScreenerService:
         )
         if unsupported:
             ctx.warnings.append(
-                "Unsupported FX conversion for quote currencies: " + ", ".join(unsupported)
+                "Unsupported FX conversion for quote currencies: "
+                + ", ".join(unsupported)
             )
         return account_to_quote_rates, quote_to_eur_rates
 
@@ -948,9 +1036,7 @@ class ScreenerService:
                 ]
             )
             currency = _normalize_quote_currency_value(
-                info.get("currency")
-                if isinstance(info, dict)
-                else None,
+                info.get("currency") if isinstance(info, dict) else None,
                 row.get("currency"),
                 instrument.get("currency"),
                 fallback_ticker=ticker_str,
@@ -969,7 +1055,9 @@ class ScreenerService:
                         getattr(risk_cfg, "k_atr", 2.0), default=2.0
                     )
                     stop_val = round(entry_val - atr_multiplier * atr_val, 4)
-            account_to_quote_rate = safe_optional_float(row.get("account_to_quote_rate"))
+            account_to_quote_rate = safe_optional_float(
+                row.get("account_to_quote_rate")
+            )
 
             candidate_history = price_history_by_ticker.get(ticker_str, [])
             suggested_order_type = (
@@ -977,7 +1065,9 @@ class ScreenerService:
                 if not is_na_scalar(row.get("suggested_order_type"))
                 else None
             )
-            suggested_order_price = safe_optional_float(row.get("suggested_order_price"))
+            suggested_order_price = safe_optional_float(
+                row.get("suggested_order_price")
+            )
             # The price shown in the order form owns every dependent number. A
             # conditional BUY_LIMIT/BUY_STOP is not an observed entry trigger.
             plan_entry = (
@@ -1007,7 +1097,9 @@ class ScreenerService:
                 if suggested_order_type == "BUY_LIMIT"
                 else "WAIT_FOR_BREAKOUT"
                 if suggested_order_type == "BUY_STOP"
-                else str(signal) if not is_na_scalar(signal) else None
+                else str(signal)
+                if not is_na_scalar(signal)
+                else None
             )
             structural_target = (
                 _structural_target_from_history(candidate_history, entry=plan_entry)
@@ -1027,7 +1119,9 @@ class ScreenerService:
                 risk_cfg=risk_cfg,
                 rr_target=rr_target,
                 target=structural_target,
-                target_source="structural" if structural_target is not None else "unknown",
+                target_source="structural"
+                if structural_target is not None
+                else "unknown",
                 data_status=candidate_data_status,
                 costs=RiskEngineConfig(
                     commission_pct=commission_pct,
@@ -1264,7 +1358,6 @@ class ScreenerService:
         """
         asof_str = ctx.asof_str
         combined_priority_cfg = ctx.combined_priority_cfg
-        risk_cfg = ctx.risk_cfg
         ticker_info = ctx.ticker_info
         warnings = ctx.warnings
 
@@ -1357,6 +1450,23 @@ class ScreenerService:
             candidates = self._enrich_and_rank(
                 ctx, candidates, requested_top, same_symbol_suppressed_count
             )
+            if self._approval_signer is not None:
+                strategy_id = str(
+                    ctx.strategy.get("id")
+                    or request.strategy_id
+                    or self._strategy_repo.get_active_strategy_id()
+                )
+                active_strategy_revision = strategy_revision(ctx.strategy)
+                signed_candidates: list[ScreenerCandidate] = []
+                for candidate in candidates:
+                    claims = _approval_claims_for_candidate(
+                        candidate, strategy_id, active_strategy_revision
+                    )
+                    token = self._approval_signer.issue(claims) if claims else None
+                    signed_candidates.append(
+                        candidate.model_copy(update={"approval_token": token})
+                    )
+                candidates = signed_candidates
 
             response = ScreenerResponse(
                 candidates=candidates,

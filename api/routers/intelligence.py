@@ -7,7 +7,7 @@ import os
 from threading import Lock
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from api.models.intelligence_chat import IntelligenceChatRequest, IntelligenceChatResponse
 from api.models.position_review import PositionReviewRequest, PositionReviewResponse
@@ -18,6 +18,7 @@ from api.services.intelligence_chat_service import IntelligenceChatService, Miss
 from api.services.position_review_service import MissingPositionReviewContextError, PositionReviewService
 from api.services.strategic_review_service import StrategicReviewService
 from api.services.fundamentals_service import FundamentalsService
+from api.security.settings import get_auth_settings
 from api.services.intelligence_enrichment import (
     enrich_intelligence_request,
     enrich_with_polygon_prices,
@@ -181,6 +182,13 @@ class SweepSymbol(BaseModel):
 
 class SweepRequest(BaseModel):
     symbols: list[SweepSymbol]
+
+    @model_validator(mode="after")
+    def validate_symbol_count(self) -> "SweepRequest":
+        maximum = get_auth_settings().intelligence_sweep_max_symbols
+        if len(self.symbols) > maximum:
+            raise ValueError(f"symbols must contain at most {maximum} items")
+        return self
 
 
 class SweepFailure(BaseModel):
