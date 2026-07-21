@@ -85,10 +85,14 @@ async def get_positions(
 @router.post("/positions", response_model=Position)
 async def create_position(
     request: CreatePositionRequest,
+    http_request: Request,
+    idempotency_key: str = Depends(require_idempotency_key),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
     """Register a position manually after a DeGiro fill."""
-    return service.create_position(request)
+    return service.create_position(
+        request, idempotency_key=idempotency_key, subject=_subject(http_request)
+    )
 
 
 @router.get("/positions/open/intelligence", response_model=list[OpenPositionIntelligenceSummary])
@@ -150,10 +154,17 @@ async def get_position_metrics(
 async def update_position_stop(
     position_id: str,
     request: UpdateStopRequest,
+    http_request: Request,
+    idempotency_key: str = Depends(require_idempotency_key),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
     """Update stop price for a position."""
-    return service.update_position_stop(position_id, request)
+    return service.update_position_stop(
+        position_id,
+        request,
+        idempotency_key=idempotency_key,
+        subject=_subject(http_request),
+    )
 
 
 @router.get("/positions/{position_id}/stop-suggestion", response_model=PositionUpdate)
@@ -179,10 +190,17 @@ async def get_position_stop_preview(
 async def update_position_trail_method(
     position_id: str,
     request: UpdateTrailMethodRequest,
+    http_request: Request,
+    idempotency_key: str = Depends(require_idempotency_key),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
     """Update trail stop method for an open position."""
-    return service.update_trail_method(position_id, request)
+    return service.update_trail_method(
+        position_id,
+        request,
+        idempotency_key=idempotency_key,
+        subject=_subject(http_request),
+    )
 
 
 @router.post("/stop-suggestion/compute", response_model=PositionUpdate)
@@ -201,20 +219,34 @@ async def compute_position_stop_suggestion(
 async def close_position(
     position_id: str,
     request: ClosePositionRequest,
+    http_request: Request,
+    idempotency_key: str = Depends(require_idempotency_key),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
     """Close a position."""
-    return service.close_position(position_id, request)
+    return service.close_position(
+        position_id,
+        request,
+        idempotency_key=idempotency_key,
+        subject=_subject(http_request),
+    )
 
 
 @router.post("/positions/{position_id}/partial-close")
 async def partial_close_position(
     position_id: str,
     request: PartialCloseRequest,
+    http_request: Request,
+    idempotency_key: str = Depends(require_idempotency_key),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
     """Partially close an open position by closing a subset of shares."""
-    return service.partial_close_position(position_id, request)
+    return service.partial_close_position(
+        position_id,
+        request,
+        idempotency_key=idempotency_key,
+        subject=_subject(http_request),
+    )
 
 
 @router.get("/summary", response_model=PortfolioSummary)

@@ -36,6 +36,7 @@ def test_patch_trail_method_persists(client, tmp_path):
     response = client.patch(
         "/api/portfolio/positions/POS-001/trail-method",
         json={"trail_method": "atr", "trail_param": 2.5},
+        headers={"Idempotency-Key": "trail-atr"},
     )
     assert response.status_code == 200
     assert response.json()["trail_method"] == "atr"
@@ -52,6 +53,7 @@ def test_patch_trail_method_manual(client, tmp_path):
     response = client.patch(
         "/api/portfolio/positions/POS-001/trail-method",
         json={"trail_method": "manual", "trail_param": None},
+        headers={"Idempotency-Key": "trail-manual"},
     )
     assert response.status_code == 200
     stored_response = client.get("/api/portfolio/positions/POS-001")
@@ -66,6 +68,7 @@ def test_patch_trail_method_invalid_value(client):
     response = client.patch(
         "/api/portfolio/positions/POS-001/trail-method",
         json={"trail_method": "unknown_method"},
+        headers={"Idempotency-Key": "trail-invalid"},
     )
     assert response.status_code == 422
 
@@ -74,6 +77,7 @@ def test_patch_trail_method_not_found(client):
     response = client.patch(
         "/api/portfolio/positions/DOES-NOT-EXIST/trail-method",
         json={"trail_method": "sma20"},
+        headers={"Idempotency-Key": "trail-missing"},
     )
     assert response.status_code == 404
 
@@ -108,6 +112,7 @@ def test_patch_trail_method_closed_position_rejected(client_closed):
     response = client_closed.patch(
         "/api/portfolio/positions/POS-CLOSED/trail-method",
         json={"trail_method": "atr", "trail_param": 2.0},
+        headers={"Idempotency-Key": "trail-closed"},
     )
     assert response.status_code == 400
 
@@ -116,6 +121,7 @@ def test_positions_list_returns_trail_method(client):
     client.patch(
         "/api/portfolio/positions/POS-001/trail-method",
         json={"trail_method": "fixed_pct", "trail_param": 5.0},
+        headers={"Idempotency-Key": "trail-fixed-pct"},
     )
     response = client.get("/api/portfolio/positions?status=open")
     assert response.status_code == 200

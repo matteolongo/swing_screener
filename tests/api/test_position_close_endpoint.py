@@ -54,6 +54,7 @@ def test_close_position_persists_optional_fee(monkeypatch, tmp_path):
             "fee_eur": 4.90,
             "reason": "Stop loss executed on broker",
         },
+        headers={"Idempotency-Key": "close-engi-1"},
     )
 
     assert response.status_code == 200

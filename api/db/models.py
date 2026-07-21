@@ -130,3 +130,11 @@ class LegacyImportRow(Base):
     imported_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class LegacyImportLockRow(Base):
+    """Singleton row used to serialize legacy import across app instances."""
+
+    __tablename__ = "legacy_import_lock"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)

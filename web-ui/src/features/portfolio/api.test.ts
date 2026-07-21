@@ -49,7 +49,7 @@ describe('portfolio api', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('sends a fresh idempotency key for each create submission', async () => {
+  it('uses a fresh idempotency key for distinct create submissions', async () => {
     const fetchMock = vi
       .fn()
       .mockImplementation(() => Promise.resolve(new Response(null, { status: 201 })));
@@ -78,6 +78,30 @@ describe('portfolio api', () => {
     );
     expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Idempotency-Key')).toBe(
       '22222222-2222-4222-8222-222222222222',
+    );
+  });
+
+  it('reuses a caller-supplied idempotency key for an order retry', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => new Response(null, { status: 201 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const request = {
+      ticker: 'AAPL',
+      orderType: 'BUY_LIMIT' as const,
+      quantity: 2,
+      limitPrice: 100,
+      stopPrice: 95,
+      targetPrice: 110,
+      approvalToken: 'approval-token',
+    };
+
+    await createOrder(request, 'create-aapl-retry');
+    await createOrder(request, 'create-aapl-retry');
+
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Idempotency-Key')).toBe(
+      'create-aapl-retry',
+    );
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Idempotency-Key')).toBe(
+      'create-aapl-retry',
     );
   });
 

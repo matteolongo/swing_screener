@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from collections.abc import Callable
 from typing import Optional
 
 import pandas as pd
+from sqlalchemy.exc import IntegrityError
 
+from swing_screener.errors import ConflictError, UnprocessableError
 from api.models.portfolio import (
     ClosePositionRequest,
     CreatePositionRequest,
@@ -62,6 +67,97 @@ class PortfolioService:
             self._positions_repo, self._provider, self._config_repo
         )
 
+    @staticmethod
+    def _idempotency_hash(
+        *, subject: str, operation: str, resource: str, body: dict
+    ) -> str:
+        canonical = json.dumps(
+            {
+                "subject": subject,
+                "operation": operation,
+                "resource": resource,
+                "body": body,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8")
+        return hashlib.sha256(canonical).hexdigest()
+
+    def _stored_idempotent_response(
+        self, *, idempotency_key: str, request_hash: str
+    ) -> dict | None:
+        assert self._uow is not None
+        existing = self._uow.idempotency.get(idempotency_key)
+        if existing is None:
+            self._uow.session.rollback()
+            self._uow.write_started = False
+            return None
+        if existing.request_hash != request_hash:
+            raise ConflictError("Idempotency-Key was already used for a different request.")
+        response = dict(existing.response)
+        self._uow.session.rollback()
+        self._uow.write_started = False
+        return response
+
+    def _recover_idempotency_race(
+        self, *, idempotency_key: str, request_hash: str
+    ) -> dict:
+        assert self._uow is not None
+        self._uow.session.rollback()
+        self._uow.write_started = False
+        existing = self._uow.idempotency.get(idempotency_key)
+        if existing is None:
+            raise ConflictError("Concurrent idempotent request could not be replayed.")
+        if existing.request_hash != request_hash:
+            raise ConflictError("Idempotency-Key was already used for a different request.")
+        return dict(existing.response)
+
+    def _run_idempotent_write(
+        self,
+        *,
+        operation: str,
+        resource: str,
+        body: dict,
+        idempotency_key: str | None,
+        subject: str,
+        action: Callable[[], dict],
+    ) -> dict:
+        if self._uow is None:
+            return action()
+        if not idempotency_key:
+            raise UnprocessableError("Idempotency-Key is required.")
+        request_hash = self._idempotency_hash(
+            subject=subject, operation=operation, resource=resource, body=body
+        )
+        self._uow.begin_write()
+        existing = self._uow.idempotency.get(idempotency_key)
+        if existing is not None:
+            if existing.request_hash != request_hash:
+                raise ConflictError(
+                    "Idempotency-Key was already used for a different request."
+                )
+            return dict(existing.response)
+        try:
+            reservation = self._uow.idempotency.add(
+                operation=operation,
+                key=idempotency_key,
+                request_hash=request_hash,
+                subject=subject,
+                resource=resource,
+                status_code=0,
+                response={},
+            )
+        except IntegrityError:
+            return self._recover_idempotency_race(
+                idempotency_key=idempotency_key, request_hash=request_hash
+            )
+        response = action()
+        self._uow.idempotency.complete(
+            reservation, status_code=200, response=response
+        )
+        return response
+
     def fetch_recent_ohlcv(
         self, ticker: str, *, lookback_days: int = 400
     ) -> pd.DataFrame:
@@ -94,26 +190,104 @@ class PortfolioService:
     def get_earnings_proximity(self, ticker: str) -> EarningsProximityResponse:
         return self._pricing.get_earnings_proximity(ticker)
 
-    def create_position(self, request: CreatePositionRequest) -> Position:
-        return self._write.create_position(request)
+    def create_position(
+        self,
+        request: CreatePositionRequest,
+        *,
+        idempotency_key: str | None = None,
+        subject: str = "local",
+    ) -> Position:
+        response = self._run_idempotent_write(
+            operation="create_position",
+            resource="positions",
+            body=request.model_dump(mode="json"),
+            idempotency_key=idempotency_key,
+            subject=subject,
+            action=lambda: self._write.create_position(request).model_dump(mode="json"),
+        )
+        return Position.model_validate(response)
 
     def update_position_stop(
-        self, position_id: str, request: UpdateStopRequest
+        self,
+        position_id: str,
+        request: UpdateStopRequest,
+        *,
+        idempotency_key: str | None = None,
+        subject: str = "local",
     ) -> dict:
-        return self._write.update_position_stop(position_id, request)
+        body = request.model_dump(mode="json")
+        if self._uow is not None and idempotency_key:
+            request_hash = self._idempotency_hash(
+                subject=subject,
+                operation="update_position_stop",
+                resource=position_id,
+                body=body,
+            )
+            stored = self._stored_idempotent_response(
+                idempotency_key=idempotency_key, request_hash=request_hash
+            )
+            if stored is not None:
+                return stored
+        prepared = self._write.prepare_position_stop(position_id, request)
+        return self._run_idempotent_write(
+            operation="update_position_stop",
+            resource=position_id,
+            body=body,
+            idempotency_key=idempotency_key,
+            subject=subject,
+            action=lambda: self._write.apply_position_stop(prepared),
+        )
 
-    def close_position(self, position_id: str, request: ClosePositionRequest) -> dict:
-        return self._write.close_position(position_id, request)
+    def close_position(
+        self,
+        position_id: str,
+        request: ClosePositionRequest,
+        *,
+        idempotency_key: str | None = None,
+        subject: str = "local",
+    ) -> dict:
+        return self._run_idempotent_write(
+            operation="close_position",
+            resource=position_id,
+            body=request.model_dump(mode="json"),
+            idempotency_key=idempotency_key,
+            subject=subject,
+            action=lambda: self._write.close_position(position_id, request),
+        )
 
     def partial_close_position(
-        self, position_id: str, request: PartialCloseRequest
+        self,
+        position_id: str,
+        request: PartialCloseRequest,
+        *,
+        idempotency_key: str | None = None,
+        subject: str = "local",
     ) -> dict:
-        return self._write.partial_close_position(position_id, request)
+        return self._run_idempotent_write(
+            operation="partial_close_position",
+            resource=position_id,
+            body=request.model_dump(mode="json"),
+            idempotency_key=idempotency_key,
+            subject=subject,
+            action=lambda: self._write.partial_close_position(position_id, request),
+        )
 
     def update_trail_method(
-        self, position_id: str, request: UpdateTrailMethodRequest
+        self,
+        position_id: str,
+        request: UpdateTrailMethodRequest,
+        *,
+        idempotency_key: str | None = None,
+        subject: str = "local",
     ) -> dict:
-        return self._write.update_trail_method(position_id, request)
+        return self._run_idempotent_write(
+            operation="update_trail_method",
+            resource=position_id,
+            body=request.model_dump(mode="json"),
+            idempotency_key=idempotency_key,
+            subject=subject,
+            action=lambda: self._write.update_trail_method(position_id, request),
+        )
 
     def compute_position_stop_suggestion(
         self,

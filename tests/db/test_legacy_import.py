@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier, local
 
 import pytest
 from sqlalchemy import delete
@@ -92,6 +94,43 @@ def test_imports_empty_database_once_with_checksums_and_preserves_sources(
     )
     assert repeated.imported is False
     assert orders_path.read_bytes() == original_orders
+
+
+def test_concurrent_import_replays_completed_ledger(runtime, tmp_path):
+    """Two startup processes must not race between EMPTY and COMPLETE."""
+    orders_path, positions_path = _write_pair(
+        tmp_path, orders=[_order()], positions=[_position()]
+    )
+    barrier = Barrier(2)
+    state = local()
+
+    class SynchronizedUnitOfWork:
+        def __init__(self):
+            self._inner = PortfolioUnitOfWork(runtime.session_factory)
+
+        def __enter__(self):
+            entered = self._inner.__enter__()
+            if not getattr(state, "first_context_entered", False):
+                state.first_context_entered = True
+                barrier.wait(timeout=5)
+            return entered
+
+        def __exit__(self, *args):
+            return self._inner.__exit__(*args)
+
+    def import_once(_index: int):
+        return import_legacy_portfolio(
+            SynchronizedUnitOfWork,
+            orders_path,
+            positions_path,
+            "20260715_0001",
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        reports = list(executor.map(import_once, range(2)))
+
+    assert {report.imported for report in reports} == {True, False}
+    assert all(report.state is LegacyImportState.COMPLETE for report in reports)
 
 
 def test_invalid_row_rolls_back_everything(runtime, tmp_path):
