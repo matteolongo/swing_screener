@@ -151,6 +151,34 @@ def test_invalid_row_rolls_back_everything(runtime, tmp_path):
         assert uow.positions.list_positions()[0] == []
 
 
+def test_import_normalizes_signed_legacy_broker_fee_without_mutating_source(
+    runtime, tmp_path
+):
+    position = _position()
+    position.update(
+        {
+            "status": "closed",
+            "exit_date": "2026-07-16",
+            "exit_price": 110,
+            "exit_fee_eur": -4.90,
+        }
+    )
+    orders_path, positions_path = _write_pair(
+        tmp_path, orders=[_order()], positions=[position]
+    )
+    original_positions = positions_path.read_bytes()
+
+    report = import_legacy_portfolio(
+        _factory(runtime), orders_path, positions_path, "20260715_0001"
+    )
+
+    assert report.state is LegacyImportState.COMPLETE
+    assert positions_path.read_bytes() == original_positions
+    with _factory(runtime)() as uow:
+        imported = uow.positions.get_position("POS-AAPL-001")
+    assert imported["exit_fee_eur"] == 4.90
+
+
 def test_partial_database_state_fails_closed(runtime, tmp_path):
     orders_path, positions_path = _write_pair(tmp_path)
     with _factory(runtime)() as uow:

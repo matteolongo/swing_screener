@@ -59,7 +59,9 @@ Docs:
   counts and SHA-256 checksums, and are never changed or dual-written. A
   migration-created singleton lock serializes import classification and writes
   across application instances, so concurrent startup returns the committed
-  import report instead of attempting a second import.
+  import report instead of attempting a second import. Signed legacy broker fee
+  debits are canonicalized to positive fee amounts during import; the source
+  JSON remains unchanged.
 - Order create/fill and every persisted position write require `Idempotency-Key`.
   Replaying the same request returns its stored response; reusing a key for
   different input returns `409`. Stop-price market-data validation runs before

@@ -47,6 +47,12 @@ class LegacyOrder(BaseModel):
     def blank_date_is_none(cls, value):
         return value or None
 
+    @field_validator("fee_eur", mode="before")
+    @classmethod
+    def normalize_signed_fee(cls, value):
+        """Convert signed legacy broker fee debits to canonical positive amounts."""
+        return None if value is None else abs(float(value))
+
 
 class LegacyPosition(BaseModel):
     model_config = ConfigDict(extra="allow", allow_inf_nan=False)
@@ -87,3 +93,9 @@ class LegacyPosition(BaseModel):
     @classmethod
     def blank_date_is_none(cls, value):
         return value or None
+
+    @field_validator("entry_fee_eur", "exit_fee_eur", mode="before")
+    @classmethod
+    def normalize_signed_fee(cls, value):
+        """Convert signed legacy broker fee debits to canonical positive amounts."""
+        return None if value is None else abs(float(value))
