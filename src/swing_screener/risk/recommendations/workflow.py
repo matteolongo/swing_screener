@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Iterable, Literal, Optional
 
 WorkflowStatus = Literal["ready", "waiting_trigger", "needs_review", "no_setup"]
@@ -82,6 +83,7 @@ def derive_execution_workflow(
         normalized_currency = str(currency or "").strip().upper()
         if (
             trigger_price is None
+            or not math.isfinite(trigger_price)
             or trigger_price <= 0
             or normalized_currency in {"", "UNKNOWN"}
         ):

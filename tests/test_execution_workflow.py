@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from swing_screener.risk.recommendations.workflow import derive_execution_workflow
@@ -157,3 +159,20 @@ def test_waiting_workflow_carries_nonlocalized_parameters():
 
     assert result.next_step.trigger_price == 98.5
     assert result.next_step.currency == "USD"
+
+
+@pytest.mark.parametrize("trigger_price", [float("nan"), float("inf")])
+def test_waiting_workflow_requires_finite_trigger_price(trigger_price):
+    result = derive_execution_workflow(
+        setup_status="PASS",
+        trigger_status="WAIT",
+        plan_status="PASS",
+        signal="BUY_ON_PULLBACK",
+        trigger_price=trigger_price,
+        currency="USD",
+        reason_codes=[],
+    )
+
+    assert not math.isfinite(trigger_price)
+    assert result.status == "needs_review"
+    assert result.next_step.code == "refresh_data"
