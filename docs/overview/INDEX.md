@@ -63,5 +63,6 @@
 
 ## Current implementation plans
 
+- [Execution readiness status design](../superpowers/specs/2026-07-22-execution-readiness-status-design.md) — Replace the misleading binary setup verdict display with gate-derived execution readiness.
 - [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/spec.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/spec.md) — approved design for Volume-Zone Stock Analysis V1
 - [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/plan.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/plan.md) — task-by-task implementation plan for Volume-Zone Stock Analysis V1
