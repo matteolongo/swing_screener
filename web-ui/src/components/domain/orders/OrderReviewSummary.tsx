@@ -13,15 +13,14 @@ import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import { EmptySection, MetricTile, REVIEW_SECTIONS, type ReviewSectionId } from './orderReviewHelpers';
+import type { ExecutionReadinessPresentation } from '@/components/domain/recommendation/readiness';
 
 interface OrderReviewSummaryProps {
   activeSection: ReviewSectionId;
   onSectionChange: (section: ReviewSectionId) => void;
   recommendation?: Recommendation;
   verdict: RecommendationVerdict | 'UNKNOWN';
-  reasonsDetailed?: Recommendation['reasonsDetailed'];
-  isRecommended: boolean;
-  isIncomplete: boolean;
+  readiness: ExecutionReadinessPresentation;
   showManualOrderHint: boolean;
   knownCurrentPrice: number | null;
   currency: string;
@@ -45,9 +44,7 @@ export default function OrderReviewSummary({
   onSectionChange,
   recommendation,
   verdict,
-  reasonsDetailed,
-  isRecommended,
-  isIncomplete,
+  readiness,
   showManualOrderHint,
   knownCurrentPrice,
   currency,
@@ -142,14 +139,19 @@ export default function OrderReviewSummary({
               {recommendation ? (
                 <div className={cn(
                   'rounded-xl border p-4',
-                  isRecommended
+                  readiness.tone === 'success'
                     ? 'border-success/40 bg-success/10'
-                    : isIncomplete
+                    : readiness.tone === 'warning'
                       ? 'border-warning/40 bg-warning/10'
-                      : 'border-danger/40 bg-danger/10',
+                      : readiness.tone === 'danger'
+                        ? 'border-danger/40 bg-danger/10'
+                        : 'border-border bg-foreground/5',
                 )}>
                   <div className="flex flex-wrap items-center gap-2">
-                    <RecommendationBadge verdict={verdict} reasonsDetailed={reasonsDetailed} />
+                    <RecommendationBadge
+                      verdict={verdict}
+                      decisionGates={recommendation.decisionGates}
+                    />
                     <span className="text-sm text-muted">{t('recommendation.summary')}</span>
                   </div>
                   {recommendation.reasonsShort.length ? (

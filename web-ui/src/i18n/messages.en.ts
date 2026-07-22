@@ -365,6 +365,7 @@ export const messagesEn = {
       createAction: 'Create Order',
       notRecommended:
         'This setup is not recommended. Review the checklist and fix the issues first.',
+      executionNotReady: 'Execution readiness: {{status}}. Review the decision gates before proceeding.',
       quantityError: 'Quantity must be greater than 0',
       limitError: 'Entry/trigger price must be greater than 0',
       stopError: 'Entry/trigger price must be higher than stop price',
@@ -1406,6 +1407,7 @@ export const messagesEn = {
       refreshTitle: 'Refresh screener data',
       currencySummary: 'Currency: {{value}}',
       recommendedOnly: 'Show recommended only',
+      readyOnly: 'Ready only',
       actionFilter: 'Decision Action',
       allActions: 'All actions',
       showAdvanced: 'Show advanced filters',
@@ -1422,6 +1424,7 @@ export const messagesEn = {
       noOtc: 'No OTC',
       weeklyUptrend: 'Weekly uptrend',
       recommendedOnlyShort: 'Rec. only',
+      readyOnlyShort: 'Ready only',
       excludeOtc: 'Exclude OTC',
       venue: {
         label: 'Venue',
@@ -2722,6 +2725,7 @@ export const messagesEn = {
       sourceRun: 'Opportunities from {{source}} · data as of {{date}}',
       customRun: 'custom screener run',
       recommendedFilter: 'Recommended',
+      readyFilter: 'Ready',
       allSourceCandidates: 'All from run',
       noSourceRun: 'No screener run is selected for Today. Run the screener and keep “Use this run for Today” selected.',
     },

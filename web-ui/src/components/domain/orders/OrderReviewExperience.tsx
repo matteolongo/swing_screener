@@ -28,6 +28,7 @@ import type { RiskConfig } from '@/types/config';
 import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
+import { deriveExecutionReadiness } from '@/components/domain/recommendation/readiness';
 
 export type OrderReviewRiskConfig = Pick<
   RiskConfig,
@@ -115,6 +116,7 @@ export default function OrderReviewExperience({
   const verdict = context.recommendation?.verdict ?? 'UNKNOWN';
   const isRecommended = verdict === 'RECOMMENDED';
   const decisionGates = context.recommendation?.decisionGates;
+  const readiness = deriveExecutionReadiness(decisionGates, verdict);
   const decisionReady = Boolean(
     decisionGates?.setup.status === 'PASS'
       && decisionGates.trigger.status === 'PASS'
@@ -122,12 +124,6 @@ export default function OrderReviewExperience({
       && context.dataStatus === 'current'
       && context.dataAsOf,
   );
-  const reasonsDetailed = context.recommendation?.reasonsDetailed;
-  const COMPLETENESS_CODES = new Set(['STOP_MISSING', 'NO_SIGNAL']);
-  const isIncomplete =
-    verdict === 'NOT_RECOMMENDED' &&
-    !!reasonsDetailed?.length &&
-    reasonsDetailed.filter((r) => r.severity === 'block').every((r) => COMPLETENESS_CODES.has(r.code));
   const currency = context.currency ?? 'USD';
   const knownCurrentPrice =
     typeof context.close === 'number' && Number.isFinite(context.close) && context.close > 0 ? context.close : null;
@@ -210,7 +206,9 @@ export default function OrderReviewExperience({
   const warnings = useMemo(() => {
     const nextWarnings: string[] = [];
     if (enforceRecommendation && verdict === 'NOT_RECOMMENDED') {
-      nextWarnings.push(t('order.candidateModal.notRecommended'));
+      nextWarnings.push(t('order.candidateModal.executionNotReady', {
+        status: t(readiness.labelKey),
+      }));
     }
     if (hasSkipSuggestion) {
       nextWarnings.push(t('order.candidateModal.skipSuggestedBody'));
@@ -233,7 +231,7 @@ export default function OrderReviewExperience({
       }
     }
     return nextWarnings;
-  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, verdict,
+  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, readiness.labelKey, verdict,
       context.avgDailyVolumeEur, quantity, limitPrice]);
   const invalidationRules = context.recommendation?.thesis?.invalidationRules ?? [];
   const hardInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'hard');
@@ -351,9 +349,7 @@ export default function OrderReviewExperience({
         onSectionChange={setActiveSection}
         recommendation={context.recommendation}
         verdict={verdict}
-        reasonsDetailed={reasonsDetailed}
-        isRecommended={isRecommended}
-        isIncomplete={isIncomplete}
+        readiness={readiness}
         showManualOrderHint={showManualOrderHint}
         knownCurrentPrice={knownCurrentPrice}
         currency={currency}

@@ -170,7 +170,7 @@ export default function ScreenerForm({
           )}
           {recommendedOnly && (
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-              {t('screener.controls.recommendedOnlyShort')}
+              {t('screener.controls.readyOnlyShort')}
             </span>
           )}
           {useForToday && setUseForToday && (
@@ -310,11 +310,11 @@ export default function ScreenerForm({
                 type="checkbox"
                 checked={recommendedOnly}
                 onChange={(e) => setRecommendedOnly(e.target.checked)}
-                aria-label={t('screener.controls.recommendedOnly')}
+                aria-label={t('screener.controls.readyOnly')}
                 className="w-5 h-5 text-primary border-border rounded focus:ring-primary"
                 disabled={isLoading}
               />
-              <span className="text-sm font-medium text-muted">{t('screener.controls.recommendedOnly')}</span>
+              <span className="text-sm font-medium text-muted">{t('screener.controls.readyOnly')}</span>
             </label>
             <label className="flex min-h-11 items-center gap-2 cursor-pointer">
               <input

@@ -1,6 +1,5 @@
 import type {
   DecisionGateState,
-  RecommendationReason,
   RecommendationVerdict,
 } from '@/types/recommendation';
 import { cn } from '@/utils/cn';
@@ -12,7 +11,6 @@ import {
 
 interface RecommendationBadgeProps {
   verdict?: RecommendationVerdict | 'UNKNOWN';
-  reasonsDetailed?: RecommendationReason[];
   decisionGates?: DecisionGateState;
   className?: string;
   showExplanation?: boolean;
