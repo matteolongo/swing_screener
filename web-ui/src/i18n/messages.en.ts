@@ -84,6 +84,16 @@ export const messagesEn = {
     closeAria: 'Close modal',
   },
   recommendation: {
+    readiness: {
+      READY_FOR_REVIEW: 'Ready for order review',
+      WAITING_FOR_TRIGGER: 'Waiting for trigger',
+      PLAN_INCOMPLETE: 'Plan incomplete',
+      PLAN_BLOCKED: 'Plan blocked',
+      TRIGGER_BLOCKED: 'Trigger blocked',
+      NO_SETUP: 'No valid setup',
+      NOT_READY: 'Not ready',
+      UNKNOWN: 'Readiness unknown',
+    },
     verdict: {
       // Beginner-friendly labels (uppercase keys match backend enum values)
       RECOMMENDED: 'Setup passes',
