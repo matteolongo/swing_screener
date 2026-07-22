@@ -1,13 +1,24 @@
 """Recommendation models."""
+
 from __future__ import annotations
 
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
-
 RecommendationVerdict = Literal["RECOMMENDED", "NOT_RECOMMENDED"]
 DecisionGateStatus = Literal["PASS", "WAIT", "BLOCK", "UNKNOWN"]
 ReasonSeverity = Literal["info", "warn", "block"]
+WorkflowStatus = Literal["ready", "waiting_trigger", "needs_review", "no_setup"]
+NextStepCode = Literal[
+    "review_order",
+    "wait_pullback",
+    "wait_breakout_close",
+    "define_target",
+    "refresh_data",
+    "fix_stop",
+    "inspect_gate_conflict",
+    "observe",
+]
 
 
 class RecommendationReason(BaseModel):
@@ -80,6 +91,12 @@ class DecisionGateStateModel(BaseModel):
     ready_to_order: bool = False
 
 
+class ExecutionNextStepModel(BaseModel):
+    code: NextStepCode
+    trigger_price: Optional[float] = None
+    currency: Optional[str] = None
+
+
 def _unknown_decision_gates() -> DecisionGateStateModel:
     unknown = lambda text: DecisionGateModel(status="UNKNOWN", explanation=text)
     return DecisionGateStateModel(
@@ -103,6 +120,14 @@ class Recommendation(BaseModel):
     risk: RecommendationRisk
     costs: RecommendationCosts
     checklist: list[ChecklistGate]
-    decision_gates: DecisionGateStateModel = Field(default_factory=_unknown_decision_gates)
+    decision_gates: DecisionGateStateModel = Field(
+        default_factory=_unknown_decision_gates
+    )
+    workflow_status: WorkflowStatus = "needs_review"
+    next_step: ExecutionNextStepModel = Field(
+        default_factory=lambda: ExecutionNextStepModel(code="refresh_data")
+    )
     education: RecommendationEducation
-    thesis: Optional[dict] = None  # Trade Thesis (structured explanation, includes beginner_explanation + education_generated)
+    thesis: Optional[dict] = (
+        None  # Trade Thesis (structured explanation, includes beginner_explanation + education_generated)
+    )
