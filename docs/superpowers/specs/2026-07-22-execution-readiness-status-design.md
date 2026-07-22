@@ -18,9 +18,9 @@ triggers and reconciled plans. It intentionally made `BUY_ON_PULLBACK` and
 `WAIT_FOR_BREAKOUT` return `NOT_RECOMMENDED` until their triggers occur. The
 frontend continued translating every `NOT_RECOMMENDED` verdict as `Setup
 fails`, even when `decision_gates.setup.status` was `PASS` and
-`decision_gates.trigger.status` was `WAIT`. Commit `ba71b9c`, later the same
-day, made those conditional decision actions prominent in Last Run and Today,
-exposing the contradiction.
+`decision_gates.trigger.status` was `WAIT`. The existing Last Run and Today
+surfaces therefore began showing the contradiction as soon as `9bbd2d4` was
+introduced.
 
 ## Approaches considered
 
