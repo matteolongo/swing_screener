@@ -66,4 +66,26 @@ describe('transformRecommendation workflow contract', () => {
     expect(result.workflowStatus).toBe('needs_review');
     expect(result.nextStep).toEqual({ code: 'refresh_data' });
   });
+
+  it('downgrades a contradictory ready workflow so it cannot be order eligible', () => {
+    const result = transformRecommendation({
+      ...base,
+      workflow_status: 'ready',
+      next_step: { code: 'observe' },
+    });
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
+
+  it('downgrades a waiting workflow without its trigger details', () => {
+    const result = transformRecommendation({
+      ...base,
+      workflow_status: 'waiting_trigger',
+      next_step: { code: 'wait_pullback' },
+    });
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
 });

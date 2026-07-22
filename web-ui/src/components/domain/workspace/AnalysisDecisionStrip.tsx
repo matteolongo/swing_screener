@@ -11,6 +11,7 @@ import {
   formatWorkflowNextStep,
   getWorkflowPresentation,
 } from '@/components/domain/recommendation/workflowPresentation';
+import type { WorkflowTone } from '@/components/domain/recommendation/workflowPresentation';
 
 interface AnalysisDecisionStripProps {
   ticker: string;
@@ -57,6 +58,19 @@ function sourceBadgeVariant(source: DataSourceHealth): 'success' | 'warning' | '
     case 'degraded':
     case 'unknown':
       return 'warning';
+  }
+}
+
+function workflowBadgeVariant(tone: WorkflowTone): 'success' | 'warning' | 'error' | 'default' {
+  switch (tone) {
+    case 'success':
+      return 'success';
+    case 'warning':
+      return 'warning';
+    case 'danger':
+      return 'error';
+    case 'neutral':
+      return 'default';
   }
 }
 
@@ -126,7 +140,11 @@ export default function AnalysisDecisionStrip({
           <div className="max-w-3xl space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-semibold text-foreground">{ticker}</h2>
-              {candidate?.recommendation ? <Badge variant="success">{t(workflowPresentation.labelKey)}</Badge> : null}
+              {candidate?.recommendation ? (
+                <Badge variant={workflowBadgeVariant(workflowPresentation.tone)}>
+                  {t(workflowPresentation.labelKey)}
+                </Badge>
+              ) : null}
               {summary ? <Badge variant="default">{convictionLabel(summary.conviction)}</Badge> : null}
               {visibleSourceItems.map(([label, source]) => (
                 <Badge key={label} variant={sourceBadgeVariant(source)}>

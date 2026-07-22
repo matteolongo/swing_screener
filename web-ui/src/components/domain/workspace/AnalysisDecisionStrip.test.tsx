@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
+import { t } from '@/i18n/t';
 
 function buildCandidate(overrides: Partial<SymbolAnalysisCandidate> = {}): SymbolAnalysisCandidate {
   return {
@@ -123,6 +124,21 @@ describe('AnalysisDecisionStrip — order preparation authority', () => {
     expect(screen.getByText('Review the proposed order')).toBeInTheDocument();
     expect(screen.queryByText('Wait for a breakout.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /prepare order/i })).toBeInTheDocument();
+  });
+});
+
+describe('AnalysisDecisionStrip — workflow status presentation', () => {
+  it('uses the canonical review tone instead of a success badge', () => {
+    render(
+      <AnalysisDecisionStrip
+        ticker="AAPL"
+        candidate={buildCandidate({
+          recommendation: { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } } as any,
+        })}
+      />,
+    );
+
+    expect(screen.getByText(t('recommendation.workflow.status.needsReview'))).toHaveClass('text-danger');
   });
 });
 

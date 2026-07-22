@@ -242,10 +242,7 @@ export interface RecommendationAPI {
 }
 
 export function transformRecommendation(api: RecommendationAPI): Recommendation {
-  const nextStep = normalizeWorkflowNextStep(api.next_step);
-  const workflowStatus = isWorkflowStatus(api.workflow_status) && isWorkflowNextStep(api.next_step)
-    ? api.workflow_status
-    : 'needs_review';
+  const { workflowStatus, nextStep } = normalizeWorkflow(api.workflow_status, api.next_step);
 
   return {
     verdict: api.verdict,
@@ -305,6 +302,17 @@ export function normalizeWorkflowStatus(value: unknown): WorkflowStatus {
   return isWorkflowStatus(value) ? value : 'needs_review';
 }
 
+function normalizeWorkflow(
+  statusValue: unknown,
+  nextStepValue: unknown,
+): Pick<Recommendation, 'workflowStatus' | 'nextStep'> {
+  const nextStep = normalizeWorkflowNextStep(nextStepValue);
+  if (!isWorkflowStatus(statusValue) || !isCoherentWorkflow(statusValue, nextStep)) {
+    return { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } };
+  }
+  return { workflowStatus: statusValue, nextStep };
+}
+
 function isWorkflowStatus(value: unknown): value is WorkflowStatus {
   switch (value) {
     case 'ready':
@@ -347,16 +355,43 @@ export function normalizeWorkflowNextStep(value: unknown): WorkflowNextStep {
   }
 
   const triggerPrice = value.trigger_price ?? value.triggerPrice;
+  const currency = typeof value.currency === 'string' ? value.currency.trim().toUpperCase() : undefined;
 
   return {
     code: value.code,
     triggerPrice: typeof triggerPrice === 'number' && Number.isFinite(triggerPrice)
       ? triggerPrice
       : undefined,
-    currency: typeof value.currency === 'string' && value.currency.length > 0
-      ? value.currency
-      : undefined,
+    currency: isValidWorkflowCurrency(currency) ? currency : undefined,
   };
+}
+
+function isCoherentWorkflow(status: WorkflowStatus, nextStep: WorkflowNextStep): boolean {
+  switch (status) {
+    case 'ready':
+      return nextStep.code === 'review_order';
+    case 'waiting_trigger':
+      return (
+        (nextStep.code === 'wait_pullback' || nextStep.code === 'wait_breakout_close')
+        && typeof nextStep.triggerPrice === 'number'
+        && Number.isFinite(nextStep.triggerPrice)
+        && nextStep.triggerPrice > 0
+        && isValidWorkflowCurrency(nextStep.currency)
+      );
+    case 'no_setup':
+      return nextStep.code === 'observe';
+    case 'needs_review':
+      return (
+        nextStep.code === 'define_target'
+        || nextStep.code === 'refresh_data'
+        || nextStep.code === 'fix_stop'
+        || nextStep.code === 'inspect_gate_conflict'
+      );
+  }
+}
+
+function isValidWorkflowCurrency(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value !== 'UNKNOWN';
 }
 
 function transformThesis(apiThesis: any): TradeThesis {
