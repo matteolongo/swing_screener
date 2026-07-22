@@ -100,6 +100,8 @@ describe('screener viewModel', () => {
             whatToLearn: '',
             whatWouldMakeValid: [],
           },
+          workflowStatus: 'needs_review',
+          nextStep: { code: 'refresh_data' },
         },
       };
       
@@ -139,6 +141,8 @@ describe('screener viewModel', () => {
             whatToLearn: '',
             whatWouldMakeValid: ['Increase R/R to 2.0', 'Reduce fee/risk ratio'],
           },
+          workflowStatus: 'needs_review',
+          nextStep: { code: 'refresh_data' },
         },
       };
       
@@ -195,6 +199,8 @@ describe('screener viewModel', () => {
           costs: { commissionEstimate: 2, fxEstimate: 0, slippageEstimate: 5, totalCost: 7 },
           checklist: [],
           education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+          workflowStatus: 'needs_review',
+          nextStep: { code: 'refresh_data' },
         },
       });
       
@@ -212,6 +218,8 @@ describe('screener viewModel', () => {
           costs: { commissionEstimate: 2, fxEstimate: 0, slippageEstimate: 5, totalCost: 7 },
           checklist: [],
           education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+          workflowStatus: 'needs_review',
+          nextStep: { code: 'refresh_data' },
         },
       });
       
@@ -237,6 +245,8 @@ describe('screener viewModel', () => {
           costs: { commissionEstimate: 2, fxEstimate: 0, slippageEstimate: 5, totalCost: 7 },
           checklist: [],
           education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: ['Fix 1'] },
+          workflowStatus: 'needs_review',
+          nextStep: { code: 'refresh_data' },
         },
       });
       

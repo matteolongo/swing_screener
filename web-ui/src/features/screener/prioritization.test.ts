@@ -42,6 +42,8 @@ function buildCandidate(
           costs: { commissionEstimate: 1, fxEstimate: 0, slippageEstimate: 1, totalCost: 2 },
           checklist: [],
           education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+          workflowStatus: 'needs_review',
+          nextStep: { code: 'refresh_data' },
         }
       : undefined,
     decisionSummary: {
