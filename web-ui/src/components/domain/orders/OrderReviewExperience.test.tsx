@@ -106,6 +106,21 @@ const waitingRecommendation: Recommendation = {
 };
 
 describe('OrderReviewExperience — execution readiness', () => {
+  it('keeps the no-candidate manual-order path usable', async () => {
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext({ recommendation: undefined, suggestedOrderType: 'BUY_LIMIT' })}
+        risk={risk}
+        defaultNotes=""
+        showManualOrderHint
+        onSubmitOrder={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(t('workspacePage.panels.analysis.manualOrderHint'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('order.candidateModal.createAction') })).toBeEnabled();
+  });
+
   it('keeps candidate review locked when gate re-derivation cannot override workflowStatus', async () => {
     const needsReviewRecommendation: Recommendation = {
       ...waitingRecommendation,

@@ -170,18 +170,19 @@ export default function SymbolAnalysisContent({
       && candidate.recommendation?.workflowStatus === 'ready',
   );
   const candidateCanReviewOrder = !candidate || candidate.recommendation?.workflowStatus === 'ready';
+  const canReviewOrder = heldMode ? canAddOn : candidateCanReviewOrder;
 
   useEffect(() => {
-    if (activeTab === 'order' && heldMode && !canAddOn) {
+    if (activeTab === 'order' && !canReviewOrder) {
       onTabChange('overview');
     }
-  }, [activeTab, heldMode, canAddOn, onTabChange]);
+  }, [activeTab, canReviewOrder, onTabChange]);
 
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
-    ...((!heldMode && candidateCanReviewOrder) || (heldMode && canAddOn)
+    ...(canReviewOrder
       ? [{ id: 'order' as const, label: t('workspacePage.panels.analysis.tabs.order') }]
       : []),
     { id: 'backtest', label: t('workspacePage.panels.analysis.tabs.backtest') },
@@ -262,7 +263,7 @@ export default function SymbolAnalysisContent({
           ticker={ticker}
           candidate={candidate}
           position={position}
-          onPrepareOrder={() => onTabChange('order')}
+          onPrepareOrder={canReviewOrder ? () => onTabChange('order') : undefined}
           isWatched={isWatched}
           isPendingWatch={isWatchPending}
           onWatch={handleWatch}

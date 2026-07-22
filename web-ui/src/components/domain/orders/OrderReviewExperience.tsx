@@ -116,9 +116,11 @@ export default function OrderReviewExperience({
   const decisionGates = context.recommendation?.decisionGates;
   const workflow = getWorkflowPresentation(context.recommendation);
   const decisionReady = Boolean(
-    context.recommendation?.workflowStatus === 'ready'
+    !context.recommendation || (
+      context.recommendation.workflowStatus === 'ready'
       && context.dataStatus === 'current'
-      && context.dataAsOf,
+      && context.dataAsOf
+    ),
   );
   const currency = context.currency ?? 'USD';
   const knownCurrentPrice =
@@ -169,7 +171,7 @@ export default function OrderReviewExperience({
   const stopPrice = form.watch('stopPrice') ?? 0;
   const hasOrderTypeMismatch = hasSuggestedOrderType && orderType !== normalizedSuggestedOrderType;
   const needsOverrideConfirmation = hasOrderTypeMismatch || (hasSkipSuggestion && workflow.status !== 'ready');
-  const apiApprovalMissing = !isLocalPersistenceMode() && !context.approvalToken;
+  const apiApprovalMissing = !isLocalPersistenceMode() && Boolean(context.recommendation) && !context.approvalToken;
   const apiOrderTypeMismatch = !isLocalPersistenceMode() && hasOrderTypeMismatch;
   const invalidBuyStopPrice = orderType === 'BUY_STOP' && knownCurrentPrice != null && limitPrice <= knownCurrentPrice;
   const triggerPriceLabel =

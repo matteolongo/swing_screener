@@ -49,6 +49,54 @@ describe('SymbolAnalysisContent held mode', () => {
   });
 });
 
+function buyNowCandidate(workflowStatus: 'ready' | 'no_setup') {
+  return {
+    ticker: 'AAPL', currency: 'USD', entry: 200, stop: 190,
+    recommendation: {
+      workflowStatus,
+      nextStep: workflowStatus === 'ready' ? { code: 'review_order' } : { code: 'observe' },
+    },
+    decisionSummary: {
+      symbol: 'AAPL', action: 'BUY_NOW', conviction: 'high', technicalLabel: 'strong',
+      fundamentalsLabel: 'strong', valuationLabel: 'fair', catalystLabel: 'active',
+      whyNow: '', whatToDo: '', mainRisk: '',
+      tradePlan: { entry: 200, stop: 190, target: 220, rr: 2 },
+      drivers: { positives: [], negatives: [], warnings: [] },
+      valuationContext: { method: 'not_available', summary: '' },
+    },
+  } as any;
+}
+
+function CandidateOrderHarness({ workflowStatus }: { workflowStatus: 'ready' | 'no_setup' }) {
+  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
+  return (
+    <SymbolAnalysisContent
+      ticker="AAPL"
+      candidate={buyNowCandidate(workflowStatus)}
+      position={null}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      orderPanel={<div>order panel</div>}
+    />
+  );
+}
+
+describe('SymbolAnalysisContent candidate order transition', () => {
+  it('does not open the order panel from a BUY_NOW opinion without ready workflow status', () => {
+    renderWithProviders(<CandidateOrderHarness workflowStatus="no_setup" />);
+
+    expect(screen.queryByRole('button', { name: /prepare order/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('order panel')).not.toBeInTheDocument();
+  });
+
+  it('opens the order panel from a canonical ready candidate', async () => {
+    renderWithProviders(<CandidateOrderHarness workflowStatus="ready" />);
+
+    await userEvent.click(screen.getByRole('button', { name: /prepare order/i }));
+    expect(screen.getByText('order panel')).toBeInTheDocument();
+  });
+});
+
 function SymbolAnalysisHarness() {
   const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
   return (

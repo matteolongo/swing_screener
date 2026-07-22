@@ -56,6 +56,48 @@ describe('AnalysisDecisionStrip — % to target cell', () => {
   });
 });
 
+describe('AnalysisDecisionStrip — order preparation authority', () => {
+  const buyNowSummary = {
+    symbol: 'AAPL', action: 'BUY_NOW' as const, conviction: 'high' as const,
+    technicalLabel: 'strong' as const, fundamentalsLabel: 'strong' as const,
+    valuationLabel: 'fair' as const, catalystLabel: 'active' as const,
+    whyNow: '', whatToDo: '', mainRisk: '',
+    tradePlan: { entry: 200, stop: 190, target: 220, rr: 2 },
+    drivers: { positives: [], negatives: [], warnings: [] },
+    valuationContext: { method: 'not_available' as const, summary: '' },
+  };
+
+  it('does not expose Prepare order for a BUY_NOW opinion without ready workflow status', () => {
+    render(
+      <AnalysisDecisionStrip
+        ticker="AAPL"
+        candidate={buildCandidate({
+          decisionSummary: buyNowSummary,
+          recommendation: { workflowStatus: 'no_setup', nextStep: { code: 'observe' } } as any,
+        })}
+        onPrepareOrder={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /prepare order/i })).not.toBeInTheDocument();
+  });
+
+  it('exposes Prepare order for a canonical ready candidate', () => {
+    render(
+      <AnalysisDecisionStrip
+        ticker="AAPL"
+        candidate={buildCandidate({
+          decisionSummary: buyNowSummary,
+          recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } } as any,
+        })}
+        onPrepareOrder={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /prepare order/i })).toBeInTheDocument();
+  });
+});
+
 describe('AnalysisDecisionStrip — Risk % cell', () => {
   it('shows dash when riskPct is 0', () => {
     const candidate = buildCandidate({
@@ -67,6 +109,8 @@ describe('AnalysisDecisionStrip — Risk % cell', () => {
         costs: { commissionEstimate: 1, fxEstimate: 0, slippageEstimate: 0, totalCost: 1 },
         checklist: [],
         education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+        workflowStatus: 'ready',
+        nextStep: { code: 'review_order' },
       },
     });
 
@@ -88,6 +132,8 @@ describe('AnalysisDecisionStrip — Risk % cell', () => {
         costs: { commissionEstimate: 1, fxEstimate: 0, slippageEstimate: 0, totalCost: 1 },
         checklist: [],
         education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+        workflowStatus: 'ready',
+        nextStep: { code: 'review_order' },
       },
     });
 

@@ -89,6 +89,7 @@ export default function AnalysisDecisionStrip({
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
   const heldMode = Boolean(position);
+  const canPrepareOrder = candidate?.recommendation?.workflowStatus === 'ready';
   const closeEntry = heldMode
     ? position!.entryPrice
     : (summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null);
@@ -184,7 +185,7 @@ export default function AnalysisDecisionStrip({
           {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
         </div>
 
-        {summary?.action === 'BUY_NOW' && onPrepareOrder && (
+        {canPrepareOrder && summary?.action === 'BUY_NOW' && onPrepareOrder && (
           <div className="flex justify-end">
             <button
               type="button"
