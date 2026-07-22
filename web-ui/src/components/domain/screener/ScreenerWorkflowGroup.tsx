@@ -21,12 +21,10 @@ export default function ScreenerWorkflowGroup({ presentation, count, defaultOpen
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-surface">
       <details open={defaultOpen}>
-        <summary className="flex cursor-pointer list-none items-center gap-3 bg-foreground/5 px-4 py-3">
+        <summary className="relative flex cursor-pointer list-none items-center gap-3 bg-foreground/5 px-4 py-3">
           <span className={cn('h-2.5 w-2.5 rounded-full', DOT_STYLES[presentation.tone])} />
-          <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-foreground">{t(presentation.groupTitleKey)}</h3>
-            <span className="text-xs text-muted">{t(presentation.groupDescriptionKey)}</span>
-          </div>
+          <h3 className="min-w-0 flex-1 text-sm font-semibold text-foreground">{t(presentation.groupTitleKey)}</h3>
+          <span className="absolute bottom-1 left-9 text-xs text-muted">{t(presentation.groupDescriptionKey)}</span>
           <span className="rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-semibold text-muted">{count}</span>
         </summary>
         {children}

@@ -130,6 +130,10 @@ describe('ScreenerCandidatesTable', () => {
     expect(screen.getByRole('button', { name: t('screener.table.reviewOrderAction') })).toBeEnabled();
     expect(screen.getAllByRole('button', { name: t('screener.table.reviewOrderAction') })).toHaveLength(1);
 
+    const readyHeading = screen.getByRole('heading', { name: t('screener.workflowGroups.ready.title') });
+    expect(readyHeading.parentElement?.tagName).toBe('SUMMARY');
+    expect(readyHeading.closest('summary')?.querySelector('div')).toBeNull();
+
     const noSetupGroup = screen.getByRole('heading', { name: t('screener.workflowGroups.noSetup.title') }).closest('section');
     expect(noSetupGroup).toContainElement(screen.getByText('NOSETUP'));
     expect(noSetupGroup?.querySelector('details')).not.toHaveAttribute('open');
