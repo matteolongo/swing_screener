@@ -101,9 +101,71 @@ const waitingRecommendation: Recommendation = {
     whatToLearn: '',
     whatWouldMakeValid: [],
   },
+  workflowStatus: 'waiting_trigger',
+  nextStep: { code: 'wait_pullback', triggerPrice: 20, currency: 'USD' },
 };
 
 describe('OrderReviewExperience — execution readiness', () => {
+  it('keeps candidate review locked when gate re-derivation cannot override workflowStatus', async () => {
+    const needsReviewRecommendation: Recommendation = {
+      ...waitingRecommendation,
+      verdict: 'RECOMMENDED',
+      workflowStatus: 'needs_review',
+      nextStep: { code: 'define_target' },
+      decisionGates: {
+        ...waitingRecommendation.decisionGates!,
+        trigger: { status: 'PASS', explanation: 'Triggered.' },
+        readyToOrder: true,
+      },
+    };
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext({ recommendation: needsReviewRecommendation, dataStatus: 'current', dataAsOf: '2026-07-21' })}
+        risk={risk}
+        defaultNotes=""
+        enforceRecommendation
+        onSubmitOrder={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('button', {
+      name: t('order.candidateModal.createAction'),
+    })).toBeDisabled();
+  });
+
+  it('allows a canonical ready recommendation with current data to proceed to review', async () => {
+    const readyRecommendation: Recommendation = {
+      ...waitingRecommendation,
+      verdict: 'RECOMMENDED',
+      workflowStatus: 'ready',
+      nextStep: { code: 'review_order' },
+      decisionGates: {
+        ...waitingRecommendation.decisionGates!,
+        trigger: { status: 'PASS', explanation: 'Triggered.' },
+        readyToOrder: true,
+      },
+    };
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext({
+          recommendation: readyRecommendation,
+          dataStatus: 'current',
+          dataAsOf: '2026-07-21',
+          approvalToken: 'approved-token',
+          suggestedOrderType: 'BUY_LIMIT',
+        })}
+        risk={risk}
+        defaultNotes=""
+        enforceRecommendation
+        onSubmitOrder={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('button', {
+      name: t('order.candidateModal.createAction'),
+    })).toBeEnabled();
+  });
+
   it('presents a qualified conditional setup as waiting while keeping creation locked', async () => {
     renderWithProviders(
       <OrderReviewExperience
@@ -120,13 +182,13 @@ describe('OrderReviewExperience — execution readiness', () => {
     );
 
     const readinessBadge = await screen.findByText(
-      t('recommendation.readiness.WAITING_FOR_TRIGGER'),
+      t('recommendation.workflow.status.waitingTrigger'),
     );
     const summaryCard = readinessBadge.closest('.rounded-xl');
     expect(summaryCard).toHaveClass('border-warning/40', 'bg-warning/10');
     expect(screen.getAllByText(
       t('order.candidateModal.executionNotReady', {
-        status: t('recommendation.readiness.WAITING_FOR_TRIGGER'),
+        status: t('recommendation.workflow.status.waitingTrigger'),
       }),
     ).length).toBeGreaterThan(0);
     expect(screen.getByText((_, node) => (

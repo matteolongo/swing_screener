@@ -2,7 +2,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import { formatNumber, getSignColorClass } from '@/utils/formatters';
-import { formatDecisionAction } from '@/features/screener/decisionSummary';
+import { formatWorkflowNextStep, getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
 import { useEarningsProximity } from '@/features/portfolio/hooks';
 import type {
@@ -277,12 +277,19 @@ export interface CandidateItemProps {
   isFocused?: boolean;
 }
 
-// Primary badge: the action to take today (Buy on Pullback / Watch / ...).
+const WORKFLOW_BADGE_STYLES = {
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/10 text-warning',
+  danger: 'bg-danger/10 text-danger',
+  neutral: 'bg-foreground/5 text-muted',
+} as const;
+
+// Primary badge: the canonical workflow next step.
 function candidateActionBadge(item: DailyReviewCandidate) {
-  const action = item.decisionSummary?.action;
+  const workflow = getWorkflowPresentation(item.recommendation);
   return (
-    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-      {action ? formatDecisionAction(action) : item.signal}
+    <span className={cn('text-xs font-medium px-1.5 py-0.5 rounded', WORKFLOW_BADGE_STYLES[workflow.tone])}>
+      {formatWorkflowNextStep(item.recommendation?.nextStep)}
     </span>
   );
 }

@@ -45,13 +45,6 @@ function resolveSameSymbolContext(
   return candidate?.sameSymbol;
 }
 
-function signalFromAction(action?: string | null): string | null {
-  const normalized = String(action ?? '').toLowerCase();
-  if (normalized === 'buy_on_pullback') return 'pullback';
-  if (normalized === 'buy_now' || normalized === 'wait_for_breakout') return 'breakout';
-  return null;
-}
-
 function buildDefaultNotes(
   candidate: SymbolAnalysisCandidate | null,
   sameSymbol: SameSymbolCandidateContext | undefined,
@@ -110,7 +103,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
 
   const context: OrderReviewContext = {
     ticker: normalizedTicker,
-    signal: candidate?.signal ?? signalFromAction(candidate?.decisionSummary?.action) ?? undefined,
+    signal: candidate?.signal,
     close: candidate?.close,
     entry: candidate?.entry,
     stop: sameSymbol?.mode === 'ADD_ON' && sameSymbol.executionStop != null ? sameSymbol.executionStop : candidate?.stop,

@@ -21,8 +21,6 @@ interface ManagePositionPanelProps {
   candidate?: SymbolAnalysisCandidate | null;
 }
 
-const ENTRY_ACTIONS = new Set(['BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT']);
-
 type ModalKind = 'stop' | 'scaleOut' | 'exit' | null;
 
 export default function ManagePositionPanel({ position, candidate }: ManagePositionPanelProps) {
@@ -36,7 +34,10 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
   const stopPreview = usePositionStopPreviewQuery(positionId, null, checkLive);
 
   const setActiveTab = useWorkspaceStore((state) => state.setAnalysisTab);
-  const canAdd = ENTRY_ACTIONS.has(candidate?.decisionSummary?.action ?? '');
+  const canAdd = Boolean(
+    candidate?.sameSymbol?.mode === 'ADD_ON'
+      && candidate.recommendation?.workflowStatus === 'ready',
+  );
 
   const displayedR = checkLive && stopPreview.data ? stopPreview.data.rNow : position.rNow;
   const rSign = displayedR >= 0 ? '+' : '';

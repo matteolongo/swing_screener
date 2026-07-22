@@ -28,7 +28,7 @@ import type { RiskConfig } from '@/types/config';
 import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
-import { deriveExecutionReadiness } from '@/components/domain/recommendation/readiness';
+import { getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 
 export type OrderReviewRiskConfig = Pick<
   RiskConfig,
@@ -113,14 +113,10 @@ export default function OrderReviewExperience({
       ? Math.floor((risk.accountSize * risk.maxPositionPct) / suggestedEntry)
       : rawSuggestedShares;
   const suggestedShares = Math.max(1, Math.min(rawSuggestedShares, maxSharesByPositionCap));
-  const verdict = context.recommendation?.verdict ?? 'UNKNOWN';
-  const isRecommended = verdict === 'RECOMMENDED';
   const decisionGates = context.recommendation?.decisionGates;
-  const readiness = deriveExecutionReadiness(decisionGates, verdict);
+  const workflow = getWorkflowPresentation(context.recommendation);
   const decisionReady = Boolean(
-    decisionGates?.setup.status === 'PASS'
-      && decisionGates.trigger.status === 'PASS'
-      && decisionGates.plan.status === 'PASS'
+    context.recommendation?.workflowStatus === 'ready'
       && context.dataStatus === 'current'
       && context.dataAsOf,
   );
@@ -172,7 +168,7 @@ export default function OrderReviewExperience({
   const limitPrice = form.watch('limitPrice') ?? 0;
   const stopPrice = form.watch('stopPrice') ?? 0;
   const hasOrderTypeMismatch = hasSuggestedOrderType && orderType !== normalizedSuggestedOrderType;
-  const needsOverrideConfirmation = hasOrderTypeMismatch || (hasSkipSuggestion && !isRecommended);
+  const needsOverrideConfirmation = hasOrderTypeMismatch || (hasSkipSuggestion && workflow.status !== 'ready');
   const apiApprovalMissing = !isLocalPersistenceMode() && !context.approvalToken;
   const apiOrderTypeMismatch = !isLocalPersistenceMode() && hasOrderTypeMismatch;
   const invalidBuyStopPrice = orderType === 'BUY_STOP' && knownCurrentPrice != null && limitPrice <= knownCurrentPrice;
@@ -205,9 +201,9 @@ export default function OrderReviewExperience({
 
   const warnings = useMemo(() => {
     const nextWarnings: string[] = [];
-    if (enforceRecommendation && verdict === 'NOT_RECOMMENDED') {
+    if (enforceRecommendation && workflow.status !== 'ready') {
       nextWarnings.push(t('order.candidateModal.executionNotReady', {
-        status: t(readiness.labelKey),
+        status: t(workflow.labelKey),
       }));
     }
     if (hasSkipSuggestion) {
@@ -231,7 +227,7 @@ export default function OrderReviewExperience({
       }
     }
     return nextWarnings;
-  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, readiness.labelKey, verdict,
+  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, workflow.labelKey, workflow.status,
       context.avgDailyVolumeEur, quantity, limitPrice]);
   const invalidationRules = context.recommendation?.thesis?.invalidationRules ?? [];
   const hardInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'hard');
@@ -253,7 +249,7 @@ export default function OrderReviewExperience({
     setSubmissionError(null);
     setSubmitSucceeded(false);
 
-    if (enforceRecommendation && !isRecommended) {
+    if (enforceRecommendation && workflow.status !== 'ready') {
       setSubmissionError(t('order.candidateModal.notRecommended'));
       return;
     }
@@ -348,8 +344,7 @@ export default function OrderReviewExperience({
         activeSection={activeSection}
         onSectionChange={setActiveSection}
         recommendation={context.recommendation}
-        verdict={verdict}
-        readiness={readiness}
+        workflow={workflow}
         showManualOrderHint={showManualOrderHint}
         knownCurrentPrice={knownCurrentPrice}
         currency={currency}
@@ -589,7 +584,6 @@ export default function OrderReviewExperience({
                       isSubmitting ||
                       invalidBuyStopPrice ||
                       (needsOverrideConfirmation && !overrideConfirmed) ||
-                      (enforceRecommendation && !isRecommended) ||
                       !decisionReady
                       || apiApprovalMissing
                       || apiOrderTypeMismatch

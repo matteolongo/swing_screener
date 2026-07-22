@@ -165,9 +165,11 @@ export default function SymbolAnalysisContent({
   }, [ticker, position, candidate, computeAnalysisMutation]);
 
   const heldMode = Boolean(position);
-  const canAddOn = ['BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT'].includes(
-    candidate?.decisionSummary?.action ?? '',
+  const canAddOn = Boolean(
+    candidate?.sameSymbol?.mode === 'ADD_ON'
+      && candidate.recommendation?.workflowStatus === 'ready',
   );
+  const candidateCanReviewOrder = !candidate || candidate.recommendation?.workflowStatus === 'ready';
 
   useEffect(() => {
     if (activeTab === 'order' && heldMode && !canAddOn) {
@@ -179,7 +181,7 @@ export default function SymbolAnalysisContent({
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
-    ...(!heldMode || canAddOn
+    ...((!heldMode && candidateCanReviewOrder) || (heldMode && canAddOn)
       ? [{ id: 'order' as const, label: t('workspacePage.panels.analysis.tabs.order') }]
       : []),
     { id: 'backtest', label: t('workspacePage.panels.analysis.tabs.backtest') },

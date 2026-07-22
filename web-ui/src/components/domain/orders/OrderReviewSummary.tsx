@@ -6,21 +6,19 @@ import type {
   InvalidationRule,
   Recommendation,
   RecommendationRisk,
-  RecommendationVerdict,
   TradeThesis,
 } from '@/types/recommendation';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import { EmptySection, MetricTile, REVIEW_SECTIONS, type ReviewSectionId } from './orderReviewHelpers';
-import type { ExecutionReadinessPresentation } from '@/components/domain/recommendation/readiness';
+import type { WorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 
 interface OrderReviewSummaryProps {
   activeSection: ReviewSectionId;
   onSectionChange: (section: ReviewSectionId) => void;
   recommendation?: Recommendation;
-  verdict: RecommendationVerdict | 'UNKNOWN';
-  readiness: ExecutionReadinessPresentation;
+  workflow: WorkflowPresentation;
   showManualOrderHint: boolean;
   knownCurrentPrice: number | null;
   currency: string;
@@ -43,8 +41,7 @@ export default function OrderReviewSummary({
   activeSection,
   onSectionChange,
   recommendation,
-  verdict,
-  readiness,
+  workflow,
   showManualOrderHint,
   knownCurrentPrice,
   currency,
@@ -139,19 +136,16 @@ export default function OrderReviewSummary({
               {recommendation ? (
                 <div className={cn(
                   'rounded-xl border p-4',
-                  readiness.tone === 'success'
+                  workflow.tone === 'success'
                     ? 'border-success/40 bg-success/10'
-                    : readiness.tone === 'warning'
+                    : workflow.tone === 'warning'
                       ? 'border-warning/40 bg-warning/10'
-                      : readiness.tone === 'danger'
+                      : workflow.tone === 'danger'
                         ? 'border-danger/40 bg-danger/10'
                         : 'border-border bg-foreground/5',
                 )}>
                   <div className="flex flex-wrap items-center gap-2">
-                    <RecommendationBadge
-                      verdict={verdict}
-                      decisionGates={recommendation.decisionGates}
-                    />
+                    <RecommendationBadge recommendation={recommendation} />
                     <span className="text-sm text-muted">{t('recommendation.summary')}</span>
                   </div>
                   {recommendation.reasonsShort.length ? (
