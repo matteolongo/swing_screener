@@ -2,55 +2,41 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import { t } from '@/i18n/t';
-import type { DecisionGateState } from '@/types/recommendation';
+import type { Recommendation, WorkflowStatus } from '@/types/recommendation';
 
-const waitingGates: DecisionGateState = {
-  setup: { status: 'PASS', explanation: 'Setup qualifies.' },
-  trigger: { status: 'WAIT', explanation: 'Waiting for pullback.' },
-  plan: { status: 'PASS', explanation: 'Plan reconciles.' },
-  portfolio: { status: 'UNKNOWN', explanation: 'Checked during order review.' },
-  readyToOrder: false,
-};
+const recommendation = (workflowStatus: WorkflowStatus): Pick<Recommendation, 'workflowStatus' | 'nextStep'> => ({
+  workflowStatus,
+  nextStep: { code: workflowStatus === 'ready' ? 'review_order' : 'observe' },
+});
 
 describe('RecommendationBadge', () => {
-  it('shows ready-for-review label for a legacy RECOMMENDED verdict', () => {
-    render(<RecommendationBadge verdict="RECOMMENDED" />);
-    expect(screen.getByText(t('recommendation.readiness.READY_FOR_REVIEW'))).toBeInTheDocument();
+  it.each([
+    ['ready', 'recommendation.workflow.status.ready'],
+    ['waiting_trigger', 'recommendation.workflow.status.waitingTrigger'],
+    ['needs_review', 'recommendation.workflow.status.needsReview'],
+    ['no_setup', 'recommendation.workflow.status.noSetup'],
+  ] as const)('shows the workflow label for %s', (status, labelKey) => {
+    render(<RecommendationBadge recommendation={recommendation(status)} />);
+
+    expect(screen.getByText(t(labelKey))).toBeInTheDocument();
   });
 
-  it('shows not-ready label for a legacy NOT_RECOMMENDED verdict', () => {
-    render(<RecommendationBadge verdict="NOT_RECOMMENDED" />);
-    expect(screen.getByText(t('recommendation.readiness.NOT_READY'))).toBeInTheDocument();
-  });
-
-  it('shows unknown-readiness label for UNKNOWN verdict', () => {
-    render(<RecommendationBadge verdict="UNKNOWN" />);
-    expect(screen.getByText(t('recommendation.readiness.UNKNOWN'))).toBeInTheDocument();
-  });
-
-  it('shows unknown-readiness label when no verdict is provided', () => {
+  it('falls back to needs review when no recommendation is provided', () => {
     render(<RecommendationBadge />);
-    expect(screen.getByText(t('recommendation.readiness.UNKNOWN'))).toBeInTheDocument();
-  });
 
-  it('shows waiting-for-trigger when a qualified conditional setup is not executable', () => {
-    render(
-      <RecommendationBadge
-        verdict="NOT_RECOMMENDED"
-        decisionGates={waitingGates}
-      />,
-    );
-    expect(screen.getByText(t('recommendation.readiness.WAITING_FOR_TRIGGER'))).toBeInTheDocument();
-    expect(screen.queryByText(t('recommendation.verdict.NOT_RECOMMENDED'))).not.toBeInTheDocument();
+    expect(screen.getByText(t('recommendation.workflow.status.needsReview'))).toBeInTheDocument();
+    expect(screen.queryByText(t('recommendation.workflow.status.ready'))).not.toBeInTheDocument();
   });
 
   it('does not show explanation text by default', () => {
-    render(<RecommendationBadge verdict="RECOMMENDED" />);
+    render(<RecommendationBadge recommendation={recommendation('ready')} />);
+
     expect(screen.queryByText(t('recommendation.setupQualityExplanation'))).not.toBeInTheDocument();
   });
 
   it('shows explanation text when showExplanation prop is true', () => {
-    render(<RecommendationBadge verdict="RECOMMENDED" showExplanation />);
+    render(<RecommendationBadge recommendation={recommendation('ready')} showExplanation />);
+
     expect(screen.getByText(t('recommendation.setupQualityExplanation'))).toBeInTheDocument();
   });
 });

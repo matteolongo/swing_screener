@@ -84,6 +84,24 @@ export const messagesEn = {
     closeAria: 'Close modal',
   },
   recommendation: {
+    workflow: {
+      status: {
+        ready: 'Ready for order review',
+        waitingTrigger: 'Waiting for trigger',
+        needsReview: 'Needs review',
+        noSetup: 'Interesting, no setup',
+      },
+      nextStep: {
+        review_order: 'Review the proposed order',
+        wait_pullback: 'Wait for a pullback to {{price}}',
+        wait_breakout_close: 'Wait for a close above {{price}}',
+        define_target: 'Define a valid target',
+        refresh_data: 'Refresh the candidate data',
+        fix_stop: 'Correct the stop level',
+        inspect_gate_conflict: 'Review the conflicting setup data',
+        observe: 'Observe — no setup today',
+      },
+    },
     readiness: {
       READY_FOR_REVIEW: 'Ready for order review',
       WAITING_FOR_TRIGGER: 'Waiting for trigger',
@@ -1389,6 +1407,24 @@ export const messagesEn = {
     },
   },
   screener: {
+    workflowGroups: {
+      ready: {
+        title: 'Ready for order review',
+        description: 'Candidates with a complete execution plan.',
+      },
+      waitingTrigger: {
+        title: 'Waiting for trigger',
+        description: 'Candidates that need their entry condition to occur.',
+      },
+      needsReview: {
+        title: 'Needs review',
+        description: 'Candidates that need data or plan review before action.',
+      },
+      noSetup: {
+        title: 'Interesting, no setup',
+        description: 'Candidates worth observing without an actionable setup.',
+      },
+    },
     header: {
       title: 'Screener',
       description: 'Find swing trade candidates based on momentum and relative strength',

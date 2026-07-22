@@ -1,6 +1,28 @@
 export type RecommendationVerdict = 'RECOMMENDED' | 'NOT_RECOMMENDED';
 export type RecommendationSeverity = 'info' | 'warn' | 'block';
 export type DecisionGateStatus = 'PASS' | 'WAIT' | 'BLOCK' | 'UNKNOWN';
+export type WorkflowStatus = 'ready' | 'waiting_trigger' | 'needs_review' | 'no_setup';
+export type NextStepCode =
+  | 'review_order'
+  | 'wait_pullback'
+  | 'wait_breakout_close'
+  | 'define_target'
+  | 'refresh_data'
+  | 'fix_stop'
+  | 'inspect_gate_conflict'
+  | 'observe';
+
+export interface WorkflowNextStep {
+  code: NextStepCode;
+  triggerPrice?: number;
+  currency?: string;
+}
+
+export interface WorkflowNextStepAPI {
+  code: NextStepCode;
+  trigger_price?: number | null;
+  currency?: string | null;
+}
 
 export interface DecisionGate {
   status: DecisionGateStatus;
@@ -150,6 +172,8 @@ export interface Recommendation {
   checklist: ChecklistGate[];
   decisionGates?: DecisionGateState;
   education: RecommendationEducation;
+  workflowStatus: WorkflowStatus;
+  nextStep: WorkflowNextStep;
   thesis?: TradeThesis;
 }
 
@@ -212,6 +236,8 @@ export interface RecommendationAPI {
     ready_to_order: boolean;
   };
   education: RecommendationEducationAPI;
+  workflow_status?: WorkflowStatus;
+  next_step?: WorkflowNextStepAPI;
   thesis?: any;  // Thesis comes as dict from backend
 }
 
@@ -264,6 +290,14 @@ export function transformRecommendation(api: RecommendationAPI): Recommendation 
       whatToLearn: api.education.what_to_learn,
       whatWouldMakeValid: api.education.what_would_make_valid ?? [],
     },
+    workflowStatus: api.workflow_status ?? 'needs_review',
+    nextStep: api.next_step
+      ? {
+          code: api.next_step.code,
+          triggerPrice: api.next_step.trigger_price ?? undefined,
+          currency: api.next_step.currency ?? undefined,
+        }
+      : { code: 'refresh_data' },
     thesis: api.thesis ? transformThesis(api.thesis) : undefined,
   };
 }
