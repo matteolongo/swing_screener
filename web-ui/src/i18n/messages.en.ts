@@ -1410,19 +1410,19 @@ export const messagesEn = {
     workflowGroups: {
       ready: {
         title: 'Ready for order review',
-        description: 'Candidates with a complete execution plan.',
+        description: 'Setup, trigger, and plan pass. Manual confirmation is still required.',
       },
       waitingTrigger: {
         title: 'Waiting for trigger',
-        description: 'Candidates that need their entry condition to occur.',
+        description: 'The setup is valid, but the entry condition has not happened yet.',
       },
       needsReview: {
         title: 'Needs review',
-        description: 'Candidates that need data or plan review before action.',
+        description: 'Resolve the stated problem before this candidate can advance.',
       },
       noSetup: {
         title: 'Interesting, no setup',
-        description: 'Candidates worth observing without an actionable setup.',
+        description: 'Useful context may exist, but there is no executable setup today.',
       },
     },
     header: {
@@ -1608,6 +1608,7 @@ export const messagesEn = {
         lastBar: 'Last Bar',
         signalConfidence: 'Signal Confidence',
         signal: 'Signal',
+        nextAction: 'Next action',
         close: 'Close',
         relativeSixMonth: '6M vs {{benchmark}}',
         rr: 'R:R',
@@ -1633,6 +1634,14 @@ export const messagesEn = {
       executionReadinessTitle: 'Execution readiness: {{status}}',
       createOrderAction: 'Create Order',
       addOnAction: 'Add On',
+      reviewOrderAction: 'Review order',
+      openDetailsAction: 'Open details',
+      openVerificationAction: 'Open verification',
+      viewContextAction: 'View context',
+      setupType: {
+        pullback: 'Setup: Pullback',
+        breakout: 'Setup: Breakout',
+      },
       expandRow: 'Expand details',
       collapseRow: 'Collapse details',
       expandRowAria: 'Expand details for {{ticker}}',
