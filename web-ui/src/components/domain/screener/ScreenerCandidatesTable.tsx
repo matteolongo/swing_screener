@@ -12,6 +12,7 @@ import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
 import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
+import { deriveExecutionReadiness } from '@/components/domain/recommendation/readiness';
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled decision action: ${value}`);
@@ -87,9 +88,15 @@ export default function ScreenerCandidatesTable({
       ? t('screener.table.addOnAction')
       : t('screener.table.createOrderAction');
 
-  const orderActionTitle = (candidate: ScreenerCandidate, verdict: string) => {
-    if (verdict === 'NOT_RECOMMENDED') {
-      return t('screener.table.createOrderNotRecommendedTitle');
+  const orderActionTitle = (candidate: ScreenerCandidate) => {
+    const readiness = deriveExecutionReadiness(
+      candidate.recommendation?.decisionGates,
+      candidate.recommendation?.verdict ?? 'UNKNOWN',
+    );
+    if (readiness.state !== 'READY_FOR_REVIEW') {
+      return t('screener.table.executionReadinessTitle', {
+        status: t(readiness.labelKey),
+      });
     }
     return candidate.sameSymbol?.mode === 'ADD_ON' || candidate.sameSymbol?.mode === 'MANAGE_ONLY'
       ? t('screener.table.addOnTitle')
@@ -286,7 +293,7 @@ export default function ScreenerCandidatesTable({
                       event.stopPropagation();
                       onCreateOrder(candidate);
                     }}
-                    title={orderActionTitle(candidate, vm.verdict)}
+                    title={orderActionTitle(candidate)}
                   >
                     {orderActionLabel(candidate)}
                   </Button>

@@ -197,7 +197,7 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
                     : 'text-muted hover:bg-foreground/5',
                 )}
               >
-                {t('todayPage.actionList.recommendedFilter')}
+                {t('todayPage.actionList.readyFilter')}
               </button>
               <button
                 type="button"

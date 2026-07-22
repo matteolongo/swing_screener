@@ -109,14 +109,18 @@ Index universes with a `source_adapter` (e.g. the `wikipedia_index_review` indic
 `spain_ibex35`, `europe_eurostoxx50`, `hongkong_hsi`, `korea_kospi200`,
 `china_csi300`) can be rebuilt from source:
 
-```bash
-python -m swing_screener.cli universes refresh --name us_sp500 --apply
+```python
+from swing_screener.data.universe import refresh_package_universe
+
+refresh_package_universe("us_sp500", apply=True)
 ```
 
-`--apply` writes the snapshot and appends any newly enriched symbols to
-`data/intelligence/instrument_master.json` (append-only, never overwrites). Omit
-`--apply` for a dry-run preview. Symbols yfinance cannot resolve are skipped with a
-note rather than failing the whole refresh.
+`apply=True` writes the snapshot and appends any newly enriched symbols to
+`data/intelligence/instrument_master.json` (append-only, never overwrites). Pass
+`apply=False` for a dry-run preview. An applied refresh persists source and review
+metadata even when membership is unchanged; `changed` reports membership changes,
+while `applied` reports whether the snapshot was written. Symbols yfinance cannot
+resolve are skipped with a note rather than failing the whole refresh.
 
 ## Universe Filtering
 

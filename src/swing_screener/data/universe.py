@@ -486,20 +486,22 @@ def refresh_package_universe(universe_id: str, *, apply: bool = False) -> dict:
     additions = [symbol for symbol in proposed_symbols if symbol not in current_set]
     removals = [symbol for symbol in current_symbols if symbol not in proposed_set]
     changed = current_symbols != proposed_symbols
+    snapshot_changed = current_snapshot != proposed_snapshot
+    applied = apply and snapshot_changed
 
     if apply and getattr(preview, "new_master_records", None):
         _write_instrument_master(preview.new_master_records)
 
-    if apply and changed:
+    if applied:
         _write_snapshot(universe_id, proposed_snapshot)
         current_snapshot = proposed_snapshot
 
     summary = _summary_from_entry(
-        entry, current_snapshot if apply and changed else proposed_snapshot
+        entry, current_snapshot if applied else proposed_snapshot
     )
     return {
         "universe": summary,
-        "applied": apply and changed,
+        "applied": applied,
         "changed": changed,
         "current_member_count": len(current_symbols),
         "proposed_member_count": len(proposed_symbols),

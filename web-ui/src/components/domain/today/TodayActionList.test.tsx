@@ -90,5 +90,8 @@ describe('TodayActionList holdings', () => {
     expect(screen.getByText('PINNED')).toBeInTheDocument();
     expect(screen.queryByText('UNPINNED')).not.toBeInTheDocument();
     expect(screen.getByText(/Opportunities from us_large_cap_equities/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', {
+      name: t('todayPage.actionList.readyFilter'),
+    })).toBeInTheDocument();
   });
 });

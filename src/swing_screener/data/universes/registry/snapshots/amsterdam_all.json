@@ -5,7 +5,7 @@
   "benchmark": "^AEX",
   "source": "euronext_review",
   "source_asof": "2026-03-23",
-  "last_reviewed_at": "2026-04-12",
+  "last_reviewed_at": "2026-07-22",
   "stale_after_days": 100,
   "rules": {
     "exchange_mics": [

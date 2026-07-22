@@ -161,6 +161,57 @@ def test_refresh_apply_merges_new_master_records(monkeypatch, tmp_path):
     assert symbols["AAPL"]["source"] == "manual"
 
 
+def test_refresh_apply_persists_review_metadata_when_membership_is_unchanged(
+    monkeypatch,
+):
+    snapshot = {
+        "id": "amsterdam_aex",
+        "kind": "index",
+        "source_adapter": "euronext_aex_family_review",
+        "source_asof": "2026-03-23",
+        "last_reviewed_at": "2020-01-01",
+        "constituents": [
+            {
+                "symbol": "ASML.AS",
+                "exchange_mic": "XAMS",
+                "currency": "EUR",
+                "source_name": "ASML HOLDING",
+                "source_symbol": "ASML",
+            }
+        ],
+        "rules": {"exchange_mics": ["XAMS"], "currencies": ["EUR"]},
+    }
+    source_result = UniverseSourceResult(
+        source_adapter="euronext_aex_family_review",
+        source_asof="2026-03-23",
+        source_documents=[],
+        notes=[],
+        constituents=list(snapshot["constituents"]),
+    )
+    written: list[dict] = []
+
+    monkeypatch.setattr(universe_mod, "_load_snapshot", lambda _id: dict(snapshot))
+    monkeypatch.setattr(
+        universe_mod,
+        "get_universe_meta",
+        lambda _id: {"id": "amsterdam_aex", "kind": "index"},
+    )
+    monkeypatch.setattr(
+        universe_mod, "refresh_snapshot_from_source", lambda *a, **k: source_result
+    )
+    monkeypatch.setattr(
+        universe_mod, "_write_snapshot", lambda _id, proposed: written.append(proposed)
+    )
+
+    result = universe_mod.refresh_package_universe("amsterdam_aex", apply=True)
+
+    assert result["changed"] is False
+    assert result["applied"] is True
+    assert (
+        written[0]["last_reviewed_at"] == universe_mod.datetime.date.today().isoformat()
+    )
+
+
 def test_materialize_auto_universe_persists_and_loads(monkeypatch, tmp_path):
     from swing_screener.data.auto_universe import (
         AutoUniverseFilter,

@@ -88,6 +88,13 @@ describe('screener viewModel', () => {
             totalCost: 7.0,
           },
           checklist: [],
+          decisionGates: {
+            setup: { status: 'PASS', explanation: 'Setup qualifies.' },
+            trigger: { status: 'PASS', explanation: 'Trigger observed.' },
+            plan: { status: 'PASS', explanation: 'Plan reconciles.' },
+            portfolio: { status: 'UNKNOWN', explanation: 'Checked later.' },
+            readyToOrder: false,
+          },
           education: {
             commonBiasWarning: '',
             whatToLearn: '',
@@ -99,6 +106,7 @@ describe('screener viewModel', () => {
       const vm = toCandidateViewModel(candidate);
       
       expect(vm.verdict).toBe('RECOMMENDED');
+      expect(vm.decisionGates).toBe(candidate.recommendation?.decisionGates);
       expect(vm.entry).toBe(180.0); // from candidate
       expect(vm.stop).toBe(176.0); // from recommendation
       expect(vm.rr).toBe(3.0); // from recommendation

@@ -84,6 +84,16 @@ export const messagesEn = {
     closeAria: 'Close modal',
   },
   recommendation: {
+    readiness: {
+      READY_FOR_REVIEW: 'Ready for order review',
+      WAITING_FOR_TRIGGER: 'Waiting for trigger',
+      PLAN_INCOMPLETE: 'Plan incomplete',
+      PLAN_BLOCKED: 'Plan blocked',
+      TRIGGER_BLOCKED: 'Trigger blocked',
+      NO_SETUP: 'No valid setup',
+      NOT_READY: 'Not ready',
+      UNKNOWN: 'Readiness unknown',
+    },
     verdict: {
       // Beginner-friendly labels (uppercase keys match backend enum values)
       RECOMMENDED: 'Setup passes',
@@ -355,6 +365,7 @@ export const messagesEn = {
       createAction: 'Create Order',
       notRecommended:
         'This setup is not recommended. Review the checklist and fix the issues first.',
+      executionNotReady: 'Execution readiness: {{status}}. Review the decision gates before proceeding.',
       quantityError: 'Quantity must be greater than 0',
       limitError: 'Entry/trigger price must be greater than 0',
       stopError: 'Entry/trigger price must be higher than stop price',
@@ -1396,6 +1407,7 @@ export const messagesEn = {
       refreshTitle: 'Refresh screener data',
       currencySummary: 'Currency: {{value}}',
       recommendedOnly: 'Show recommended only',
+      readyOnly: 'Ready only',
       actionFilter: 'Decision Action',
       allActions: 'All actions',
       showAdvanced: 'Show advanced filters',
@@ -1412,6 +1424,7 @@ export const messagesEn = {
       noOtc: 'No OTC',
       weeklyUptrend: 'Weekly uptrend',
       recommendedOnlyShort: 'Rec. only',
+      readyOnlyShort: 'Ready only',
       excludeOtc: 'Exclude OTC',
       venue: {
         label: 'Venue',
@@ -1581,6 +1594,7 @@ export const messagesEn = {
       createOrderTitle: 'Create Order',
       addOnTitle: 'Create Add-On Order',
       createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
+      executionReadinessTitle: 'Execution readiness: {{status}}',
       createOrderAction: 'Create Order',
       addOnAction: 'Add On',
       expandRow: 'Expand details',
@@ -2711,6 +2725,7 @@ export const messagesEn = {
       sourceRun: 'Opportunities from {{source}} · data as of {{date}}',
       customRun: 'custom screener run',
       recommendedFilter: 'Recommended',
+      readyFilter: 'Ready',
       allSourceCandidates: 'All from run',
       noSourceRun: 'No screener run is selected for Today. Run the screener and keep “Use this run for Today” selected.',
     },

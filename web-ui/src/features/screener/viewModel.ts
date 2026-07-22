@@ -2,6 +2,7 @@
 // Centralizes fallback logic for recommendation vs candidate data
 
 import { SameSymbolCandidateContext, ScreenerCandidate } from './types';
+import type { DecisionGateState } from '@/types/recommendation';
 
 export interface CandidateViewModel {
   ticker: string;
@@ -15,6 +16,7 @@ export interface CandidateViewModel {
   priorityRank: number;
   rawRank: number;
   verdict: 'RECOMMENDED' | 'NOT_RECOMMENDED' | 'UNKNOWN';
+  decisionGates?: DecisionGateState;
   
   // Setup fields (with fallback logic)
   entry: number | null;
@@ -72,6 +74,7 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
     priorityRank: candidate.priorityRank ?? candidate.rank,
     rawRank: candidate.rank,
     verdict,
+    decisionGates: candidate.recommendation?.decisionGates,
     
     // Setup with fallbacks
     entry,

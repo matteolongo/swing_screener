@@ -100,6 +100,13 @@ describe('ScreenerForm - expanded state', () => {
       screen.queryByRole('combobox', { name: t('screener.controls.universe') })
     ).not.toBeInTheDocument();
   });
+
+  it('labels the strict recommendation filter as execution readiness', () => {
+    renderWithProviders(<ScreenerForm {...defaultProps} isCollapsed={false} />);
+    expect(
+      screen.getByLabelText(t('screener.controls.readyOnly')),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('ScreenerForm - forceRefresh', () => {

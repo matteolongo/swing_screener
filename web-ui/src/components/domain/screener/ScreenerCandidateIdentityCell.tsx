@@ -57,7 +57,10 @@ export default function ScreenerCandidateIdentityCell({
         >
           <ExternalLink className="h-3 w-3" />
         </a>
-        <RecommendationBadge verdict={candidate.verdict} />
+        <RecommendationBadge
+          verdict={candidate.verdict}
+          decisionGates={candidate.decisionGates}
+        />
         {streak != null && streak >= 2 ? (
           <span
             className="ml-1 whitespace-nowrap rounded bg-warning/10 px-1 py-0.5 text-[10px] font-bold text-warning"
