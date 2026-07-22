@@ -7,6 +7,12 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Conditional pullback and breakout candidates now show gate-derived execution
+  readiness instead of being mislabeled as failed setups in Last Run and order
+  review.
+
 ## [3.0.0] - Unreleased
 
 ### Added
