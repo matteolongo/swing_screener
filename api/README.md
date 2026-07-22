@@ -144,6 +144,13 @@ Screener (`/api/screener`):
 - `GET /api/screener/run/{job_id}` (poll async screener status/result)
 - `GET /api/screener/recurrence`
 
+Each candidate recommendation exposes additive `workflow_status` and
+`next_step` fields. `workflow_status` is one of `ready`, `waiting_trigger`,
+`needs_review`, or `no_setup`. `next_step` contains a stable `code` and, for
+pullback/breakout waits, `trigger_price` plus `currency`. These fields are the
+canonical execution-workflow authority. `decision_summary.action` remains an
+analytical compatibility field and must not be used to authorize order review.
+
 Symbol pool (`/api/pool`):
 - `GET /api/pool/symbols` — browse the unified pool with taxonomy query params (`region`, `market_cap_tier`, `sector`, `index_memberships`, `instrument_type_detail`, `provider`, `currency`, `exchange_mics`, `liquidity_tier`), paginated (`page`, `page_size`). Returns `{symbols, total, page, page_size}`.
 - `GET /api/pool/review-queue` — symbols flagged after repeated OHLCV fetch failures. Returns `{entries}`.

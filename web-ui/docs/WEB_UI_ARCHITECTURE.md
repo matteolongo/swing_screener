@@ -20,6 +20,10 @@
 ## Contracts
 
 - API payloads arrive as `snake_case`. Transform functions in `src/types/` convert to `camelCase` before use in components. Never use raw API shape inside components.
+- Candidate workflow state is server-authoritative. Components consume
+  transformed `workflowStatus` / `nextStep`; they do not re-derive precedence
+  from decision gates or `decisionSummary.action`. Missing workflow fields fail
+  safely to `needs_review` / `refresh_data` at the API boundary.
 - React Query keys live in `src/lib/queryKeys.ts`. Always use these for cache invalidation — do not construct key arrays inline.
 - All user-facing strings go through `src/i18n/`. No hardcoded copy in components or tests.
 
