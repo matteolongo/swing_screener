@@ -118,7 +118,7 @@ describe('ScreenerCandidatesTable', () => {
       />
     );
 
-    expect(screen.getAllByRole('heading', { level: 3 }).map((node) => node.textContent)).toEqual([
+    expect(screen.getAllByRole('heading', { level: 3 }).map((node) => node.getAttribute('aria-label') ?? node.textContent)).toEqual([
       t('screener.workflowGroups.ready.title'),
       t('screener.workflowGroups.waitingTrigger.title'),
       t('screener.workflowGroups.needsReview.title'),
@@ -131,8 +131,12 @@ describe('ScreenerCandidatesTable', () => {
     expect(screen.getAllByRole('button', { name: t('screener.table.reviewOrderAction') })).toHaveLength(1);
 
     const readyHeading = screen.getByRole('heading', { name: t('screener.workflowGroups.ready.title') });
-    expect(readyHeading.parentElement?.tagName).toBe('SUMMARY');
-    expect(readyHeading.closest('summary')?.querySelector('div')).toBeNull();
+    const readySummary = readyHeading.closest('summary');
+    expect(readyHeading.parentElement).toBe(readySummary);
+    expect(Array.from(readySummary?.children ?? [])).toEqual([readyHeading]);
+    expect(readyHeading).toContainElement(readySummary?.querySelector('[class*="h-2.5"]') ?? null);
+    expect(readyHeading).toContainElement(screen.getByText(t('screener.workflowGroups.ready.description')));
+    expect(Array.from(readyHeading.querySelectorAll('span')).some((node) => node.textContent === '1')).toBe(true);
 
     const noSetupGroup = screen.getByRole('heading', { name: t('screener.workflowGroups.noSetup.title') }).closest('section');
     expect(noSetupGroup).toContainElement(screen.getByText('NOSETUP'));
@@ -150,7 +154,7 @@ describe('ScreenerCandidatesTable', () => {
       />
     );
 
-    expect(screen.getAllByRole('heading', { level: 3 }).map((node) => node.textContent)).toEqual([
+    expect(screen.getAllByRole('heading', { level: 3 }).map((node) => node.getAttribute('aria-label') ?? node.textContent)).toEqual([
       t('screener.workflowGroups.ready.title'),
       t('screener.workflowGroups.waitingTrigger.title'),
       t('screener.workflowGroups.needsReview.title'),
