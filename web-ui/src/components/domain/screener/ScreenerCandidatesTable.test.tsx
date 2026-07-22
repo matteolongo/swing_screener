@@ -135,6 +135,27 @@ describe('ScreenerCandidatesTable', () => {
     expect(noSetupGroup?.querySelector('details')).not.toHaveAttribute('open');
   });
 
+  it('keeps all workflow groups visible when there are no candidates', () => {
+    server.use(http.get('/api/screener/recurrence', () => HttpResponse.json([])));
+
+    renderWithProviders(
+      <ScreenerCandidatesTable
+        candidates={[]}
+        onCreateOrder={vi.fn()}
+        onRecommendationDetails={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole('heading', { level: 3 }).map((node) => node.textContent)).toEqual([
+      t('screener.workflowGroups.ready.title'),
+      t('screener.workflowGroups.waitingTrigger.title'),
+      t('screener.workflowGroups.needsReview.title'),
+      t('screener.workflowGroups.noSetup.title'),
+    ]);
+    const noSetupGroup = screen.getByRole('heading', { name: t('screener.workflowGroups.noSetup.title') }).closest('section');
+    expect(noSetupGroup?.querySelector('details')).not.toHaveAttribute('open');
+  });
+
   it('activates selectable rows with the keyboard', async () => {
     server.use(http.get('/api/screener/recurrence', () => HttpResponse.json([])));
     const onRowClick = vi.fn();

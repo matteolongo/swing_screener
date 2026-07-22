@@ -72,14 +72,6 @@ export default function ScreenerCandidatesTable({
     unwatchSymbolMutation.mutate(ticker);
   };
 
-  if (candidates.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted">
-        {t('screener.table.empty')}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
       {groups.map(({ status, presentation, candidates: groupCandidates }) => (
