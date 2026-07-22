@@ -146,10 +146,13 @@ Screener (`/api/screener`):
 
 Each candidate recommendation exposes additive `workflow_status` and
 `next_step` fields. `workflow_status` is one of `ready`, `waiting_trigger`,
-`needs_review`, or `no_setup`. `next_step` contains a stable `code` and, for
-pullback/breakout waits, `trigger_price` plus `currency`. These fields are the
-canonical execution-workflow authority. `decision_summary.action` remains an
-analytical compatibility field and must not be used to authorize order review.
+`needs_review`, or `no_setup`. `next_step.code` is stable and always one of
+`review_order`, `wait_pullback`, `wait_breakout_close`, `define_target`,
+`refresh_data`, `fix_stop`, `inspect_gate_conflict`, or `observe`. For
+pullback/breakout waits, `next_step` also contains `trigger_price` plus
+`currency`. These fields are the canonical execution-workflow authority.
+`decision_summary.action` remains an analytical compatibility field and must
+not be used to authorize order review.
 
 Symbol pool (`/api/pool`):
 - `GET /api/pool/symbols` — browse the unified pool with taxonomy query params (`region`, `market_cap_tier`, `sector`, `index_memberships`, `instrument_type_detail`, `provider`, `currency`, `exchange_mics`, `liquidity_tier`), paginated (`page`, `page_size`). Returns `{symbols, total, page, page_size}`.
