@@ -69,6 +69,22 @@ describe('DecisionSummaryCard', () => {
     expect(screen.getByText('-6.8%')).toBeInTheDocument();
   });
 
+  it('shows canonical workflow guidance separately from an analytical action', () => {
+    render(
+      <DecisionSummaryCard
+        summary={buildSummary({ action: 'WAIT_FOR_BREAKOUT', whatToDo: 'Wait for a breakout.' })}
+        recommendation={{
+          workflowStatus: 'ready',
+          nextStep: { code: 'review_order' },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Ready for order review')).toBeInTheDocument();
+    expect(screen.getByText('Review the proposed order')).toBeInTheDocument();
+    expect(screen.getByText(/Decision Summary.*Wait for Breakout/)).toBeInTheDocument();
+  });
+
   it('renders unknown catalyst as a neutral data state', () => {
     render(
       <DecisionSummaryCard

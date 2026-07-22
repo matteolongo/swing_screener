@@ -6,6 +6,7 @@ import type {
   WorkflowNextStep,
   WorkflowStatus,
 } from '@/types/recommendation';
+import { normalizeWorkflowNextStep, normalizeWorkflowStatus } from '@/types/recommendation';
 import { formatCurrency } from '@/utils/formatters';
 
 export type WorkflowTone = 'success' | 'warning' | 'danger' | 'neutral';
@@ -59,11 +60,11 @@ export const WORKFLOW_ORDER: WorkflowStatus[] = [
 export function getWorkflowPresentation(
   recommendation?: Pick<Recommendation, 'workflowStatus'>,
 ): WorkflowPresentation {
-  return PRESENTATIONS[recommendation?.workflowStatus ?? 'needs_review'];
+  return PRESENTATIONS[normalizeWorkflowStatus(recommendation?.workflowStatus)];
 }
 
 export function formatWorkflowNextStep(nextStep?: WorkflowNextStep): string {
-  const safeStep = nextStep ?? { code: 'refresh_data' as const };
+  const safeStep = normalizeWorkflowNextStep(nextStep);
   if (safeStep.code === 'wait_pullback' || safeStep.code === 'wait_breakout_close') {
     if (safeStep.triggerPrice == null || !safeStep.currency) {
       return t('recommendation.workflow.nextStep.refresh_data');
@@ -81,7 +82,7 @@ export function groupCandidatesByWorkflow(candidates: ScreenerCandidate[]) {
     status,
     presentation: PRESENTATIONS[status],
     candidates: candidates.filter(
-      (candidate) => (candidate.recommendation?.workflowStatus ?? 'needs_review') === status,
+      (candidate) => normalizeWorkflowStatus(candidate.recommendation?.workflowStatus) === status,
     ),
   }));
 }

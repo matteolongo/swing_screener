@@ -96,6 +96,34 @@ describe('AnalysisDecisionStrip — order preparation authority', () => {
 
     expect(screen.getByRole('button', { name: /prepare order/i })).toBeInTheDocument();
   });
+
+  it('uses the canonical ready workflow for the CTA and primary next step even when the analysis says wait', () => {
+    const readyRecommendation = {
+      verdict: 'RECOMMENDED' as const,
+      reasonsShort: [],
+      reasonsDetailed: [],
+      risk: { entry: 200, riskAmount: 10, riskPct: 0.05, positionSize: 200, shares: 1 },
+      costs: { commissionEstimate: 0, fxEstimate: 0, slippageEstimate: 0, totalCost: 0 },
+      checklist: [],
+      education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+      workflowStatus: 'ready' as const,
+      nextStep: { code: 'review_order' as const },
+    };
+    const waitSummary = { ...buyNowSummary, action: 'WAIT_FOR_BREAKOUT' as const, whatToDo: 'Wait for a breakout.' };
+
+    render(
+      <AnalysisDecisionStrip
+        ticker="AAPL"
+        candidate={buildCandidate({ decisionSummary: waitSummary, recommendation: readyRecommendation })}
+        onPrepareOrder={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Ready for order review')).toBeInTheDocument();
+    expect(screen.getByText('Review the proposed order')).toBeInTheDocument();
+    expect(screen.queryByText('Wait for a breakout.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /prepare order/i })).toBeInTheDocument();
+  });
 });
 
 describe('AnalysisDecisionStrip — Risk % cell', () => {

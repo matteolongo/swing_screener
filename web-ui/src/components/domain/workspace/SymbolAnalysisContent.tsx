@@ -312,6 +312,7 @@ export default function SymbolAnalysisContent({
             {candidate?.decisionSummary ? (
               <DecisionSummaryCard
                 summary={candidate.decisionSummary}
+                recommendation={candidate.recommendation}
                 currency={candidate.currency}
                 onRefreshFundamentals={() => refreshFundamentalsMutation.mutate(ticker)}
                 isRefreshingFundamentals={refreshFundamentalsMutation.isPending}

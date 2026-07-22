@@ -48,4 +48,22 @@ describe('transformRecommendation workflow contract', () => {
     expect(result.workflowStatus).toBe('needs_review');
     expect(result.nextStep).toEqual({ code: 'refresh_data' });
   });
+
+  it('fails safely when the API returns an unknown workflow status or next-step code', () => {
+    const result = transformRecommendation(JSON.parse(JSON.stringify({
+      ...base,
+      workflow_status: 'pending_manual_override',
+      next_step: { code: 'open_broker' },
+    })));
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
+
+  it('downgrades a ready status when its required next step is missing', () => {
+    const result = transformRecommendation({ ...base, workflow_status: 'ready' });
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
 });

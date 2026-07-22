@@ -9,10 +9,16 @@ import type {
   DecisionValuationLabel,
 } from '@/features/screener/types';
 import { t } from '@/i18n/t';
+import type { Recommendation } from '@/types/recommendation';
 import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters';
+import {
+  formatWorkflowNextStep,
+  getWorkflowPresentation,
+} from '@/components/domain/recommendation/workflowPresentation';
 
 interface DecisionSummaryCardProps {
   summary: DecisionSummary;
+  recommendation?: Pick<Recommendation, 'workflowStatus' | 'nextStep'>;
   currency?: string;
   onRefreshFundamentals?: () => void;
   isRefreshingFundamentals?: boolean;
@@ -129,10 +135,12 @@ function fairValueMethodLabel(method: FairValueMethod): string {
 
 export default function DecisionSummaryCard({
   summary,
+  recommendation,
   currency = 'USD',
   onRefreshFundamentals,
   isRefreshingFundamentals = false,
 }: DecisionSummaryCardProps) {
+  const workflowPresentation = getWorkflowPresentation(recommendation);
   const warningItems = (summary.explanation?.confidenceNotes ?? summary.drivers.warnings).filter(Boolean);
   const tradeStateItems = (summary.drivers.tradeState ?? []).filter(Boolean);
   // Structured flag from the backend contract; fall back to prefix-matching the
@@ -196,21 +204,7 @@ export default function DecisionSummaryCard({
       ]
     : [];
 
-  const bannerClass = (() => {
-    switch (summary.action) {
-      case 'BUY_NOW':
-        return 'bg-success text-white';
-      case 'BUY_ON_PULLBACK':
-      case 'WAIT_FOR_BREAKOUT':
-      case 'TACTICAL_ONLY':
-        return 'bg-warning/15 text-warning';
-      case 'AVOID':
-        return 'bg-danger text-white';
-      case 'WATCH':
-      case 'MANAGE_ONLY':
-        return 'bg-foreground/10 text-foreground';
-    }
-  })();
+  const bannerClass = 'bg-foreground/10 text-foreground';
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
@@ -231,6 +225,15 @@ export default function DecisionSummaryCard({
           </p>
         </div>
       </div>
+
+      {recommendation ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm font-medium text-foreground">
+          <Badge variant={workflowPresentation.tone === 'success' ? 'success' : workflowPresentation.tone === 'danger' ? 'error' : workflowPresentation.tone === 'warning' ? 'warning' : 'default'}>
+            {t(workflowPresentation.labelKey)}
+          </Badge>
+          <span>{formatWorkflowNextStep(recommendation.nextStep)}</span>
+        </div>
+      ) : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
         <Badge variant={badgeVariantForSignal(summary.technicalLabel)}>

@@ -2,12 +2,15 @@ import Badge from '@/components/common/Badge';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type {
   DataSourceHealth,
-  DecisionAction,
   DecisionConviction,
 } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
+import {
+  formatWorkflowNextStep,
+  getWorkflowPresentation,
+} from '@/components/domain/recommendation/workflowPresentation';
 
 interface AnalysisDecisionStripProps {
   ticker: string;
@@ -18,25 +21,6 @@ interface AnalysisDecisionStripProps {
   isPendingWatch?: boolean;
   onWatch?: () => void;
   onUnwatch?: () => void;
-}
-
-function actionLabel(action: DecisionAction): string {
-  switch (action) {
-    case 'BUY_NOW':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.buyNow');
-    case 'BUY_ON_PULLBACK':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback');
-    case 'WAIT_FOR_BREAKOUT':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.waitForBreakout');
-    case 'WATCH':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.watch');
-    case 'TACTICAL_ONLY':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.tacticalOnly');
-    case 'AVOID':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.avoid');
-    case 'MANAGE_ONLY':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly');
-  }
 }
 
 function convictionLabel(conviction: DecisionConviction): string {
@@ -90,6 +74,10 @@ export default function AnalysisDecisionStrip({
   const currency = candidate?.currency ?? 'USD';
   const heldMode = Boolean(position);
   const canPrepareOrder = candidate?.recommendation?.workflowStatus === 'ready';
+  const workflowPresentation = getWorkflowPresentation(candidate?.recommendation);
+  const operationalNextStep = candidate?.recommendation
+    ? formatWorkflowNextStep(candidate.recommendation.nextStep)
+    : undefined;
   const closeEntry = heldMode
     ? position!.entryPrice
     : (summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null);
@@ -131,11 +119,6 @@ export default function AnalysisDecisionStrip({
   const visibleSourceItems = sourceItems.filter(
     (item): item is readonly [typeof item[0], DataSourceHealth] => Boolean(item[1])
   );
-  const nextStep = summary?.tradePlan.triggerNote
-    ?? (summary?.action === 'WAIT_FOR_BREAKOUT'
-      ? 'Wait for confirmed breakout evidence before entering.'
-      : summary?.whatToDo);
-
   return (
     <div className="sticky top-0 z-10 rounded-xl border border-border bg-surface/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-surface/85">
       <div className="flex flex-col gap-3">
@@ -143,7 +126,7 @@ export default function AnalysisDecisionStrip({
           <div className="max-w-3xl space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-semibold text-foreground">{ticker}</h2>
-              {summary ? <Badge variant="primary">{actionLabel(summary.action)}</Badge> : null}
+              {candidate?.recommendation ? <Badge variant="success">{t(workflowPresentation.labelKey)}</Badge> : null}
               {summary ? <Badge variant="default">{convictionLabel(summary.conviction)}</Badge> : null}
               {visibleSourceItems.map(([label, source]) => (
                 <Badge key={label} variant={sourceBadgeVariant(source)}>
@@ -157,9 +140,9 @@ export default function AnalysisDecisionStrip({
                 ?? candidate?.recommendation?.reasonsShort?.[0]
                 ?? 'Review the current setup, risk, and execution plan before acting.'}
             </p>
-            {nextStep ? (
+            {operationalNextStep ? (
               <p className="text-sm font-medium text-foreground">
-                <span className="text-muted">Next step: </span>{nextStep}
+                <span className="text-muted">Next step: </span>{operationalNextStep}
               </p>
             ) : null}
           </div>
@@ -185,7 +168,7 @@ export default function AnalysisDecisionStrip({
           {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
         </div>
 
-        {canPrepareOrder && summary?.action === 'BUY_NOW' && onPrepareOrder && (
+        {canPrepareOrder && onPrepareOrder && (
           <div className="flex justify-end">
             <button
               type="button"
