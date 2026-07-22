@@ -25,6 +25,45 @@ function candidate(): ScreenerCandidate {
     confidence: 78,
     rank: 2,
     rr: 2,
+    recommendation: {
+      verdict: 'NOT_RECOMMENDED',
+      reasonsShort: ['Entry condition has not triggered.'],
+      reasonsDetailed: [{
+        code: 'ENTRY_NOT_TRIGGERED',
+        message: 'Waiting for the configured entry condition.',
+        severity: 'block',
+        metrics: {},
+      }],
+      risk: {
+        entry: 375.06,
+        stop: 367.7,
+        target: 397.16,
+        rr: 3,
+        riskAmount: 73.6,
+        riskPct: 0.01,
+        positionSize: 3750.6,
+        shares: 10,
+      },
+      costs: {
+        commissionEstimate: 1,
+        fxEstimate: 0,
+        slippageEstimate: 1,
+        totalCost: 2,
+      },
+      checklist: [],
+      decisionGates: {
+        setup: { status: 'PASS', explanation: 'Setup qualifies.' },
+        trigger: { status: 'WAIT', explanation: 'Waiting for breakout.' },
+        plan: { status: 'PASS', explanation: 'Plan reconciles.' },
+        portfolio: { status: 'UNKNOWN', explanation: 'Checked later.' },
+        readyToOrder: false,
+      },
+      education: {
+        commonBiasWarning: '',
+        whatToLearn: '',
+        whatWouldMakeValid: [],
+      },
+    },
     decisionSummary: {
       symbol: 'GE',
       action: 'WAIT_FOR_BREAKOUT',
@@ -56,6 +95,13 @@ describe('ScreenerCandidatesTable', () => {
     );
 
     expect(screen.getByText(t('screener.table.signalBadge.breakout'))).toBeInTheDocument();
+    expect(screen.getByText(t('recommendation.readiness.WAITING_FOR_TRIGGER'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('screener.table.createOrderAction') })).toHaveAttribute(
+      'title',
+      t('screener.table.executionReadinessTitle', {
+        status: t('recommendation.readiness.WAITING_FOR_TRIGGER'),
+      }),
+    );
     expect(screen.queryByText(/^Breakout$/)).not.toBeInTheDocument();
   });
 

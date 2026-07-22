@@ -2,38 +2,46 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import { t } from '@/i18n/t';
+import type { DecisionGateState } from '@/types/recommendation';
+
+const waitingGates: DecisionGateState = {
+  setup: { status: 'PASS', explanation: 'Setup qualifies.' },
+  trigger: { status: 'WAIT', explanation: 'Waiting for pullback.' },
+  plan: { status: 'PASS', explanation: 'Plan reconciles.' },
+  portfolio: { status: 'UNKNOWN', explanation: 'Checked during order review.' },
+  readyToOrder: false,
+};
 
 describe('RecommendationBadge', () => {
-  it('shows beginner-friendly "Setup passes" label for RECOMMENDED verdict', () => {
+  it('shows ready-for-review label for a legacy RECOMMENDED verdict', () => {
     render(<RecommendationBadge verdict="RECOMMENDED" />);
-    expect(screen.getByText(t('recommendation.verdict.RECOMMENDED'))).toBeInTheDocument();
+    expect(screen.getByText(t('recommendation.readiness.READY_FOR_REVIEW'))).toBeInTheDocument();
   });
 
-  it('shows beginner-friendly "Setup fails" label for NOT_RECOMMENDED verdict', () => {
+  it('shows not-ready label for a legacy NOT_RECOMMENDED verdict', () => {
     render(<RecommendationBadge verdict="NOT_RECOMMENDED" />);
-    expect(screen.getByText(t('recommendation.verdict.NOT_RECOMMENDED'))).toBeInTheDocument();
+    expect(screen.getByText(t('recommendation.readiness.NOT_READY'))).toBeInTheDocument();
   });
 
-  it('shows "Setup incomplete" label for UNKNOWN verdict', () => {
+  it('shows unknown-readiness label for UNKNOWN verdict', () => {
     render(<RecommendationBadge verdict="UNKNOWN" />);
-    expect(screen.getByText(t('recommendation.verdict.UNKNOWN'))).toBeInTheDocument();
+    expect(screen.getByText(t('recommendation.readiness.UNKNOWN'))).toBeInTheDocument();
   });
 
-  it('shows "Setup incomplete" label when no verdict is provided', () => {
+  it('shows unknown-readiness label when no verdict is provided', () => {
     render(<RecommendationBadge />);
-    expect(screen.getByText(t('recommendation.verdict.UNKNOWN'))).toBeInTheDocument();
+    expect(screen.getByText(t('recommendation.readiness.UNKNOWN'))).toBeInTheDocument();
   });
 
-  it('shows "Setup incomplete" label when NOT_RECOMMENDED verdict is due to completeness only', () => {
+  it('shows waiting-for-trigger when a qualified conditional setup is not executable', () => {
     render(
       <RecommendationBadge
         verdict="NOT_RECOMMENDED"
-        reasonsDetailed={[
-          { code: 'STOP_MISSING', severity: 'block', message: 'Stop is missing', metrics: {} },
-        ]}
+        decisionGates={waitingGates}
       />,
     );
-    expect(screen.getByText(t('recommendation.verdict.INCOMPLETE'))).toBeInTheDocument();
+    expect(screen.getByText(t('recommendation.readiness.WAITING_FOR_TRIGGER'))).toBeInTheDocument();
+    expect(screen.queryByText(t('recommendation.verdict.NOT_RECOMMENDED'))).not.toBeInTheDocument();
   });
 
   it('does not show explanation text by default', () => {

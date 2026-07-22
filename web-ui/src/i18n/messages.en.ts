@@ -1591,6 +1591,7 @@ export const messagesEn = {
       createOrderTitle: 'Create Order',
       addOnTitle: 'Create Add-On Order',
       createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
+      executionReadinessTitle: 'Execution readiness: {{status}}',
       createOrderAction: 'Create Order',
       addOnAction: 'Add On',
       expandRow: 'Expand details',

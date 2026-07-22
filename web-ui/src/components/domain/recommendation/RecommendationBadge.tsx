@@ -1,66 +1,48 @@
-import { RecommendationReason, RecommendationVerdict } from '@/types/recommendation';
+import type {
+  DecisionGateState,
+  RecommendationReason,
+  RecommendationVerdict,
+} from '@/types/recommendation';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
-import type { MessageKey } from '@/i18n/types';
+import {
+  deriveExecutionReadiness,
+  type ExecutionReadinessTone,
+} from './readiness';
 
 interface RecommendationBadgeProps {
   verdict?: RecommendationVerdict | 'UNKNOWN';
   reasonsDetailed?: RecommendationReason[];
+  decisionGates?: DecisionGateState;
   className?: string;
   showExplanation?: boolean;
 }
 
-// When the only blocking reasons are parameter-completeness issues (not signal/quality
-// failures), show "Incomplete" rather than "Not Recommended" so the badge doesn't
-// contradict a BUY_ON_PULLBACK or BUY_NOW action label in the candidate list.
-const COMPLETENESS_CODES = new Set(['STOP_MISSING', 'NO_SIGNAL']);
-
-function isIncomplete(
-  verdict: string,
-  reasons: RecommendationReason[] | undefined,
-): boolean {
-  if (verdict !== 'NOT_RECOMMENDED' || !reasons?.length) return false;
-  const blockers = reasons.filter((r) => r.severity === 'block');
-  return blockers.length > 0 && blockers.every((r) => COMPLETENESS_CODES.has(r.code));
-}
-
-const VERDICT_STYLES: Record<string, string> = {
-  RECOMMENDED: 'bg-success/10 text-success',
-  NOT_RECOMMENDED: 'bg-danger/10 text-danger',
-  INCOMPLETE: 'bg-warning/10 text-warning',
-  UNKNOWN: 'bg-foreground/5 text-muted',
-};
-
-const VERDICT_LABEL_KEY: Record<string, MessageKey> = {
-  RECOMMENDED: 'recommendation.verdict.RECOMMENDED',
-  NOT_RECOMMENDED: 'recommendation.verdict.NOT_RECOMMENDED',
-  INCOMPLETE: 'recommendation.verdict.INCOMPLETE',
-  UNKNOWN: 'recommendation.verdict.UNKNOWN',
+const READINESS_STYLES: Record<ExecutionReadinessTone, string> = {
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/10 text-warning',
+  danger: 'bg-danger/10 text-danger',
+  neutral: 'bg-foreground/5 text-muted',
 };
 
 export default function RecommendationBadge({
   verdict = 'UNKNOWN',
-  reasonsDetailed,
+  decisionGates,
   className,
   showExplanation = false,
 }: RecommendationBadgeProps) {
-  const displayKey =
-    isIncomplete(verdict, reasonsDetailed)
-      ? 'INCOMPLETE'
-      : verdict in VERDICT_STYLES
-        ? verdict
-        : 'UNKNOWN';
+  const readiness = deriveExecutionReadiness(decisionGates, verdict);
 
   return (
     <span className="inline-flex flex-col gap-1">
       <span
         className={cn(
           'text-xs px-2 py-1 rounded whitespace-nowrap',
-          VERDICT_STYLES[displayKey],
+          READINESS_STYLES[readiness.tone],
           className,
         )}
       >
-        {t(VERDICT_LABEL_KEY[displayKey] ?? 'recommendation.verdict.INCOMPLETE')}
+        {t(readiness.labelKey)}
       </span>
       {showExplanation ? (
         <span className="text-[11px] text-muted leading-snug">
