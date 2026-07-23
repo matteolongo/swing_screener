@@ -1,38 +1,27 @@
 """Tests for F13: per-position trail method PATCH endpoint."""
+
 import json
+
 import pytest
-from fastapi.testclient import TestClient
-from api.main import app
-import api.dependencies as deps
+from tests.support.factories.portfolio import position_payload
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
-    pos_file = tmp_path / "positions.json"
-    ord_file = tmp_path / "orders.json"
-    pos_file.write_text(json.dumps({
-        "asof": "2026-01-01",
-        "positions": [
-            {
-                "position_id": "POS-001",
-                "ticker": "AAPL",
-                "status": "open",
-                "entry_date": "2025-12-01",
-                "entry_price": 150.0,
-                "stop_price": 140.0,
-                "shares": 10,
-                "initial_risk": 10.0,
-            }
-        ],
-    }))
-    ord_file.write_text(json.dumps({"orders": []}))
-    monkeypatch.setattr(deps, "_positions_path", pos_file)
-    monkeypatch.setattr(deps, "_orders_path", ord_file)
-    return TestClient(app)
+def client(portfolio_state, api_client):
+    portfolio_state.write(
+        positions=[
+            position_payload(
+                entry_date="2025-12-01",
+                entry_price=150.0,
+                stop_price=140.0,
+                initial_risk=10.0,
+            )
+        ]
+    )
+    return api_client
 
 
-def test_patch_trail_method_persists(client, tmp_path):
-    pos_file = tmp_path / "positions.json"
+def test_patch_trail_method_persists(client, portfolio_state):
     response = client.patch(
         "/api/portfolio/positions/POS-001/trail-method",
         json={"trail_method": "atr", "trail_param": 2.5},
@@ -45,11 +34,13 @@ def test_patch_trail_method_persists(client, tmp_path):
     pos = stored_response.json()
     assert pos["trail_method"] == "atr"
     assert pos["trail_param"] == 2.5
-    assert "trail_method" not in json.loads(pos_file.read_text())["positions"][0]
+    assert (
+        "trail_method"
+        not in json.loads(portfolio_state.positions_path.read_text())["positions"][0]
+    )
 
 
-def test_patch_trail_method_manual(client, tmp_path):
-    pos_file = tmp_path / "positions.json"
+def test_patch_trail_method_manual(client, portfolio_state):
     response = client.patch(
         "/api/portfolio/positions/POS-001/trail-method",
         json={"trail_method": "manual", "trail_param": None},
@@ -61,7 +52,10 @@ def test_patch_trail_method_manual(client, tmp_path):
     stored = stored_response.json()
     assert stored["trail_method"] == "manual"
     assert stored["trail_param"] is None
-    assert "trail_method" not in json.loads(pos_file.read_text())["positions"][0]
+    assert (
+        "trail_method"
+        not in json.loads(portfolio_state.positions_path.read_text())["positions"][0]
+    )
 
 
 def test_patch_trail_method_invalid_value(client):
@@ -83,29 +77,21 @@ def test_patch_trail_method_not_found(client):
 
 
 @pytest.fixture
-def client_closed(tmp_path, monkeypatch):
-    pos_file = tmp_path / "positions_closed.json"
-    ord_file = tmp_path / "orders_closed.json"
-    pos_file.write_text(json.dumps({
-        "asof": "2026-01-01",
-        "positions": [
-            {
-                "position_id": "POS-CLOSED",
-                "ticker": "AAPL",
-                "status": "closed",
-                "entry_date": "2025-10-01",
-                "entry_price": 150.0,
-                "stop_price": 140.0,
-                "shares": 10,
-                "exit_date": "2025-11-01",
-                "exit_price": 160.0,
-            }
-        ],
-    }))
-    ord_file.write_text(json.dumps({"orders": []}))
-    monkeypatch.setattr(deps, "_positions_path", pos_file)
-    monkeypatch.setattr(deps, "_orders_path", ord_file)
-    return TestClient(app)
+def client_closed(portfolio_state, api_client):
+    portfolio_state.write(
+        positions=[
+            position_payload(
+                position_id="POS-CLOSED",
+                status="closed",
+                entry_date="2025-10-01",
+                entry_price=150.0,
+                stop_price=140.0,
+                exit_date="2025-11-01",
+                exit_price=160.0,
+            )
+        ]
+    )
+    return api_client
 
 
 def test_patch_trail_method_closed_position_rejected(client_closed):

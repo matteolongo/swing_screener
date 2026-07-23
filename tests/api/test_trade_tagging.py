@@ -1,36 +1,20 @@
 """Tests for trade tagging on position close."""
-import json
 
 import pytest
-from fastapi.testclient import TestClient
-
-import api.dependencies as deps
-from api.main import app
+from tests.support.factories.portfolio import position_payload
 
 
 @pytest.fixture
-def client_with_open_position(tmp_path, monkeypatch):
-    positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
-    positions_file.write_text(json.dumps({
-        "asof": "2026-01-01",
-        "positions": [{
-            "position_id": "POS-TAG-001",
-            "ticker": "AAPL",
-            "status": "open",
-            "entry_date": "2026-01-01",
-            "entry_price": 100.0,
-            "stop_price": 95.0,
-            "shares": 10,
-            "initial_risk": 50.0,
-            "notes": "",
-            "tags": [],
-        }],
-    }))
-    orders_file.write_text(json.dumps({"asof": "2026-01-01", "orders": []}))
-    monkeypatch.setattr(deps, "_positions_path", positions_file)
-    monkeypatch.setattr(deps, "_orders_path", orders_file)
-    return TestClient(app)
+def client_with_open_position(portfolio_state, api_client):
+    portfolio_state.write(
+        positions=[
+            position_payload(
+                position_id="POS-TAG-001",
+                initial_risk=50.0,
+            )
+        ]
+    )
+    return api_client
 
 
 def test_close_with_tags_stores_tags(client_with_open_position):
