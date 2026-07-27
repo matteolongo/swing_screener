@@ -9,6 +9,10 @@ describe('useWorkspaceStore', () => {
       selectedTickerSource: null,
       analysisTab: 'overview',
       runScreenerTrigger: 0,
+      workspaceMode: 'split',
+      selectionVersion: 0,
+      activityDrawerOpen: false,
+      fullscreen: false,
     });
   });
 
@@ -29,6 +33,23 @@ describe('useWorkspaceStore', () => {
     expect(result.current.selectedTickerSource).toBe('portfolio');
   });
 
+  it('increments the selection version and expands on a new ticker', () => {
+    useWorkspaceStore.getState().setSelectedTicker('aapl', 'screener');
+    const first = useWorkspaceStore.getState();
+    expect(first.workspaceMode).toBe('expanded');
+    expect(first.selectionVersion).toBe(1);
+
+    useWorkspaceStore.getState().setSelectedTicker('msft', 'screener');
+    expect(useWorkspaceStore.getState().selectionVersion).toBe(2);
+  });
+
+  it('does not increment the selection version for the same normalized ticker', () => {
+    useWorkspaceStore.getState().setSelectedTicker('aapl', 'screener');
+    useWorkspaceStore.getState().setSelectedTicker(' AAPL ', 'portfolio');
+
+    expect(useWorkspaceStore.getState().selectionVersion).toBe(1);
+  });
+
   it('clears source when ticker is null', () => {
     const { result } = renderHook(() => useWorkspaceStore());
 
@@ -44,12 +65,32 @@ describe('useWorkspaceStore', () => {
     act(() => {
       result.current.setSelectedTicker('aapl', 'portfolio');
       result.current.setAnalysisTab('fundamentals');
+      result.current.setFullscreen(true);
       result.current.clearSelectedTicker();
     });
 
     expect(result.current.selectedTicker).toBeNull();
     expect(result.current.selectedTickerSource).toBeNull();
     expect(result.current.analysisTab).toBe('overview');
+    expect(result.current.workspaceMode).toBe('split');
+    expect(result.current.fullscreen).toBe(false);
+  });
+
+  it('collapses an expanded workspace without clearing its selection', () => {
+    useWorkspaceStore.getState().setSelectedTicker('aapl');
+    useWorkspaceStore.getState().collapseWorkspace();
+
+    const state = useWorkspaceStore.getState();
+    expect(state.workspaceMode).toBe('split');
+    expect(state.selectedTicker).toBe('AAPL');
+  });
+
+  it('controls the activity drawer and fullscreen explicitly', () => {
+    useWorkspaceStore.getState().setActivityDrawerOpen(true);
+    useWorkspaceStore.getState().setFullscreen(true);
+
+    expect(useWorkspaceStore.getState().activityDrawerOpen).toBe(true);
+    expect(useWorkspaceStore.getState().fullscreen).toBe(true);
   });
 
   it('increments the run-screener trigger', () => {
