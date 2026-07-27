@@ -108,7 +108,11 @@ describe('SymbolOverviewTab', () => {
       />,
     );
 
-    expect(screen.getByText(t('workspacePage.data.partial'))).toBeVisible();
+    const decision = screen.getByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'));
+    const evidence = screen.getByText(t('workspacePage.overview.supports'));
+    const partial = screen.getByText(t('workspacePage.data.partial'));
+    expect(decision.compareDocumentPosition(evidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(evidence.compareDocumentPosition(partial) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getAllByText(/fundamentals/i).some((element) => element.textContent?.includes('Unavailable'))).toBe(true);
     expect(screen.getByTestId('symbol-candle-chart')).toBeVisible();
   });

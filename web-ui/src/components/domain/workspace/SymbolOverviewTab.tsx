@@ -59,21 +59,6 @@ export default function SymbolOverviewTab({ model }: { model: SymbolOverviewMode
 
   return (
     <div className="space-y-3">
-      {partialDependencies.length > 0 ? (
-        <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
-          <p className="text-sm font-semibold text-warning">{t('workspacePage.data.partial')}</p>
-          <p className="mt-1 text-xs text-muted">
-            {t('workspacePage.overview.partialDependencies', { dependencies: partialDependencies.join(', ') })}
-          </p>
-        </div>
-      ) : null}
-
-      {model.intelligenceOutdated ? (
-        <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
-          {t('workspacePage.overview.intelligenceOutdated')}
-        </div>
-      ) : null}
-
       <AnalysisDecisionStrip
         ticker={model.ticker}
         candidate={candidate}
@@ -121,6 +106,21 @@ export default function SymbolOverviewTab({ model }: { model: SymbolOverviewMode
               </ul>
             </div>
         </section>
+      ) : null}
+
+      {partialDependencies.length > 0 ? (
+        <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+          <p className="text-sm font-semibold text-warning">{t('workspacePage.data.partial')}</p>
+          <p className="mt-1 text-xs text-muted">
+            {t('workspacePage.overview.partialDependencies', { dependencies: partialDependencies.join(', ') })}
+          </p>
+        </div>
+      ) : null}
+
+      {model.intelligenceOutdated ? (
+        <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+          {t('workspacePage.overview.intelligenceOutdated')}
+        </div>
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-2">

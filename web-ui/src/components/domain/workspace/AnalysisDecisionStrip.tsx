@@ -105,6 +105,13 @@ export default function AnalysisDecisionStrip({
   const currency = candidate?.currency ?? 'USD';
   const heldMode = Boolean(position);
   const canPrepareOrder = candidate?.recommendation?.workflowStatus === 'ready';
+  const showAnalysisAction = summary && (
+    !candidate?.recommendation ||
+    (
+      candidate.recommendation.workflowStatus === 'ready' &&
+      (summary.action === 'BUY_NOW' || summary.action === 'BUY_ON_PULLBACK')
+    )
+  );
   const workflowPresentation = getWorkflowPresentation(candidate?.recommendation);
   const operationalNextStep = candidate?.recommendation
     ? formatWorkflowNextStep(candidate.recommendation.nextStep)
@@ -151,13 +158,13 @@ export default function AnalysisDecisionStrip({
     (item): item is readonly [typeof item[0], DataSourceHealth] => Boolean(item[1])
   );
   return (
-    <div className="sticky top-0 z-10 rounded-xl border border-border bg-surface/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-surface/85">
+    <div className="rounded-xl border border-border bg-surface/95 p-3 shadow-sm">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-3xl space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-semibold text-foreground">{ticker}</h2>
-              {summary ? <Badge variant="primary">{actionLabel(summary.action)}</Badge> : null}
+              {showAnalysisAction ? <Badge variant="primary">{actionLabel(summary.action)}</Badge> : null}
               {candidate?.recommendation ? (
                 <Badge variant={workflowBadgeVariant(workflowPresentation.tone)}>
                   {t(workflowPresentation.labelKey)}

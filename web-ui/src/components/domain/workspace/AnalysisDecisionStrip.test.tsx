@@ -83,6 +83,25 @@ describe('AnalysisDecisionStrip — order preparation authority', () => {
     expect(screen.queryByRole('button', { name: /prepare order/i })).not.toBeInTheDocument();
   });
 
+  it('suppresses a conflicting BUY_NOW opinion when the canonical workflow says no setup', () => {
+    const { container } = render(
+      <AnalysisDecisionStrip
+        ticker="AAPL"
+        candidate={buildCandidate({
+          decisionSummary: buyNowSummary,
+          recommendation: { workflowStatus: 'no_setup', nextStep: { code: 'observe' } } as any,
+        })}
+        onPrepareOrder={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(t('recommendation.workflow.status.noSetup'))).toBeVisible();
+    expect(screen.getByText(t('recommendation.workflow.nextStep.observe'))).toBeVisible();
+    expect(screen.queryByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /prepare order/i })).not.toBeInTheDocument();
+    expect(container.firstElementChild).not.toHaveClass('sticky');
+  });
+
   it('exposes Prepare order for a canonical ready candidate', () => {
     render(
       <AnalysisDecisionStrip
