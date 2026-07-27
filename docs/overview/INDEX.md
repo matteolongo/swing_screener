@@ -64,6 +64,7 @@
 ## Current implementation plans
 
 - [`docs/superpowers/specs/2026-07-27-symbol-workspace-redesign-design.md`](../superpowers/specs/2026-07-27-symbol-workspace-redesign-design.md) — approved UX, data-flow, reliability, and testing design for the Today-page symbol workspace
+- [`docs/superpowers/plans/2026-07-27-symbol-workspace-redesign.md`](../superpowers/plans/2026-07-27-symbol-workspace-redesign.md) — task-by-task implementation plan for the Today-page symbol workspace redesign
 - [`docs/superpowers/specs/2026-07-22-coherent-execution-workflow-design.md`](../superpowers/specs/2026-07-22-coherent-execution-workflow-design.md) — approved design for the coherent execution workflow
 - [`docs/superpowers/plans/2026-07-22-coherent-execution-workflow.md`](../superpowers/plans/2026-07-22-coherent-execution-workflow.md) — implementation plan for the coherent execution workflow
 - [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/spec.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/spec.md) — approved design for Volume-Zone Stock Analysis V1
