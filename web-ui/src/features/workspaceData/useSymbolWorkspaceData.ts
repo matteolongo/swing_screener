@@ -175,7 +175,7 @@ export function useSymbolWorkspaceData({
       [
         validCandidate?.lastBar ?? null,
         fundamentalsData?.updatedAt ?? null,
-        fetchedAt(pricesQuery.dataUpdatedAt),
+        pricesData ? fetchedAt(pricesQuery.dataUpdatedAt) : null,
       ],
     ),
     refreshSource,

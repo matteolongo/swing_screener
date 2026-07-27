@@ -3,12 +3,18 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { tickerCandlesResult } = vi.hoisted(() => ({
+const { intelligenceResult, tickerCandlesResult } = vi.hoisted(() => ({
+  intelligenceResult: {
+    current: {
+      data: undefined as { symbol: string; generatedAt: string } | undefined,
+    },
+  },
   tickerCandlesResult: {
     current: {
       data: undefined as
         | { ticker: string; priceHistory: Array<{ date: string; close: number }>; patterns: [] }
         | undefined,
+      dataUpdatedAt: 0,
     },
   },
 }));
@@ -19,7 +25,7 @@ vi.mock('@/features/fundamentals/api', () => ({
 vi.mock('@/features/screener/hooks', () => ({
   useTickerCandles: () => ({
     data: tickerCandlesResult.current.data,
-    dataUpdatedAt: 0,
+    dataUpdatedAt: tickerCandlesResult.current.dataUpdatedAt,
     error: null,
     isError: false,
     isFetching: false,
@@ -29,7 +35,7 @@ vi.mock('@/features/screener/hooks', () => ({
 }));
 vi.mock('@/features/intelligence/hooks', () => ({
   useIntelligenceLatestQuery: () => ({
-    data: undefined,
+    data: intelligenceResult.current.data,
     dataUpdatedAt: 0,
     error: null,
     isError: false,
@@ -83,7 +89,9 @@ describe('useSymbolWorkspaceData', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    intelligenceResult.current.data = undefined;
     tickerCandlesResult.current.data = undefined;
+    tickerCandlesResult.current.dataUpdatedAt = 0;
   });
 
   it('does not expose an AAPL completion in an MSFT workspace session', async () => {
@@ -162,5 +170,31 @@ describe('useSymbolWorkspaceData', () => {
 
     expect(result.current.prices.data).toBeUndefined();
     expect(result.current.sourceStates.find(({ id }) => id === 'prices')?.phase).toBe('idle');
+  });
+
+  it('does not use a mismatched candle timestamp to invalidate intelligence', () => {
+    intelligenceResult.current.data = {
+      symbol: 'MSFT',
+      generatedAt: '2026-07-27T19:00:00Z',
+    };
+    tickerCandlesResult.current.data = {
+      ticker: 'AAPL',
+      priceHistory: [{ date: '2026-07-27', close: 210 }],
+      patterns: [],
+    };
+    tickerCandlesResult.current.dataUpdatedAt = Date.parse('2026-07-27T20:00:00Z');
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () =>
+        useSymbolWorkspaceData({
+          ticker: 'MSFT',
+          selectionVersion: 2,
+          candidate: null,
+          position: null,
+        }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    expect(result.current.intelligenceOutdated).toBe(false);
   });
 });
