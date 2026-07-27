@@ -250,9 +250,9 @@ def sweep(
                         ohlcv = portfolio_service.fetch_recent_ohlcv(upper)
                         item_req = enrich_with_technicals(upper, item_req, ohlcv)
                         ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
-                    except Exception as exc:
+                    except Exception:
                         item_req = record_enrichment_failure(item_req, "technicals")
-                        skipped_reason = _brief_error(exc)
+                        skipped_reason = "Technical enrichment failed."
                         logger.warning(
                             "Sweep technical enrichment skipped for %r", item.ticker, exc_info=True
                         )
@@ -488,9 +488,9 @@ def analyze_position(
                     ohlcv = portfolio_service.fetch_recent_ohlcv(pos.ticker)
                     request = enrich_with_technicals(pos.ticker, request, ohlcv)
                     ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
-                except Exception as exc:
+                except Exception:
                     request = record_enrichment_failure(request, "technicals")
-                    skipped_reason = _brief_error(exc)
+                    skipped_reason = "Technical enrichment failed."
                     logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
                 _set_step_output(
                     draft, ohlcv_rows=ohlcv_rows, skipped_reason=skipped_reason

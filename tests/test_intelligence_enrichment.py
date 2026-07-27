@@ -106,6 +106,34 @@ def test_enricher_records_used_and_missing_attempts():
     assert out.enrichment_diagnostics[1].as_of is not None
 
 
+def test_enricher_treats_none_evidence_as_missing():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+
+    out = enrich_intelligence_request("AAPL", req, evidence=lambda _ticker: None)
+
+    assert out.catalyst_evidence == []
+    assert out.enrichment_diagnostics[-1].source == "evidence"
+    assert out.enrichment_diagnostics[-1].status == "missing"
+    assert out.enrichment_diagnostics[-1].item_count == 0
+
+
+def test_enricher_treats_malformed_evidence_as_sanitized_failure():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+
+    out = enrich_intelligence_request(
+        "AAPL",
+        req,
+        evidence=lambda _ticker: {"api_key": "secret"},
+    )
+
+    assert out.catalyst_evidence == []
+    assert out.enrichment_diagnostics[-1] == EnrichmentDiagnostic(
+        source="evidence",
+        status="failed",
+        message="Evidence provider failed.",
+    )
+
+
 def _synthetic_ohlcv(ticker="AAA", n=300):
     import numpy as np
     import pandas as pd

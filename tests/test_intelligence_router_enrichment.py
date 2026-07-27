@@ -238,7 +238,11 @@ def test_position_analysis_trace_records_nonfatal_technical_enrichment_failure(m
             resp = client.post("/api/intelligence/position/pos-aapl")
         assert resp.status_code == 200, resp.text
         assert captured["technical_summary"]["ohlcv_rows"] == 0
-        assert captured["technical_summary"]["skipped_reason"] == "RuntimeError: ohlcv provider down"
+        assert (
+            captured["technical_summary"]["skipped_reason"]
+            == "Technical enrichment failed."
+        )
+        assert "ohlcv provider down" not in str(captured["technical_summary"])
         diagnostic = next(
             item for item in captured["diagnostics"] if item.source == "technicals"
         )

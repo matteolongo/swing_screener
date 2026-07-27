@@ -87,7 +87,7 @@ def enrich_intelligence_request(
     fundamentals: _FundamentalsLike | None = None,
     earnings: Callable[[str], tuple[int | None, str | None]] | None = None,
     dividend: Callable[[str], tuple[int | None, str | None, float | None]] | None = None,
-    evidence: Callable[[str], list[SourceEvidence]] | None = None,
+    evidence: Callable[[str], list[SourceEvidence] | None] | None = None,
 ) -> SymbolIntelligenceRequest:
     updates: dict = {}
     diagnostics = list(request.enrichment_diagnostics)
@@ -184,7 +184,13 @@ def enrich_intelligence_request(
 
     if evidence is not None and not request.catalyst_evidence:
         try:
-            items = evidence(ticker)
+            raw_items = evidence(ticker)
+            if raw_items is None:
+                items: list[SourceEvidence] = []
+            elif isinstance(raw_items, list):
+                items = raw_items
+            else:
+                raise TypeError("Evidence provider returned an invalid payload.")
             updates["evidence_asof"] = datetime.now(timezone.utc).isoformat()
             updates["evidence_status"] = "current"
         except Exception as exc:  # degrade, never fail the analysis
