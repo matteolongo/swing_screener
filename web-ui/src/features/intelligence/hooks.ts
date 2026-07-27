@@ -32,22 +32,25 @@ import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/type
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { queryKeys } from '@/lib/queryKeys';
 
-export function findRunStartedAfter(
+export function findRunByAttemptId(
   runs: RunIndexEntry[],
   ticker: string,
-  requestStartedAt: number,
+  clientAttemptId: string,
 ): RunIndexEntry | null {
   const normalizedTicker = ticker.trim().toUpperCase();
-  return (
-    runs
-      .filter(
-        (run) =>
-          run.ticker.trim().toUpperCase() === normalizedTicker
-          && Date.parse(run.startedAt) >= requestStartedAt,
-      )
-      .sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt))[0]
-    ?? null
-  );
+  return runs.find(
+    (run) =>
+      run.ticker.trim().toUpperCase() === normalizedTicker
+      && run.clientAttemptId === clientAttemptId,
+  ) ?? null;
+}
+
+export function resolveRunId(
+  runs: RunIndexEntry[] | undefined,
+  attemptedRunId: string | null,
+  cachedRunId: string | null | undefined,
+): string | null {
+  return attemptedRunId ?? runs?.[0]?.runId ?? cachedRunId ?? null;
 }
 
 export function useIntelligenceAnalysisMutation() {
@@ -55,12 +58,12 @@ export function useIntelligenceAnalysisMutation() {
   return useMutation<
     SymbolIntelligence,
     Error,
-    { ticker: string; candidate: SymbolAnalysisCandidate | null | undefined; position?: PositionWithMetrics | null; force?: boolean }
+    { ticker: string; candidate: SymbolAnalysisCandidate | null | undefined; position?: PositionWithMetrics | null; force?: boolean; attemptId?: string }
   >({
-    mutationFn: async ({ ticker, candidate, position, force }) => {
+    mutationFn: async ({ ticker, candidate, position, force, attemptId }) => {
       const payload = candidateToPayload(candidate, position);
       if (!payload) throw new Error('No technical context available for this symbol');
-      const api = await postIntelligenceAnalysis(ticker, payload, force);
+      const api = await postIntelligenceAnalysis(ticker, payload, force, attemptId);
       return transformIntelligence(api);
     },
     onSuccess: (_data, { ticker }) => {

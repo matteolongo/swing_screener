@@ -103,6 +103,7 @@ function phaseLabel(phase: WorkspaceSourcePhase): string {
 function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
   const diagnostics = model.analysis?.inputsUsed?.enrichmentDiagnostics ?? [];
   const refreshedEvidence = model.refreshedEvidence?.sources ?? [];
+  const hasEvidenceRefresh = model.refreshedEvidence !== null;
   const workspaceSources =
     model.sources.length > 0
       ? model.sources
@@ -123,9 +124,12 @@ function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
       .filter(
         (source) =>
           source.id !== 'intelligence'
-          && !(source.id === 'evidence' && refreshedEvidence.length > 0),
+          && !(source.id === 'evidence' && hasEvidenceRefresh),
       )
-      .map((source) =>
+      .map((source) => ({
+        rowKind: 'workspace' as const,
+        rowKey: `workspace:${source.id}`,
+        ...(
         source.id === 'evidence' && model.refreshError
           ? {
               ...source,
@@ -133,9 +137,24 @@ function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
               cacheOrigin: null,
               error: model.refreshError.message,
             }
-          : source,
-      ),
+          : source
+        ),
+      })),
+    ...(model.refreshedEvidence?.status === 'failed' && refreshedEvidence.length === 0
+      ? [{
+          rowKind: 'refresh' as const,
+          rowKey: 'refresh:evidence',
+          id: 'evidence',
+          provider: null,
+          dataAsOf: model.refreshedEvidence.refreshedAt,
+          phase: 'failed' as const,
+          itemCount: 0,
+          error: 'Evidence provider failed.',
+        }]
+      : []),
     ...refreshedEvidence.map((source) => ({
+      rowKind: 'provider' as const,
+      rowKey: `provider:${source.provider}`,
       id: source.source,
       provider: source.provider,
       dataAsOf: source.asOf,
@@ -146,6 +165,8 @@ function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
     ...diagnostics
       .filter((diagnostic) => !SOURCE_IDS.includes(diagnostic.source as WorkspaceSourceId))
       .map((diagnostic) => ({
+        rowKind: 'diagnostic' as const,
+        rowKey: `diagnostic:${diagnostic.source}`,
         id: diagnostic.source,
         provider: null,
         dataAsOf: diagnostic.asOf,
@@ -173,11 +194,13 @@ function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
         </thead>
         <tbody className="divide-y divide-border">
           {rows.map((row) => {
-            const diagnostic = diagnostics.find((item) => item.source === row.id);
+            const diagnostic = row.rowKind === 'workspace'
+              ? diagnostics.find((item) => item.source === row.id)
+              : undefined;
             const rowError =
               typeof row.error === 'string' ? row.error : row.error?.message;
             return (
-              <tr key={`${row.id}-${row.provider ?? ''}`}>
+              <tr key={row.rowKey}>
                 <th scope="row" className="px-3 py-2 font-medium text-foreground">
                   {sourceLabel(row.id)}
                 </th>

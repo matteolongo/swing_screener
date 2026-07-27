@@ -279,6 +279,21 @@ describe('postIntelligenceAnalysis', () => {
     expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/AAPL?force=true');
     vi.unstubAllGlobals();
   });
+
+  it('sends the stable client attempt id for exact trace correlation', async () => {
+    const mockFetch = okFetch();
+    vi.stubGlobal('fetch', mockFetch);
+
+    await postIntelligenceAnalysis(
+      'AAPL',
+      { close: 150, signal: 'BUY' },
+      false,
+      'attempt-aapl-1',
+    );
+
+    expect(mockFetch.mock.calls[0][0]).toContain('attempt_id=attempt-aapl-1');
+    vi.unstubAllGlobals();
+  });
 });
 
 describe('sendIntelligenceChatMessage', () => {

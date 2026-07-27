@@ -47,6 +47,10 @@ _FAILED_MESSAGES: dict[EnrichmentSource, str] = {
     "polygon_prices": "Polygon price provider failed.",
 }
 
+def _optional_string(value: object) -> str | None:
+    """Keep provider/test-double metadata from escaping the public string contract."""
+    return value if isinstance(value, str) else None
+
 
 def _with_diagnostic(
     request: SymbolIntelligenceRequest,
@@ -110,7 +114,11 @@ def enrich_intelligence_request(
                 EnrichmentDiagnostic(
                     source="fundamentals",
                     status="used" if snap is not None else "missing",
-                    as_of=getattr(snap, "asof_date", None) if snap is not None else None,
+                    as_of=(
+                        _optional_string(getattr(snap, "asof_date", None))
+                        if snap is not None
+                        else None
+                    ),
                 )
             )
         if snap is not None:
@@ -142,7 +150,7 @@ def enrich_intelligence_request(
                 EnrichmentDiagnostic(
                     source="earnings",
                     status="used" if days is not None or date is not None else "missing",
-                    as_of=date,
+                    as_of=_optional_string(date),
                 )
             )
         if days is not None:
@@ -172,7 +180,7 @@ def enrich_intelligence_request(
                         if any(value is not None for value in (div_days, div_date, div_amount))
                         else "missing"
                     ),
-                    as_of=div_date,
+                    as_of=_optional_string(div_date),
                 )
             )
         if div_days is not None:

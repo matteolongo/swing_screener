@@ -214,7 +214,7 @@ class RunIndexResponse(BaseModel):
 
 
 class EvidenceRefreshSource(BaseModel):
-    source: str = "evidence"
+    source: Literal["evidence"] = "evidence"
     provider: str
     status: Literal["fresh", "failed"]
     item_count: int
@@ -440,6 +440,7 @@ def analyze_symbol(
     ticker: str,
     request: SymbolIntelligenceRequest,
     force: bool = False,
+    attempt_id: str | None = None,
     positions_repo: PositionsRepository = Depends(get_positions_repo),
     fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
@@ -448,12 +449,18 @@ def analyze_symbol(
     _require_api_key()
     _require_analyzer_enabled()
     upper = ticker.upper()
+    if attempt_id is not None and not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", attempt_id):
+        raise HTTPException(status_code=422, detail="Invalid attempt id.")
     def _earnings(t: str) -> tuple[int | None, str | None]:
         ep = portfolio_service.get_earnings_proximity(t)
         return ep.days_until, ep.next_earnings_date
 
     try:
-        with recording_run(upper) as recorder:
+        with recording_run(
+            upper,
+            client_attempt_id=attempt_id,
+            attempt_force=force if attempt_id is not None else None,
+        ) as recorder:
             with step(recorder, "enrich_request") as draft:
                 request = enrich_intelligence_request(
                     upper,

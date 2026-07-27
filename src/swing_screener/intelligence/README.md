@@ -331,7 +331,10 @@ written to `data/intelligence/runs/{run_id}.json` with a per-ticker index at
 `data/intelligence/runs/index/{TICKER}.json` (newest-first, capped at
 `config.tracing.max_runs_per_ticker`). The index is updated under an exclusive file
 lock so concurrent same-ticker runs cannot clobber each other, and the run just
-written is never pruned from its own index. Each `SymbolIntelligence` result (and its
+written is never pruned from its own index. Single-symbol generation may include
+a client attempt ID; the trace and index persist that ID and the requested force
+mode so clients can resolve an exact concurrent or failed attempt. These fields
+are additive and absent from older run files. Each `SymbolIntelligence` result (and its
 cache entry) carries the `run_id` that produced it, so a cache hit still resolves
 its trace. Each step records status, timing, and an `outputs_summary`; steps that
 have them also record model, token usage, `source_counts`, `prompt_hash` + a

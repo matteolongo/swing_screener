@@ -51,6 +51,12 @@ Symbol analysis overview (`components/domain/workspace/SymbolOverviewTab.tsx`): 
 
 Symbol intelligence tab (`components/domain/workspace/SymbolIntelligenceTab.tsx`): follows an explicit evidence-first flow. It shows the current source manifest and enrichment diagnostics before any generation action. **Refresh evidence sources** calls the dedicated read-only `POST /api/intelligence/{ticker}/evidence/refresh` collector endpoint and updates the per-provider manifest without invoking analysis; **Generate analysis** and **Force-refresh analysis** remain separate actions, and selection never generates automatically. Active and failed pipeline stages are derived from the mutation and the exact ticker-run trace started by that request, including failures where no prior analysis exists; a retry preserves whether the failed request was normal or forced. Current, partial, and outdated results remain readable as a discursive recap followed by structured evidence. Position review and strategic context remain optional collapsed advisory actions even before narrative generation; chat is available once analysis context exists. History and the technical trace are collapsed separately. All mutation-local results, including evidence refreshes, are scoped to the normalized ticker and workspace selection version, so late responses from a previous symbol/session are ignored. Position review remains read-only and calls `POST /api/intelligence/position-review/{position_id}` for held positions or `POST /api/intelligence/{ticker}/position-review` for symbol-only review. `NarrativeAnalysisCard` retains pre-open outlook, thesis delta, evidence balance, dated events/news, and analysis history. Chat remains persisted per ticker/day and advisory-only.
 
+Generation attempts carry a stable client attempt ID persisted in both the run
+trace and ticker index. The tab therefore selects the exact success or failure
+without clock correlation, prefers the newest persisted run after reload, and
+retries with the persisted normal/force mode. Refreshed evidence providers render
+as distinct rows and do not inherit aggregate evidence diagnostics.
+
 ## Shared primitives
 
 Reusable building blocks live in `components/common/`. Prefer these over hand-rolling markup so styling and behavior stay in one place (colors come from the semantic tokens in `docs/DESIGN_TOKENS.md`, enforced by the ESLint token rule).

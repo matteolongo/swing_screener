@@ -147,3 +147,53 @@ GREEN verification:
 - `git diff --check`: passed.
 
 Concerns: none.
+
+## Review fix round 2
+
+- Replaced timestamp correlation with a stable client attempt ID persisted in
+  `RunTrace` and `RunIndexEntry`, together with the normal/force attempt mode.
+- Selected the exact attempt after settlement, including errors and concurrent
+  same-ticker requests. After remount, the newest persisted run supersedes an
+  older cached success; retry restores the persisted force mode.
+- Kept old run files compatible through optional trace/index fields.
+- Made refreshed provider evidence rows independent from aggregate evidence
+  diagnostics, and represented an empty failed refresh as an aggregate failure.
+- Restricted refresh-source `source` to the literal `"evidence"`.
+
+RED evidence:
+
+- Trace persistence rejected the new attempt fields.
+- The frontend analysis request omitted `attempt_id`, and exact attempt lookup
+  did not exist.
+- Refreshed provider rows inherited stale aggregate counts/messages, while an
+  empty failed refresh retained the old fresh aggregate row.
+
+GREEN verification:
+
+- `pytest tests/intelligence/test_tracing.py -q` — 14 passed.
+- Focused frontend API, trace-hook, manifest, and workspace suite — 61 passed.
+
+Full-suite audit:
+
+- `test_sweep_returns_analyzed_and_failed` failed because a `MagicMock`
+  fundamentals `asof_date` violated the new diagnostic string contract.
+- `test_analyze_position_returns_cache_without_calling_analyzer` returned 500
+  through the same unsanitized provider-metadata path.
+- Both parametrizations of `test_analyze_output_is_stable` differed because an
+  empty `enrichment_diagnostics` list was added to otherwise unchanged analyzer
+  output.
+- These were Task 6/7 contract regressions, not baseline failures. Provider
+  metadata is now accepted only when it is a real string, and the graph emits
+  `enrichment_diagnostics` only when entries exist. The exact four failing tests
+  now pass.
+
+Final verification:
+
+- Full frontend suite — 149 files, 800 tests passed.
+- Impacted backend/API/intelligence suite — 20 passed.
+- TypeScript typecheck — passed.
+- ESLint strict — passed with zero warnings.
+- Ruff on every changed backend/test module — passed.
+- `git diff --check` — passed.
+- A full backend run reached 1,546 passed and 7 skipped before reporting the
+  four regressions above; all four were then fixed and rerun successfully.

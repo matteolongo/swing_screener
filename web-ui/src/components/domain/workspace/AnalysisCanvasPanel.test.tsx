@@ -23,7 +23,9 @@ vi.mock('@/features/fundamentals/hooks', () => ({
 vi.mock('@/features/intelligence/hooks', () => ({
   useRunTrace: vi.fn(),
   useTickerRuns: vi.fn(),
-  findRunStartedAfter: vi.fn(() => null),
+  findRunByAttemptId: vi.fn(() => null),
+  resolveRunId: vi.fn((runs, attemptedRunId, cachedRunId) =>
+    attemptedRunId ?? runs?.[0]?.runId ?? cachedRunId ?? null),
   useIntelligenceAnalysisMutation: vi.fn(),
   useEvidenceRefreshMutation: vi.fn(),
   useIntelligenceLatestQuery: vi.fn(),
@@ -451,7 +453,7 @@ describe('AnalysisCanvasPanel', () => {
       data: [],
       refetch: refetchRuns,
     } as never);
-    vi.mocked(intelligenceHooks.findRunStartedAfter).mockReturnValue({
+    vi.mocked(intelligenceHooks.findRunByAttemptId).mockReturnValue({
       runId: 'run-current-attempt',
       ticker: 'AAPL',
       startedAt: new Date().toISOString(),

@@ -150,11 +150,14 @@ export function candidateToPayload(
 export async function postIntelligenceAnalysis(
   ticker: string,
   payload: IntelligenceRequestPayload,
-  force = false
+  force = false,
+  attemptId?: string,
 ): Promise<SymbolIntelligenceAPI> {
-  const endpoint = force
-    ? `${API_ENDPOINTS.intelligenceAnalyze(ticker)}?force=true`
-    : API_ENDPOINTS.intelligenceAnalyze(ticker);
+  const query = new URLSearchParams();
+  if (force) query.set('force', 'true');
+  if (attemptId) query.set('attempt_id', attemptId);
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+  const endpoint = `${API_ENDPOINTS.intelligenceAnalyze(ticker)}${suffix}`;
   return fetchJson<SymbolIntelligenceAPI>(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

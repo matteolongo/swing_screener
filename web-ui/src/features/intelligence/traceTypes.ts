@@ -21,6 +21,8 @@ export interface RunTraceAPI {
   status: 'ok' | 'error' | 'running';
   steps: StepTraceAPI[];
   error: string | null;
+  client_attempt_id?: string | null;
+  attempt_force?: boolean | null;
 }
 
 export interface RunIndexEntryAPI {
@@ -31,6 +33,8 @@ export interface RunIndexEntryAPI {
   status: string;
   duration_ms: number | null;
   step_count: number;
+  client_attempt_id?: string | null;
+  attempt_force?: boolean | null;
 }
 
 export interface StepTrace {
@@ -56,6 +60,8 @@ export interface RunTrace {
   status: 'ok' | 'error' | 'running';
   steps: StepTrace[];
   error: string | null;
+  clientAttemptId?: string | null;
+  attemptForce?: boolean | null;
 }
 
 export interface RunIndexEntry {
@@ -66,6 +72,8 @@ export interface RunIndexEntry {
   status: string;
   durationMs: number | null;
   stepCount: number;
+  clientAttemptId?: string | null;
+  attemptForce?: boolean | null;
 }
 
 export function transformStepTrace(api: StepTraceAPI): StepTrace {
@@ -94,6 +102,8 @@ export function transformRunTrace(api: RunTraceAPI): RunTrace {
     status: api.status,
     steps: (api.steps ?? []).map(transformStepTrace),
     error: api.error ?? null,
+    clientAttemptId: api.client_attempt_id ?? null,
+    attemptForce: api.attempt_force ?? null,
   };
 }
 
@@ -106,5 +116,7 @@ export function transformRunIndexEntry(api: RunIndexEntryAPI): RunIndexEntry {
     status: api.status,
     durationMs: api.duration_ms ?? null,
     stepCount: api.step_count ?? 0,
+    clientAttemptId: api.client_attempt_id ?? null,
+    attemptForce: api.attempt_force ?? null,
   };
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
 import {
-  findRunStartedAfter,
+  findRunByAttemptId,
+  resolveRunId,
   useEvidenceRefreshMutation,
   useIntelligenceAnalysisMutation,
   useIntelligenceLatestQuery,
@@ -109,9 +110,14 @@ export default function SymbolAnalysisContent({
   const tabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
   const tickerRuns = useTickerRuns(ticker, activeTab === 'intelligence');
-  const traceRunId =
-    attemptedRunId
-    ?? (intelligenceMutation.isError ? null : displayedIntelligence?.runId);
+  const traceRunId = resolveRunId(
+    tickerRuns.data,
+    attemptedRunId,
+    displayedIntelligence?.runId,
+  );
+  const persistedAttemptForce = tickerRuns.data?.find(
+    (run) => run.runId === traceRunId,
+  )?.attemptForce;
   const runTrace = useRunTrace(
     traceRunId,
     activeTab === 'intelligence' && Boolean(traceRunId),
@@ -124,11 +130,11 @@ export default function SymbolAnalysisContent({
 
   const handleAnalyzeWithAi = (force = false) => {
     const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
-    const requestStartedAt = Date.now();
+    const attemptId = globalThis.crypto.randomUUID();
     setAttemptedRunId(null);
     setLastAttemptForce(force);
     intelligenceMutation.mutate(
-      { ticker, candidate, position, force },
+      { ticker, candidate, position, force, attemptId },
       {
         onSuccess: (result) => {
           if (
@@ -141,10 +147,10 @@ export default function SymbolAnalysisContent({
         onSettled: async () => {
           const refreshedRuns = await tickerRuns.refetch();
           if (requestedSession !== currentSessionRef.current) return;
-          const attemptedRun = findRunStartedAfter(
+          const attemptedRun = findRunByAttemptId(
             refreshedRuns.data ?? [],
             ticker,
-            requestStartedAt,
+            attemptId,
           );
           setAttemptedRunId(attemptedRun?.runId ?? null);
         },
@@ -370,7 +376,7 @@ export default function SymbolAnalysisContent({
               isGenerating: intelligenceMutation.isPending,
               isRefreshingEvidence: evidenceRefreshMutation.isPending,
               generationError: intelligenceMutation.error,
-              failedGenerationForce: lastAttemptForce,
+              failedGenerationForce: persistedAttemptForce ?? lastAttemptForce,
               refreshError: evidenceRefreshMutation.error,
               refreshedEvidence,
               onRefreshEvidence: handleRefreshEvidence,

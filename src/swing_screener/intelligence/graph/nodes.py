@@ -129,9 +129,10 @@ def assemble_inputs(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> Analyze
         }
     if state["prior_digest"]:
         inputs_used["history"] = {"prior_runs": len(state["prior_digest"])}
-    inputs_used["enrichment_diagnostics"] = [
-        item.model_dump(mode="json") for item in req.enrichment_diagnostics
-    ]
+    if req.enrichment_diagnostics:
+        inputs_used["enrichment_diagnostics"] = [
+            item.model_dump(mode="json") for item in req.enrichment_diagnostics
+        ]
 
     provenance = {
         "price": DataProvenance(

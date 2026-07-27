@@ -230,6 +230,18 @@ describe('SymbolIntelligenceTab guided flow', () => {
       <SymbolIntelligenceTab
         model={{
           ...baseModel,
+          analysis: {
+            ...analysis,
+            inputsUsed: {
+              enrichmentDiagnostics: [{
+                source: 'evidence',
+                status: 'used',
+                asOf: '2026-07-27T08:00:00Z',
+                itemCount: 99,
+                message: 'Old aggregate diagnostic.',
+              }],
+            },
+          },
           refreshedEvidence: {
             ticker: 'AAPL',
             refreshedAt: '2026-07-28T10:00:00Z',
@@ -249,6 +261,28 @@ describe('SymbolIntelligenceTab guided flow', () => {
 
     expect(screen.getByText('tavily')).toBeVisible();
     expect(screen.getByText('Evidence provider failed.')).toBeVisible();
+    expect(screen.queryByText('Old aggregate diagnostic.')).not.toBeInTheDocument();
+    expect(screen.queryByText('99')).not.toBeInTheDocument();
+  });
+
+  it('marks aggregate evidence failed when a valid failed refresh has no source rows', () => {
+    renderWithProviders(
+      <SymbolIntelligenceTab
+        model={{
+          ...baseModel,
+          refreshedEvidence: {
+            ticker: 'AAPL',
+            refreshedAt: '2026-07-28T10:00:00Z',
+            status: 'failed',
+            sources: [],
+          },
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: /News and evidence.*Failed.*Evidence provider failed/i }),
+    ).toBeVisible();
   });
 
   it('marks the evidence manifest failed when the refresh request fails', () => {

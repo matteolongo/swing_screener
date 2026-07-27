@@ -9,7 +9,12 @@ vi.mock('@/features/intelligence/api', () => ({
 }));
 
 import * as intelligenceApi from '@/features/intelligence/api';
-import { findRunStartedAfter, useRunTrace, useTickerRuns } from '@/features/intelligence/hooks';
+import {
+  findRunByAttemptId,
+  resolveRunId,
+  useRunTrace,
+  useTickerRuns,
+} from '@/features/intelligence/hooks';
 
 function createQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -89,8 +94,8 @@ describe('useTickerRuns', () => {
   });
 });
 
-describe('findRunStartedAfter', () => {
-  it('selects the newest same-symbol run started by the current request', () => {
+describe('findRunByAttemptId', () => {
+  it('selects the exact concurrent same-symbol attempt without a clock heuristic', () => {
     const runs = [
       {
         runId: 'old-success',
@@ -100,6 +105,8 @@ describe('findRunStartedAfter', () => {
         status: 'ok',
         durationMs: 2000,
         stepCount: 9,
+        clientAttemptId: null,
+        attemptForce: null,
       },
       {
         runId: 'wrong-symbol',
@@ -109,6 +116,8 @@ describe('findRunStartedAfter', () => {
         status: 'error',
         durationMs: 1000,
         stepCount: 2,
+        clientAttemptId: 'attempt-msft',
+        attemptForce: false,
       },
       {
         runId: 'current-failure',
@@ -118,11 +127,42 @@ describe('findRunStartedAfter', () => {
         status: 'error',
         durationMs: 1000,
         stepCount: 4,
+        clientAttemptId: 'attempt-aapl-2',
+        attemptForce: true,
+      },
+      {
+        runId: 'concurrent-other-aapl',
+        ticker: 'AAPL',
+        startedAt: '2026-07-28T09:00:01Z',
+        finishedAt: null,
+        status: 'running',
+        durationMs: null,
+        stepCount: 1,
+        clientAttemptId: 'attempt-aapl-1',
+        attemptForce: false,
       },
     ];
 
     expect(
-      findRunStartedAfter(runs, ' AAPL ', Date.parse('2026-07-28T09:00:00Z'))?.runId,
+      findRunByAttemptId(runs, ' AAPL ', 'attempt-aapl-2')?.runId,
     ).toBe('current-failure');
+  });
+});
+
+describe('resolveRunId', () => {
+  it('prefers the newest persisted failed run after remount over an older cached success', () => {
+    expect(resolveRunId([
+      {
+        runId: 'new-failure',
+        ticker: 'AAPL',
+        startedAt: '2026-07-28T09:00:00Z',
+        finishedAt: '2026-07-28T09:00:01Z',
+        status: 'error',
+        durationMs: 1000,
+        stepCount: 2,
+        clientAttemptId: 'attempt-new',
+        attemptForce: true,
+      },
+    ], null, 'old-cached-success')).toBe('new-failure');
   });
 });
