@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
 import { renderWithProviders, screen, userEvent, waitFor } from '@/test/utils';
@@ -12,6 +12,7 @@ function payload(overrides: Record<string, unknown> = {}) {
     provider: 'mock',
     interval: '1d',
     lookback: 120,
+    min_rr: 2,
     data_quality: { ok: true, bars: 160, warnings: [] },
     profile_type: 'approximate_bar_based',
     market_bias: 'bullish',
@@ -146,5 +147,106 @@ describe('VolumeZonesTab', () => {
       screen.getByRole('button', { name: t('workspacePage.data.retryAnalysis') }),
     ).toBeEnabled();
     expect(screen.getByText(t('workspacePage.data.partial'))).toBeVisible();
+  });
+
+  it('shows candle provenance and keeps content date separate from fetch time', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () =>
+        HttpResponse.json(payload({ provider: 'analysis-provider' })),
+      ),
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () =>
+        HttpResponse.json({
+          ticker: 'AAPL',
+          provider: 'polygon',
+          interval: '1d',
+          data_as_of: '2026-07-25',
+          fetched_at: '2026-07-28T10:30:00+00:00',
+          price_history: [],
+          patterns: [],
+        }),
+      ),
+    );
+
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+
+    expect(await screen.findByText('polygon')).toBeVisible();
+    expect(screen.getByText('2026-07-25')).toBeVisible();
+    expect(screen.getByText(new Date('2026-07-28T10:30:00+00:00').toLocaleString())).toBeVisible();
+    expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.latestCandleDate'))).toBeVisible();
+    expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.fetchedAt'))).toBeVisible();
+  });
+
+  it('shows candle loading explicitly instead of rendering an empty chart', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () => HttpResponse.json(payload())),
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, async () => {
+        await delay(200);
+        return HttpResponse.json({
+          ticker: 'AAPL',
+          provider: 'mock',
+          interval: '1d',
+          data_as_of: null,
+          fetched_at: '2026-07-28T10:30:00+00:00',
+          price_history: [],
+          patterns: [],
+        });
+      }),
+    );
+
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+
+    expect(await screen.findByText(t('workspacePage.panels.analysis.volumeZones.candlesLoading'))).toBeVisible();
+    expect(screen.queryByTestId('volume-zone-chart')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('volume-zone-chart')).toBeVisible();
+  });
+
+  it('renders a typed candle identity mismatch without accepting the chart', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () => HttpResponse.json(payload())),
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () =>
+        HttpResponse.json({
+          ticker: 'MSFT',
+          provider: 'mock',
+          interval: '1d',
+          data_as_of: null,
+          fetched_at: '2026-07-28T10:30:00+00:00',
+          price_history: [],
+          patterns: [],
+        }),
+      ),
+    );
+
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+
+    expect(await screen.findByText(t('workspacePage.data.identityMismatch'))).toBeVisible();
+    expect(screen.queryByTestId('volume-zone-chart')).not.toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.summary'))).toBeVisible();
+  });
+
+  it('passes and displays the exact analysis parameters owned by the tab', async () => {
+    let requestedSearch = '';
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, ({ request }) => {
+        requestedSearch = new URL(request.url).search;
+        return HttpResponse.json(payload({ lookback: 90, min_rr: 2.5 }));
+      }),
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () =>
+        HttpResponse.json({
+          ticker: 'AAPL',
+          provider: 'mock',
+          interval: '1d',
+          data_as_of: null,
+          fetched_at: '2026-07-28T10:30:00+00:00',
+          price_history: [],
+          patterns: [],
+        }),
+      ),
+    );
+
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" lookback={90} minRr={2.5} />);
+
+    expect(await screen.findByText('90')).toBeVisible();
+    expect(screen.getByText('2.5')).toBeVisible();
+    expect(requestedSearch).toBe('?lookback=90&min_rr=2.5');
   });
 });

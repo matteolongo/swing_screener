@@ -62,7 +62,10 @@ def test_volume_analysis_query_params(monkeypatch):
         "/api/market-data/AAPL/volume-analysis?interval=1d&lookback=60&min_rr=3"
     )
     assert res.status_code == 200
+    assert res.json()["symbol"] == "AAPL"
+    assert res.json()["interval"] == "1d"
     assert res.json()["lookback"] == 60
+    assert res.json()["min_rr"] == 3.0
     assert prov.fetch_ohlcv.called
 
 

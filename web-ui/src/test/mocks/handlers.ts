@@ -40,6 +40,7 @@ export const mockVolumeAnalysis = {
   provider: 'mock',
   interval: '1d',
   lookback: 120,
+  min_rr: 2,
   data_quality: { ok: true, bars: 160, warnings: [] },
   profile_type: 'approximate_bar_based',
   market_bias: 'bullish',
@@ -1067,6 +1068,10 @@ export const handlers = [
   http.get(`${API_BASE_URL}/api/market-data/:ticker/candles`, ({ params }) => {
     return HttpResponse.json({
       ticker: String(params.ticker ?? 'AAPL').toUpperCase(),
+      provider: 'mock',
+      interval: '1d',
+      data_as_of: null,
+      fetched_at: '2026-07-28T10:30:00+00:00',
       price_history: [],
       patterns: [],
     })

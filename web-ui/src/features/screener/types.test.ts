@@ -1,9 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import {
+  TickerCandlesIdentityError,
   transformScreenerResponse,
   transformCandlePattern,
+  transformTickerCandles,
   type ScreenerResponseAPI,
 } from '@/features/screener/types';
+
+describe('transformTickerCandles', () => {
+  const raw = {
+    ticker: 'AAPL',
+    provider: 'polygon',
+    interval: '1d',
+    data_as_of: '2026-07-25',
+    fetched_at: '2026-07-28T10:30:00+00:00',
+    price_history: [],
+    patterns: [],
+  };
+
+  it('maps independent candle provenance and timestamps at the API boundary', () => {
+    expect(transformTickerCandles(raw, ' aapl ')).toEqual({
+      ticker: 'AAPL',
+      provider: 'polygon',
+      interval: '1d',
+      dataAsOf: '2026-07-25',
+      fetchedAt: '2026-07-28T10:30:00+00:00',
+      priceHistory: [],
+      patterns: [],
+    });
+  });
+
+  it('throws a typed identity error for another ticker', () => {
+    expect(() => transformTickerCandles({ ...raw, ticker: 'MSFT' }, 'AAPL')).toThrow(
+      TickerCandlesIdentityError,
+    );
+  });
+});
 
 describe('transformCandlePattern', () => {
   it('maps snake_case raw pattern to camelCase', () => {

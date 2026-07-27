@@ -1,7 +1,9 @@
 import { lazy, Suspense, useMemo } from 'react';
 import type { ChartVolumeZone } from '@/components/domain/market/CandleChart';
 import { useTickerCandles } from '@/features/screener/hooks';
+import { TickerCandlesIdentityError } from '@/features/screener/types';
 import {
+  DEFAULT_VOLUME_LOOKBACK,
   DEFAULT_VOLUME_MIN_RR,
   useVolumeAnalysisQuery,
 } from '@/features/volumeZones/hooks';
@@ -26,9 +28,19 @@ function ChartLoadingFallback() {
   );
 }
 
-export default function VolumeZonesTab({ ticker }: { ticker: string }) {
+interface VolumeZonesTabProps {
+  ticker: string;
+  lookback?: number;
+  minRr?: number;
+}
+
+export default function VolumeZonesTab({
+  ticker,
+  lookback = DEFAULT_VOLUME_LOOKBACK,
+  minRr = DEFAULT_VOLUME_MIN_RR,
+}: VolumeZonesTabProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
-  const analysisQuery = useVolumeAnalysisQuery(normalizedTicker);
+  const analysisQuery = useVolumeAnalysisQuery(normalizedTicker, true, lookback, minRr);
   const candlesQuery = useTickerCandles(normalizedTicker);
 
   const analysis = analysisQuery.data;
@@ -61,8 +73,11 @@ export default function VolumeZonesTab({ ticker }: { ticker: string }) {
     );
   }
 
-  const priceHistory = candlesQuery.data?.priceHistory ?? [];
-  const latestBar = priceHistory[priceHistory.length - 1]?.date;
+  const candleIdentityMismatch = candlesQuery.error instanceof TickerCandlesIdentityError;
+  const unavailable = tk('unavailable');
+  const fetchedAt = candlesQuery.data?.fetchedAt
+    ? new Date(candlesQuery.data.fetchedAt).toLocaleString()
+    : unavailable;
 
   return (
     <div className="space-y-3">
@@ -85,11 +100,18 @@ export default function VolumeZonesTab({ ticker }: { ticker: string }) {
           </button>
         </div>
       )}
+      {candlesQuery.isLoading && !candlesQuery.data && (
+        <div className="text-sm text-muted" role="status">
+          {tk('candlesLoading')}
+        </div>
+      )}
       {candlesQuery.isError && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <div>
             <span className="mr-2 font-semibold text-warning">{t('workspacePage.data.partial')}</span>
-            <span>{tk('candlesFailed')}</span>
+            <span>
+              {candleIdentityMismatch ? t('workspacePage.data.identityMismatch') : tk('candlesFailed')}
+            </span>
           </div>
           <button
             type="button"
@@ -134,29 +156,43 @@ export default function VolumeZonesTab({ ticker }: { ticker: string }) {
         )}
       </div>}
 
-      {analysis && <div className="rounded-lg border border-border bg-surface p-3 text-sm">
+      <div className="rounded-lg border border-border bg-surface p-3 text-sm">
         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{tk('sources')}</div>
         <div className="grid gap-1 sm:grid-cols-2">
           <div>
-            {tk('priceSource')}: {analysis.provider} · {analysis.interval}
+            <span>{tk('candleProvider')}</span>: <span>{candlesQuery.data?.provider ?? unavailable}</span>
           </div>
           <div>
-            {tk('latestBar')}: {latestBar ?? '—'}
+            <span>{tk('candleInterval')}</span>: <span>{candlesQuery.data?.interval ?? unavailable}</span>
           </div>
           <div>
-            {tk('analysisParameters')}: {tk('lookback')} {analysis.lookback}
+            <span>{tk('latestCandleDate')}</span>: <span>{candlesQuery.data?.dataAsOf ?? unavailable}</span>
           </div>
           <div>
-            {tk('minRr')}: {DEFAULT_VOLUME_MIN_RR.toFixed(1)}
+            <span>{tk('fetchedAt')}</span>: <span>{fetchedAt}</span>
           </div>
+          {analysis && (
+            <>
+              <div>
+                <span>{tk('analysisProvider')}</span>: <span>{analysis.provider}</span> · {analysis.interval}
+              </div>
+              <div>
+                <span>{tk('analysisParameters')}</span>: <span>{tk('lookback')}</span>{' '}
+                <span>{lookback}</span>
+              </div>
+              <div>
+                <span>{tk('minRr')}</span>: <span>{minRr}</span>
+              </div>
+            </>
+          )}
         </div>
-      </div>}
+      </div>
 
       {analysis && <div className="rounded-lg border border-warning/60 bg-warning/10 p-3 text-sm font-medium text-warning">
         {tk('approximateLimitation')}
       </div>}
 
-      {!candlesQuery.isError && (
+      {candlesQuery.data && !candlesQuery.isError && (
         <div data-testid="volume-zone-chart">
           <Suspense fallback={<ChartLoadingFallback />}>
             <CandleChart

@@ -80,6 +80,52 @@ export function transformCandlePattern(raw: CandlePatternRaw): CandlePattern {
   };
 }
 
+export interface TickerCandlesAPIResponse {
+  ticker: string;
+  provider?: string | null;
+  interval?: string | null;
+  data_as_of?: string | null;
+  fetched_at?: string | null;
+  price_history: PriceHistoryPoint[];
+  patterns: CandlePatternRaw[];
+}
+
+export interface TickerCandles {
+  ticker: string;
+  provider?: string;
+  interval?: string;
+  dataAsOf?: string;
+  fetchedAt?: string;
+  priceHistory: PriceHistoryPoint[];
+  patterns: CandlePattern[];
+}
+
+export class TickerCandlesIdentityError extends Error {
+  constructor() {
+    super('Ticker candles identity mismatch');
+    this.name = 'TickerCandlesIdentityError';
+  }
+}
+
+export function transformTickerCandles(
+  raw: TickerCandlesAPIResponse,
+  requestedTicker: string,
+): TickerCandles {
+  const ticker = raw.ticker.trim().toUpperCase();
+  if (ticker !== requestedTicker.trim().toUpperCase()) {
+    throw new TickerCandlesIdentityError();
+  }
+  return {
+    ticker,
+    provider: raw.provider ?? undefined,
+    interval: raw.interval ?? undefined,
+    dataAsOf: raw.data_as_of ?? undefined,
+    fetchedAt: raw.fetched_at ?? undefined,
+    priceHistory: raw.price_history,
+    patterns: raw.patterns.map(transformCandlePattern),
+  };
+}
+
 export type DecisionAction =
   | 'BUY_NOW'
   | 'BUY_ON_PULLBACK'

@@ -10,6 +10,14 @@ Market-data provider implementations for OHLCV and price history.
 | `alpaca_provider.py` | `AlpacaDataProvider` | Alpaca Markets | primary (requires `ALPACA_API_KEY` + `ALPACA_SECRET_KEY`) |
 | `polygon_provider.py` | `PolygonProvider` | Polygon.io | primary (requires `POLYGON_IO_API_KEY`) |
 
+## API provenance
+
+`GET /api/market-data/{ticker}/candles` reports the selected provider's
+`get_provider_name()` result and the requested interval. Its `data_as_of` value
+is the latest returned candle date; `fetched_at` is the separate,
+timezone-aware API fetch timestamp. Neither timestamp is inferred from the
+other, and `data_as_of` is null when the provider returns no bars.
+
 ## How to add a data source
 
 A source appears on the Data Sources page when it implements the diagnostics

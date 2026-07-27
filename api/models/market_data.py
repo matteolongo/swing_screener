@@ -48,6 +48,7 @@ class VolumeAnalysisResponse(BaseModel):
     provider: str
     interval: str
     lookback: int
+    min_rr: float
     data_quality: DataQualityOut
     profile_type: str
     market_bias: str
@@ -62,13 +63,14 @@ class VolumeAnalysisResponse(BaseModel):
 
 
 def build_volume_analysis_response(
-    analysis: VolumeZoneAnalysis, provider: str
+    analysis: VolumeZoneAnalysis, provider: str, min_rr: float
 ) -> VolumeAnalysisResponse:
     return VolumeAnalysisResponse(
         symbol=analysis.symbol,
         provider=provider,
         interval=analysis.interval,
         lookback=analysis.lookback,
+        min_rr=min_rr,
         data_quality=DataQualityOut(
             ok=analysis.data_quality.ok,
             bars=analysis.data_quality.bars,

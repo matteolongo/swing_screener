@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 import pandas as pd
 from fastapi import APIRouter, Query
@@ -26,6 +27,10 @@ router = APIRouter(prefix="/market-data", tags=["market-data"])
 
 class TickerCandlesResponse(BaseModel):
     ticker: str
+    provider: str
+    interval: str
+    data_as_of: str | None
+    fetched_at: str
     price_history: list[PriceHistoryPoint]
     patterns: list[CandlePatternOut]
 
@@ -35,6 +40,7 @@ def get_ticker_candles(
     ticker: str,
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    interval: str = Query(default="1d"),
 ) -> TickerCandlesResponse:
     """Return OHLCV price history and detected candle patterns for a ticker.
 
@@ -43,17 +49,36 @@ def get_ticker_candles(
     """
     symbol = ticker.strip().upper()
     provider = get_default_provider()
+    provider_name = provider.get_provider_name()
     _start = start_date or get_default_history_start()
     _end = end_date or get_today_str()
 
     try:
-        ohlcv = provider.fetch_ohlcv([symbol], start_date=_start, end_date=_end)
+        ohlcv = provider.fetch_ohlcv(
+            [symbol], start_date=_start, end_date=_end, interval=interval
+        )
     except Exception as exc:
         logger.warning("OHLCV fetch failed for %s: %s", symbol, exc)
-        return TickerCandlesResponse(ticker=symbol, price_history=[], patterns=[])
+        return TickerCandlesResponse(
+            ticker=symbol,
+            provider=provider_name,
+            interval=interval,
+            data_as_of=None,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+            price_history=[],
+            patterns=[],
+        )
 
     if ohlcv is None or ohlcv.empty:
-        return TickerCandlesResponse(ticker=symbol, price_history=[], patterns=[])
+        return TickerCandlesResponse(
+            ticker=symbol,
+            provider=provider_name,
+            interval=interval,
+            data_as_of=None,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+            price_history=[],
+            patterns=[],
+        )
 
     raw_history = price_history_map(ohlcv, tickers=[symbol]).get(symbol, [])
     price_history = [PriceHistoryPoint(**point) for point in raw_history]
@@ -75,7 +100,13 @@ def get_ticker_candles(
     ]
 
     return TickerCandlesResponse(
-        ticker=symbol, price_history=price_history, patterns=patterns
+        ticker=symbol,
+        provider=provider_name,
+        interval=interval,
+        data_as_of=price_history[-1].date if price_history else None,
+        fetched_at=datetime.now(timezone.utc).isoformat(),
+        price_history=price_history,
+        patterns=patterns,
     )
 
 
@@ -115,4 +146,4 @@ def get_ticker_volume_analysis(
         min_rr=float(min_rr),
         cfg=VolumeZoneConfig(),
     )
-    return build_volume_analysis_response(analysis, provider_name)
+    return build_volume_analysis_response(analysis, provider_name, min_rr=float(min_rr))

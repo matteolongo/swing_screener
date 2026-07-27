@@ -17,6 +17,6 @@ export async function fetchVolumeAnalysis(
     errorMessage: `Failed to fetch volume analysis for ${ticker}`,
   });
   const analysis = transformVolumeAnalysis(raw);
-  assertVolumeAnalysisIdentity(analysis, ticker, lookback);
+  assertVolumeAnalysisIdentity(analysis, ticker, lookback, minRr);
   return analysis;
 }

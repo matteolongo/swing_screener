@@ -233,8 +233,8 @@ Watchlist (`/api/watchlist`):
 - `DELETE /api/watchlist/{ticker}`
 
 Market Data (`/api/market-data`):
-- `GET /api/market-data/{ticker}/candles` — returns `price_history` (OHLCV, up to 252 bars) and `patterns` for any ticker. Used as a fallback when the ticker is not present in the last screener result (e.g. open positions, watchlist items).
-- `GET /api/market-data/{ticker}/volume-analysis` — read-only advisory volume-zone analysis for one symbol. Query params: `interval` (default `1d`), `lookback` (default `120`), and `min_rr` (default `2.0`). Uses the configured market-data provider's OHLCV bars only, returns an approximate bar-based profile warning, and does not affect screener ranking, sizing, positions, or orders.
+- `GET /api/market-data/{ticker}/candles` — returns `price_history` (OHLCV, up to 252 bars) and `patterns` for any ticker. The additive provenance fields are `provider`, requested `interval`, `data_as_of` (latest candle date, nullable when no bars are available), and `fetched_at` (timezone-aware API fetch timestamp). Query param `interval` defaults to `1d`. Used as a fallback when the ticker is not present in the last screener result (e.g. open positions, watchlist items).
+- `GET /api/market-data/{ticker}/volume-analysis` — read-only advisory volume-zone analysis for one symbol. Query params: `interval` (default `1d`), `lookback` (default `120`), and `min_rr` (default `2.0`); the response echoes all three parameters with the normalized `symbol` so clients can validate query identity. Uses the configured market-data provider's OHLCV bars only, returns an approximate bar-based profile warning, and does not affect screener ranking, sizing, positions, or orders.
 
 Calendar:
 - `GET /api/calendar/events`

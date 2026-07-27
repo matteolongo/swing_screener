@@ -15,7 +15,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Applied universe refreshes now persist review metadata when index membership is
   unchanged, preventing verified snapshots from expiring immediately afterward.
 - Volume Zones now preserves available candle or analysis content during partial
-  failures, rejects mismatched response identities, and offers source-specific retries.
+  failures, rejects mismatched response and parameter identities, reports each
+  source's provenance without conflating candle and fetch times, and offers
+  source-specific retries.
 
 ## [3.0.0] - Unreleased
 

@@ -135,6 +135,7 @@ describe('SymbolAnalysisContent volume zones tab', () => {
           provider: 'mock',
           interval: '1d',
           lookback: 120,
+          min_rr: 2,
           data_quality: { ok: true, bars: 160, warnings: [] },
           profile_type: 'approximate_bar_based',
           market_bias: 'bullish',

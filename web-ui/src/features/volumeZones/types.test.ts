@@ -11,6 +11,7 @@ const raw: VolumeAnalysisAPI = {
   provider: 'mock',
   interval: '1d',
   lookback: 120,
+  min_rr: 2,
   data_quality: { ok: true, bars: 160, warnings: [] },
   profile_type: 'approximate_bar_based',
   market_bias: 'bullish',
@@ -44,6 +45,7 @@ describe('transformVolumeAnalysis', () => {
     expect(r.confidenceScore).toBe(72.5);
     expect(r.marketBias).toBe('bullish');
     expect(r.profileType).toBe('approximate_bar_based');
+    expect(r.minRr).toBe(2);
     expect(r.keyLevels.poc).toBe(95);
     expect(r.keyLevels.relVolume).toBe(1.3);
     expect(r.volumeZones[0].priceLow).toBe(94);
@@ -67,12 +69,39 @@ describe('transformVolumeAnalysis', () => {
     const analysis = transformVolumeAnalysis({ ...raw, symbol: 'MSFT' });
 
     expect(VolumeAnalysisIdentityError).toBeDefined();
-    expect(() => assertVolumeAnalysisIdentity(analysis, ' aapl ', 120)).toThrow('identity mismatch');
+    expect(() => assertVolumeAnalysisIdentity(analysis, ' aapl ', 120, 2)).toThrow('identity mismatch');
   });
 
   it('rejects analysis whose lookback does not match the requested parameter', () => {
     const analysis = transformVolumeAnalysis({ ...raw, lookback: 90 });
 
-    expect(() => assertVolumeAnalysisIdentity(analysis, 'AAPL', 120)).toThrow('identity mismatch');
+    expect(() => assertVolumeAnalysisIdentity(analysis, 'AAPL', 120, 2)).toThrow('identity mismatch');
+  });
+
+  it('rejects a materially different minRr but accepts serialization noise', () => {
+    const analysis = transformVolumeAnalysis({ ...raw, min_rr: 2.01 });
+
+    expect(() => assertVolumeAnalysisIdentity(analysis, 'AAPL', 120, 2)).toThrow(
+      VolumeAnalysisIdentityError,
+    );
+    expect(() =>
+      assertVolumeAnalysisIdentity(
+        transformVolumeAnalysis({ ...raw, min_rr: 2.0000000001 }),
+        'AAPL',
+        120,
+        2,
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects a response that omits minRr identity', () => {
+    const analysis = transformVolumeAnalysis({
+      ...raw,
+      min_rr: undefined as unknown as number,
+    });
+
+    expect(() => assertVolumeAnalysisIdentity(analysis, 'AAPL', 120, 2)).toThrow(
+      VolumeAnalysisIdentityError,
+    );
   });
 });
