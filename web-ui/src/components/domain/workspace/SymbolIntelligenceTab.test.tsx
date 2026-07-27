@@ -73,6 +73,7 @@ const baseModel: SymbolIntelligenceTabModel = {
   isGenerating: false,
   isRefreshingEvidence: false,
   generationError: null,
+  failedGenerationForce: false,
   refreshError: null,
   onRefreshEvidence: vi.fn(),
   onGenerate: vi.fn(),
@@ -190,5 +191,72 @@ describe('SymbolIntelligenceTab guided flow', () => {
     expect(onRefreshEvidence).toHaveBeenCalledOnce();
     expect(onGenerate).toHaveBeenNthCalledWith(1, false);
     expect(onGenerate).toHaveBeenNthCalledWith(2, true);
+  });
+
+  it.each([
+    { failedGenerationForce: false, expectedForce: false },
+    { failedGenerationForce: true, expectedForce: true },
+  ])('retries the failed generation mode', async ({ failedGenerationForce, expectedForce }) => {
+    const onGenerate = vi.fn();
+    renderWithProviders(
+      <SymbolIntelligenceTab
+        model={{
+          ...baseModel,
+          generationError: new Error('generation failed'),
+          failedGenerationForce,
+          onGenerate,
+        }}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: t('workspacePage.data.retry') }),
+    );
+
+    expect(onGenerate).toHaveBeenCalledWith(expectedForce);
+  });
+
+  it('keeps manual reviews available before a narrative exists', () => {
+    renderWithProviders(<SymbolIntelligenceTab model={baseModel} />);
+
+    expect(screen.getByText(t('workspacePage.intelligence.followUps'))).toBeVisible();
+    expect(screen.getByText('position review')).toBeInTheDocument();
+    expect(screen.getByText('strategic review')).toBeInTheDocument();
+  });
+
+  it('marks an in-flight trace step as running rather than complete', () => {
+    const runningTrace: RunTrace = {
+      runId: 'run-active',
+      ticker: 'AAPL',
+      startedAt: '2026-07-27T20:00:00Z',
+      finishedAt: null,
+      status: 'running',
+      error: null,
+      steps: [
+        {
+          name: 'format',
+          status: 'running' as RunTrace['steps'][number]['status'],
+          startedAt: '2026-07-27T20:00:01Z',
+          finishedAt: '',
+          durationMs: 0,
+          outputsSummary: {},
+          error: null,
+          model: null,
+          tokens: null,
+          sourceCounts: null,
+          promptHash: null,
+          promptPreview: null,
+        },
+      ],
+    };
+
+    renderWithProviders(
+      <SymbolIntelligenceTab model={{ ...baseModel, trace: runningTrace }} />,
+    );
+
+    expect(screen.getByText(t('workspacePage.intelligence.steps.formatting'))).toHaveAttribute(
+      'data-status',
+      'running',
+    );
   });
 });

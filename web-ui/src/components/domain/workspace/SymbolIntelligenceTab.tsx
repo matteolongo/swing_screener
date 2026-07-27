@@ -32,6 +32,7 @@ export interface SymbolIntelligenceTabModel {
   isGenerating: boolean;
   isRefreshingEvidence: boolean;
   generationError: Error | null;
+  failedGenerationForce: boolean;
   refreshError: Error | null;
   onRefreshEvidence: () => void;
   onGenerate: (force: boolean) => void;
@@ -81,7 +82,8 @@ function pipelineStatus(
 ): PipelineStatus {
   const matching = trace?.steps.filter((item) => step.traceNames.includes(item.name)) ?? [];
   if (matching.some((item) => item.status === 'error')) return 'failed';
-  if (matching.length > 0) return 'complete';
+  if (matching.some((item) => item.status === 'running')) return 'running';
+  if (matching.some((item) => item.status === 'ok')) return 'complete';
   if (!trace && isGenerating && step.id === 'enriching') return 'running';
   return 'pending';
 }
@@ -205,7 +207,12 @@ function Pipeline({ model }: { model: SymbolIntelligenceTabModel }) {
           <p className="text-sm text-danger">
             {model.generationError?.message ?? model.trace?.error ?? t('workspacePage.intelligence.failed')}
           </p>
-          <Button type="button" size="sm" variant="secondary" onClick={() => model.onGenerate(true)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => model.onGenerate(model.failedGenerationForce)}
+          >
             {t('workspacePage.data.retry')}
           </Button>
         </div>
@@ -322,9 +329,17 @@ export default function SymbolIntelligenceTab({ model }: { model: SymbolIntellig
           </CollapsibleSection>
         </>
       ) : (
-        <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted">
-          {t('workspacePage.intelligence.empty')}
-        </div>
+        <>
+          <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted">
+            {t('workspacePage.intelligence.empty')}
+          </div>
+          <CollapsibleSection title={t('workspacePage.intelligence.followUps')}>
+            <div className="grid gap-3">
+              <PositionReviewPanel ticker={model.ticker} position={model.position} />
+              <StrategicReviewPanel ticker={model.ticker} />
+            </div>
+          </CollapsibleSection>
+        </>
       )}
     </div>
   );

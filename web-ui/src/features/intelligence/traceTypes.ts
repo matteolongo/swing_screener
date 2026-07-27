@@ -1,6 +1,6 @@
 export interface StepTraceAPI {
   name: string;
-  status: 'ok' | 'error';
+  status: 'ok' | 'error' | 'running';
   started_at: string;
   finished_at: string;
   duration_ms: number;
@@ -35,7 +35,7 @@ export interface RunIndexEntryAPI {
 
 export interface StepTrace {
   name: string;
-  status: 'ok' | 'error';
+  status: 'ok' | 'error' | 'running';
   startedAt: string;
   finishedAt: string;
   durationMs: number;

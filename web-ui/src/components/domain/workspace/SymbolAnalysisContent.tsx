@@ -1,6 +1,12 @@
 import { useState, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
-import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery, useRunTrace } from '@/features/intelligence/hooks';
+import {
+  findRunStartedAfter,
+  useIntelligenceAnalysisMutation,
+  useIntelligenceLatestQuery,
+  useRunTrace,
+  useTickerRuns,
+} from '@/features/intelligence/hooks';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
@@ -93,12 +99,18 @@ export default function SymbolAnalysisContent({
   const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
+  const [attemptedRunId, setAttemptedRunId] = useState<string | null>(null);
+  const [lastAttemptForce, setLastAttemptForce] = useState(false);
   const currentSessionRef = useRef(`${ticker.trim().toUpperCase()}:${selectionVersion}`);
   const tabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
+  const tickerRuns = useTickerRuns(ticker, activeTab === 'intelligence');
+  const traceRunId =
+    attemptedRunId
+    ?? (intelligenceMutation.isError ? null : displayedIntelligence?.runId);
   const runTrace = useRunTrace(
-    displayedIntelligence?.runId,
-    activeTab === 'intelligence' && Boolean(displayedIntelligence?.runId),
+    traceRunId,
+    activeTab === 'intelligence' && Boolean(traceRunId),
   );
   const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
 
@@ -108,6 +120,9 @@ export default function SymbolAnalysisContent({
 
   const handleAnalyzeWithAi = (force = false) => {
     const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+    const requestStartedAt = Date.now();
+    setAttemptedRunId(null);
+    setLastAttemptForce(force);
     intelligenceMutation.mutate(
       { ticker, candidate, position, force },
       {
@@ -119,12 +134,24 @@ export default function SymbolAnalysisContent({
             setIntelligenceResult(result);
           }
         },
+        onSettled: async () => {
+          const refreshedRuns = await tickerRuns.refetch();
+          if (requestedSession !== currentSessionRef.current) return;
+          const attemptedRun = findRunStartedAfter(
+            refreshedRuns.data ?? [],
+            ticker,
+            requestStartedAt,
+          );
+          setAttemptedRunId(attemptedRun?.runId ?? null);
+        },
       }
     );
   };
 
   useEffect(() => {
     setIntelligenceResult(null);
+    setAttemptedRunId(null);
+    setLastAttemptForce(false);
     intelligenceMutation.reset();
   }, [ticker, selectionVersion]);
 
@@ -322,6 +349,7 @@ export default function SymbolAnalysisContent({
               isGenerating: intelligenceMutation.isPending,
               isRefreshingEvidence: intelligenceWorkflow?.isRefreshingEvidence ?? false,
               generationError: intelligenceMutation.error,
+              failedGenerationForce: lastAttemptForce,
               refreshError: intelligenceWorkflow?.refreshError ?? null,
               onRefreshEvidence: intelligenceWorkflow?.onRefreshEvidence ?? fundamentals.onRefresh,
               onGenerate: handleAnalyzeWithAi,

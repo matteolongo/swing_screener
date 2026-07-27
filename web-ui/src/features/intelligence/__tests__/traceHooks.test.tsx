@@ -9,7 +9,7 @@ vi.mock('@/features/intelligence/api', () => ({
 }));
 
 import * as intelligenceApi from '@/features/intelligence/api';
-import { useRunTrace, useTickerRuns } from '@/features/intelligence/hooks';
+import { findRunStartedAfter, useRunTrace, useTickerRuns } from '@/features/intelligence/hooks';
 
 function createQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -86,5 +86,43 @@ describe('useTickerRuns', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockedGetTickerRuns).toHaveBeenCalledWith('AAPL');
     expect(result.current.data?.[0].stepCount).toBe(9);
+  });
+});
+
+describe('findRunStartedAfter', () => {
+  it('selects the newest same-symbol run started by the current request', () => {
+    const runs = [
+      {
+        runId: 'old-success',
+        ticker: 'AAPL',
+        startedAt: '2026-07-28T08:59:00Z',
+        finishedAt: '2026-07-28T08:59:02Z',
+        status: 'ok',
+        durationMs: 2000,
+        stepCount: 9,
+      },
+      {
+        runId: 'wrong-symbol',
+        ticker: 'MSFT',
+        startedAt: '2026-07-28T09:01:00Z',
+        finishedAt: '2026-07-28T09:01:01Z',
+        status: 'error',
+        durationMs: 1000,
+        stepCount: 2,
+      },
+      {
+        runId: 'current-failure',
+        ticker: 'aapl',
+        startedAt: '2026-07-28T09:00:01Z',
+        finishedAt: '2026-07-28T09:00:02Z',
+        status: 'error',
+        durationMs: 1000,
+        stepCount: 4,
+      },
+    ];
+
+    expect(
+      findRunStartedAfter(runs, ' AAPL ', Date.parse('2026-07-28T09:00:00Z'))?.runId,
+    ).toBe('current-failure');
   });
 });

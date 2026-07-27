@@ -21,7 +21,9 @@ vi.mock('@/features/fundamentals/hooks', () => ({
 }));
 
 vi.mock('@/features/intelligence/hooks', () => ({
-  useRunTrace: () => ({ data: undefined, isLoading: false, isError: false }),
+  useRunTrace: vi.fn(),
+  useTickerRuns: vi.fn(),
+  findRunStartedAfter: vi.fn(() => null),
   useIntelligenceAnalysisMutation: vi.fn(),
   useIntelligenceLatestQuery: vi.fn(),
   useIntelligenceHistoryQuery: vi.fn(() => ({ data: [], isLoading: false })),
@@ -154,6 +156,15 @@ describe('AnalysisCanvasPanel', () => {
       data: undefined,
       isLoading: false,
       isError: false,
+    } as never);
+    vi.mocked(intelligenceHooks.useRunTrace).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(intelligenceHooks.useTickerRuns).mockReturnValue({
+      data: [],
+      refetch: vi.fn().mockResolvedValue({ data: [] }),
     } as never);
     vi.mocked(catalystHooks.useSymbolCatalystQuery).mockReturnValue({
       data: undefined,
@@ -408,8 +419,39 @@ describe('AnalysisCanvasPanel', () => {
       evidenceLedger: null,
       classifiedCatalysts: [],
     };
-    const mutate = vi.fn((_variables: unknown, options?: { onSuccess?: (result: SymbolIntelligence) => void }) => {
+    const mutate = vi.fn(async (
+      _variables: unknown,
+      options?: {
+        onSuccess?: (result: SymbolIntelligence) => void;
+        onSettled?: () => Promise<void>;
+      },
+    ) => {
       options?.onSuccess?.(mockIntelligence);
+      await options?.onSettled?.();
+    });
+    const refetchRuns = vi.fn().mockResolvedValue({
+      data: [{
+        runId: 'run-current-attempt',
+        ticker: 'AAPL',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        status: 'ok',
+        durationMs: 1,
+        stepCount: 1,
+      }],
+    });
+    vi.mocked(intelligenceHooks.useTickerRuns).mockReturnValue({
+      data: [],
+      refetch: refetchRuns,
+    } as never);
+    vi.mocked(intelligenceHooks.findRunStartedAfter).mockReturnValue({
+      runId: 'run-current-attempt',
+      ticker: 'AAPL',
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      status: 'ok',
+      durationMs: 1,
+      stepCount: 1,
     });
     vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
       mutate,
@@ -497,6 +539,12 @@ describe('AnalysisCanvasPanel', () => {
       expect.objectContaining({ ticker: 'AAPL' }),
       expect.objectContaining({ onSuccess: expect.any(Function) })
     );
+    await waitFor(() => {
+      expect(intelligenceHooks.useRunTrace).toHaveBeenCalledWith(
+        'run-current-attempt',
+        true,
+      );
+    });
     expect(screen.getAllByText('AAPL is showing strong momentum with a confirmed breakout.')).not.toHaveLength(0);
   });
 

@@ -24,6 +24,24 @@ import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/type
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { queryKeys } from '@/lib/queryKeys';
 
+export function findRunStartedAfter(
+  runs: RunIndexEntry[],
+  ticker: string,
+  requestStartedAt: number,
+): RunIndexEntry | null {
+  const normalizedTicker = ticker.trim().toUpperCase();
+  return (
+    runs
+      .filter(
+        (run) =>
+          run.ticker.trim().toUpperCase() === normalizedTicker
+          && Date.parse(run.startedAt) >= requestStartedAt,
+      )
+      .sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt))[0]
+    ?? null
+  );
+}
+
 export function useIntelligenceAnalysisMutation() {
   const queryClient = useQueryClient();
   return useMutation<

@@ -68,3 +68,38 @@ Passed 14 files and 125 tests.
 ## Concerns
 
 None.
+
+## Review fix round 1
+
+Implemented:
+
+- Associated a settled mutation with the newest same-symbol ticker run whose
+  `startedAt` is at or after the captured request start, then fetched that exact
+  trace. A new failure no longer appears beside the prior successful trace, and
+  failed first attempts can show their own provenance.
+- Preserved the failed request mode for retry: normal retries remain normal and
+  force retries remain forced.
+- Kept Position Review and Strategic Review available in collapsed follow-ups
+  before a narrative exists; chat remains gated on analysis context.
+- Treated a step trace with `running` status as running; only `ok` is complete.
+- Left the evidence-refresh action unchanged pending the controller's API
+  decision.
+
+RED evidence:
+
+- `npx vitest run src/components/domain/workspace/SymbolIntelligenceTab.test.tsx`
+  failed 3 tests: normal retry forced regeneration, pre-analysis follow-ups were
+  absent, and an in-flight format step rendered complete.
+- `npx vitest run src/features/intelligence/__tests__/traceHooks.test.tsx`
+  failed because `findRunStartedAfter` did not exist.
+
+GREEN verification:
+
+- `npx vitest run src/features/intelligence src/components/domain/workspace/SymbolIntelligenceTab.test.tsx src/components/domain/workspace/PositionReviewPanel.test.tsx src/components/domain/workspace/StrategicReviewPanel.test.tsx src/components/domain/workspace/IntelligenceChatPanel.test.tsx src/components/domain/workspace/NarrativeAnalysisCard.test.tsx src/components/domain/workspace/AnalysisCanvasPanel.test.tsx src/components/domain/workspace/SymbolAnalysisContent.test.tsx`
+  — PASS, 14 files and 130 tests.
+- `npm run typecheck` — PASS.
+- `npm run lint` — PASS with zero warnings.
+- `git diff --check` — PASS.
+
+Concerns: evidence refresh still has no dedicated backend endpoint; intentionally
+unchanged while the controller resolves the approved-plan/API conflict.
