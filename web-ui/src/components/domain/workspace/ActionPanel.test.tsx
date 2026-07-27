@@ -278,7 +278,36 @@ describe('ActionPanel', () => {
     expect(screen.getByRole('button', { name: 'Create Order' })).toBeDisabled();
   });
 
-  it('submits as ADD_ON when a live open position exists even if screener metadata is stale', async () => {
+  it.each([
+    ['no same-symbol state', undefined],
+    ['a canonical new-entry state', {
+      mode: 'NEW_ENTRY',
+      pendingEntryExists: false,
+      addOnCount: 0,
+      maxAddOns: 1,
+      reason: 'Manage the existing position.',
+    }],
+  ])('does not show an order form for a held ready candidate with %s', (_label, sameSymbol) => {
+    openPositionsMock.mockReturnValue([
+      {
+        ticker: 'AAPL',
+        status: 'open',
+        entryDate: '2026-03-10',
+        entryPrice: 95,
+        stopPrice: 90,
+        shares: 10,
+        positionId: 'POS-AAPL-1',
+      },
+    ]);
+    setCandidate({ sameSymbol });
+
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.panels.analysis.orderUnavailable.title'))).toBeVisible();
+  });
+
+  it('submits a held candidate only from canonical ready ADD_ON state', async () => {
     openPositionsMock.mockReturnValue([
       {
         ticker: 'AAPL',
@@ -292,11 +321,16 @@ describe('ActionPanel', () => {
     ]);
     setCandidate({
       sameSymbol: {
-        mode: 'NEW_ENTRY',
+        mode: 'ADD_ON',
+        positionId: 'POS-AAPL-1',
+        currentPositionEntry: 95,
+        currentPositionStop: 90,
+        freshSetupStop: 97,
+        executionStop: 90,
         pendingEntryExists: false,
         addOnCount: 0,
         maxAddOns: 1,
-        reason: 'stale snapshot',
+        reason: 'Canonical add-on setup.',
       },
     });
     mutateMock.mockResolvedValue(undefined);

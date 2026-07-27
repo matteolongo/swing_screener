@@ -14,38 +14,6 @@ interface ActionPanelProps {
   ticker: string;
 }
 
-function resolveSameSymbolContext(
-  candidate: SymbolAnalysisCandidate | null,
-  openPosition:
-    | {
-        positionId?: string;
-        entryPrice: number;
-        stopPrice: number;
-      }
-    | undefined,
-): SameSymbolCandidateContext | undefined {
-  if (candidate?.sameSymbol?.mode === 'ADD_ON') {
-    return candidate.sameSymbol;
-  }
-
-  if (openPosition?.positionId) {
-    return {
-      mode: 'ADD_ON',
-      positionId: openPosition.positionId,
-      currentPositionEntry: openPosition.entryPrice,
-      currentPositionStop: openPosition.stopPrice,
-      freshSetupStop: candidate?.sameSymbol?.freshSetupStop ?? candidate?.stop,
-      executionStop: openPosition.stopPrice,
-      pendingEntryExists: candidate?.sameSymbol?.pendingEntryExists ?? false,
-      addOnCount: candidate?.sameSymbol?.addOnCount ?? 0,
-      maxAddOns: candidate?.sameSymbol?.maxAddOns,
-      reason: 'Workspace inferred add-on mode from the current open position.',
-    };
-  }
-
-  return candidate?.sameSymbol;
-}
-
 function buildDefaultNotes(
   candidate: SymbolAnalysisCandidate | null,
   sameSymbol: SameSymbolCandidateContext | undefined,
@@ -88,7 +56,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
   );
   const createOrderMutation = useCreateOrderMutation();
 
-  const sameSymbol = resolveSameSymbolContext(candidate ?? null, openPosition);
+  const sameSymbol = candidate?.sameSymbol;
   const defaultNotes = buildDefaultNotes(candidate ?? null, sameSymbol, normalizedTicker);
   const isReadyCandidate = candidate?.recommendation?.workflowStatus === 'ready';
   const canReviewOrder = Boolean(
