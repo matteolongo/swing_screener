@@ -1343,9 +1343,17 @@ export const messagesEn = {
         noThesis: 'No structured thesis is available for this ticker yet.',
         actionTitle: 'Action Panel',
         actionDescription: 'Create an entry order using the selected screener setup.',
+        orderUnavailable: {
+          title: 'Order not available',
+          noCandidate: 'Run the screener and wait for a server-approved setup before reviewing an order.',
+        },
         managePosition: {
           title: 'Manage position',
           description: 'Adjust risk on your open {{ticker}} position.',
+          previewTitle: 'Advisory preview',
+          previewDescription: 'Read-only. Checking live metrics does not change your position.',
+          changesTitle: 'Position changes',
+          changesDescription: 'These actions update the recorded position only after you confirm the form.',
           updateStop: 'Update stop',
           scaleOut: 'Scale out',
           exit: 'Exit position',

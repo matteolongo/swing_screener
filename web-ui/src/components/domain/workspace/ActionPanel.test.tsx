@@ -6,6 +6,7 @@ import { renderWithProviders } from '@/test/utils';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import type { DecisionSummary } from '@/features/screener/types';
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 
 const { mutateMock } = vi.hoisted(() => ({
   mutateMock: vi.fn(),
@@ -109,7 +110,7 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
               trigger: { status: 'PASS', explanation: 'Triggered.' },
               plan: { status: 'PASS', explanation: 'Reconciled.' },
               portfolio: { status: 'UNKNOWN', explanation: 'Checked on submit.' },
-              readyToOrder: false,
+              readyToOrder: true,
             },
             education: {
               commonBiasWarning: '',
@@ -216,6 +217,36 @@ describe('ActionPanel', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Decision' }));
     expect((screen.getByLabelText('Quantity') as HTMLInputElement).value).toBe('12');
+  });
+
+  it('explains why a non-ready candidate has no order form', () => {
+    setCandidate({
+      recommendation: {
+        workflowStatus: 'needs_review',
+        nextStep: { code: 'define_target' },
+      },
+    });
+
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
+    expect(screen.getByText(formatWorkflowNextStep({ code: 'define_target' }))).toBeVisible();
+  });
+
+  it('preserves order values after a failed submit', async () => {
+    const user = userEvent.setup();
+    mutateMock.mockRejectedValueOnce(new Error('Order service unavailable'));
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    const quantityInput = screen.getByLabelText(t('order.candidateModal.quantity'));
+    await user.clear(quantityInput);
+    await user.type(quantityInput, '25');
+    fireEvent.submit(
+      screen.getByRole('button', { name: t('order.candidateModal.createAction') }).closest('form')!,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Order service unavailable');
+    expect(quantityInput).toHaveValue(25);
   });
 
   it('keeps the action block below the review carousel', () => {

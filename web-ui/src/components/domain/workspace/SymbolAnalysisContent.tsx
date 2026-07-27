@@ -202,7 +202,7 @@ export default function SymbolAnalysisContent({
     candidate?.sameSymbol?.mode === 'ADD_ON'
       && candidate.recommendation?.workflowStatus === 'ready',
   );
-  const candidateCanReviewOrder = !candidate || candidate.recommendation?.workflowStatus === 'ready';
+  const candidateCanReviewOrder = candidate?.recommendation?.workflowStatus === 'ready';
   const canReviewOrder = heldMode ? canAddOn : candidateCanReviewOrder;
 
   useEffect(() => {

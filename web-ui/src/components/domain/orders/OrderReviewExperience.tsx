@@ -568,7 +568,7 @@ export default function OrderReviewExperience({
               ) : null}
 
               {submissionError ? (
-                <div className="rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger">
+                <div role="alert" className="rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger">
                   {submissionError}
                 </div>
               ) : null}

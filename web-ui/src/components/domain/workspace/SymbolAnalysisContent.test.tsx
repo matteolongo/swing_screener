@@ -104,6 +104,12 @@ describe('SymbolAnalysisContent candidate order transition', () => {
     await userEvent.click(screen.getByRole('button', { name: /prepare order/i }));
     expect(screen.getByText('order panel')).toBeInTheDocument();
   });
+
+  it('does not expose an Order tab without a canonical candidate', () => {
+    renderWithProviders(<SymbolAnalysisHarness />);
+
+    expect(screen.queryByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).not.toBeInTheDocument();
+  });
 });
 
 function SymbolAnalysisHarness() {

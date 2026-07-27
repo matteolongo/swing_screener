@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
 import { API_BASE_URL } from '@/lib/api';
@@ -53,6 +53,40 @@ describe('ManagePositionPanel', () => {
     renderWithProviders(<ManagePositionPanel position={position} candidate={null} />);
     await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.updateStop') }));
     expect(screen.getByText(t('positions.updateStopModal.title', { ticker: 'LRCX' }))).toBeInTheDocument();
+  });
+
+  it('places the read-only live preview before position mutation controls', () => {
+    renderWithProviders(<ManagePositionPanel position={position} candidate={null} />);
+
+    const preview = screen.getByRole('button', {
+      name: t('workspacePage.panels.analysis.managePosition.checkLive'),
+    });
+    const mutation = screen.getByRole('button', {
+      name: t('workspacePage.panels.analysis.managePosition.updateStop'),
+    });
+    expect(Boolean(preview.compareDocumentPosition(mutation) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+  });
+
+  it('preserves update-stop values after a failed mutation', async () => {
+    server.use(
+      http.put(`${API_BASE_URL}/api/portfolio/positions/:id/stop`, () =>
+        HttpResponse.json({ detail: 'Stop update failed' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<ManagePositionPanel position={position} candidate={null} />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.panels.analysis.managePosition.updateStop'),
+    }));
+    await screen.findByText(t('positions.updateStopModal.noUpdateSuggested'));
+    const stopInput = screen.getByLabelText(t('positions.updateStopModal.newStopPrice'));
+    await user.clear(stopInput);
+    await user.type(stopInput, '350');
+    fireEvent.submit(stopInput.closest('form')!);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Stop update failed');
+    expect(stopInput).toHaveValue(350);
   });
 
   it('updates the displayed R and explains a live NO_ACTION stop preview', async () => {

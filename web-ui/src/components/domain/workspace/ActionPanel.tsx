@@ -8,6 +8,7 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 
 interface ActionPanelProps {
   ticker: string;
@@ -89,6 +90,11 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
 
   const sameSymbol = resolveSameSymbolContext(candidate ?? null, openPosition);
   const defaultNotes = buildDefaultNotes(candidate ?? null, sameSymbol, normalizedTicker);
+  const isReadyCandidate = candidate?.recommendation?.workflowStatus === 'ready';
+  const canReviewOrder = Boolean(
+    isReadyCandidate
+      && (!openPosition || sameSymbol?.mode === 'ADD_ON'),
+  );
 
   if (!risk) {
     const configFailed = configDefaultsQuery.isError && !activeStrategyQuery.data?.risk;
@@ -96,6 +102,21 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
       <div className="rounded-lg border border-border p-3 text-sm">
         <p className={configFailed ? 'text-danger' : 'text-muted'}>
           {configFailed ? t('common.errors.generic') : t('common.table.loading')}
+        </p>
+      </div>
+    );
+  }
+
+  if (!canReviewOrder) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-4 space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">
+          {t('workspacePage.panels.analysis.orderUnavailable.title')}
+        </h3>
+        <p className="text-sm text-muted">
+          {candidate?.recommendation
+            ? formatWorkflowNextStep(candidate.recommendation.nextStep)
+            : t('workspacePage.panels.analysis.orderUnavailable.noCandidate')}
         </p>
       </div>
     );
