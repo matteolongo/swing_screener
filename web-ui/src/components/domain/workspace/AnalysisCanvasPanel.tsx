@@ -66,12 +66,21 @@ export default function AnalysisCanvasPanel() {
           />
           <SymbolAnalysisContent
             ticker={selectedTicker}
+            selectionVersion={selectionVersion}
             candidate={selectedCandidate}
             position={openPosition}
             activeTab={activeTab}
             onTabChange={setAnalysisTab}
             orderPanel={<ActionPanel ticker={selectedTicker} />}
             intelligenceOutdated={workspaceData.intelligenceOutdated}
+            intelligenceWorkflow={{
+              sources: workspaceData.sourceStates,
+              isRefreshingEvidence:
+                workspaceData.fundamentalsRefreshing || workspaceData.prices.isFetching,
+              refreshError:
+                workspaceData.fundamentalsRefreshError ?? workspaceData.prices.error,
+              onRefreshEvidence: () => void workspaceData.refreshAllNonIntelligence(),
+            }}
             fundamentals={{
               data: workspaceData.fundamentals.data,
               isLoading: workspaceData.fundamentals.isLoading,

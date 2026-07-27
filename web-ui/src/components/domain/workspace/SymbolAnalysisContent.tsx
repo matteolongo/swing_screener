@@ -1,16 +1,11 @@
 import { useState, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
-import AgentTracePanel from '@/components/domain/workspace/AgentTracePanel';
-import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
+import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery, useRunTrace } from '@/features/intelligence/hooks';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
-import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
-import IntelligenceDecisionBrief from '@/components/domain/workspace/IntelligenceDecisionBrief';
-import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
-import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
-import StrategicReviewPanel from '@/components/domain/workspace/StrategicReviewPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import SymbolFundamentalsTab from '@/components/domain/workspace/SymbolFundamentalsTab';
+import SymbolIntelligenceTab from '@/components/domain/workspace/SymbolIntelligenceTab';
 import SymbolOverviewTab from '@/components/domain/workspace/SymbolOverviewTab';
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -18,6 +13,7 @@ import type { ScreenerResponse } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
@@ -31,6 +27,13 @@ interface SymbolAnalysisContentProps {
   onTabChange: (tab: WorkspaceAnalysisTab) => void;
   orderPanel?: ReactNode;
   intelligenceOutdated?: boolean;
+  selectionVersion?: number;
+  intelligenceWorkflow?: {
+    sources: WorkspaceSourceState[];
+    isRefreshingEvidence: boolean;
+    refreshError: Error | null;
+    onRefreshEvidence: () => void;
+  };
   fundamentals?: {
     data?: FundamentalSnapshot;
     isLoading: boolean;
@@ -51,6 +54,8 @@ export default function SymbolAnalysisContent({
   onTabChange,
   orderPanel = null,
   intelligenceOutdated = false,
+  selectionVersion = 0,
+  intelligenceWorkflow,
   fundamentals = {
     data: undefined,
     isLoading: false,
@@ -88,22 +93,29 @@ export default function SymbolAnalysisContent({
   const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
-  const currentTickerRef = useRef(ticker.toUpperCase());
+  const currentSessionRef = useRef(`${ticker.trim().toUpperCase()}:${selectionVersion}`);
   const tabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
+  const runTrace = useRunTrace(
+    displayedIntelligence?.runId,
+    activeTab === 'intelligence' && Boolean(displayedIntelligence?.runId),
+  );
   const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
-  const hasNarrative = Boolean(!isIntelligenceLoading && displayedIntelligence?.narrative?.trim());
 
   useEffect(() => {
-    currentTickerRef.current = ticker.toUpperCase();
-  }, [ticker]);
+    currentSessionRef.current = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+  }, [ticker, selectionVersion]);
 
   const handleAnalyzeWithAi = (force = false) => {
+    const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
     intelligenceMutation.mutate(
       { ticker, candidate, position, force },
       {
         onSuccess: (result) => {
-          if (result.symbol.toUpperCase() === currentTickerRef.current) {
+          if (
+            result.symbol.trim().toUpperCase() === ticker.trim().toUpperCase()
+            && requestedSession === currentSessionRef.current
+          ) {
             setIntelligenceResult(result);
           }
         },
@@ -111,43 +123,10 @@ export default function SymbolAnalysisContent({
     );
   };
 
-  const renderAnalyzePrompt = (description: string, showButton: boolean) => (
-    <div className="rounded-lg border border-border bg-surface p-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
-          </p>
-          <p className="mt-1 text-sm text-muted">{description}</p>
-        </div>
-        {showButton && (
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={intelligenceMutation.isPending}
-            onClick={() => handleAnalyzeWithAi(false)}
-          >
-            {intelligenceMutation.isPending
-              ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-              : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
-          </Button>
-        )}
-      </div>
-      {intelligenceMutation.isError && (
-        <p className="mt-2 text-sm text-danger">
-          {intelligenceMutation.error instanceof Error
-            ? intelligenceMutation.error.message
-            : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-        </p>
-      )}
-    </div>
-  );
-
   useEffect(() => {
     setIntelligenceResult(null);
     intelligenceMutation.reset();
-  }, [ticker]);
+  }, [ticker, selectionVersion]);
 
   // Open positions are suppressed from the screener as manage-only, so a held
   // symbol has no candidate and the analysis (and AI payload) is thin. Compute
@@ -324,95 +303,30 @@ export default function SymbolAnalysisContent({
         {activeTab === 'volumeZones' && <VolumeZonesTab ticker={ticker} />}
 
         {activeTab === 'intelligence' && (
-          <>
-            {isIntelligenceLoading ? (
-              <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
-                {t('workspacePage.panels.analysis.intelligence.analyzingAction')}
-              </div>
-            ) : (
-              <>
-                <IntelligenceDecisionBrief candidate={candidate} intelligence={displayedIntelligence} />
-
-                {hasNarrative && displayedIntelligence ? (
-                  <>
-                    <div className="grid gap-3 xl:grid-cols-2">
-                      <PositionReviewPanel ticker={ticker} position={position} />
-                      <StrategicReviewPanel ticker={ticker} />
-                    </div>
-
-                    <details className="rounded-lg border border-border bg-surface p-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Full intelligence report</summary>
-                      <div className="mt-3">
-                        <NarrativeAnalysisCard
-                          intelligence={displayedIntelligence}
-                          candidate={candidate}
-                          isPosition={Boolean(position)}
-                        />
-                      </div>
-                    </details>
-
-                    <details className="rounded-lg border border-border bg-surface p-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Ask about this decision</summary>
-                      <div className="mt-3">
-                        <IntelligenceChatPanel
-                          ticker={ticker}
-                          intelligence={displayedIntelligence}
-                          candidate={candidate}
-                          position={position}
-                        />
-                      </div>
-                    </details>
-
-                    <details className="rounded-lg border border-border bg-surface p-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Technical details</summary>
-                      <div className="mt-3">
-                        <AgentTracePanel runId={displayedIntelligence.runId ?? null} />
-                      </div>
-                    </details>
-                  </>
-                ) : (
-                  <>
-                    {renderAnalyzePrompt(
-                      'Generate a company and setup review first, then use the optional checks below when you need more context.',
-                      Boolean(candidate || position),
-                    )}
-                    <div className="grid gap-3 xl:grid-cols-2">
-                      <PositionReviewPanel ticker={ticker} position={position} />
-                      <StrategicReviewPanel ticker={ticker} />
-                    </div>
-                  </>
-                )}
-
-                {hasNarrative && (
-                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={intelligenceMutation.isPending}
-                      onClick={() => handleAnalyzeWithAi(true)}
-                    >
-                      {intelligenceMutation.isPending
-                        ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                        : 'Refresh decision and intelligence'}
-                    </Button>
-                    {displayedIntelligence && !intelligenceMutation.isPending && (
-                      <span className="text-xs text-muted">
-                        Last analyzed: {new Date(displayedIntelligence.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    )}
-                    {intelligenceMutation.isError && (
-                      <span className="text-xs text-danger">
-                        {intelligenceMutation.error instanceof Error
-                          ? intelligenceMutation.error.message
-                          : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </>
+          <SymbolIntelligenceTab
+            model={{
+              ticker,
+              selectionVersion,
+              candidate,
+              position,
+              analysis: displayedIntelligence,
+              intelligenceOutdated,
+              sources: intelligenceWorkflow?.sources ?? [],
+              trace:
+                runTrace.data?.ticker.trim().toUpperCase() === ticker.trim().toUpperCase()
+                  ? runTrace.data
+                  : null,
+              isLoadingAnalysis: isIntelligenceLoading,
+              isCachedAnalysis:
+                !intelligenceResult && intelligenceLatest.isFetchedAfterMount === false,
+              isGenerating: intelligenceMutation.isPending,
+              isRefreshingEvidence: intelligenceWorkflow?.isRefreshingEvidence ?? false,
+              generationError: intelligenceMutation.error,
+              refreshError: intelligenceWorkflow?.refreshError ?? null,
+              onRefreshEvidence: intelligenceWorkflow?.onRefreshEvidence ?? fundamentals.onRefresh,
+              onGenerate: handleAnalyzeWithAi,
+            }}
+          />
         )}
 
         {activeTab === 'fundamentals' && (

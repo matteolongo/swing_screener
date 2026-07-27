@@ -242,7 +242,7 @@ describe('AnalysisCanvasPanel', () => {
       await user.click(screen.getByRole('tab', { name: 'Intelligence' }));
     });
 
-    expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
+    expect(screen.getAllByText('AAPL is showing strong momentum with a confirmed breakout.')).not.toHaveLength(0);
     // DecisionSummaryCard heading should NOT appear
     expect(screen.queryByText(/AAPL Decision Summary/)).not.toBeInTheDocument();
   });
@@ -490,14 +490,14 @@ describe('AnalysisCanvasPanel', () => {
     });
 
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: 'Analyze with AI' }));
+      await user.click(screen.getByRole('button', { name: t('workspacePage.intelligence.generate') }));
     });
 
     expect(mutate).toHaveBeenCalledWith(
       expect.objectContaining({ ticker: 'AAPL' }),
       expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
+    expect(screen.getAllByText('AAPL is showing strong momentum with a confirmed breakout.')).not.toHaveLength(0);
   });
 
   it('labels the fundamentals summary strip by metric horizon', () => {

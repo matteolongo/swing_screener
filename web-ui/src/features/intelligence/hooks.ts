@@ -113,7 +113,7 @@ export function useIntelligenceSweepMutation() {
 
 export function useRunTrace(runId: string | null | undefined, enabled: boolean) {
   return useQuery<RunTrace, Error>({
-    queryKey: ['intelligence', 'runTrace', runId],
+    queryKey: queryKeys.intelligence.runTrace(runId),
     queryFn: () => getRunTrace(runId as string),
     enabled: enabled && !!runId,
     retry: false,
@@ -123,7 +123,7 @@ export function useRunTrace(runId: string | null | undefined, enabled: boolean) 
 
 export function useTickerRuns(ticker: string, enabled: boolean) {
   return useQuery<RunIndexEntry[], Error>({
-    queryKey: ['intelligence', 'runs', ticker],
+    queryKey: queryKeys.intelligence.runs(ticker),
     queryFn: () => getTickerRuns(ticker),
     enabled,
     retry: false,

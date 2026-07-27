@@ -36,6 +36,9 @@ export const queryKeys = {
       generatedAt === undefined
         ? (['intelligence', 'chat', ticker] as const)
         : (['intelligence', 'chat', ticker, generatedAt] as const),
+    runTrace: (runId: string | null | undefined) =>
+      ['intelligence', 'runTrace', runId ?? null] as const,
+    runs: (ticker: string) => ['intelligence', 'runs', ticker] as const,
   },
   calendarEvents: (daysAhead?: number) =>
     ['calendar-events', daysAhead ?? 30] as const,
