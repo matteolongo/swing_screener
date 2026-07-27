@@ -188,7 +188,10 @@ def enrich_intelligence_request(
             if raw_items is None:
                 items: list[SourceEvidence] = []
             elif isinstance(raw_items, list):
-                items = raw_items
+                items = [
+                    SourceEvidence.model_validate(item)
+                    for item in raw_items
+                ]
             else:
                 raise TypeError("Evidence provider returned an invalid payload.")
             updates["evidence_asof"] = datetime.now(timezone.utc).isoformat()
