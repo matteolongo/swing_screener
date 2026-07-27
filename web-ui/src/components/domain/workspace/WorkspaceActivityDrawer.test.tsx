@@ -33,4 +33,43 @@ describe('WorkspaceActivityDrawer', () => {
     rerender(<WorkspaceActivityDrawer activities={[]} onRetry={onRetry} />);
     expect(screen.getByRole('status')).toHaveTextContent(failedActivity.error!.message);
   });
+
+  it('drops retained failures when the workspace selection changes', () => {
+    const { rerender } = renderWithProviders(
+      <WorkspaceActivityDrawer activities={[failedActivity]} />,
+    );
+
+    rerender(
+      <WorkspaceActivityDrawer
+        activities={[
+          {
+            ...failedActivity,
+            ticker: 'MSFT',
+            selectionVersion: 2,
+            phase: 'loading',
+            error: null,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByText(failedActivity.error!.message)).not.toBeInTheDocument();
+  });
+
+  it('keeps a dismissed failure hidden across parent rerenders until recovery or a new failure', async () => {
+    const { user, rerender } = renderWithProviders(
+      <WorkspaceActivityDrawer activities={[failedActivity]} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: t('workspacePage.data.dismiss') }));
+    rerender(<WorkspaceActivityDrawer activities={[{ ...failedActivity }]} />);
+    expect(screen.queryByText(failedActivity.error!.message)).not.toBeInTheDocument();
+
+    rerender(
+      <WorkspaceActivityDrawer
+        activities={[{ ...failedActivity, error: { message: 'A new price failure', retryable: true } }]}
+      />,
+    );
+    expect(screen.getByText('A new price failure')).toBeInTheDocument();
+  });
 });

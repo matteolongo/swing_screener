@@ -114,6 +114,26 @@ describe('Today page — expanded workspace', () => {
       'true',
     );
   });
+
+  it.each([
+    ['close', 'workspacePage.controls.close'],
+    ['mobile back', 'workspacePage.controls.backToList'],
+  ] as const)('restores focus to the originating symbol after %s', async (_, controlKey) => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [], asof: '2026-05-16' })
+      ),
+      http.get('*/api/daily-review', () => HttpResponse.json(threeCloseItemReview)),
+    );
+    useWorkspaceStore.getState().clearSelectedTicker();
+    const { user } = renderWithProviders(<Today />);
+    const tickerButton = await screen.findByRole('button', { name: /NVDA/i });
+
+    await user.click(tickerButton);
+    await user.click(screen.getByRole('button', { name: t(controlKey) }));
+
+    expect(tickerButton).toHaveFocus();
+  });
 });
 
 describe('Today page — pending orders badge', () => {

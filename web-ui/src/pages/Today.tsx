@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import TodayActionList from '@/components/domain/today/TodayActionList';
@@ -90,12 +90,29 @@ export default function Today() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const workspaceMode = useWorkspaceStore((state) => state.workspaceMode);
   const fullscreen = useWorkspaceStore((state) => state.fullscreen);
+  const originControlRef = useRef<HTMLElement | null>(null);
+  const previousSelectionRef = useRef(selectedTicker);
+  const previousModeRef = useRef(workspaceMode);
 
   const [leftTab, setLeftTab] = useState<LeftTab>('today');
 
   const handleTickerSelect = useCallback((ticker: string) => {
+    if (document.activeElement instanceof HTMLElement) {
+      originControlRef.current = document.activeElement;
+    }
     setSelectedTicker(ticker, 'screener');
   }, [setSelectedTicker]);
+
+  useEffect(() => {
+    const listWasRevealed =
+      (previousSelectionRef.current && !selectedTicker) ||
+      (previousModeRef.current === 'expanded' && workspaceMode === 'split');
+    if (listWasRevealed && originControlRef.current?.isConnected) {
+      originControlRef.current.focus();
+    }
+    previousSelectionRef.current = selectedTicker;
+    previousModeRef.current = workspaceMode;
+  }, [selectedTicker, workspaceMode]);
 
   return (
     <div className="mx-auto max-w-[1600px]">
@@ -116,6 +133,10 @@ export default function Today() {
             fullscreen && 'xl:hidden',
             !selectedTicker || workspaceMode === 'split' ? 'xl:col-span-7' : '',
           )}
+          onClickCapture={(event) => {
+            const control = (event.target as HTMLElement).closest<HTMLElement>('button, [role="button"]');
+            if (control) originControlRef.current = control;
+          }}
         >
           {/* Left panel tab bar */}
           <div
