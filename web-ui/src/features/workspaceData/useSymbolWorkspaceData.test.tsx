@@ -3,12 +3,22 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { tickerCandlesResult } = vi.hoisted(() => ({
+  tickerCandlesResult: {
+    current: {
+      data: undefined as
+        | { ticker: string; priceHistory: Array<{ date: string; close: number }>; patterns: [] }
+        | undefined,
+    },
+  },
+}));
+
 vi.mock('@/features/fundamentals/api', () => ({
   fetchFundamentalSnapshot: vi.fn(),
 }));
 vi.mock('@/features/screener/hooks', () => ({
   useTickerCandles: () => ({
-    data: undefined,
+    data: tickerCandlesResult.current.data,
     dataUpdatedAt: 0,
     error: null,
     isError: false,
@@ -73,6 +83,7 @@ describe('useSymbolWorkspaceData', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    tickerCandlesResult.current.data = undefined;
   });
 
   it('does not expose an AAPL completion in an MSFT workspace session', async () => {
@@ -129,5 +140,27 @@ describe('useSymbolWorkspaceData', () => {
     expect(invalidate).not.toHaveBeenCalledWith({
       queryKey: queryKeys.intelligence.latest('AAPL'),
     });
+  });
+
+  it('does not expose candle data tagged for another ticker', () => {
+    tickerCandlesResult.current.data = {
+      ticker: 'AAPL',
+      priceHistory: [{ date: '2026-07-27', close: 210 }],
+      patterns: [],
+    };
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () =>
+        useSymbolWorkspaceData({
+          ticker: 'MSFT',
+          selectionVersion: 2,
+          candidate: null,
+          position: null,
+        }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    expect(result.current.prices.data).toBeUndefined();
+    expect(result.current.sourceStates.find(({ id }) => id === 'prices')?.phase).toBe('idle');
   });
 });

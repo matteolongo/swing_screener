@@ -30,6 +30,7 @@ interface TickerCandlesAPIResponse {
 }
 
 export interface TickerCandles {
+  ticker: string;
   priceHistory: PriceHistoryPoint[];
   patterns: CandlePattern[];
 }
@@ -40,6 +41,7 @@ async function fetchTickerCandles(ticker: string): Promise<TickerCandles> {
     { errorMessage: `Failed to fetch candles for ${ticker}` },
   );
   return {
+    ticker: raw.ticker.trim().toUpperCase(),
     priceHistory: raw.price_history,
     patterns: raw.patterns.map(transformCandlePattern),
   };

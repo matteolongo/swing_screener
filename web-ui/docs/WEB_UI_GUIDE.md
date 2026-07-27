@@ -43,7 +43,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/datasources` | Data Sources | Source inventory, per-source and bulk probe, fallback event feed |
 | `features/config` | (cross-cutting) | App config read/write |
 | `features/persistence` | (cross-cutting) | API vs localStorage mode toggle |
-| `features/workspaceData` | Today | Symbol-workspace source health, freshness aggregation, and intelligence dependency invalidation contracts |
+| `features/workspaceData` | Today | Canonical symbol-workspace composition through `useSymbolWorkspaceData`: ticker/session-safe React Query data, source health and freshness aggregation, per-source refresh, non-intelligence bulk refresh, and intelligence dependency invalidation contracts |
 
 Charts (`components/domain/market/`): `CandleChart` is a responsive hand-rolled SVG candlestick chart (bodies + wicks + volume bars + pattern markers with i18n tooltips + a rebased benchmark comparison line). It also accepts optional `volumeZones` / `showVolumeZones` props for POC, HVN, and LVN price-line overlays. `CachedSymbolCandleChart` wraps it, sourcing OHLCV bars, detected patterns, and the benchmark series from the cached screener result by ticker, and adds a time-range selector (`1W`/`1M`/`3M`/`6M`/`1Y`/`MAX`, default `MAX`) plus a fullscreen overlay. It is used in the full symbol views (`SymbolViewModal`, `SymbolAnalysisContent`); range slicing reuses `features/screener/priceHistory.ts`. The older close-only `CachedSymbolPriceChart` was removed.
 

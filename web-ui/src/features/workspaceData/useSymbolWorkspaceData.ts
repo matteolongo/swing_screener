@@ -70,7 +70,11 @@ export function useSymbolWorkspaceData({
     normalizedTicker(intelligenceQuery.data?.symbol) === currentTicker
       ? intelligenceQuery.data
       : undefined;
-  const priceHistory = pricesQuery.data?.priceHistory;
+  const pricesData =
+    normalizedTicker(pricesQuery.data?.ticker) === currentTicker
+      ? pricesQuery.data
+      : undefined;
+  const priceHistory = pricesData?.priceHistory;
 
   const sourceState = (
     id: WorkspaceSourceId,
@@ -94,7 +98,7 @@ export function useSymbolWorkspaceData({
     sourceState('screener', validCandidate ? 'fresh' : 'idle', {
       dataAsOf: validCandidate?.lastBar ?? null,
     }),
-    sourceState('prices', queryPhase(pricesQuery), {
+    sourceState('prices', queryPhase({ ...pricesQuery, data: pricesData }), {
       dataAsOf: priceHistory?.[priceHistory.length - 1]?.date ?? null,
       fetchedAt: fetchedAt(pricesQuery.dataUpdatedAt),
       error: pricesQuery.error
@@ -162,7 +166,7 @@ export function useSymbolWorkspaceData({
     candidate: validCandidate,
     position: validPosition,
     fundamentals: { ...fundamentalsQuery, data: fundamentalsData },
-    prices: pricesQuery,
+    prices: { ...pricesQuery, data: pricesData },
     intelligence: { ...intelligenceQuery, data: intelligenceData },
     sourceStates,
     health: aggregateWorkspaceHealth(sourceStates),
