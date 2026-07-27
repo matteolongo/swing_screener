@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import { t } from '@/i18n/t';
 
 const snapshot: FundamentalSnapshot = {
   symbol: 'SBMO.AS',
@@ -86,9 +87,19 @@ describe('FundamentalsSnapshotCard', () => {
   it('renders trust metadata and filters contradictory trend narratives', () => {
     render(<FundamentalsSnapshotCard snapshot={snapshot} />);
 
-    expect(screen.getByText('quality low')).toBeInTheDocument();
-    expect(screen.getByText('not comparable')).toBeInTheDocument();
-    expect(screen.getByText('Price / Book')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        t('workspacePage.fundamentals.card.qualityBadge', {
+          status: t('workspacePage.fundamentals.card.statuses.low'),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(t('workspacePage.fundamentals.card.statuses.notComparable')),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(t('workspacePage.fundamentals.card.metrics.priceToBook')),
+    ).toBeInTheDocument();
     expect(screen.getByText(/1[,.]7/)).toBeInTheDocument();
     expect(screen.getByText(/58[,.]8%/)).toBeInTheDocument();
     expect(screen.getByText(/6[,.]?5\s*B|6[,.]?500\s*M/i)).toBeInTheDocument();
@@ -97,7 +108,9 @@ describe('FundamentalsSnapshotCard', () => {
     expect(screen.getByText('rep')).toBeInTheDocument();
     expect(screen.getByText(/yfinance · 2024-12-31/i)).toBeInTheDocument();
     expect(screen.getByText(/yfinance · 2025-12-31/i)).toBeInTheDocument();
-    expect(screen.getAllByText('Data quality').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(t('workspacePage.fundamentals.card.dataQuality')).length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getAllByText(/Revenue YoY mixes snapshot metric data with annual history\./i).length
     ).toBeGreaterThan(0);
@@ -112,9 +125,45 @@ describe('FundamentalsSnapshotCard', () => {
     const flag = screen.getByText(
       /Operating margin history is too sparse for a reliable trend signal\./
     );
-    const pillars = screen.getByText('Pillar scores');
+    const pillars = screen.getByText(t('workspacePage.fundamentals.card.pillarScores'));
     expect(
       flag.compareDocumentPosition(pillars) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+  });
+
+  it('renders the decision-first hierarchy from localized copy', () => {
+    render(<FundamentalsSnapshotCard snapshot={snapshot} />);
+
+    expect(
+      screen.getByText(t('workspacePage.fundamentals.card.overallRead')),
+    ).toBeVisible();
+    expect(
+      screen.getByText(t('workspacePage.fundamentals.card.readMixed')),
+    ).toBeVisible();
+    expect(
+      screen.getByText(t('workspacePage.fundamentals.card.keySupports')),
+    ).toBeVisible();
+    expect(
+      screen.getByText(t('workspacePage.fundamentals.card.mainConcerns')),
+    ).toBeVisible();
+    expect(
+      screen.getAllByText(t('workspacePage.fundamentals.card.dataQuality')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        t('workspacePage.fundamentals.card.qualityStatus', {
+          status: t('workspacePage.fundamentals.card.statuses.low'),
+        }),
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(t('workspacePage.fundamentals.card.recentHistory')),
+    ).toBeVisible();
+    expect(
+      screen.getAllByText(t('workspacePage.fundamentals.card.date')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(t('workspacePage.fundamentals.card.value')).length,
+    ).toBeGreaterThan(0);
   });
 });

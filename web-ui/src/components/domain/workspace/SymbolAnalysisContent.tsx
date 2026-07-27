@@ -424,7 +424,7 @@ export default function SymbolAnalysisContent({
               isRefreshing: fundamentals.isRefreshing || fundamentals.isFetching,
               error: fundamentals.refreshError ?? fundamentals.error,
               intelligenceOutdated,
-              screenerFundamentalsAsOf: candidate?.fundamentalsAsOf ?? null,
+              screenerFundamentalsInputAsOf: candidate?.fundamentalsAsOf ?? null,
               onRefresh: fundamentals.onRefresh,
             }}
           />

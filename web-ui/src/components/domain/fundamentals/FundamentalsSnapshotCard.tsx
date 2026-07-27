@@ -11,17 +11,17 @@ import {
 import { t } from '@/i18n/t';
 
 function formatPercent(value?: number) {
-  if (value == null) return 'n/a';
+  if (value == null) return t('workspacePage.fundamentals.card.notAvailable');
   return `${(value * 100).toFixed(1)}%`;
 }
 
 function formatNumber(value?: number) {
-  if (value == null) return 'n/a';
+  if (value == null) return t('workspacePage.fundamentals.card.notAvailable');
   return Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
 }
 
 function formatCompactNumber(value?: number) {
-  if (value == null) return 'n/a';
+  if (value == null) return t('workspacePage.fundamentals.card.notAvailable');
   return Intl.NumberFormat(undefined, {
     notation: 'compact',
     maximumFractionDigits: 1,
@@ -67,7 +67,10 @@ function trendClass(direction: 'improving' | 'deteriorating' | 'stable' | 'unkno
 }
 
 function humanizeDirection(direction: 'improving' | 'deteriorating' | 'stable' | 'unknown' | 'not_comparable') {
-  return direction === 'not_comparable' ? 'not comparable' : direction;
+  if (direction === 'not_comparable') {
+    return t('workspacePage.fundamentals.card.statuses.notComparable');
+  }
+  return t(`workspacePage.fundamentals.card.statuses.${direction}`);
 }
 
 function isSupportedTrendNarrative(
@@ -127,6 +130,7 @@ interface FundamentalsSnapshotCardProps {
 }
 
 export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnapshotCardProps) {
+  const notAvailable = t('workspacePage.fundamentals.card.notAvailable');
   const pillars = Object.entries(snapshot.pillars);
   const safeHighlights = filterTrendNarratives(snapshot.highlights, snapshot.historicalSeries);
   const safeRedFlags = filterTrendNarratives(snapshot.redFlags, snapshot.historicalSeries);
@@ -134,10 +138,10 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
   const weakPillars = pillars.filter(([, pillar]) => pillar.status === 'weak');
   const overallRead =
     strongPillars.length >= 2 && weakPillars.length === 0
-      ? 'Positive'
+      ? t('workspacePage.fundamentals.card.readPositive')
       : weakPillars.length >= 2
-        ? 'Weak'
-        : 'Mixed';
+        ? t('workspacePage.fundamentals.card.readWeak')
+        : t('workspacePage.fundamentals.card.readMixed');
   const topSupports = safeHighlights.slice(0, 2).length
     ? safeHighlights.slice(0, 2)
     : strongPillars.slice(0, 2).map(([name, pillar]) => `${name.replace('_', ' ')}: ${pillar.summary}`);
@@ -146,8 +150,8 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
     : weakPillars.slice(0, 2).map(([name, pillar]) => `${name.replace('_', ' ')}: ${pillar.summary}`);
   const trustStatement = snapshot.dataQualityFlags[0]
     ?? (snapshot.dataQualityStatus === 'high'
-      ? 'Coverage looks stable enough for directional use.'
-      : 'Use extra care when relying on the current fundamentals snapshot.');
+      ? t('workspacePage.fundamentals.card.trustHigh')
+      : t('workspacePage.fundamentals.card.trustCaution'));
   const historicalSeries = Object.entries(snapshot.historicalSeries).sort(([left], [right]) => {
     const order = ['revenue', 'operating_margin', 'free_cash_flow_margin', 'free_cash_flow'];
     const leftIndex = order.indexOf(left);
@@ -157,63 +161,63 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
   const metricCards = [
     {
       key: 'revenue_growth_yoy',
-      label: 'Revenue YoY',
+      label: t('workspacePage.fundamentals.card.metrics.revenueGrowthYoy'),
       value: formatPercent(snapshot.revenueGrowthYoy),
     },
     {
       key: 'earnings_growth_yoy',
-      label: 'Earnings YoY',
+      label: t('workspacePage.fundamentals.card.metrics.earningsGrowthYoy'),
       value: formatPercent(snapshot.earningsGrowthYoy),
     },
     {
       key: 'operating_margin',
-      label: 'Operating Margin',
+      label: t('workspacePage.fundamentals.card.metrics.operatingMargin'),
       value: formatPercent(snapshot.operatingMargin),
     },
     {
       key: 'free_cash_flow_margin',
-      label: 'FCF Margin',
+      label: t('workspacePage.fundamentals.card.metrics.freeCashFlowMargin'),
       value: formatPercent(snapshot.freeCashFlowMargin),
     },
     {
       key: 'debt_to_equity',
-      label: 'Debt / Equity',
+      label: t('workspacePage.fundamentals.card.metrics.debtToEquity'),
       value: formatNumber(snapshot.debtToEquity),
     },
     {
       key: 'trailing_pe',
-      label: 'Trailing PE',
+      label: t('workspacePage.fundamentals.card.metrics.trailingPe'),
       value: formatNumber(snapshot.trailingPe),
     },
     {
       key: 'price_to_book',
-      label: 'Price / Book',
+      label: t('workspacePage.fundamentals.card.metrics.priceToBook'),
       value: formatNumber(snapshot.priceToBook),
     },
     {
       key: 'book_value_per_share',
-      label: 'Book Value / Share',
+      label: t('workspacePage.fundamentals.card.metrics.bookValuePerShare'),
       value: formatNumber(snapshot.bookValuePerShare),
     },
     {
       key: 'book_to_price',
-      label: 'Book / Price',
+      label: t('workspacePage.fundamentals.card.metrics.bookToPrice'),
       value:
-        snapshot.bookToPrice == null ? 'n/a' : `${(snapshot.bookToPrice * 100).toFixed(1)}%`,
+        snapshot.bookToPrice == null ? notAvailable : `${(snapshot.bookToPrice * 100).toFixed(1)}%`,
     },
     {
       key: 'total_equity',
-      label: 'Total Equity',
+      label: t('workspacePage.fundamentals.card.metrics.totalEquity'),
       value: formatCompactNumber(snapshot.totalEquity),
     },
     {
       key: 'shares_outstanding',
-      label: 'Shares Outstanding',
+      label: t('workspacePage.fundamentals.card.metrics.sharesOutstanding'),
       value: formatCompactNumber(snapshot.sharesOutstanding),
     },
   ] as const;
-  const availableMetrics = metricCards.filter((metric) => metric.value !== 'n/a');
-  const unavailableMetrics = metricCards.filter((metric) => metric.value === 'n/a');
+  const availableMetrics = metricCards.filter((metric) => metric.value !== notAvailable);
+  const unavailableMetrics = metricCards.filter((metric) => metric.value === notAvailable);
 
   return (
     <Card variant="bordered" className="h-full">
@@ -222,27 +226,33 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
           <div>
             <CardTitle>{snapshot.symbol}</CardTitle>
             <p className="mt-1 text-sm text-muted">
-              {snapshot.companyName ?? 'Unknown company'}
+              {snapshot.companyName ?? t('workspacePage.fundamentals.card.unknownCompany')}
             </p>
             <p className="mt-1 text-xs text-muted">
               {[
                 snapshot.sector,
                 snapshot.currency,
-                snapshot.mostRecentQuarter ? `most recent ${snapshot.mostRecentQuarter}` : null,
+                snapshot.mostRecentQuarter
+                  ? t('workspacePage.fundamentals.card.mostRecent', {
+                      period: snapshot.mostRecentQuarter,
+                    })
+                  : null,
               ]
                 .filter(Boolean)
-                .join(' · ') || 'Snapshot context unavailable'}
+                .join(' · ') || t('workspacePage.fundamentals.card.contextUnavailable')}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${pillStatusClass(snapshot.coverageStatus)}`}>
-              {snapshot.coverageStatus}
+              {t(`workspacePage.fundamentals.card.statuses.${snapshot.coverageStatus}`)}
             </span>
             <span className="rounded-full bg-surface px-2 py-1 text-xs font-medium text-muted">
-              {snapshot.freshnessStatus}
+              {t(`workspacePage.fundamentals.card.statuses.${snapshot.freshnessStatus}`)}
             </span>
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${qualityBadgeClass(snapshot.dataQualityStatus)}`}>
-              quality {snapshot.dataQualityStatus}
+              {t('workspacePage.fundamentals.card.qualityBadge', {
+                status: t(`workspacePage.fundamentals.card.statuses.${snapshot.dataQualityStatus}`),
+              })}
             </span>
             <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
               {[snapshot.provider, snapshot.dataRegion].filter(Boolean).join(' · ')}
@@ -253,7 +263,9 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
       <CardContent className="space-y-4">
         {snapshot.dataQualityFlags.length > 0 ? (
           <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
-            <h4 className="text-sm font-semibold text-warning">Data quality</h4>
+            <h4 className="text-sm font-semibold text-warning">
+              {t('workspacePage.fundamentals.card.dataQuality')}
+            </h4>
             <ul className="mt-2 space-y-1 text-sm text-warning">
               {snapshot.dataQualityFlags.map((item) => (
                 <li key={item}>• {item}</li>
@@ -264,51 +276,67 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
           <div className="rounded-md border border-border bg-surface p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-muted">Overall read</div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-muted">
+              {t('workspacePage.fundamentals.card.overallRead')}
+            </div>
             <div className="mt-2 text-lg font-semibold text-foreground">{overallRead}</div>
             <p className="mt-2 text-sm text-muted">
-              Use the pillar scores and trust notes below to confirm the quality of the setup.
+              {t('workspacePage.fundamentals.card.overallHint')}
             </p>
           </div>
           <div className="rounded-md border border-success/40 bg-success/10 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-success">Key supports</div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-success">
+              {t('workspacePage.fundamentals.card.keySupports')}
+            </div>
             <ul className="mt-2 space-y-1 text-sm text-success">
-              {(topSupports.length ? topSupports : ['No strong support stands out yet.']).map((item) => (
+              {(topSupports.length
+                ? topSupports
+                : [t('workspacePage.fundamentals.card.noSupports')]).map((item) => (
                 <li key={item}>• {item}</li>
               ))}
             </ul>
           </div>
           <div className="rounded-md border border-danger/40 bg-danger/10 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-danger">Main concerns</div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-danger">
+              {t('workspacePage.fundamentals.card.mainConcerns')}
+            </div>
             <ul className="mt-2 space-y-1 text-sm text-danger">
-              {(topConcerns.length ? topConcerns : ['No major fundamental red flag is currently visible.']).map((item) => (
+              {(topConcerns.length
+                ? topConcerns
+                : [t('workspacePage.fundamentals.card.noConcerns')]).map((item) => (
                 <li key={item}>• {item}</li>
               ))}
             </ul>
           </div>
           <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-warning">Data quality</div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-warning">
+              {t('workspacePage.fundamentals.card.dataQuality')}
+            </div>
             <p className="mt-2 text-sm text-warning">{trustStatement}</p>
             <p className="mt-2 text-xs text-warning">
-              Quality status: <span className="font-semibold">{snapshot.dataQualityStatus}</span>
+              {t('workspacePage.fundamentals.card.qualityStatus', {
+                status: t(`workspacePage.fundamentals.card.statuses.${snapshot.dataQualityStatus}`),
+              })}
             </p>
           </div>
         </div>
 
         {pillars.length > 0 ? (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-muted">Pillar scores</h4>
+            <h4 className="text-sm font-semibold text-muted">
+              {t('workspacePage.fundamentals.card.pillarScores')}
+            </h4>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {pillars.map(([name, pillar]) => (
                 <div key={name} className="rounded-md border border-border bg-surface p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium capitalize">{name.replace('_', ' ')}</span>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${pillStatusClass(pillar.status)}`}>
-                      {pillar.status}
+                      {t(`workspacePage.fundamentals.card.statuses.${pillar.status}`)}
                     </span>
                   </div>
                   <div className="mt-2 text-2xl font-semibold text-foreground">
-                    {pillar.score == null ? 'n/a' : `${Math.round(pillar.score * 100)}/100`}
+                    {pillar.score == null ? notAvailable : `${Math.round(pillar.score * 100)}/100`}
                   </div>
                   <div className="mt-2 text-xs text-muted">{pillar.summary}</div>
                 </div>
@@ -357,7 +385,9 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
           <div className="grid gap-4 md:grid-cols-2">
             {safeHighlights.length > 0 ? (
               <div>
-                <h4 className="text-sm font-semibold text-muted">Highlights</h4>
+                <h4 className="text-sm font-semibold text-muted">
+                  {t('workspacePage.fundamentals.card.highlights')}
+                </h4>
                 <ul className="mt-2 space-y-1 text-sm text-muted">
                   {safeHighlights.map((item) => (
                     <li key={item}>• {item}</li>
@@ -368,7 +398,9 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
             {safeRedFlags.length > 0 ? (
               <div>
-                <h4 className="text-sm font-semibold text-danger">Red flags</h4>
+                <h4 className="text-sm font-semibold text-danger">
+                  {t('workspacePage.fundamentals.card.redFlags')}
+                </h4>
                 <ul className="mt-2 space-y-1 text-sm text-danger">
                   {safeRedFlags.map((item) => (
                     <li key={item}>• {item}</li>
@@ -381,7 +413,9 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
         {historicalSeries.length > 0 ? (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-muted">Recent history</h4>
+            <h4 className="text-sm font-semibold text-muted">
+              {t('workspacePage.fundamentals.card.recentHistory')}
+            </h4>
             <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {historicalSeries.map(([key, series]) => (
                 <div key={key} className="overflow-hidden rounded-md border border-border bg-surface">
@@ -398,7 +432,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                         humanizeFundamentalSource(series.source),
                       ]
                         .filter(Boolean)
-                        .join(' · ') || 'metadata unavailable'}
+                        .join(' · ') || t('workspacePage.fundamentals.card.metadataUnavailable')}
                     </div>
                   </div>
                   <div className="border-t border-border">
@@ -406,10 +440,10 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                       <thead className="bg-surface">
                         <tr>
                           <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted">
-                            Date
+                            {t('workspacePage.fundamentals.card.date')}
                           </th>
                           <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted">
-                            Value
+                            {t('workspacePage.fundamentals.card.value')}
                           </th>
                         </tr>
                       </thead>

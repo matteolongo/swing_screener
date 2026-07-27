@@ -46,7 +46,7 @@ function model(
     isRefreshing: false,
     error: null,
     intelligenceOutdated: false,
-    screenerFundamentalsAsOf: '2026-07-25T20:00:00Z',
+    screenerFundamentalsInputAsOf: '2026-07-25T20:00:00Z',
     onRefresh: vi.fn(),
     ...overrides,
   };
@@ -58,7 +58,7 @@ describe('SymbolFundamentalsTab', () => {
       <SymbolFundamentalsTab model={model({ isRefreshing: true })} />,
     );
 
-    expect(screen.getByText(t('workspacePage.data.stale'))).toBeVisible();
+    expect(screen.getAllByText(t('workspacePage.data.stale')).length).toBeGreaterThan(0);
     expect(screen.getByText(formatDateTime(staleSnapshot.updatedAt))).toBeVisible();
     expect(screen.getByText(t('workspacePage.data.refreshing'))).toBeVisible();
     expect(screen.getByText(staleSnapshot.companyName!)).toBeVisible();
@@ -116,7 +116,7 @@ describe('SymbolFundamentalsTab', () => {
 
     expect(
       screen.getByText(
-        t('workspacePage.fundamentals.usedByScreenerAt', {
+        t('workspacePage.fundamentals.screenerInputAsOf', {
           date: formatDateTime('2026-07-25T20:00:00Z'),
         }),
       ),

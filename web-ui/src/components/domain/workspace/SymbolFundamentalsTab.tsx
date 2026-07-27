@@ -13,7 +13,7 @@ export interface SymbolFundamentalsTabModel {
   isRefreshing: boolean;
   error: Error | null;
   intelligenceOutdated: boolean;
-  screenerFundamentalsAsOf?: string | null;
+  screenerFundamentalsInputAsOf?: string | null;
   onRefresh: () => void;
 }
 
@@ -90,10 +90,10 @@ export default function SymbolFundamentalsTab({
         </p>
       ) : null}
 
-      {model.screenerFundamentalsAsOf ? (
+      {model.screenerFundamentalsInputAsOf ? (
         <p className="text-xs text-muted">
-          {t('workspacePage.fundamentals.usedByScreenerAt', {
-            date: formatDateTime(model.screenerFundamentalsAsOf),
+          {t('workspacePage.fundamentals.screenerInputAsOf', {
+            date: formatDateTime(model.screenerFundamentalsInputAsOf),
           })}
         </p>
       ) : null}
