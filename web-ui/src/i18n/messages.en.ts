@@ -761,6 +761,10 @@ export const messagesEn = {
     },
     data: {
       partial: 'Partial data',
+      stale: 'Stale',
+      current: 'Current',
+      refreshing: 'Refreshing…',
+      showActivity: 'Show activity',
       activity: 'Data activity',
       retry: 'Retry',
       dismiss: 'Dismiss',
@@ -781,6 +785,16 @@ export const messagesEn = {
         partial: 'Partial',
         failed: 'Failed',
       },
+    },
+    fundamentals: {
+      refresh: 'Refresh fundamentals',
+      run: 'Run fundamentals analysis',
+      loading: 'Loading fundamentals…',
+      noSnapshot: 'No fundamentals snapshot is available yet.',
+      unavailableCount: '{{count}} metrics unavailable',
+      providerActivity: 'Canonical snapshot supplied by {{provider}}.',
+      intelligenceOutdated: 'Intelligence is based on older inputs.',
+      usedByScreenerAt: 'Historical context used by screener run at {{date}}.',
     },
     overview: {
       tradePlan: 'Trade plan',

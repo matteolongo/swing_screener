@@ -166,6 +166,8 @@ export function useSymbolWorkspaceData({
     candidate: validCandidate,
     position: validPosition,
     fundamentals: { ...fundamentalsQuery, data: fundamentalsData },
+    fundamentalsRefreshing: refreshFundamentals.isPending,
+    fundamentalsRefreshError: refreshFundamentals.error,
     prices: { ...pricesQuery, data: pricesData },
     intelligence: { ...intelligenceQuery, data: intelligenceData },
     sourceStates,

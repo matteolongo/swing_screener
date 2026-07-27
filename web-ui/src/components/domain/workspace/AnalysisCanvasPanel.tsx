@@ -1,13 +1,9 @@
-import { useEffect } from 'react';
-
 import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import DataStatusBar from '@/components/domain/workspace/DataStatusBar';
 import SymbolWorkspaceHeader from '@/components/domain/workspace/SymbolWorkspaceHeader';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
 import WorkspaceActivityDrawer from '@/components/domain/workspace/WorkspaceActivityDrawer';
-import { useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
-import { syncCandidateWithFundamentals } from '@/features/screener/decisionSummary';
 import { useOpenPositions } from '@/features/portfolio/hooks';
 import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorkspaceData';
 import { useScreenerStore } from '@/stores/screenerStore';
@@ -24,7 +20,6 @@ export default function AnalysisCanvasPanel() {
   const collapseWorkspace = useWorkspaceStore((state) => state.collapseWorkspace);
   const setFullscreen = useWorkspaceStore((state) => state.setFullscreen);
   const lastScreenerResult = useScreenerStore((state) => state.lastResult);
-  const patchCandidate = useScreenerStore((state) => state.patchCandidate);
   const selectedCandidate = lastScreenerResult?.candidates.find(
     (candidate) => candidate.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   );
@@ -39,26 +34,6 @@ export default function AnalysisCanvasPanel() {
     candidate: selectedCandidate ?? null,
     position: openPosition,
   });
-  const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
-  const latestFundamentalsSnapshot =
-    refreshFundamentalsMutation.data ?? workspaceData.fundamentals.data;
-
-  useEffect(() => {
-    if (!selectedTicker || !selectedCandidate || !latestFundamentalsSnapshot) {
-      return;
-    }
-
-    if (latestFundamentalsSnapshot.symbol.trim().toUpperCase() !== selectedTicker.trim().toUpperCase()) {
-      return;
-    }
-
-    if (syncCandidateWithFundamentals(selectedCandidate, latestFundamentalsSnapshot) === selectedCandidate) {
-      return;
-    }
-
-    patchCandidate(selectedTicker, (candidate) => syncCandidateWithFundamentals(candidate, latestFundamentalsSnapshot));
-  }, [latestFundamentalsSnapshot, patchCandidate, selectedCandidate, selectedTicker]);
-
   return (
     <Card
       id="workspace-analysis-canvas"
@@ -97,6 +72,16 @@ export default function AnalysisCanvasPanel() {
             onTabChange={setAnalysisTab}
             orderPanel={<ActionPanel ticker={selectedTicker} />}
             intelligenceOutdated={workspaceData.intelligenceOutdated}
+            fundamentals={{
+              data: workspaceData.fundamentals.data,
+              isLoading: workspaceData.fundamentals.isLoading,
+              isFetching: workspaceData.fundamentals.isFetching,
+              isError: workspaceData.fundamentals.isError,
+              error: workspaceData.fundamentals.error,
+              isRefreshing: workspaceData.fundamentalsRefreshing,
+              refreshError: workspaceData.fundamentalsRefreshError,
+              onRefresh: () => void workspaceData.refreshSource('fundamentals'),
+            }}
           />
         </>
       )}

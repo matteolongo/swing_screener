@@ -13,6 +13,7 @@ import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { renderWithProviders } from '@/test/utils';
+import { formatDateTime } from '@/utils/formatters';
 
 vi.mock('@/features/fundamentals/hooks', () => ({
   useFundamentalSnapshotQuery: vi.fn(),
@@ -168,7 +169,7 @@ describe('AnalysisCanvasPanel', () => {
   });
 
   it('runs fundamentals analysis for the selected symbol from the canvas', async () => {
-    const mutate = vi.fn();
+    const mutateAsync = vi.fn().mockResolvedValue(buildSnapshot());
 
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
@@ -176,7 +177,7 @@ describe('AnalysisCanvasPanel', () => {
       data: undefined,
     } as never);
     vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
-      mutate,
+      mutateAsync,
       data: undefined,
       isPending: false,
       isError: false,
@@ -185,13 +186,13 @@ describe('AnalysisCanvasPanel', () => {
 
     const { user } = renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(t('workspacePage.panels.analysis.fundamentals.noSnapshot'))).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.fundamentals.noSnapshot'))).toBeInTheDocument();
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Run fundamentals analysis' }));
     });
 
-    expect(mutate).toHaveBeenCalledWith('AAPL');
+    expect(mutateAsync).toHaveBeenCalledWith('AAPL');
   });
 
   it('renders NarrativeAnalysisCard in the Intelligence tab when latest intelligence has a narrative', async () => {
@@ -515,16 +516,12 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText('About metric labels')).toBeInTheDocument();
-    expect(screen.getByText('Live price')).toBeInTheDocument();
-    expect(screen.getByText('Reported')).toBeInTheDocument();
-    expect(screen.getByText('Latest FY / quarter')).toBeInTheDocument();
     expect(
       screen.getAllByText(/yfinance · 2026-03-19/i).length
     ).toBeGreaterThan(0);
   });
 
-  it('live reloads the selected candidate when refreshed fundamentals arrive', async () => {
+  it('preserves the historical screener candidate when refreshed fundamentals arrive', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -576,12 +573,9 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    await waitFor(() => {
-      const candidate = useScreenerStore.getState().lastResult?.candidates[0];
-      expect(candidate?.fundamentalsCoverageStatus).toBe('supported');
-      expect(candidate?.decisionSummary?.valuationContext.method).toBe('earnings_multiple');
-      expect(candidate?.decisionSummary?.valuationContext.summary).toContain('Trailing PE is 24.6x');
-    });
+    const candidate = useScreenerStore.getState().lastResult?.candidates[0];
+    expect(candidate?.fundamentalsCoverageStatus).toBeUndefined();
+    expect(candidate?.decisionSummary).toBeUndefined();
   });
 
   it('keeps the canonical decision visible in overview while intelligence is loading', () => {
@@ -881,7 +875,7 @@ describe('AnalysisCanvasPanel', () => {
     expect(screen.queryByRole('heading', { name: 'AAPL', level: 3 })).not.toBeInTheDocument();
   });
 
-  it('fundamentals tab: metric labels glossary is collapsed by default', () => {
+  it('fundamentals tab: provider activity is hidden by default', () => {
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
       isError: false,
@@ -898,11 +892,13 @@ describe('AnalysisCanvasPanel', () => {
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(
-      screen.getByText('multiple or ratio that moves with the stock price')
-    ).not.toBeVisible();
+      screen.queryByText(
+        t('workspacePage.fundamentals.providerActivity', { provider: 'yfinance' }),
+      ),
+    ).not.toBeInTheDocument();
   });
 
-  it('fundamentals tab: metric labels glossary details has no open attribute', () => {
+  it('fundamentals tab: reveals provider activity on request', async () => {
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
       isError: false,
@@ -916,11 +912,16 @@ describe('AnalysisCanvasPanel', () => {
       error: null,
     } as never);
 
-    renderWithProviders(<AnalysisCanvasPanel />);
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
 
-    const details = screen.getByText('About metric labels').closest('details');
-    expect(details).not.toBeNull();
-    expect(details).not.toHaveAttribute('open');
+    await user.click(
+      screen.getByRole('button', { name: t('workspacePage.data.showActivity') }),
+    );
+    expect(
+      screen.getByText(
+        t('workspacePage.fundamentals.providerActivity', { provider: 'yfinance' }),
+      ),
+    ).toBeVisible();
   });
 
   it('fundamentals tab: shows a refresh button in the compact row', () => {
@@ -958,7 +959,7 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(/Updated/i)).toBeInTheDocument();
+    expect(screen.getByText(formatDateTime(buildSnapshot().updatedAt))).toBeInTheDocument();
   });
 });
 

@@ -4,28 +4,24 @@ import AgentTracePanel from '@/components/domain/workspace/AgentTracePanel';
 import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
-import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
 import IntelligenceDecisionBrief from '@/components/domain/workspace/IntelligenceDecisionBrief';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
 import StrategicReviewPanel from '@/components/domain/workspace/StrategicReviewPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
+import SymbolFundamentalsTab from '@/components/domain/workspace/SymbolFundamentalsTab';
 import SymbolOverviewTab from '@/components/domain/workspace/SymbolOverviewTab';
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { ScreenerResponse } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
-import {
-  useFundamentalSnapshotQuery,
-  useRefreshFundamentalSnapshotMutation,
-} from '@/features/fundamentals/hooks';
+import type { FundamentalSnapshot } from '@/features/fundamentals/types';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
-import { formatDateTime } from '@/utils/formatters';
 
 interface SymbolAnalysisContentProps {
   ticker: string;
@@ -35,14 +31,16 @@ interface SymbolAnalysisContentProps {
   onTabChange: (tab: WorkspaceAnalysisTab) => void;
   orderPanel?: ReactNode;
   intelligenceOutdated?: boolean;
-}
-
-function provenanceLegendItems() {
-  return [
-    { label: 'Live price', detail: 'multiple or ratio that moves with the stock price' },
-    { label: 'Reported', detail: 'point-in-time value from the latest data snapshot' },
-    { label: 'Latest FY / quarter', detail: 'value from a specific reported statement period' },
-  ];
+  fundamentals?: {
+    data?: FundamentalSnapshot;
+    isLoading: boolean;
+    isFetching: boolean;
+    isError: boolean;
+    error: Error | null;
+    isRefreshing: boolean;
+    refreshError: Error | null;
+    onRefresh: () => void;
+  };
 }
 
 export default function SymbolAnalysisContent({
@@ -53,14 +51,20 @@ export default function SymbolAnalysisContent({
   onTabChange,
   orderPanel = null,
   intelligenceOutdated = false,
+  fundamentals = {
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    isRefreshing: false,
+    refreshError: null,
+    onRefresh: () => undefined,
+  },
 }: SymbolAnalysisContentProps) {
   const watchlistQuery = useWatchlist();
   const watchSymbolMutation = useWatchSymbolMutation();
   const unwatchSymbolMutation = useUnwatchSymbolMutation();
-  const fundamentalsQuery = useFundamentalSnapshotQuery(
-    activeTab === 'fundamentals' || activeTab === 'overview' ? ticker : undefined
-  );
-  const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
   const computeAnalysisMutation = useRunScreenerMutation((result) => {
     const newCandidate = result.candidates[0];
     if (!newCandidate) return;
@@ -289,10 +293,10 @@ export default function SymbolAnalysisContent({
                 candidate,
                 position,
                 fundamentals: {
-                  data: fundamentalsQuery.data,
-                  isLoading: fundamentalsQuery.isLoading,
-                  isError: fundamentalsQuery.isError,
-                  error: fundamentalsQuery.error,
+                  data: fundamentals.data,
+                  isLoading: fundamentals.isLoading,
+                  isError: fundamentals.isError,
+                  error: fundamentals.error,
                 },
                 catalyst: {
                   data: catalystQuery.data,
@@ -412,68 +416,18 @@ export default function SymbolAnalysisContent({
         )}
 
         {activeTab === 'fundamentals' && (
-          <>
-            <div className="flex items-center justify-between gap-3 py-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => refreshFundamentalsMutation.mutate(ticker)}
-                disabled={refreshFundamentalsMutation.isPending}
-              >
-                {refreshFundamentalsMutation.isPending
-                  ? fundamentalsQuery.data
-                    ? t('workspacePage.panels.analysis.fundamentals.refreshingAction')
-                    : t('workspacePage.panels.analysis.fundamentals.runningAction')
-                  : fundamentalsQuery.data
-                    ? t('workspacePage.panels.analysis.fundamentals.refreshAction')
-                    : t('workspacePage.panels.analysis.fundamentals.runAction')}
-              </Button>
-              {fundamentalsQuery.data && (
-                <span className="text-xs text-muted">
-                  Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
-                </span>
-              )}
-            </div>
-
-            {fundamentalsQuery.data ? (
-              <details className="rounded-lg border border-border bg-surface p-3">
-                <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-muted">
-                  About metric labels
-                </summary>
-                <div className="mt-3 grid gap-2 md:grid-cols-3">
-                  {provenanceLegendItems().map((item) => (
-                    <div key={item.label} className="rounded-md border border-border bg-surface px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{item.label}</p>
-                      <p className="mt-1 text-sm text-muted">{item.detail}</p>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ) : null}
-
-            {refreshFundamentalsMutation.isError ? (
-              <div className="text-sm text-danger">
-                {refreshFundamentalsMutation.error instanceof Error
-                  ? refreshFundamentalsMutation.error.message
-                  : t('workspacePage.panels.analysis.fundamentals.refreshError')}
-              </div>
-            ) : null}
-
-            {fundamentalsQuery.isLoading ? (
-              <div className="text-sm text-muted">{t('workspacePage.panels.analysis.fundamentals.loading')}</div>
-            ) : fundamentalsQuery.isError ? (
-              <div className="text-sm text-danger">
-                {fundamentalsQuery.error instanceof Error
-                  ? fundamentalsQuery.error.message
-                  : t('workspacePage.panels.analysis.fundamentals.loadError')}
-              </div>
-            ) : fundamentalsQuery.data ? (
-              <FundamentalsSnapshotCard snapshot={fundamentalsQuery.data} />
-            ) : (
-              <div className="text-sm text-muted">{t('workspacePage.panels.analysis.fundamentals.noSnapshot')}</div>
-            )}
-          </>
+          <SymbolFundamentalsTab
+            model={{
+              ticker,
+              snapshot: fundamentals.data,
+              isLoading: fundamentals.isLoading,
+              isRefreshing: fundamentals.isRefreshing || fundamentals.isFetching,
+              error: fundamentals.refreshError ?? fundamentals.error,
+              intelligenceOutdated,
+              screenerFundamentalsAsOf: candidate?.fundamentalsAsOf ?? null,
+              onRefresh: fundamentals.onRefresh,
+            }}
+          />
         )}
 
       </div>

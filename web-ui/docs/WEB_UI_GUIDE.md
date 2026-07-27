@@ -33,7 +33,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/watchlist` | Today | Watchlist CRUD (Watchlist tab) |
 | `features/dailyReview` | Today | Portfolio/watchlist review compute and structured result. Candidate opportunities are derived from the persisted pinned screener snapshot, not from this endpoint. |
 | `features/analytics` | Analytics | Regime breakdown, performance stats |
-| `features/fundamentals` | Today (symbol analysis) | Fundamental snapshots used by the symbol analysis panels. The standalone Research/Fundamentals comparison page was removed; the `compare`/`warmup` hooks are now unused and pending cleanup. |
+| `features/fundamentals` | Today (symbol analysis) | One canonical fundamental snapshot, owned by `useSymbolWorkspaceData`, feeds Overview and the decision-first Fundamentals tab. Refresh updates that query without rewriting historical screener inputs; a newer snapshot marks intelligence outdated but does not regenerate it. The standalone Research/Fundamentals comparison page was removed; the `compare`/`warmup` hooks are now unused and pending cleanup. |
 | `features/calendar` | Calendar | Calendar events |
 | `features/weeklyReview` | Book | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |

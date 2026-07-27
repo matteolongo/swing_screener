@@ -8,6 +8,7 @@ import {
   metricHorizonShortLabel,
   metricHorizonTooltip,
 } from '@/features/fundamentals/presentation';
+import { t } from '@/i18n/t';
 
 function formatPercent(value?: number) {
   if (value == null) return 'n/a';
@@ -211,6 +212,8 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
       value: formatCompactNumber(snapshot.sharesOutstanding),
     },
   ] as const;
+  const availableMetrics = metricCards.filter((metric) => metric.value !== 'n/a');
+  const unavailableMetrics = metricCards.filter((metric) => metric.value === 'n/a');
 
   return (
     <Card variant="bordered" className="h-full">
@@ -315,7 +318,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
         ) : null}
 
         <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
-          {metricCards.map((metric) => {
+          {availableMetrics.map((metric) => {
             const context = snapshot.metricContext[metric.key];
             const meta = formatFundamentalMetricMeta(metric.key, context);
             return (
@@ -335,6 +338,20 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             );
           })}
         </div>
+        {unavailableMetrics.length > 0 ? (
+          <details className="rounded-md border border-border bg-surface p-3">
+            <summary className="cursor-pointer text-sm font-medium text-muted">
+              {t('workspacePage.fundamentals.unavailableCount', {
+                count: unavailableMetrics.length,
+              })}
+            </summary>
+            <ul className="mt-2 grid gap-1 text-xs text-muted sm:grid-cols-2">
+              {unavailableMetrics.map((metric) => (
+                <li key={metric.key}>{metric.label}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
 
         {(safeHighlights.length > 0 || safeRedFlags.length > 0) ? (
           <div className="grid gap-4 md:grid-cols-2">
