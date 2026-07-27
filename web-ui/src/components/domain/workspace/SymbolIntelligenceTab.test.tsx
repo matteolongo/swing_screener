@@ -75,6 +75,7 @@ const baseModel: SymbolIntelligenceTabModel = {
   generationError: null,
   failedGenerationForce: false,
   refreshError: null,
+  refreshedEvidence: null,
   onRefreshEvidence: vi.fn(),
   onGenerate: vi.fn(),
 };
@@ -222,6 +223,47 @@ describe('SymbolIntelligenceTab guided flow', () => {
     expect(screen.getByText(t('workspacePage.intelligence.followUps'))).toBeVisible();
     expect(screen.getByText('position review')).toBeInTheDocument();
     expect(screen.getByText('strategic review')).toBeInTheDocument();
+  });
+
+  it('replaces the aggregate evidence row with the refreshed provider manifest', () => {
+    renderWithProviders(
+      <SymbolIntelligenceTab
+        model={{
+          ...baseModel,
+          refreshedEvidence: {
+            ticker: 'AAPL',
+            refreshedAt: '2026-07-28T10:00:00Z',
+            status: 'partial',
+            sources: [{
+              source: 'evidence',
+              provider: 'tavily',
+              status: 'failed',
+              itemCount: 0,
+              asOf: '2026-07-28T10:00:00Z',
+              message: 'Evidence provider failed.',
+            }],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('tavily')).toBeVisible();
+    expect(screen.getByText('Evidence provider failed.')).toBeVisible();
+  });
+
+  it('marks the evidence manifest failed when the refresh request fails', () => {
+    renderWithProviders(
+      <SymbolIntelligenceTab
+        model={{
+          ...baseModel,
+          refreshError: new Error('Evidence refresh failed.'),
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: /News and evidence.*Failed.*Evidence refresh failed/i }),
+    ).toBeVisible();
   });
 
   it('marks an in-flight trace step as running rather than complete', () => {

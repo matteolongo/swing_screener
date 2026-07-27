@@ -7,8 +7,13 @@ import type {
   AnalysisHistoryResponseAPI,
   HistoryEntry,
   IntelligenceChatResponseAPI,
+  EvidenceRefreshResponseAPI,
 } from '@/features/intelligence/types';
-import { transformHistoryEntry, transformIntelligenceChat } from '@/features/intelligence/types';
+import {
+  transformEvidenceRefresh,
+  transformHistoryEntry,
+  transformIntelligenceChat,
+} from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import type { PositionReviewAPI } from '@/features/intelligence/positionReviewTypes';
@@ -162,6 +167,17 @@ export async function getIntelligenceLatest(ticker: string): Promise<SymbolIntel
   return fetchJson<SymbolIntelligenceAPI>(API_ENDPOINTS.intelligenceLatest(ticker), {
     errorMessage: `No cached analysis for ${ticker}`,
   });
+}
+
+export async function refreshIntelligenceEvidence(ticker: string) {
+  const response = await fetchJson<EvidenceRefreshResponseAPI>(
+    API_ENDPOINTS.intelligenceEvidenceRefresh(ticker),
+    {
+      method: 'POST',
+      errorMessage: `Failed to refresh intelligence evidence for ${ticker}`,
+    },
+  );
+  return transformEvidenceRefresh(response);
 }
 
 export async function getIntelligenceHistory(ticker: string): Promise<HistoryEntry[]> {

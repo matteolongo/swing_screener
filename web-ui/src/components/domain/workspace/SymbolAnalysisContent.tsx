@@ -2,13 +2,17 @@ import { useState, useEffect, useId, useRef, type KeyboardEvent, type ReactNode 
 import Button from '@/components/common/Button';
 import {
   findRunStartedAfter,
+  useEvidenceRefreshMutation,
   useIntelligenceAnalysisMutation,
   useIntelligenceLatestQuery,
   useRunTrace,
   useTickerRuns,
 } from '@/features/intelligence/hooks';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
-import type { SymbolIntelligence } from '@/features/intelligence/types';
+import type {
+  EvidenceRefreshResponse,
+  SymbolIntelligence,
+} from '@/features/intelligence/types';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import SymbolFundamentalsTab from '@/components/domain/workspace/SymbolFundamentalsTab';
 import SymbolIntelligenceTab from '@/components/domain/workspace/SymbolIntelligenceTab';
@@ -36,9 +40,6 @@ interface SymbolAnalysisContentProps {
   selectionVersion?: number;
   intelligenceWorkflow?: {
     sources: WorkspaceSourceState[];
-    isRefreshingEvidence: boolean;
-    refreshError: Error | null;
-    onRefreshEvidence: () => void;
   };
   fundamentals?: {
     data?: FundamentalSnapshot;
@@ -96,11 +97,14 @@ export default function SymbolAnalysisContent({
   });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
+  const evidenceRefreshMutation = useEvidenceRefreshMutation();
   const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
   const [attemptedRunId, setAttemptedRunId] = useState<string | null>(null);
   const [lastAttemptForce, setLastAttemptForce] = useState(false);
+  const [refreshedEvidence, setRefreshedEvidence] =
+    useState<EvidenceRefreshResponse | null>(null);
   const currentSessionRef = useRef(`${ticker.trim().toUpperCase()}:${selectionVersion}`);
   const tabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
@@ -148,11 +152,28 @@ export default function SymbolAnalysisContent({
     );
   };
 
+  const handleRefreshEvidence = () => {
+    const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+    setRefreshedEvidence(null);
+    evidenceRefreshMutation.mutate(ticker, {
+      onSuccess: (result) => {
+        if (
+          result.ticker.trim().toUpperCase() === ticker.trim().toUpperCase()
+          && requestedSession === currentSessionRef.current
+        ) {
+          setRefreshedEvidence(result);
+        }
+      },
+    });
+  };
+
   useEffect(() => {
     setIntelligenceResult(null);
     setAttemptedRunId(null);
     setLastAttemptForce(false);
+    setRefreshedEvidence(null);
     intelligenceMutation.reset();
+    evidenceRefreshMutation.reset();
   }, [ticker, selectionVersion]);
 
   // Open positions are suppressed from the screener as manage-only, so a held
@@ -347,11 +368,12 @@ export default function SymbolAnalysisContent({
               isCachedAnalysis:
                 !intelligenceResult && intelligenceLatest.isFetchedAfterMount === false,
               isGenerating: intelligenceMutation.isPending,
-              isRefreshingEvidence: intelligenceWorkflow?.isRefreshingEvidence ?? false,
+              isRefreshingEvidence: evidenceRefreshMutation.isPending,
               generationError: intelligenceMutation.error,
               failedGenerationForce: lastAttemptForce,
-              refreshError: intelligenceWorkflow?.refreshError ?? null,
-              onRefreshEvidence: intelligenceWorkflow?.onRefreshEvidence ?? fundamentals.onRefresh,
+              refreshError: evidenceRefreshMutation.error,
+              refreshedEvidence,
+              onRefreshEvidence: handleRefreshEvidence,
               onGenerate: handleAnalyzeWithAi,
             }}
           />

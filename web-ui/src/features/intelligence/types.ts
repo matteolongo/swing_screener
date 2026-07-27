@@ -234,6 +234,56 @@ export interface EnrichmentDiagnostic {
   message: string | null;
 }
 
+export interface EvidenceRefreshSourceAPI {
+  source: 'evidence';
+  provider: string;
+  status: 'fresh' | 'failed';
+  item_count: number;
+  as_of: string;
+  message: string | null;
+}
+
+export interface EvidenceRefreshResponseAPI {
+  ticker: string;
+  refreshed_at: string;
+  status: 'fresh' | 'partial' | 'failed';
+  sources: EvidenceRefreshSourceAPI[];
+}
+
+export interface EvidenceRefreshSource {
+  source: 'evidence';
+  provider: string;
+  status: 'fresh' | 'failed';
+  itemCount: number;
+  asOf: string;
+  message: string | null;
+}
+
+export interface EvidenceRefreshResponse {
+  ticker: string;
+  refreshedAt: string;
+  status: 'fresh' | 'partial' | 'failed';
+  sources: EvidenceRefreshSource[];
+}
+
+export function transformEvidenceRefresh(
+  api: EvidenceRefreshResponseAPI,
+): EvidenceRefreshResponse {
+  return {
+    ticker: api.ticker.trim().toUpperCase(),
+    refreshedAt: api.refreshed_at,
+    status: api.status,
+    sources: (api.sources ?? []).map((source) => ({
+      source: source.source,
+      provider: source.provider,
+      status: source.status,
+      itemCount: source.item_count,
+      asOf: source.as_of,
+      message: source.message ?? null,
+    })),
+  };
+}
+
 export interface IntelligenceInputsUsed {
   enrichmentDiagnostics?: EnrichmentDiagnostic[];
   [key: string]: unknown;

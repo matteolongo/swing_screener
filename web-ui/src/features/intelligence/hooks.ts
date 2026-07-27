@@ -9,6 +9,7 @@ import {
   postPositionReview,
   postStrategicReview,
   postIntelligenceAnalysis,
+  refreshIntelligenceEvidence,
   postIntelligenceSweep,
   sendIntelligenceChatMessage,
   type IntelligenceChatMessagePayload,
@@ -16,7 +17,14 @@ import {
   type StrategicReviewPayload,
 } from '@/features/intelligence/api';
 import { transformIntelligence } from '@/features/intelligence/types';
-import type { HistoryEntry, IntelligenceChatResponse, SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
+import type {
+  EvidenceRefreshResponse,
+  HistoryEntry,
+  IntelligenceChatResponse,
+  SymbolIntelligence,
+  SweepResponseAPI,
+  SweepSymbolPayload,
+} from '@/features/intelligence/types';
 import type { PositionReview } from '@/features/intelligence/positionReviewTypes';
 import type { StrategicReview } from '@/features/intelligence/strategicReviewTypes';
 import type { RunTrace, RunIndexEntry } from '@/features/intelligence/traceTypes';
@@ -60,6 +68,19 @@ export function useIntelligenceAnalysisMutation() {
       queryClient.invalidateQueries({ queryKey: queryKeys.intelligence.history(ticker) });
       queryClient.invalidateQueries({ queryKey: queryKeys.intelligence.latest(ticker) });
       queryClient.invalidateQueries({ queryKey: queryKeys.intelligence.chat(ticker) });
+    },
+  });
+}
+
+export function useEvidenceRefreshMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<EvidenceRefreshResponse, Error, string>({
+    mutationFn: refreshIntelligenceEvidence,
+    onSuccess: (response, ticker) => {
+      queryClient.setQueryData(
+        queryKeys.intelligence.evidence(ticker),
+        response,
+      );
     },
   });
 }

@@ -74,3 +74,27 @@ def test_failing_collector_records_fallback_and_degrades(tmp_path, monkeypatch):
     assert out == []
     events = source_health.recent_events()
     assert any(e.from_provider == "sec_edgar_catalysts" and e.domain == "intelligence" for e in events)
+
+
+def test_refresh_reports_each_collector_without_exposing_exceptions(tmp_path, monkeypatch):
+    attempts = []
+
+    def boom(cls, *args, **kwargs):
+        raise RuntimeError("api_key=top-secret")
+
+    monkeypatch.setattr(SecEdgarCatalystCollector, "collect", classmethod(boom))
+
+    result = collect_evidence(
+        "AAPL",
+        asof_date=ASOF,
+        cfg=CFG,
+        cache_root=tmp_path,
+        refresh_sources=True,
+        attempt_callback=lambda provider, status, count: attempts.append(
+            (provider, status, count)
+        ),
+    )
+
+    assert result == []
+    assert attempts == [("sec_edgar_catalysts", "failed", 0)]
+    assert "secret" not in repr(attempts)

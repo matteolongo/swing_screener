@@ -4,7 +4,10 @@ from __future__ import annotations
 import logging
 import math
 import os
+import re
+from datetime import datetime, timezone
 from threading import Lock
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, model_validator
@@ -208,6 +211,64 @@ class AnalysisHistoryResponse(BaseModel):
 
 class RunIndexResponse(BaseModel):
     entries: list[RunIndexEntry]
+
+
+class EvidenceRefreshSource(BaseModel):
+    source: str = "evidence"
+    provider: str
+    status: Literal["fresh", "failed"]
+    item_count: int
+    as_of: str
+    message: str | None = None
+
+
+class EvidenceRefreshResponse(BaseModel):
+    ticker: str
+    refreshed_at: str
+    status: Literal["fresh", "partial", "failed"]
+    sources: list[EvidenceRefreshSource]
+
+
+@router.post("/{ticker}/evidence/refresh", response_model=EvidenceRefreshResponse)
+def refresh_evidence(ticker: str) -> EvidenceRefreshResponse:
+    """Refresh configured evidence collectors without analysis or trading mutations."""
+    upper = ticker.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9._-]{0,19}", upper):
+        raise HTTPException(status_code=422, detail="Invalid ticker.")
+
+    refreshed_at = datetime.now(timezone.utc).isoformat()
+    sources: list[EvidenceRefreshSource] = []
+
+    def record_attempt(provider: str, status: str, item_count: int) -> None:
+        sources.append(
+            EvidenceRefreshSource(
+                provider=provider,
+                status=status,
+                item_count=item_count,
+                as_of=refreshed_at,
+                message="Evidence provider failed." if status == "failed" else None,
+            )
+        )
+
+    collect_evidence(
+        upper,
+        refresh_sources=True,
+        attempt_callback=record_attempt,
+    )
+    failures = sum(source.status == "failed" for source in sources)
+    overall = (
+        "failed"
+        if not sources or failures == len(sources)
+        else "partial"
+        if failures
+        else "fresh"
+    )
+    return EvidenceRefreshResponse(
+        ticker=upper,
+        refreshed_at=refreshed_at,
+        status=overall,
+        sources=sources,
+    )
 
 
 @router.post("/sweep", response_model=SweepResponse)

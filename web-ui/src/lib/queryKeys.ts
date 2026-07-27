@@ -39,6 +39,7 @@ export const queryKeys = {
     runTrace: (runId: string | null | undefined) =>
       ['intelligence', 'runTrace', runId ?? null] as const,
     runs: (ticker: string) => ['intelligence', 'runs', ticker] as const,
+    evidence: (ticker: string) => ['intelligence', 'evidence', ticker] as const,
   },
   calendarEvents: (daysAhead?: number) =>
     ['calendar-events', daysAhead ?? 30] as const,

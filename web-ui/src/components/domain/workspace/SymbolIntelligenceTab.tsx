@@ -7,7 +7,10 @@ import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalys
 import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
 import StrategicReviewPanel from '@/components/domain/workspace/StrategicReviewPanel';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
-import type { SymbolIntelligence } from '@/features/intelligence/types';
+import type {
+  EvidenceRefreshResponse,
+  SymbolIntelligence,
+} from '@/features/intelligence/types';
 import type { RunTrace } from '@/features/intelligence/traceTypes';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import type {
@@ -34,6 +37,7 @@ export interface SymbolIntelligenceTabModel {
   generationError: Error | null;
   failedGenerationForce: boolean;
   refreshError: Error | null;
+  refreshedEvidence: EvidenceRefreshResponse | null;
   onRefreshEvidence: () => void;
   onGenerate: (force: boolean) => void;
 }
@@ -98,6 +102,7 @@ function phaseLabel(phase: WorkspaceSourcePhase): string {
 
 function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
   const diagnostics = model.analysis?.inputsUsed?.enrichmentDiagnostics ?? [];
+  const refreshedEvidence = model.refreshedEvidence?.sources ?? [];
   const workspaceSources =
     model.sources.length > 0
       ? model.sources
@@ -114,7 +119,30 @@ function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
           error: null,
         }));
   const rows = [
-    ...workspaceSources.filter((source) => source.id !== 'intelligence'),
+    ...workspaceSources
+      .filter(
+        (source) =>
+          source.id !== 'intelligence'
+          && !(source.id === 'evidence' && refreshedEvidence.length > 0),
+      )
+      .map((source) =>
+        source.id === 'evidence' && model.refreshError
+          ? {
+              ...source,
+              phase: 'failed' as const,
+              cacheOrigin: null,
+              error: model.refreshError.message,
+            }
+          : source,
+      ),
+    ...refreshedEvidence.map((source) => ({
+      id: source.source,
+      provider: source.provider,
+      dataAsOf: source.asOf,
+      phase: source.status,
+      itemCount: source.itemCount,
+      error: source.message,
+    })),
     ...diagnostics
       .filter((diagnostic) => !SOURCE_IDS.includes(diagnostic.source as WorkspaceSourceId))
       .map((diagnostic) => ({
@@ -149,7 +177,7 @@ function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
             const rowError =
               typeof row.error === 'string' ? row.error : row.error?.message;
             return (
-              <tr key={row.id}>
+              <tr key={`${row.id}-${row.provider ?? ''}`}>
                 <th scope="row" className="px-3 py-2 font-medium text-foreground">
                   {sourceLabel(row.id)}
                 </th>

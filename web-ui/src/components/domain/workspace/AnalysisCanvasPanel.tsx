@@ -75,11 +75,6 @@ export default function AnalysisCanvasPanel() {
             intelligenceOutdated={workspaceData.intelligenceOutdated}
             intelligenceWorkflow={{
               sources: workspaceData.sourceStates,
-              isRefreshingEvidence:
-                workspaceData.fundamentalsRefreshing || workspaceData.prices.isFetching,
-              refreshError:
-                workspaceData.fundamentalsRefreshError ?? workspaceData.prices.error,
-              onRefreshEvidence: () => void workspaceData.refreshAllNonIntelligence(),
             }}
             fundamentals={{
               data: workspaceData.fundamentals.data,

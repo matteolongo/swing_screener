@@ -24,6 +24,7 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 
 ```
 POST /api/intelligence/{ticker}            — run analysis; cache result
+POST /api/intelligence/{ticker}/evidence/refresh — refresh evidence only; no LLM or trading mutation
 GET  /api/intelligence/{ticker}/latest     — return most-recent cached result
 GET  /api/intelligence/{ticker}/history    — return per-symbol analysis history (newest-first, capped)
 GET  /api/intelligence/runs/{run_id}       — return a single persisted agent-run trace
@@ -142,6 +143,14 @@ with a `used`, `missing`, or `failed` status plus optional as-of time and item
 count. Failure messages are stable, user-safe summaries; detailed provider
 exceptions remain restricted to logs and run traces. The field is additive, so
 cached results written before diagnostics were introduced remain valid.
+
+`POST /api/intelligence/{ticker}/evidence/refresh` is the explicit evidence-only
+path used by the workspace input review. It bypasses the analyzer entirely,
+forces the configured evidence collectors (including refresh-only collectors),
+updates their normal curated evidence cache, and returns only a sanitized
+per-provider manifest with freshness, count, and failure status. It never writes
+analysis/history/metrics, calls an LLM, or mutates portfolio/order state. Raw
+collector exceptions remain server-side.
 
 `POST /api/intelligence/position/{position_id}` enriches the same way: it runs
 `enrich_intelligence_request` (fundamentals + earnings) and then `enrich_with_technicals`,

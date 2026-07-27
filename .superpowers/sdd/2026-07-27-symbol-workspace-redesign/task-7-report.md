@@ -103,3 +103,47 @@ GREEN verification:
 
 Concerns: evidence refresh still has no dedicated backend endpoint; intentionally
 unchanged while the controller resolves the approved-plan/API conflict.
+
+## Evidence refresh endpoint follow-up
+
+Implemented after user approval:
+
+- Added `POST /api/intelligence/{ticker}/evidence/refresh`.
+- The endpoint validates and normalizes the ticker, forces only configured
+  evidence collectors, updates the normal curated evidence cache, and returns a
+  sanitized per-provider manifest with overall `fresh`/`partial`/`failed`
+  status. It does not require or invoke the analyzer/LLM and has no
+  position/order/trading-state dependencies.
+- Added collector attempt reporting without copying exception text into the
+  response. Failed entries expose only `Evidence provider failed.`.
+- Added frontend API/domain transforms and a dedicated React Query mutation/cache
+  key, separate from generation.
+- Wired **Refresh evidence sources** to the new endpoint. Successful manifests
+  replace the aggregate evidence row; request and provider failures remain
+  visible in the input table.
+- Guarded refreshed manifest display with normalized ticker and workspace
+  `selectionVersion`; switching sessions resets mutation-local evidence state.
+- Updated API, intelligence-module, and Web UI documentation.
+
+RED evidence:
+
+- `uv run pytest tests/test_intelligence_evidence_refresh.py tests/test_evidence_collect.py -q`
+  failed 3 tests: the endpoint returned 404 and `collect_evidence` rejected the
+  attempt callback.
+- `npx vitest run src/features/intelligence/api.test.ts src/components/domain/workspace/SymbolIntelligenceTab.test.tsx`
+  failed because `refreshIntelligenceEvidence` did not exist and refreshed
+  provider rows were absent.
+- The focused manifest failure test failed because a failed request left the
+  prior aggregate evidence row looking fresh.
+
+GREEN verification:
+
+- Backend focused tests: 26 passed across evidence collection, the refresh
+  endpoint, enrichment, and router enrichment.
+- Ruff: all checks passed for changed backend/test files.
+- Frontend focused suite: 14 files and 133 tests passed.
+- TypeScript typecheck: passed.
+- ESLint strict: passed with zero warnings.
+- `git diff --check`: passed.
+
+Concerns: none.

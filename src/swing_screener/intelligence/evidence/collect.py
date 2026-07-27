@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import date
 from pathlib import Path
+from typing import Callable
 
 from swing_screener.data.source_health import record_fallback
 from swing_screener.intelligence.evidence import registry
@@ -64,6 +65,7 @@ def collect_evidence(
     cfg: EvidenceConfig | None = None,
     cache_root: Path | None = None,
     refresh_sources: bool = False,
+    attempt_callback: Callable[[str, str, int], None] | None = None,
 ) -> list[SourceEvidence]:
     asof_date = asof_date or date.today()
     cfg = cfg or load_evidence_config()
@@ -82,10 +84,15 @@ def collect_evidence(
         if collector is None:
             continue
         try:
-            raw.extend(collector.collect(ticker, asof_date=asof_date, cfg=cfg))
+            collected = collector.collect(ticker, asof_date=asof_date, cfg=cfg)
+            raw.extend(collected)
+            if attempt_callback is not None:
+                attempt_callback(source_id, "fresh", len(collected))
         except Exception as exc:  # never fail the analysis
             logger.warning("Evidence collector %s failed for %s: %s", source_id, ticker, exc)
             record_fallback(domain="intelligence", from_provider=source_id, reason=str(exc), tickers=[ticker])
+            if attempt_callback is not None:
+                attempt_callback(source_id, "failed", 0)
 
     curated = curate(
         raw, window_days=cfg.recency_window_days, max_items=cfg.max_items_per_symbol, asof_date=asof_date
