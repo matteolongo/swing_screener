@@ -238,6 +238,35 @@ def test_inputs_used_includes_price_source():
     assert result.inputs_used["technical"]["price_source"] == "polygon"
 
 
+def test_inputs_used_exposes_enrichment_diagnostics():
+    from swing_screener.intelligence.models import EnrichmentDiagnostic
+
+    request = SymbolIntelligenceRequest(
+        close=48.5,
+        signal="breakout",
+        enrichment_diagnostics=[
+            EnrichmentDiagnostic(source="evidence", status="missing", item_count=0)
+        ],
+    )
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, _FAKE_RESPONSE_JSON)
+
+        result = SymbolAnalyzer().analyze("APAM", request)
+
+    assert result.inputs_used["enrichment_diagnostics"] == [
+        {
+            "source": "evidence",
+            "status": "missing",
+            "as_of": None,
+            "item_count": 0,
+            "message": None,
+        }
+    ]
+
+
 def test_symbol_analyzer_raises_on_invalid_action():
     # _LLMAnalysis now validates action: DecisionAction at call-2 decode.
     # Simulate responses.parse raising (as the real API would) and confirm

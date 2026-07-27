@@ -23,6 +23,7 @@ from api.services.intelligence_enrichment import (
     enrich_intelligence_request,
     enrich_with_polygon_prices,
     enrich_with_technicals,
+    record_enrichment_failure,
 )
 from swing_screener.intelligence.evidence.collect import collect_evidence
 from api.services.portfolio_service import PortfolioService
@@ -250,6 +251,7 @@ def sweep(
                         item_req = enrich_with_technicals(upper, item_req, ohlcv)
                         ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
                     except Exception as exc:
+                        item_req = record_enrichment_failure(item_req, "technicals")
                         skipped_reason = _brief_error(exc)
                         logger.warning(
                             "Sweep technical enrichment skipped for %r", item.ticker, exc_info=True
@@ -487,6 +489,7 @@ def analyze_position(
                     request = enrich_with_technicals(pos.ticker, request, ohlcv)
                     ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
                 except Exception as exc:
+                    request = record_enrichment_failure(request, "technicals")
                     skipped_reason = _brief_error(exc)
                     logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
                 _set_step_output(

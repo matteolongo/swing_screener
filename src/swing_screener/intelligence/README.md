@@ -135,6 +135,14 @@ sees the full picture regardless of what the caller sent. Provider errors degrad
 gracefully (the field stays unset; analysis never fails on a fetch error), and
 caller-provided values are never overwritten.
 
+Every attempted fundamentals, earnings, dividend, evidence, technical, and
+Polygon-price source appends an `EnrichmentDiagnostic` to the request. The graph
+copies these entries to `SymbolIntelligence.inputs_used.enrichment_diagnostics`
+with a `used`, `missing`, or `failed` status plus optional as-of time and item
+count. Failure messages are stable, user-safe summaries; detailed provider
+exceptions remain restricted to logs and run traces. The field is additive, so
+cached results written before diagnostics were introduced remain valid.
+
 `POST /api/intelligence/position/{position_id}` enriches the same way: it runs
 `enrich_intelligence_request` (fundamentals + earnings) and then `enrich_with_technicals`,
 which fetches recent OHLCV via `PortfolioService.fetch_recent_ohlcv` and computes SMAs,
@@ -287,7 +295,7 @@ history metadata; metrics add a capped token log for quick operational checks.
 
 ```mermaid
 flowchart LR
-  Result[SymbolIntelligence] --> Inputs[inputs_used: trade plan, technicals, fundamentals, source counts]
+  Result[SymbolIntelligence] --> Inputs[inputs_used: trade plan, technicals, provenance, enrichment diagnostics]
   Result --> Sources[sources: URLs cited by the model]
   Result --> Catalysts[classified_catalysts: typed cited catalysts]
   Result --> Ledger[evidence_ledger: deterministic bull/bear balance]

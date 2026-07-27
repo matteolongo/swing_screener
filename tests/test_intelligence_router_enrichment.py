@@ -19,6 +19,11 @@ class _Fund:
         )
 
 
+class _FailedFund:
+    def get_snapshot(self, symbol):
+        raise RuntimeError("https://provider.invalid/?api_key=secret")
+
+
 class _Port:
     def __init__(self, position=None, *, technicals_raise=False):
         self.position = position
@@ -105,6 +110,56 @@ def test_analyze_enriches_request_before_calling_llm(monkeypatch):
         app.dependency_overrides.clear()
 
 
+def test_analyze_exposes_sanitized_enrichment_failure(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    def _fake_analyze(self, ticker, req, past_positions=None, recorder=None):
+        return SymbolIntelligence(
+            symbol=ticker,
+            generated_at="2026-06-15T00:00:00Z",
+            action="WATCH",
+            conviction="medium",
+            summary_line="x",
+            narrative="y",
+            inputs_used={
+                "enrichment_diagnostics": [
+                    item.model_dump(mode="json")
+                    for item in req.enrichment_diagnostics
+                ]
+            },
+        )
+
+    analyzer_instance = type(
+        "_FakeAnalyzer",
+        (),
+        {"analyze": _fake_analyze, "context_fingerprint": lambda self, *a: "test"},
+    )()
+    app.dependency_overrides[get_fundamentals_service] = lambda: _FailedFund()
+    app.dependency_overrides[get_portfolio_service] = lambda: _Port()
+    app.dependency_overrides[get_positions_repo] = lambda: _Repo()
+    try:
+        with (
+            patch("api.routers.intelligence._get_analyzer", return_value=analyzer_instance),
+            patch("api.routers.intelligence.read_from_cache", return_value=None),
+        ):
+            response = TestClient(app).post(
+                "/api/intelligence/AAPL",
+                json={"close": 100.0, "signal": "breakout"},
+            )
+        assert response.status_code == 200
+        diagnostic = response.json()["inputs_used"]["enrichment_diagnostics"][0]
+        assert diagnostic == {
+            "source": "fundamentals",
+            "status": "failed",
+            "as_of": None,
+            "item_count": None,
+            "message": "Fundamentals provider failed.",
+        }
+        assert "secret" not in str(diagnostic)
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_position_analysis_trace_records_nonfatal_technical_enrichment_failure(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     captured = {}
@@ -142,6 +197,7 @@ def test_position_analysis_trace_records_nonfatal_technical_enrichment_failure(m
     def _fake_analyze(self, ticker, req, past_positions=None, recorder=None):
         technical_step = next(s for s in recorder.trace.steps if s.name == "enrich_technicals")
         captured["technical_summary"] = technical_step.outputs_summary
+        captured["diagnostics"] = req.enrichment_diagnostics
         return SymbolIntelligence(
             symbol=ticker,
             generated_at="2026-06-15T00:00:00Z",
@@ -183,5 +239,11 @@ def test_position_analysis_trace_records_nonfatal_technical_enrichment_failure(m
         assert resp.status_code == 200, resp.text
         assert captured["technical_summary"]["ohlcv_rows"] == 0
         assert captured["technical_summary"]["skipped_reason"] == "RuntimeError: ohlcv provider down"
+        diagnostic = next(
+            item for item in captured["diagnostics"] if item.source == "technicals"
+        )
+        assert diagnostic.status == "failed"
+        assert diagnostic.message == "Technical enrichment failed."
+        assert "ohlcv provider down" not in diagnostic.message
     finally:
         app.dependency_overrides.clear()

@@ -11,6 +11,22 @@ from swing_screener.recommendation.models import DecisionAction, DecisionConvict
 
 CatalystUrgency = Literal["high", "medium", "low", "none"]
 DataStatus = Literal["current", "stale", "intraday", "unknown"]
+EnrichmentSource = Literal[
+    "fundamentals",
+    "earnings",
+    "dividend",
+    "evidence",
+    "technicals",
+    "polygon_prices",
+]
+
+
+class EnrichmentDiagnostic(BaseModel):
+    source: EnrichmentSource
+    status: Literal["used", "missing", "failed"]
+    as_of: str | None = None
+    item_count: int | None = None
+    message: str | None = None
 
 
 class DataProvenance(BaseModel):
@@ -224,6 +240,7 @@ class SymbolIntelligenceRequest(BaseModel):
     fundamentals_status: DataStatus = "unknown"
     evidence_asof: str | None = None
     evidence_status: DataStatus = "unknown"
+    enrichment_diagnostics: list[EnrichmentDiagnostic] = Field(default_factory=list)
     # Raw fundamentals (filled by the server-side enricher when absent)
     trailing_pe: float | None = None
     revenue_growth_yoy: float | None = None
