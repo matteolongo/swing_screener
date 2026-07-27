@@ -1,7 +1,9 @@
 import Badge from '@/components/common/Badge';
+import type { ReactNode } from 'react';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type {
   DataSourceHealth,
+  DecisionAction,
   DecisionConviction,
 } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
@@ -22,6 +24,7 @@ interface AnalysisDecisionStripProps {
   isPendingWatch?: boolean;
   onWatch?: () => void;
   onUnwatch?: () => void;
+  decisionContext?: ReactNode;
 }
 
 function convictionLabel(conviction: DecisionConviction): string {
@@ -33,6 +36,19 @@ function convictionLabel(conviction: DecisionConviction): string {
     case 'low':
       return t('workspacePage.panels.analysis.decisionSummary.conviction.low');
   }
+}
+
+function actionLabel(action: DecisionAction): string {
+  const keys = {
+    BUY_NOW: 'workspacePage.panels.analysis.decisionSummary.actions.buyNow',
+    BUY_ON_PULLBACK: 'workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback',
+    WAIT_FOR_BREAKOUT: 'workspacePage.panels.analysis.decisionSummary.actions.waitForBreakout',
+    WATCH: 'workspacePage.panels.analysis.decisionSummary.actions.watch',
+    TACTICAL_ONLY: 'workspacePage.panels.analysis.decisionSummary.actions.tacticalOnly',
+    AVOID: 'workspacePage.panels.analysis.decisionSummary.actions.avoid',
+    MANAGE_ONLY: 'workspacePage.panels.analysis.decisionSummary.actions.manageOnly',
+  } as const;
+  return t(keys[action]);
 }
 
 function isPositiveNumber(value: number | null | undefined): value is number {
@@ -83,6 +99,7 @@ export default function AnalysisDecisionStrip({
   isPendingWatch,
   onWatch,
   onUnwatch,
+  decisionContext,
 }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
@@ -126,9 +143,9 @@ export default function AnalysisDecisionStrip({
     ? `${t('workspacePage.panels.analysis.decisionSummary.tradePlan.close')} ${formatCurrency(closeEntry, currency)}`
     : undefined;
   const sourceItems = [
-    ['Market', candidate?.dataSourceSummary?.marketData],
-    ['Fundamentals', candidate?.dataSourceSummary?.fundamentals],
-    ['Events', candidate?.dataSourceSummary?.calendar],
+    [t('workspacePage.overview.sources.market'), candidate?.dataSourceSummary?.marketData],
+    [t('workspacePage.overview.sources.fundamentals'), candidate?.dataSourceSummary?.fundamentals],
+    [t('workspacePage.overview.sources.events'), candidate?.dataSourceSummary?.calendar],
   ] as const;
   const visibleSourceItems = sourceItems.filter(
     (item): item is readonly [typeof item[0], DataSourceHealth] => Boolean(item[1])
@@ -140,6 +157,7 @@ export default function AnalysisDecisionStrip({
           <div className="max-w-3xl space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-semibold text-foreground">{ticker}</h2>
+              {summary ? <Badge variant="primary">{actionLabel(summary.action)}</Badge> : null}
               {candidate?.recommendation ? (
                 <Badge variant={workflowBadgeVariant(workflowPresentation.tone)}>
                   {t(workflowPresentation.labelKey)}
@@ -156,11 +174,11 @@ export default function AnalysisDecisionStrip({
               {summary?.explanation?.summaryLine
                 ?? summary?.whyNow
                 ?? candidate?.recommendation?.reasonsShort?.[0]
-                ?? 'Review the current setup, risk, and execution plan before acting.'}
+                ?? t('workspacePage.overview.reviewFallback')}
             </p>
             {operationalNextStep ? (
               <p className="text-sm font-medium text-foreground">
-                <span className="text-muted">Next step: </span>{operationalNextStep}
+                <span className="text-muted">{t('workspacePage.overview.nextStep')}: </span>{operationalNextStep}
               </p>
             ) : null}
           </div>
@@ -171,19 +189,34 @@ export default function AnalysisDecisionStrip({
               disabled={isPendingWatch}
               className="rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface disabled:opacity-50"
             >
-              {isPendingWatch ? '…' : isWatched ? 'Unwatch' : 'Watch'}
+              {isPendingWatch
+                ? t('workspacePage.overview.watchPending')
+                : isWatched
+                  ? t('workspacePage.overview.unwatch')
+                  : t('workspacePage.overview.watch')}
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-          {compactValue(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}
-          {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
-          {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
-          {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
-          {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
-          {compactValue('Risk %', riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
-          {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
+        {decisionContext}
+
+        <div className="overflow-x-auto">
+          <table className="w-full border-separate border-spacing-1" aria-label={t('workspacePage.overview.tradePlan')}>
+            <tbody>
+              <tr>
+                <td>{compactValue(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}</td>
+                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), stop != null ? formatCurrency(stop, currency) : '—')}</td>
+                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), target != null ? formatCurrency(target, currency) : '—')}</td>
+                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}</td>
+              </tr>
+              <tr>
+                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), rr != null ? `${formatNumber(rr, 1)}x` : '—')}</td>
+                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent'), riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}</td>
+                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}</td>
+                <td>{compactValue(t('workspacePage.overview.invalidation'), summary?.explanation?.whatInvalidatesIt?.[0] ?? summary?.mainRisk ?? '—')}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         {canPrepareOrder && onPrepareOrder && (

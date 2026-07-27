@@ -313,17 +313,18 @@ describe('AnalysisDecisionStrip — no signal pills row', () => {
     expect(screen.queryByText(/Setup:/)).not.toBeInTheDocument();
   });
 });
-describe('AnalysisDecisionStrip — metric grid layout', () => {
-  it('renders exactly 7 metric cells', () => {
-    const { container } = render(<AnalysisDecisionStrip ticker="BESI.AS" />);
-    const cells = container.querySelectorAll('[class*="min-w-"]');
-    expect(cells.length).toBe(7);
+describe('AnalysisDecisionStrip — trade-plan table', () => {
+  it('groups the execution metrics and invalidation in one named table', () => {
+    render(<AnalysisDecisionStrip ticker="BESI.AS" />);
+    expect(screen.getByRole('table', { name: t('workspacePage.overview.tradePlan') })).toBeVisible();
   });
 
-  it('metric cell container uses a grid class, not flex', () => {
-    const { container } = render(<AnalysisDecisionStrip ticker="BESI.AS" />);
-    const gridWrapper = container.querySelector('[class*="grid"][class*="grid-cols"]');
-    expect(gridWrapper).not.toBeNull();
+  it('renders the four core execution fields', () => {
+    render(<AnalysisDecisionStrip ticker="BESI.AS" />);
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose'))).toBeVisible();
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'))).toBeVisible();
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'))).toBeVisible();
+    expect(screen.getByText(t('workspacePage.overview.invalidation'))).toBeVisible();
   });
 });
 

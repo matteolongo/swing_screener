@@ -1,24 +1,17 @@
 import { useState, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
 import AgentTracePanel from '@/components/domain/workspace/AgentTracePanel';
-import CatalystContextCard from '@/components/domain/workspace/CatalystContextCard';
 import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
-import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCandleChart';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
-import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
-import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
-import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
-import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
 import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
 import IntelligenceDecisionBrief from '@/components/domain/workspace/IntelligenceDecisionBrief';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
-import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
 import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
 import StrategicReviewPanel from '@/components/domain/workspace/StrategicReviewPanel';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
-import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
+import SymbolOverviewTab from '@/components/domain/workspace/SymbolOverviewTab';
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { ScreenerResponse } from '@/features/screener/types';
@@ -41,6 +34,7 @@ interface SymbolAnalysisContentProps {
   activeTab: WorkspaceAnalysisTab;
   onTabChange: (tab: WorkspaceAnalysisTab) => void;
   orderPanel?: ReactNode;
+  intelligenceOutdated?: boolean;
 }
 
 function provenanceLegendItems() {
@@ -58,6 +52,7 @@ export default function SymbolAnalysisContent({
   activeTab,
   onTabChange,
   orderPanel = null,
+  intelligenceOutdated = false,
 }: SymbolAnalysisContentProps) {
   const watchlistQuery = useWatchlist();
   const watchSymbolMutation = useWatchSymbolMutation();
@@ -259,29 +254,8 @@ export default function SymbolAnalysisContent({
         aria-labelledby={`${tabsId}-tab-${activeTab}`}
         className="flex-1 min-h-0 overflow-y-auto space-y-3"
       >
-        <AnalysisDecisionStrip
-          ticker={ticker}
-          candidate={candidate}
-          position={position}
-          onPrepareOrder={canReviewOrder ? () => onTabChange('order') : undefined}
-          isWatched={isWatched}
-          isPendingWatch={isWatchPending}
-          onWatch={handleWatch}
-          onUnwatch={handleUnwatch}
-        />
-
         {activeTab === 'overview' && (
           <>
-            <DecisionWhyPanel
-              summary={candidate?.decisionSummary}
-            />
-            <FundamentalsStrip
-              trailingPe={fundamentalsQuery.data?.trailingPe ?? null}
-              revenueGrowthYoy={fundamentalsQuery.data?.revenueGrowthYoy ?? null}
-              grossMargin={fundamentalsQuery.data?.grossMargin ?? null}
-              valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
-            />
-            {heldMode && position && <ManagePositionPanel position={position} candidate={candidate} />}
             {!candidate && (
               <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
                 <p className="text-sm text-muted">
@@ -309,33 +283,33 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
-            {candidate?.decisionSummary ? (
-              <DecisionSummaryCard
-                summary={candidate.decisionSummary}
-                recommendation={candidate.recommendation}
-                currency={candidate.currency}
-                onRefreshFundamentals={() => refreshFundamentalsMutation.mutate(ticker)}
-                isRefreshingFundamentals={refreshFundamentalsMutation.isPending}
-              />
-            ) : null}
-            <div className="rounded-lg border border-border bg-surface p-3">
-              <CachedSymbolCandleChart
-                ticker={ticker}
-                width={820}
-                height={220}
-              />
-              {candidate?.patternStop != null && (
-                <p className="mt-2 text-xs text-primary">
-                  {t('chart.patternStopLabel')}: {candidate.patternStop.toFixed(2)}
-                  {candidate.currency ? ` ${candidate.currency}` : ''}
-                  {candidate.patternStopReason ? ` · ${candidate.patternStopReason}` : ''}
-                </p>
-              )}
-            </div>
-            {catalystQuery.data && (
-              <CatalystContextCard opportunity={catalystQuery.data} />
-            )}
-            {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
+            <SymbolOverviewTab
+              model={{
+                ticker,
+                candidate,
+                position,
+                fundamentals: {
+                  data: fundamentalsQuery.data,
+                  isLoading: fundamentalsQuery.isLoading,
+                  isError: fundamentalsQuery.isError,
+                  error: fundamentalsQuery.error,
+                },
+                catalyst: {
+                  data: catalystQuery.data,
+                  isLoading: catalystQuery.isLoading,
+                  isError: catalystQuery.isError,
+                  error: catalystQuery.error,
+                },
+                intelligenceOutdated,
+                onOpenFundamentals: () => onTabChange('fundamentals'),
+                onOpenIntelligence: () => onTabChange('intelligence'),
+                onPrepareOrder: canReviewOrder ? () => onTabChange('order') : undefined,
+                isWatched,
+                isPendingWatch: isWatchPending,
+                onWatch: handleWatch,
+                onUnwatch: handleUnwatch,
+              }}
+            />
           </>
         )}
 

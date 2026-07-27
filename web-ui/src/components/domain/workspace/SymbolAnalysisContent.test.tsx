@@ -82,6 +82,15 @@ function CandidateOrderHarness({ workflowStatus }: { workflowStatus: 'ready' | '
 }
 
 describe('SymbolAnalysisContent candidate order transition', () => {
+  it('keeps the canonical decision inside Overview instead of repeating it above every tab', async () => {
+    renderWithProviders(<CandidateOrderHarness workflowStatus="ready" />);
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toBeVisible();
+
+    await userEvent.click(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.backtest') }));
+
+    expect(screen.queryByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).not.toBeInTheDocument();
+  });
+
   it('does not open the order panel from a BUY_NOW opinion without ready workflow status', () => {
     renderWithProviders(<CandidateOrderHarness workflowStatus="no_setup" />);
 

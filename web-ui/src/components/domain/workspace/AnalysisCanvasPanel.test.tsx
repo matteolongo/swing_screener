@@ -246,7 +246,7 @@ describe('AnalysisCanvasPanel', () => {
     expect(screen.queryByText(/AAPL Decision Summary/)).not.toBeInTheDocument();
   });
 
-  it('renders the decision summary card in overview for the selected screener candidate', () => {
+  it('renders one decision-first overview for the selected screener candidate', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -310,11 +310,11 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Buy Now/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toHaveLength(1);
+    expect(screen.getByRole('table', { name: t('workspacePage.overview.tradePlan') })).toBeVisible();
   });
 
-  it('renders the price chart before the catalyst card in overview', () => {
+  it('renders the catalyst summary before the technical chart in overview', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -388,7 +388,7 @@ describe('AnalysisCanvasPanel', () => {
     const chart = screen.getByText('Chart AAPL');
     const catalyst = screen.getByText('Unique catalyst thesis marker for ordering');
     expect(
-      chart.compareDocumentPosition(catalyst) & Node.DOCUMENT_POSITION_FOLLOWING
+      catalyst.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 
@@ -584,7 +584,7 @@ describe('AnalysisCanvasPanel', () => {
     });
   });
 
-  it('shows DecisionSummaryCard in overview while intelligence is loading', () => {
+  it('keeps the canonical decision visible in overview while intelligence is loading', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -653,7 +653,7 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toBeVisible();
   });
 
   it('does not render BeginnerDecisionHeader in overview when decisionSummary is present', () => {
@@ -793,7 +793,7 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(t('workspacePage.panels.analysis.decisionWhy.title'))).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.overview.decisionRationale'))).toBeInTheDocument();
     // NarrativeAnalysisCard renders "{symbol} — AI analysis" in a <span>
     const aiTitle = screen.queryByText((_content, el) =>
       el?.tagName === 'SPAN' &&
@@ -843,6 +843,7 @@ describe('AnalysisCanvasPanel', () => {
   });
 
   it('renders a watch toggle for the selected symbol', () => {
+    useWorkspaceStore.setState({ analysisTab: 'overview' });
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
       isError: false,

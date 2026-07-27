@@ -96,6 +96,7 @@ export default function AnalysisCanvasPanel() {
             activeTab={activeTab}
             onTabChange={setAnalysisTab}
             orderPanel={<ActionPanel ticker={selectedTicker} />}
+            intelligenceOutdated={workspaceData.intelligenceOutdated}
           />
         </>
       )}
