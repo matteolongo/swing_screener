@@ -752,6 +752,35 @@ export const messagesEn = {
     title: 'Workspace',
     subtitle: 'Screen, analyze, act, and manage from one unified view.',
     openOnboarding: 'Open Onboarding Guide',
+    controls: {
+      close: 'Close workspace',
+      collapse: 'Collapse workspace',
+      backToList: 'Back to list',
+      fullscreen: 'Full screen',
+      exitFullscreen: 'Exit full screen',
+    },
+    data: {
+      activity: 'Data activity',
+      retry: 'Retry',
+      dismiss: 'Dismiss',
+      sources: {
+        screener: 'Screener',
+        prices: 'Prices',
+        fundamentals: 'Fundamentals',
+        evidence: 'Evidence',
+        intelligence: 'Intelligence',
+        positionOrders: 'Position & orders',
+      },
+      phases: {
+        idle: 'Waiting',
+        loading: 'Loading',
+        fresh: 'Fresh',
+        cached: 'Cached',
+        stale: 'Stale',
+        partial: 'Partial',
+        failed: 'Failed',
+      },
+    },
     symbolDetails: {
       title: '{{ticker}} Details',
       description: 'Review all setup context and place a buy order from this symbol view.',
@@ -2704,6 +2733,7 @@ export const messagesEn = {
   },
   todayPage: {
     tabs: {
+      ariaLabel: 'Today views',
       today: 'Today',
       screener: 'Last Run',
       watchlist: 'Watchlist',

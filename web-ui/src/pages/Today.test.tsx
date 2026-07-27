@@ -5,6 +5,7 @@ import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import Today from './Today';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 function makeCloseItem(ticker: string, positionId: string) {
   return {
@@ -88,6 +89,30 @@ describe('Today page — accessibility', () => {
       name: t('dailyReview.header.refreshTitle'),
     });
     expect(refreshButton).toHaveAttribute('aria-label', t('dailyReview.header.refreshTitle'));
+  });
+});
+
+describe('Today page — expanded workspace', () => {
+  it('collapses the list to a symbol rail and restores the active tab on close', async () => {
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      workspaceMode: 'expanded',
+      fullscreen: false,
+    });
+
+    const { user } = renderWithProviders(<Today />);
+    await user.click(screen.getByRole('tab', { name: t('todayPage.tabs.screener') }));
+
+    expect(screen.getByTestId('symbol-rail')).toBeVisible();
+    expect(screen.getByTestId('symbol-workspace')).toHaveAttribute('data-mode', 'expanded');
+
+    await user.click(screen.getByRole('button', { name: t('workspacePage.controls.close') }));
+    expect(screen.getByTestId('today-symbol-table')).toBeVisible();
+    expect(screen.getByRole('tab', { name: t('todayPage.tabs.screener') })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 });
 

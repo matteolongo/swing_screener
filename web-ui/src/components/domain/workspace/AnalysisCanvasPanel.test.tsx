@@ -36,6 +36,15 @@ vi.mock('@/features/intelligence/catalysts/hooks', () => ({
 
 vi.mock('@/features/screener/hooks', () => ({
   useRunScreenerMutation: vi.fn(),
+  useTickerCandles: vi.fn(() => ({
+    data: undefined,
+    dataUpdatedAt: 0,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  })),
 }));
 
 vi.mock('@/features/watchlist/hooks', () => ({

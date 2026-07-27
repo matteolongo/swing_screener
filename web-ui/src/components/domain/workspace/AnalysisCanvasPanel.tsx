@@ -2,10 +2,14 @@ import { useEffect } from 'react';
 
 import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
+import DataStatusBar from '@/components/domain/workspace/DataStatusBar';
+import SymbolWorkspaceHeader from '@/components/domain/workspace/SymbolWorkspaceHeader';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
+import WorkspaceActivityDrawer from '@/components/domain/workspace/WorkspaceActivityDrawer';
+import { useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
 import { syncCandidateWithFundamentals } from '@/features/screener/decisionSummary';
-import { useFundamentalSnapshotQuery, useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
 import { useOpenPositions } from '@/features/portfolio/hooks';
+import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorkspaceData';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -13,7 +17,12 @@ import { t } from '@/i18n/t';
 export default function AnalysisCanvasPanel() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
+  const selectionVersion = useWorkspaceStore((state) => state.selectionVersion);
+  const fullscreen = useWorkspaceStore((state) => state.fullscreen);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
+  const clearSelectedTicker = useWorkspaceStore((state) => state.clearSelectedTicker);
+  const collapseWorkspace = useWorkspaceStore((state) => state.collapseWorkspace);
+  const setFullscreen = useWorkspaceStore((state) => state.setFullscreen);
   const lastScreenerResult = useScreenerStore((state) => state.lastResult);
   const patchCandidate = useScreenerStore((state) => state.patchCandidate);
   const selectedCandidate = lastScreenerResult?.candidates.find(
@@ -24,11 +33,15 @@ export default function AnalysisCanvasPanel() {
     (p) => p.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   ) ?? null;
 
-  const fundamentalsQuery = useFundamentalSnapshotQuery(
-    activeTab === 'fundamentals' ? selectedTicker ?? undefined : undefined
-  );
+  const workspaceData = useSymbolWorkspaceData({
+    ticker: selectedTicker ?? '',
+    selectionVersion,
+    candidate: selectedCandidate ?? null,
+    position: openPosition,
+  });
   const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
-  const latestFundamentalsSnapshot = refreshFundamentalsMutation.data ?? fundamentalsQuery.data;
+  const latestFundamentalsSnapshot =
+    refreshFundamentalsMutation.data ?? workspaceData.fundamentals.data;
 
   useEffect(() => {
     if (!selectedTicker || !selectedCandidate || !latestFundamentalsSnapshot) {
@@ -64,6 +77,18 @@ export default function AnalysisCanvasPanel() {
         </div>
       ) : (
         <>
+          <SymbolWorkspaceHeader
+            ticker={selectedTicker}
+            fullscreen={fullscreen}
+            onClose={clearSelectedTicker}
+            onCollapse={collapseWorkspace}
+            onFullscreenChange={setFullscreen}
+          />
+          <DataStatusBar sources={workspaceData.sourceStates} />
+          <WorkspaceActivityDrawer
+            activities={workspaceData.sourceStates}
+            onRetry={(sourceId) => void workspaceData.refreshSource(sourceId)}
+          />
           <SymbolAnalysisContent
             ticker={selectedTicker}
             candidate={selectedCandidate}
