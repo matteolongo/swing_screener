@@ -9,6 +9,7 @@ vi.mock('@/features/fundamentals/api', () => ({
 
 import * as fundamentalsApi from '@/features/fundamentals/api';
 import { useFundamentalSnapshotQuery, useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
+import { queryKeys } from '@/lib/queryKeys';
 
 function createQueryClient() {
   return new QueryClient({
@@ -75,7 +76,7 @@ describe("fundamentals hooks", () => {
     expect(mockedFetchFundamentalSnapshot).not.toHaveBeenCalled();
   });
 
-  it("refresh mutation invalidates snapshot cache", async () => {
+  it("writes a refreshed response into the canonical snapshot cache", async () => {
     const queryClient = createQueryClient();
     mockedFetchFundamentalSnapshot.mockResolvedValue(mockSnapshot);
 
@@ -88,5 +89,6 @@ describe("fundamentals hooks", () => {
     });
 
     expect(mockedFetchFundamentalSnapshot).toHaveBeenCalledWith("AAPL", true);
+    expect(queryClient.getQueryData(queryKeys.fundamentalsSnapshot("AAPL"))).toEqual(mockSnapshot);
   });
 });

@@ -1,0 +1,133 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/features/fundamentals/api', () => ({
+  fetchFundamentalSnapshot: vi.fn(),
+}));
+vi.mock('@/features/screener/hooks', () => ({
+  useTickerCandles: () => ({
+    data: undefined,
+    dataUpdatedAt: 0,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+vi.mock('@/features/intelligence/hooks', () => ({
+  useIntelligenceLatestQuery: () => ({
+    data: undefined,
+    dataUpdatedAt: 0,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+  }),
+}));
+
+import * as fundamentalsApi from '@/features/fundamentals/api';
+import { queryKeys } from '@/lib/queryKeys';
+import { useSymbolWorkspaceData } from './useSymbolWorkspaceData';
+
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+}
+
+function wrapper(queryClient: QueryClient) {
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
+
+function snapshot(symbol: string) {
+  return {
+    symbol,
+    asofDate: '2026-07-27',
+    provider: 'test',
+    updatedAt: '2026-07-27T18:00:00Z',
+    instrumentType: 'equity',
+    supported: true,
+    coverageStatus: 'supported' as const,
+    freshnessStatus: 'current' as const,
+    pillars: {},
+    historicalSeries: {},
+    metricContext: {},
+    dataQualityStatus: 'high' as const,
+    dataQualityFlags: [],
+    redFlags: [],
+    highlights: [],
+    metricSources: {},
+  };
+}
+
+describe('useSymbolWorkspaceData', () => {
+  const fetchSnapshot = vi.mocked(fundamentalsApi.fetchFundamentalSnapshot);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('does not expose an AAPL completion in an MSFT workspace session', async () => {
+    let finishAapl!: (value: ReturnType<typeof snapshot>) => void;
+    fetchSnapshot.mockImplementation(
+      (symbol) =>
+        symbol === 'AAPL'
+          ? new Promise((resolve) => {
+              finishAapl = resolve;
+            })
+          : Promise.resolve(snapshot('MSFT')),
+    );
+    const queryClient = createQueryClient();
+    const { result, rerender } = renderHook(
+      ({ ticker, selectionVersion }) =>
+        useSymbolWorkspaceData({ ticker, selectionVersion, candidate: null, position: null }),
+      {
+        initialProps: { ticker: 'AAPL', selectionVersion: 1 },
+        wrapper: wrapper(queryClient),
+      },
+    );
+
+    rerender({ ticker: 'MSFT', selectionVersion: 2 });
+    await waitFor(() => expect(result.current.fundamentals.data?.symbol).toBe('MSFT'));
+    await act(async () => finishAapl(snapshot('AAPL')));
+
+    expect(result.current.ticker).toBe('MSFT');
+    expect(result.current.fundamentals.data?.symbol).not.toBe('AAPL');
+  });
+
+  it('refreshes non-intelligence sources without invalidating intelligence', async () => {
+    fetchSnapshot.mockResolvedValue(snapshot('AAPL'));
+    const queryClient = createQueryClient();
+    await queryClient.prefetchQuery({
+      queryKey: queryKeys.intelligence.latest('AAPL'),
+      queryFn: async () => ({ generatedAt: '2026-07-27T17:00:00Z' }),
+    });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(
+      () =>
+        useSymbolWorkspaceData({
+          ticker: 'AAPL',
+          selectionVersion: 1,
+          candidate: null,
+          position: null,
+        }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    await act(async () => result.current.refreshAllNonIntelligence());
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.positions() });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.orders() });
+    expect(invalidate).not.toHaveBeenCalledWith({
+      queryKey: queryKeys.intelligence.latest('AAPL'),
+    });
+  });
+});

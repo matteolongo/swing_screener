@@ -22,6 +22,7 @@ import type { StrategicReview } from '@/features/intelligence/strategicReviewTyp
 import type { RunTrace, RunIndexEntry } from '@/features/intelligence/traceTypes';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
+import { queryKeys } from '@/lib/queryKeys';
 
 export function useIntelligenceAnalysisMutation() {
   const queryClient = useQueryClient();
@@ -38,16 +39,16 @@ export function useIntelligenceAnalysisMutation() {
     },
     onSuccess: (_data, { ticker }) => {
       // A fresh analysis is appended to history server-side; refresh the timeline.
-      queryClient.invalidateQueries({ queryKey: ['intelligence', 'history', ticker] });
-      queryClient.invalidateQueries({ queryKey: ['intelligence', 'latest', ticker] });
-      queryClient.invalidateQueries({ queryKey: ['intelligence', 'chat', ticker] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.intelligence.history(ticker) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.intelligence.latest(ticker) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.intelligence.chat(ticker) });
     },
   });
 }
 
 export function useIntelligenceLatestQuery(ticker: string, enabled: boolean) {
   return useQuery<SymbolIntelligence, Error>({
-    queryKey: ['intelligence', 'latest', ticker],
+    queryKey: queryKeys.intelligence.latest(ticker),
     queryFn: async () => {
       const api = await getIntelligenceLatest(ticker);
       return transformIntelligence(api);
@@ -60,7 +61,7 @@ export function useIntelligenceLatestQuery(ticker: string, enabled: boolean) {
 
 export function useIntelligenceHistoryQuery(ticker: string, enabled: boolean) {
   return useQuery<HistoryEntry[], Error>({
-    queryKey: ['intelligence', 'history', ticker],
+    queryKey: queryKeys.intelligence.history(ticker),
     queryFn: () => getIntelligenceHistory(ticker),
     enabled,
     retry: false,
@@ -74,7 +75,7 @@ export function useIntelligenceChatQuery(
   analysisGeneratedAt: string | null | undefined,
 ) {
   return useQuery<IntelligenceChatResponse, Error>({
-    queryKey: ['intelligence', 'chat', ticker, analysisGeneratedAt ?? null],
+    queryKey: queryKeys.intelligence.chat(ticker, analysisGeneratedAt ?? null),
     queryFn: () => getIntelligenceChat(ticker),
     enabled,
     retry: false,
@@ -87,7 +88,7 @@ export function useSendIntelligenceChatMutation(ticker: string) {
   return useMutation<IntelligenceChatResponse, Error, IntelligenceChatMessagePayload>({
     mutationFn: (payload) => sendIntelligenceChatMessage(ticker, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['intelligence', 'chat', ticker] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.intelligence.chat(ticker) });
     },
   });
 }
