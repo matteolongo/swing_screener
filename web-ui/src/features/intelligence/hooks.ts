@@ -49,8 +49,14 @@ export function resolveRunId(
   runs: RunIndexEntry[] | undefined,
   attemptedRunId: string | null,
   cachedRunId: string | null | undefined,
+  hasFailedAttempt = false,
 ): string | null {
-  return attemptedRunId ?? runs?.[0]?.runId ?? cachedRunId ?? null;
+  if (hasFailedAttempt) return attemptedRunId;
+  if (attemptedRunId) return attemptedRunId;
+  const modernRun = runs?.find((run) => run.clientAttemptId);
+  if (modernRun) return modernRun.runId;
+  if (cachedRunId) return cachedRunId;
+  return runs?.[0]?.runId ?? null;
 }
 
 export function useIntelligenceAnalysisMutation() {

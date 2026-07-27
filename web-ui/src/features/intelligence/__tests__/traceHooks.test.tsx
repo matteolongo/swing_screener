@@ -165,4 +165,59 @@ describe('resolveRunId', () => {
       },
     ], null, 'old-cached-success')).toBe('new-failure');
   });
+
+  it('shows a client preflight failure without an older cached trace', () => {
+    expect(resolveRunId([
+      {
+        runId: 'old-success',
+        ticker: 'AAPL',
+        startedAt: '2026-07-27T09:00:00Z',
+        finishedAt: '2026-07-27T09:00:01Z',
+        status: 'ok',
+        durationMs: 1000,
+        stepCount: 9,
+        clientAttemptId: 'old-attempt',
+        attemptForce: false,
+      },
+    ], null, 'old-success', true)).toBeNull();
+  });
+
+  it('shows an untraced server 503 without an older cached trace', () => {
+    expect(resolveRunId([
+      {
+        runId: 'old-success',
+        ticker: 'AAPL',
+        startedAt: '2026-07-27T09:00:00Z',
+        finishedAt: '2026-07-27T09:00:01Z',
+        status: 'ok',
+        durationMs: 1000,
+        stepCount: 9,
+      },
+    ], null, 'old-success', true)).toBeNull();
+  });
+
+  it('prefers a modern attempted run after remount over a newer legacy run', () => {
+    expect(resolveRunId([
+      {
+        runId: 'newer-legacy',
+        ticker: 'AAPL',
+        startedAt: '2026-07-28T10:00:00Z',
+        finishedAt: null,
+        status: 'error',
+        durationMs: 100,
+        stepCount: 1,
+      },
+      {
+        runId: 'modern-attempt',
+        ticker: 'AAPL',
+        startedAt: '2026-07-28T09:00:00Z',
+        finishedAt: null,
+        status: 'error',
+        durationMs: 100,
+        stepCount: 1,
+        clientAttemptId: 'attempt-modern',
+        attemptForce: true,
+      },
+    ], null, 'cached-success')).toBe('modern-attempt');
+  });
 });

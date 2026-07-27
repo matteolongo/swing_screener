@@ -53,8 +53,9 @@ Symbol intelligence tab (`components/domain/workspace/SymbolIntelligenceTab.tsx`
 
 Generation attempts carry a stable client attempt ID persisted in both the run
 trace and ticker index. The tab therefore selects the exact success or failure
-without clock correlation, prefers the newest persisted run after reload, and
-retries with the persisted normal/force mode. Refreshed evidence providers render
+without clock correlation. An untraced preflight failure never falls back to an
+older trace; after reload, attempt-aware runs take precedence over the cached
+result and legacy history. Retry uses the persisted normal/force mode. Refreshed evidence providers render
 as distinct rows and do not inherit aggregate evidence diagnostics.
 
 ## Shared primitives

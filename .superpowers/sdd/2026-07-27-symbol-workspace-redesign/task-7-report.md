@@ -197,3 +197,21 @@ Final verification:
 - `git diff --check` — passed.
 - A full backend run reached 1,546 passed and 7 skipped before reporting the
   four regressions above; all four were then fixed and rerun successfully.
+
+## Review fix round 3
+
+- A failed live mutation now resolves only its exact persisted attempt. Client
+  payload preflight failures and server prerequisite failures that occur before
+  tracing show a standalone error instead of an older successful trace.
+- Reload selection deterministically prefers the newest attempt-aware run, then
+  the cached result run, and uses legacy newest history only when no cached run
+  exists.
+
+TDD evidence:
+
+- RED: three resolver regressions failed: client preflight and untraced 503 both
+  returned `old-success`, while remount selected `newer-legacy` instead of
+  `modern-attempt`.
+- GREEN: focused trace/workspace suite — 43 passed.
+- TypeScript typecheck — passed.
+- ESLint strict — passed with zero warnings.

@@ -24,8 +24,14 @@ vi.mock('@/features/intelligence/hooks', () => ({
   useRunTrace: vi.fn(),
   useTickerRuns: vi.fn(),
   findRunByAttemptId: vi.fn(() => null),
-  resolveRunId: vi.fn((runs, attemptedRunId, cachedRunId) =>
-    attemptedRunId ?? runs?.[0]?.runId ?? cachedRunId ?? null),
+  resolveRunId: vi.fn((runs, attemptedRunId, cachedRunId, hasFailedAttempt) => {
+    if (hasFailedAttempt) return attemptedRunId;
+    return attemptedRunId
+      ?? runs?.find((run: { clientAttemptId?: string | null }) => run.clientAttemptId)?.runId
+      ?? cachedRunId
+      ?? runs?.[0]?.runId
+      ?? null;
+  }),
   useIntelligenceAnalysisMutation: vi.fn(),
   useEvidenceRefreshMutation: vi.fn(),
   useIntelligenceLatestQuery: vi.fn(),

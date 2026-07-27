@@ -114,6 +114,7 @@ export default function SymbolAnalysisContent({
     tickerRuns.data,
     attemptedRunId,
     displayedIntelligence?.runId,
+    intelligenceMutation.isError,
   );
   const persistedAttemptForce = tickerRuns.data?.find(
     (run) => run.runId === traceRunId,
