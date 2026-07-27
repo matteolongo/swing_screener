@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { transformVolumeAnalysis, type VolumeAnalysisAPI } from './types';
+import {
+  assertVolumeAnalysisIdentity,
+  VolumeAnalysisIdentityError,
+  transformVolumeAnalysis,
+  type VolumeAnalysisAPI,
+} from './types';
 
 const raw: VolumeAnalysisAPI = {
   symbol: 'AAPL',
@@ -56,5 +61,18 @@ describe('transformVolumeAnalysis', () => {
     });
     expect(r.keyLevels.poc).toBeUndefined();
     expect(r.tradePlan.entry).toBeUndefined();
+  });
+
+  it('rejects analysis whose symbol does not match the normalized request', () => {
+    const analysis = transformVolumeAnalysis({ ...raw, symbol: 'MSFT' });
+
+    expect(VolumeAnalysisIdentityError).toBeDefined();
+    expect(() => assertVolumeAnalysisIdentity(analysis, ' aapl ', 120)).toThrow('identity mismatch');
+  });
+
+  it('rejects analysis whose lookback does not match the requested parameter', () => {
+    const analysis = transformVolumeAnalysis({ ...raw, lookback: 90 });
+
+    expect(() => assertVolumeAnalysisIdentity(analysis, 'AAPL', 120)).toThrow('identity mismatch');
   });
 });

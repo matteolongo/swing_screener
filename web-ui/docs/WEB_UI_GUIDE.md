@@ -39,7 +39,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/strategy` | Strategy | Strategy CRUD and activation |
 | `features/universes` | Universes | Universe list, detail, refresh, benchmark |
 | `features/backtest` | Today (canvas Backtest tab) | Event-study run (202+poll), trade ledger + metrics, snake_case→camelCase transform. Run inline per-symbol from the analysis canvas Backtest tab (`components/domain/workspace/SymbolBacktestTab`, locked to the selected symbol); results render via `components/domain/backtest/BacktestResults`. No standalone page |
-| `features/volumeZones` | Today (canvas Volume Zones tab) | Read-only volume-zone analysis fetch/hook and snake_case→camelCase transform for advisory POC/HVN/LVN context |
+| `features/volumeZones` | Today (canvas Volume Zones tab) | Read-only volume-zone analysis fetch/hook and snake_case→camelCase transform for advisory POC/HVN/LVN context. Analysis and candle sources render independently with normalized ticker/request identity checks and scoped retries; partial failures preserve the available summary or chart, and the bar-profile approximation is explicit |
 | `features/datasources` | Data Sources | Source inventory, per-source and bulk probe, fallback event feed |
 | `features/config` | (cross-cutting) | App config read/write |
 | `features/persistence` | (cross-cutting) | API vs localStorage mode toggle |

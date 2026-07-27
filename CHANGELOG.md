@@ -14,6 +14,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   analytical `Buy on Pullback` opinion from appearing beside `No valid setup`.
 - Applied universe refreshes now persist review metadata when index membership is
   unchanged, preventing verified snapshots from expiring immediately afterward.
+- Volume Zones now preserves available candle or analysis content during partial
+  failures, rejects mismatched response identities, and offers source-specific retries.
 
 ## [3.0.0] - Unreleased
 

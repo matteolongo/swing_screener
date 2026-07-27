@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
-import { renderWithProviders, screen } from '@/test/utils';
+import { renderWithProviders, screen, userEvent, waitFor } from '@/test/utils';
 import { t } from '@/i18n/t';
 import VolumeZonesTab from './VolumeZonesTab';
 
@@ -65,5 +65,86 @@ describe('VolumeZonesTab', () => {
     );
     renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
     expect(await screen.findByText(t('workspacePage.panels.analysis.volumeZones.loadError'))).toBeInTheDocument();
+  });
+
+  it('shows zones when candle rendering fails and exposes the candle retry', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () => HttpResponse.json(payload())),
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () =>
+        HttpResponse.json({ detail: 'prices unavailable' }, { status: 503 }),
+      ),
+    );
+
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+
+    expect(
+      await screen.findByText(t('workspacePage.panels.analysis.volumeZones.summary')),
+    ).toBeVisible();
+    expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.candlesFailed'))).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: t('workspacePage.data.retryPrices') }),
+    ).toBeEnabled();
+    expect(screen.getByText(t('workspacePage.data.partial'))).toBeVisible();
+  });
+
+  it('rejects a response for another symbol', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () =>
+        HttpResponse.json(payload({ symbol: 'MSFT' })),
+      ),
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () =>
+        HttpResponse.json({ ticker: 'AAPL', price_history: [], patterns: [] }),
+      ),
+    );
+
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+
+    expect(await screen.findByText(t('workspacePage.data.identityMismatch'))).toBeVisible();
+    expect(screen.queryByTestId('volume-zone-chart')).not.toBeInTheDocument();
+  });
+
+  it('retries only the failed candle source', async () => {
+    let candleAttempts = 0;
+    let analysisAttempts = 0;
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () => {
+        analysisAttempts += 1;
+        return HttpResponse.json(payload());
+      }),
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () => {
+        candleAttempts += 1;
+        return candleAttempts === 1
+          ? HttpResponse.json({ detail: 'prices unavailable' }, { status: 503 })
+          : HttpResponse.json({ ticker: 'AAPL', price_history: [], patterns: [] });
+      }),
+    );
+    const user = userEvent.setup();
+
+    renderWithProviders(<VolumeZonesTab ticker=" aapl " />);
+    await screen.findByText(t('workspacePage.panels.analysis.volumeZones.candlesFailed'));
+    await user.click(screen.getByRole('button', { name: t('workspacePage.data.retryPrices') }));
+
+    await waitFor(() => expect(candleAttempts).toBe(2));
+    expect(analysisAttempts).toBe(1);
+  });
+
+  it('keeps available candles visible when analysis fails and exposes the analysis retry', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () =>
+        HttpResponse.json({ detail: 'analysis unavailable' }, { status: 503 }),
+      ),
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () =>
+        HttpResponse.json({ ticker: 'AAPL', price_history: [], patterns: [] }),
+      ),
+    );
+
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+
+    expect(await screen.findByText(t('workspacePage.panels.analysis.volumeZones.loadError'))).toBeVisible();
+    expect(screen.getByTestId('volume-zone-chart')).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: t('workspacePage.data.retryAnalysis') }),
+    ).toBeEnabled();
+    expect(screen.getByText(t('workspacePage.data.partial'))).toBeVisible();
   });
 });

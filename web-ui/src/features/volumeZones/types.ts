@@ -111,6 +111,24 @@ export interface VolumeAnalysis {
   warnings: string[];
 }
 
+export class VolumeAnalysisIdentityError extends Error {
+  constructor() {
+    super('Volume analysis identity mismatch');
+    this.name = 'VolumeAnalysisIdentityError';
+  }
+}
+
+export function assertVolumeAnalysisIdentity(
+  analysis: VolumeAnalysis,
+  requestedTicker: string,
+  requestedLookback: number,
+): void {
+  const ticker = requestedTicker.trim().toUpperCase();
+  if (analysis.symbol.trim().toUpperCase() !== ticker || analysis.lookback !== requestedLookback) {
+    throw new VolumeAnalysisIdentityError();
+  }
+}
+
 export function transformVolumeAnalysis(api: VolumeAnalysisAPI): VolumeAnalysis {
   return {
     symbol: api.symbol,

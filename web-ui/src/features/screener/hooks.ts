@@ -36,10 +36,14 @@ export interface TickerCandles {
 }
 
 async function fetchTickerCandles(ticker: string): Promise<TickerCandles> {
+  const normalized = ticker.trim().toUpperCase();
   const raw = await fetchJson<TickerCandlesAPIResponse>(
-    API_ENDPOINTS.marketDataCandles(ticker),
+    API_ENDPOINTS.marketDataCandles(normalized),
     { errorMessage: `Failed to fetch candles for ${ticker}` },
   );
+  if (raw.ticker.trim().toUpperCase() !== normalized) {
+    throw new Error('Ticker candles identity mismatch');
+  }
   return {
     ticker: raw.ticker.trim().toUpperCase(),
     priceHistory: raw.price_history,
@@ -48,10 +52,12 @@ async function fetchTickerCandles(ticker: string): Promise<TickerCandles> {
 }
 
 export function useTickerCandles(ticker: string | null | undefined) {
+  const normalized = ticker?.trim().toUpperCase();
   return useQuery({
-    queryKey: queryKeys.tickerCandles(ticker),
-    queryFn: () => fetchTickerCandles(ticker!),
-    enabled: Boolean(ticker),
+    queryKey: queryKeys.tickerCandles(normalized),
+    queryFn: () => fetchTickerCandles(normalized!),
+    enabled: Boolean(normalized),
     staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
