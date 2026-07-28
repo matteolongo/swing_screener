@@ -8,9 +8,11 @@ import type {
   HistoryEntry,
   IntelligenceChatResponseAPI,
   EvidenceRefreshResponseAPI,
+  EvidenceCacheSummaryAPI,
 } from '@/features/intelligence/types';
 import {
   transformEvidenceRefresh,
+  transformEvidenceCacheSummary,
   transformHistoryEntry,
   transformIntelligenceChat,
 } from '@/features/intelligence/types';
@@ -170,6 +172,13 @@ export async function getIntelligenceLatest(ticker: string): Promise<SymbolIntel
   return fetchJson<SymbolIntelligenceAPI>(API_ENDPOINTS.intelligenceLatest(ticker), {
     errorMessage: `No cached analysis for ${ticker}`,
   });
+}
+
+export async function getLatestEvidenceSummary(ticker: string) {
+  const response = await fetchJson<EvidenceCacheSummaryAPI>(API_ENDPOINTS.intelligenceEvidenceLatest(ticker), {
+    errorMessage: `Failed to load saved evidence for ${ticker}`,
+  });
+  return transformEvidenceCacheSummary(response);
 }
 
 export async function refreshIntelligenceEvidence(ticker: string) {

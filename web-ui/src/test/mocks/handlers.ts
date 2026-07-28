@@ -741,7 +741,17 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/api/intelligence/:ticker/latest`, ({ params }) => {
-    return HttpResponse.json({ detail: `No cached analysis for ${params.ticker}` }, { status: 404 })
+    return HttpResponse.json({
+      detail: `No cached analysis for ${params.ticker}`,
+      code: 'analysis_not_generated_today',
+    }, { status: 404 })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/:ticker/evidence/latest`, ({ params }) => {
+    return HttpResponse.json({
+      detail: `No cached evidence for ${params.ticker}`,
+      code: 'evidence_not_cached',
+    }, { status: 404 })
   }),
 
   http.get(`${API_BASE_URL}/api/intelligence/:ticker/history`, () => {

@@ -90,6 +90,15 @@ export default function SymbolFundamentalsTab({
         </p>
       ) : null}
 
+      {snapshot?.freshnessStatus === 'stale' && snapshot.mostRecentQuarter ? (
+        <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+          {t('workspacePage.fundamentals.reportingPeriodStale', {
+            updatedAt: formatDateTime(snapshot.updatedAt),
+            date: snapshot.mostRecentQuarter,
+          })}
+        </p>
+      ) : null}
+
       {model.screenerFundamentalsInputAsOf ? (
         <p className="text-xs text-muted">
           {t('workspacePage.fundamentals.screenerInputAsOf', {

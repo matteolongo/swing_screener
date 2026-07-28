@@ -777,6 +777,8 @@ export const messagesEn = {
       refreshEvidence: 'Refresh evidence sources',
       refreshingEvidence: 'Refreshing evidence…',
       evidenceProviderFailed: 'Evidence provider failed.',
+      notGeneratedToday: 'No analysis has been generated today.',
+      evidenceNotCached: 'No saved evidence is available yet.',
       generate: 'Generate analysis',
       generating: 'Generating analysis…',
       forceRefresh: 'Force-refresh analysis',
@@ -885,6 +887,7 @@ export const messagesEn = {
       providerActivity: 'Canonical snapshot supplied by {{provider}}.',
       intelligenceOutdated: 'Intelligence is based on older inputs.',
       screenerInputAsOf: 'Fundamentals input used by the screener · as of {{date}}.',
+      reportingPeriodStale: 'Snapshot refreshed {{updatedAt}}; latest reported quarter is {{date}}, which is older than the reporting-period threshold.',
       card: {
         unknownCompany: 'Unknown company',
         mostRecent: 'most recent {{period}}',

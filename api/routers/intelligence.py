@@ -10,6 +10,7 @@ from threading import Lock
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, model_validator
 
 from api.models.intelligence_chat import IntelligenceChatRequest, IntelligenceChatResponse
@@ -28,7 +29,10 @@ from api.services.intelligence_enrichment import (
     enrich_with_technicals,
     record_enrichment_failure,
 )
-from swing_screener.intelligence.evidence.collect import collect_evidence
+from swing_screener.intelligence.evidence.collect import (
+    collect_evidence,
+    read_latest_cached_evidence_summary,
+)
 from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.history import HistoryEntry, read_history
@@ -229,6 +233,35 @@ class EvidenceRefreshResponse(BaseModel):
     sources: list[EvidenceRefreshSource]
 
 
+class EvidenceCacheSummaryResponse(BaseModel):
+    ticker: str
+    cached_at: str
+    item_count: int
+    providers: list[str]
+    freshness_status: Literal["fresh", "cached", "stale"]
+
+
+@router.get("/{ticker}/evidence/latest", response_model=EvidenceCacheSummaryResponse)
+def get_latest_evidence_summary(ticker: str) -> EvidenceCacheSummaryResponse | JSONResponse:
+    """Return the newest persisted evidence-cache metadata without collecting."""
+    upper = ticker.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9._-]{0,19}", upper):
+        raise HTTPException(status_code=422, detail="Invalid ticker.")
+    summary = read_latest_cached_evidence_summary(upper)
+    if summary is None:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"No cached evidence for {upper}", "code": "evidence_not_cached"},
+        )
+    return EvidenceCacheSummaryResponse(
+        ticker=summary.ticker,
+        cached_at=summary.cached_at,
+        item_count=summary.item_count,
+        providers=summary.providers,
+        freshness_status=summary.freshness_status,
+    )
+
+
 @router.post("/{ticker}/evidence/refresh", response_model=EvidenceRefreshResponse)
 def refresh_evidence(ticker: str) -> EvidenceRefreshResponse:
     """Refresh configured evidence collectors without analysis or trading mutations."""
@@ -427,11 +460,14 @@ def review_symbol(
 
 
 @router.get("/{ticker}/latest", response_model=SymbolIntelligence)
-def get_latest(ticker: str) -> SymbolIntelligence:
+def get_latest(ticker: str) -> SymbolIntelligence | JSONResponse:
     """Return today's cached intelligence result for a symbol, or 404."""
     result = read_from_cache(ticker.upper())
     if result is None:
-        raise HTTPException(status_code=404, detail=f"No cached analysis for {ticker} today")
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"No cached analysis for {ticker} today", "code": "analysis_not_generated_today"},
+        )
     return result
 
 

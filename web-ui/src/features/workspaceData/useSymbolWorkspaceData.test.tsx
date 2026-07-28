@@ -3,10 +3,16 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { intelligenceResult, tickerCandlesResult, positionsResult, ordersResult } = vi.hoisted(() => ({
+const { intelligenceResult, evidenceLatestResult, tickerCandlesResult, positionsResult, ordersResult } = vi.hoisted(() => ({
   intelligenceResult: {
     current: {
       data: undefined as { symbol: string; generatedAt: string } | undefined,
+    },
+  },
+  evidenceLatestResult: {
+    current: {
+      data: undefined as { ticker: string; cachedAt: string; itemCount: number; providers: string[]; freshnessStatus: 'fresh' | 'cached' | 'stale' } | undefined,
+      error: null as Error | null,
     },
   },
   tickerCandlesResult: {
@@ -41,6 +47,14 @@ vi.mock('@/features/intelligence/hooks', () => ({
     dataUpdatedAt: 0,
     error: null,
     isError: false,
+    isFetching: false,
+    isLoading: false,
+  }),
+  useLatestEvidenceSummaryQuery: () => ({
+    data: evidenceLatestResult.current.data,
+    dataUpdatedAt: 0,
+    error: evidenceLatestResult.current.error,
+    isError: evidenceLatestResult.current.error !== null,
     isFetching: false,
     isLoading: false,
   }),
@@ -117,6 +131,8 @@ describe('useSymbolWorkspaceData', () => {
     vi.clearAllMocks();
     fetchSnapshot.mockResolvedValue(snapshot('AAPL'));
     intelligenceResult.current.data = undefined;
+    evidenceLatestResult.current.data = undefined;
+    evidenceLatestResult.current.error = null;
     tickerCandlesResult.current.data = undefined;
     tickerCandlesResult.current.dataUpdatedAt = 0;
     positionsResult.current = {};

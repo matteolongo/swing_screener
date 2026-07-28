@@ -43,6 +43,8 @@ def test_latest_returns_404_when_no_cache(tmp_path, monkeypatch):
     (tmp_path / "intelligence").mkdir(parents=True, exist_ok=True)
     response = client.get("/api/intelligence/AAPL/latest")
     assert response.status_code == 404
+    assert isinstance(response.json()["detail"], str)
+    assert response.json()["code"] == "analysis_not_generated_today"
 
 
 def test_latest_returns_cached_entry(tmp_path, monkeypatch):

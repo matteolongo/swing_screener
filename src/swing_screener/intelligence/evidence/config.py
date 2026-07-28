@@ -10,6 +10,7 @@ class EvidenceConfig:
     enabled_sources: tuple[str, ...] = ("sec_edgar_catalysts", "polygon_news", "degiro_news")
     recency_window_days: int = 30
     max_items_per_symbol: int = 8
+    cache_stale_after_days: int = 1
     sec_forms: tuple[str, ...] = ("8-K", "6-K", "SC 13D", "SC 13G", "424B", "DEF 14A")
     user_agent: str = "swing-screener-intelligence-bot/1.0 (matteolongo0@gmail.com)"
     connect_timeout_seconds: float = 5.0
@@ -19,10 +20,16 @@ class EvidenceConfig:
 def load_evidence_config() -> EvidenceConfig:
     cfg = intelligence_config_section("evidence")
     http = cfg.get("http", {}) or {}
+    cache_stale_after_days = int(
+        cfg.get("cache_stale_after_days", EvidenceConfig.cache_stale_after_days)
+    )
+    if cache_stale_after_days < 0:
+        raise ValueError("config.evidence.cache_stale_after_days must be non-negative")
     return EvidenceConfig(
         enabled_sources=tuple(cfg.get("enabled_sources") or EvidenceConfig.enabled_sources),
         recency_window_days=int(cfg.get("recency_window_days", 30)),
         max_items_per_symbol=int(cfg.get("max_items_per_symbol", 8)),
+        cache_stale_after_days=cache_stale_after_days,
         sec_forms=tuple(cfg.get("sec_forms") or EvidenceConfig.sec_forms),
         user_agent=str(http.get("user_agent", EvidenceConfig.user_agent)),
         connect_timeout_seconds=float(http.get("connect_timeout_seconds", 5.0)),

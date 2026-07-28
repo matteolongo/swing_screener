@@ -26,6 +26,7 @@ export interface WorkspaceSourceState {
   cacheOrigin: 'network' | 'memory' | 'disk' | null;
   missingInputs: string[];
   error: { message: string; retryable: boolean } | null;
+  stateReason?: 'analysisNotGeneratedToday' | 'evidenceNotCached';
 }
 
 export type WorkspaceHealth = 'fresh' | 'mixed' | 'stale' | 'partial' | 'failed';
