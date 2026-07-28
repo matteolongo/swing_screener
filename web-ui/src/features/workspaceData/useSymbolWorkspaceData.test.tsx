@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { intelligenceResult, tickerCandlesResult, positionsResult, ordersResult } = vi.hoisted(() => ({
   intelligenceResult: {
@@ -72,7 +72,10 @@ vi.mock('@/features/portfolio/hooks', () => ({
 
 import * as fundamentalsApi from '@/features/fundamentals/api';
 import { queryKeys } from '@/lib/queryKeys';
-import { useSymbolWorkspaceData } from './useSymbolWorkspaceData';
+import {
+  POSITION_ORDERS_FRESHNESS_MS,
+  useSymbolWorkspaceData,
+} from './useSymbolWorkspaceData';
 
 function createQueryClient() {
   return new QueryClient({
@@ -115,6 +118,7 @@ describe('useSymbolWorkspaceData', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchSnapshot.mockResolvedValue(snapshot('AAPL'));
     intelligenceResult.current.data = undefined;
     tickerCandlesResult.current.data = undefined;
     tickerCandlesResult.current.dataUpdatedAt = 0;
@@ -122,17 +126,25 @@ describe('useSymbolWorkspaceData', () => {
     ordersResult.current = {};
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('derives position and order health from both canonical query observers', () => {
     fetchSnapshot.mockResolvedValue(snapshot('AAPL'));
+    const now = Date.parse('2026-07-28T12:00:00Z');
+    vi.spyOn(Date, 'now').mockReturnValue(now);
     positionsResult.current = {
       data: [{ ticker: 'AAPL' }],
-      dataUpdatedAt: 500,
+      dataUpdatedAt: now - 1_000,
       isFetching: true,
+      isStale: true,
     };
     ordersResult.current = {
       data: [],
-      dataUpdatedAt: 400,
+      dataUpdatedAt: now - 2_000,
       isFetchedAfterMount: false,
+      isStale: true,
     };
     const queryClient = createQueryClient();
     const { result, rerender } = renderHook(
@@ -148,11 +160,34 @@ describe('useSymbolWorkspaceData', () => {
     expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')).toMatchObject({
       phase: 'loading',
       provider: 'local portfolio',
-      fetchedAt: new Date(500).toISOString(),
+      fetchedAt: new Date(now - 1_000).toISOString(),
     });
 
-    positionsResult.current = { data: [], isFetching: false, isStale: true };
-    ordersResult.current = { data: [], isStale: false };
+    positionsResult.current = {
+      data: [],
+      dataUpdatedAt: now - 1_000,
+      isFetching: false,
+      isStale: true,
+    };
+    ordersResult.current = {
+      data: [],
+      dataUpdatedAt: now - 2_000,
+      isFetchedAfterMount: true,
+      isStale: true,
+    };
+    rerender();
+    expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')?.phase).toBe('fresh');
+
+    positionsResult.current = {
+      data: [],
+      dataUpdatedAt: now - POSITION_ORDERS_FRESHNESS_MS - 1,
+      isStale: true,
+    };
+    ordersResult.current = {
+      data: [],
+      dataUpdatedAt: now - POSITION_ORDERS_FRESHNESS_MS - 2,
+      isStale: true,
+    };
     rerender();
     expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')?.phase).toBe('stale');
   });
