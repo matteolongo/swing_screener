@@ -251,6 +251,46 @@ def test_exit_signal_disabled_when_exit_signal_days_zero():
     assert updates[0].action != "CLOSE_EXIT_SIGNAL"
 
 
+def test_short_term_five_day_config_exits_on_fifth_trading_bar():
+    ohlcv = _make_ohlcv({"AAA": [100.0, 101.0, 102.0, 103.0, 104.0]})
+    pos = Position(
+        ticker="AAA",
+        status="open",
+        entry_date="2026-01-01",
+        entry_price=100.0,
+        stop_price=90.0,
+        shares=1,
+    )
+
+    updates, _ = evaluate_positions(
+        ohlcv, [pos], ManageConfig(max_holding_days=5, exit_signal_days=0)
+    )
+
+    assert updates[0].action == "CLOSE_TIME_EXIT"
+    assert "5 bars" in updates[0].reason
+
+
+def test_short_term_one_close_sma_exit_fires_after_single_close_below_sma():
+    ohlcv = _make_ohlcv({"AAA": [110.0] * 20 + [95.0]})
+    pos = Position(
+        ticker="AAA",
+        status="open",
+        entry_date="2026-01-01",
+        entry_price=100.0,
+        stop_price=90.0,
+        shares=1,
+        initial_risk=10.0,
+    )
+
+    updates, _ = evaluate_positions(
+        ohlcv,
+        [pos],
+        ManageConfig(max_holding_days=999, trail_sma=5, exit_signal_days=1),
+    )
+
+    assert updates[0].action == "CLOSE_EXIT_SIGNAL"
+
+
 def test_position_has_exhaustion_fields():
     from swing_screener.portfolio.state import Position
     pos = Position(
