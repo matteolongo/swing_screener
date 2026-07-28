@@ -40,3 +40,20 @@ def test_empty_candles_keep_truthful_provenance_with_no_content_time(monkeypatch
     assert data["interval"] == "1d"
     assert data["data_as_of"] is None
     assert datetime.fromisoformat(data["fetched_at"]).tzinfo is not None
+
+
+def test_candle_provider_failure_is_not_an_empty_success(monkeypatch):
+    provider = _mock_provider(None)
+    provider.fetch_ohlcv.side_effect = RuntimeError("secret upstream failure")
+    monkeypatch.setattr(
+        "api.routers.market_data.get_default_provider", lambda *a, **k: provider
+    )
+
+    response = TestClient(app).get("/api/market-data/AAPL/candles")
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == {
+        "code": "market_data_provider_failed",
+        "message": "Market data provider failed.",
+        "provider": "mock",
+    }

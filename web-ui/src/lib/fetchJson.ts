@@ -19,7 +19,11 @@ export async function fetchJson<T>(endpoint: string, init: FetchJsonInit = {}): 
     let detail: string | undefined;
     try {
       const body = await response.json();
-      detail = body?.detail;
+      detail = typeof body?.detail === 'string'
+        ? body.detail
+        : typeof body?.detail?.message === 'string'
+          ? body.detail.message
+          : undefined;
     } catch {
       // non-JSON error body; fall through to errorMessage/status
     }

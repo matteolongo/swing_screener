@@ -221,6 +221,55 @@ describe('useSymbolWorkspaceData', () => {
     });
   });
 
+  it('uses structured screener and evidence provenance instead of summary presence', () => {
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        candidate: {
+          ticker: 'AAPL',
+          lastBar: '2026-07-28',
+          dataSourceSummary: {
+            marketData: {
+              provider: 'polygon',
+              status: 'ok',
+              qualityScore: 1,
+              warnings: [],
+            },
+          },
+        },
+        position: null,
+        screenerRun: { asOf: '2026-07-28', freshness: 'final_close' },
+        evidenceRefresh: {
+          ticker: 'AAPL',
+          refreshedAt: '2026-07-28T20:00:00Z',
+          status: 'partial',
+          sources: [{
+            source: 'evidence',
+            provider: 'finnhub',
+            status: 'failed',
+            itemCount: 0,
+            asOf: '2026-07-28',
+            message: 'Evidence provider failed.',
+          }],
+        },
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    expect(result.current.sourceStates.find(({ id }) => id === 'screener')).toMatchObject({
+      phase: 'fresh',
+      provider: 'polygon',
+      dataAsOf: '2026-07-28',
+    });
+    expect(result.current.sourceStates.find(({ id }) => id === 'evidence')).toMatchObject({
+      phase: 'partial',
+      provider: 'finnhub',
+      fetchedAt: '2026-07-28T20:00:00Z',
+    });
+  });
+
   it('does not expose an AAPL completion in an MSFT workspace session', async () => {
     let finishAapl!: (value: ReturnType<typeof snapshot>) => void;
     fetchSnapshot.mockImplementation(

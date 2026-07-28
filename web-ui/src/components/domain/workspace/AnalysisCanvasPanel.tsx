@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
@@ -12,9 +12,11 @@ import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import type { WorkspaceSourceId } from '@/features/workspaceData/types';
+import type { EvidenceRefreshResponse } from '@/features/intelligence/types';
 
 export default function AnalysisCanvasPanel() {
   const [selectedSourceId, setSelectedSourceId] = useState<WorkspaceSourceId | null>(null);
+  const [evidenceRefresh, setEvidenceRefresh] = useState<EvidenceRefreshResponse | null>(null);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const selectionVersion = useWorkspaceStore((state) => state.selectionVersion);
@@ -32,11 +34,19 @@ export default function AnalysisCanvasPanel() {
     (p) => p.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   ) ?? null;
 
+  useEffect(() => {
+    setEvidenceRefresh(null);
+  }, [selectedTicker, selectionVersion]);
+
   const workspaceData = useSymbolWorkspaceData({
     ticker: selectedTicker ?? '',
     selectionVersion,
     candidate: selectedCandidate ?? null,
     position: openPosition,
+    screenerRun: lastScreenerResult
+      ? { asOf: lastScreenerResult.asofDate, freshness: lastScreenerResult.dataFreshness }
+      : null,
+    evidenceRefresh,
   });
   return (
     <Card
@@ -51,13 +61,20 @@ export default function AnalysisCanvasPanel() {
             {t('workspacePage.panels.analysis.empty')}
           </p>
           <p className="text-xs text-muted max-w-xs">
-            Run the screener and select a symbol to see its analysis, trade plan, and intelligence.
+            {t('workspacePage.emptyDescription')}
           </p>
         </div>
       ) : (
         <>
           <SymbolWorkspaceHeader
             ticker={selectedTicker}
+            companyName={workspaceData.fundamentals.data?.companyName ?? selectedCandidate?.name}
+            mode={openPosition ? 'position' : selectedCandidate ? 'candidate' : 'research'}
+            runAsOf={lastScreenerResult?.asofDate ?? null}
+            runFreshness={lastScreenerResult?.dataFreshness ?? null}
+            health={workspaceData.health}
+            isRefreshing={workspaceData.sourceStates.some(({ phase }) => phase === 'loading')}
+            onRefreshAll={() => void workspaceData.refreshAllNonIntelligence()}
             fullscreen={fullscreen}
             onClose={clearSelectedTicker}
             onCollapse={collapseWorkspace}
@@ -88,6 +105,7 @@ export default function AnalysisCanvasPanel() {
             intelligenceOutdated={workspaceData.intelligenceOutdated}
             intelligenceWorkflow={{
               sources: workspaceData.sourceStates,
+              onEvidenceRefresh: setEvidenceRefresh,
             }}
             fundamentals={{
               data: workspaceData.fundamentals.data,

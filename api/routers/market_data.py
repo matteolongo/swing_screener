@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timezone
 
 import pandas as pd
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from api.models.market_data import (
@@ -59,14 +59,13 @@ def get_ticker_candles(
         )
     except Exception as exc:
         logger.warning("OHLCV fetch failed for %s: %s", symbol, exc)
-        return TickerCandlesResponse(
-            ticker=symbol,
-            provider=provider_name,
-            interval=interval,
-            data_as_of=None,
-            fetched_at=datetime.now(timezone.utc).isoformat(),
-            price_history=[],
-            patterns=[],
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "market_data_provider_failed",
+                "message": "Market data provider failed.",
+                "provider": provider_name,
+            },
         )
 
     if ohlcv is None or ohlcv.empty:

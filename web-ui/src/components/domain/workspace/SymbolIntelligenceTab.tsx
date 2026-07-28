@@ -100,6 +100,12 @@ function phaseLabel(phase: WorkspaceSourcePhase): string {
   return t(`workspacePage.data.phases.${phase}`);
 }
 
+function localizeEvidenceFailure(message: string | null): string | null {
+  return message === 'Evidence provider failed.' || message === 'evidence_provider_failed'
+    ? t('workspacePage.intelligence.evidenceProviderFailed')
+    : message;
+}
+
 function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
   const diagnostics = model.analysis?.inputsUsed?.enrichmentDiagnostics ?? [];
   const refreshedEvidence = model.refreshedEvidence?.sources ?? [];
@@ -149,7 +155,7 @@ function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
           dataAsOf: model.refreshedEvidence.refreshedAt,
           phase: 'failed' as const,
           itemCount: 0,
-          error: 'Evidence provider failed.',
+          error: t('workspacePage.intelligence.evidenceProviderFailed'),
         }]
       : []),
     ...refreshedEvidence.map((source) => ({
@@ -160,7 +166,7 @@ function ManifestTable({ model }: { model: SymbolIntelligenceTabModel }) {
       dataAsOf: source.asOf,
       phase: source.status,
       itemCount: source.itemCount,
-      error: source.message,
+      error: localizeEvidenceFailure(source.message),
     })),
     ...diagnostics
       .filter((diagnostic) => !SOURCE_IDS.includes(diagnostic.source as WorkspaceSourceId))

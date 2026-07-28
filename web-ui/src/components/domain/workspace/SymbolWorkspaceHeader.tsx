@@ -1,6 +1,7 @@
-import { ArrowLeft, ChevronsRight, Maximize2, Minimize2, X } from 'lucide-react';
+import { ArrowLeft, ChevronsRight, Maximize2, Minimize2, RefreshCw, X } from 'lucide-react';
 
 import { t } from '@/i18n/t';
+import type { WorkspaceHealth } from '@/features/workspaceData/types';
 
 interface SymbolWorkspaceHeaderProps {
   ticker: string;
@@ -8,6 +9,13 @@ interface SymbolWorkspaceHeaderProps {
   onClose: () => void;
   onCollapse: () => void;
   onFullscreenChange: (fullscreen: boolean) => void;
+  companyName?: string | null;
+  mode?: 'candidate' | 'position' | 'research';
+  runAsOf?: string | null;
+  runFreshness?: 'final_close' | 'intraday' | null;
+  health?: WorkspaceHealth;
+  isRefreshing?: boolean;
+  onRefreshAll?: () => void;
 }
 
 export default function SymbolWorkspaceHeader({
@@ -16,6 +24,13 @@ export default function SymbolWorkspaceHeader({
   onClose,
   onCollapse,
   onFullscreenChange,
+  companyName = null,
+  mode = 'research',
+  runAsOf = null,
+  runFreshness = null,
+  health = 'fresh',
+  isRefreshing = false,
+  onRefreshAll,
 }: SymbolWorkspaceHeaderProps) {
   const controlClass =
     'inline-flex min-h-9 min-w-9 items-center justify-center rounded-md border border-border text-muted transition-colors hover:bg-foreground/5 hover:text-foreground';
@@ -30,7 +45,34 @@ export default function SymbolWorkspaceHeader({
       >
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
       </button>
-      <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-foreground">{ticker}</h2>
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-base font-semibold text-foreground">
+          {ticker}{companyName ? ` · ${companyName}` : ''}
+        </h2>
+        <div className="flex flex-wrap gap-x-2 text-xs text-muted">
+          <span>{t(`workspacePage.header.${mode}Mode`)}</span>
+          {runAsOf ? <span>{t('workspacePage.header.runAsOf', { date: runAsOf })}</span> : null}
+          {runFreshness ? (
+            <span>{t(`workspacePage.panels.screener.freshness.${runFreshness === 'final_close' ? 'finalClose' : 'intraday'}`)}</span>
+          ) : null}
+          <span>
+            {t('workspacePage.header.health', {
+              health: t(`workspacePage.header.healthValues.${health}`),
+            })}
+          </span>
+        </div>
+      </div>
+      {onRefreshAll ? (
+        <button
+          type="button"
+          className={controlClass}
+          onClick={onRefreshAll}
+          disabled={isRefreshing}
+          aria-label={t('workspacePage.controls.refreshAll')}
+        >
+          <RefreshCw aria-hidden="true" className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
+      ) : null}
       <button
         type="button"
         className={`${controlClass} hidden xl:inline-flex`}

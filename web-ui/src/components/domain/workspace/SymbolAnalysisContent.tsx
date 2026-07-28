@@ -41,6 +41,7 @@ interface SymbolAnalysisContentProps {
   selectionVersion?: number;
   intelligenceWorkflow?: {
     sources: WorkspaceSourceState[];
+    onEvidenceRefresh?: (result: EvidenceRefreshResponse) => void;
   };
   fundamentals?: {
     data?: FundamentalSnapshot;
@@ -169,6 +170,7 @@ export default function SymbolAnalysisContent({
           && requestedSession === currentSessionRef.current
         ) {
           setRefreshedEvidence(result);
+          intelligenceWorkflow?.onEvidenceRefresh?.(result);
         }
       },
     });

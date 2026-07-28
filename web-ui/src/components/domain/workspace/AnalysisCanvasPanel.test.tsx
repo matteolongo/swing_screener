@@ -215,7 +215,7 @@ describe('AnalysisCanvasPanel', () => {
     const { user } = renderWithProviders(<AnalysisCanvasPanel />);
     const traversedNames: string[] = [];
 
-    for (let index = 0; index < 14; index += 1) {
+    for (let index = 0; index < 15; index += 1) {
       await user.tab();
       traversedNames.push(document.activeElement?.getAttribute('aria-label')
         ?? document.activeElement?.textContent?.trim()
@@ -224,6 +224,7 @@ describe('AnalysisCanvasPanel', () => {
 
     expect(traversedNames).toEqual([
       t('workspacePage.controls.backToList'),
+      t('workspacePage.controls.refreshAll'),
       t('workspacePage.controls.collapse'),
       t('workspacePage.controls.fullscreen'),
       t('workspacePage.controls.close'),
@@ -1149,7 +1150,9 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', {
+      name: t('workspacePage.fundamentals.refresh'),
+    })).toBeInTheDocument();
   });
 
   it('fundamentals tab: shows updated timestamp when snapshot exists', () => {

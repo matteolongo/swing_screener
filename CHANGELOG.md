@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The symbol workspace header now exposes symbol context, screener close status,
+  aggregate source health, and a non-intelligence bulk refresh; candle-provider
+  failures are retryable errors rather than empty successful histories.
+
 - Portfolio position/order workspace freshness is now derived by the API from
   persisted ledger dates and the YAML-backed staleness policy, rather than from
   browser cache timing.

@@ -6,6 +6,7 @@ import {
   useRefreshFundamentalSnapshotMutation,
 } from '@/features/fundamentals/hooks';
 import { useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
+import type { EvidenceRefreshResponse } from '@/features/intelligence/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useOpenPositions, useOrders } from '@/features/portfolio/hooks';
 import { useTickerCandles } from '@/features/screener/hooks';
@@ -22,6 +23,11 @@ interface SymbolWorkspaceDataInput {
   selectionVersion: number;
   candidate: SymbolAnalysisCandidate | null;
   position: PositionWithMetrics | null;
+  screenerRun?: {
+    asOf: string;
+    freshness: 'final_close' | 'intraday';
+  } | null;
+  evidenceRefresh?: EvidenceRefreshResponse | null;
 }
 
 function normalizedTicker(value: string | null | undefined): string | null {
@@ -51,6 +57,8 @@ export function useSymbolWorkspaceData({
   selectionVersion,
   candidate,
   position,
+  screenerRun = null,
+  evidenceRefresh = null,
 }: SymbolWorkspaceDataInput) {
   const queryClient = useQueryClient();
   const currentTicker = normalizedTicker(ticker) ?? '';
@@ -78,6 +86,9 @@ export function useSymbolWorkspaceData({
       ? pricesQuery.data
       : undefined;
   const priceHistory = pricesData?.priceHistory;
+  const evidenceDiagnostic = intelligenceData?.inputsUsed?.enrichmentDiagnostics?.find(
+    ({ source }) => source === 'evidence',
+  );
   const positionOrdersAsOf = [
     positionsQuery.data?.snapshotAsOf,
     ordersQuery.data?.snapshotAsOf,
@@ -122,9 +133,22 @@ export function useSymbolWorkspaceData({
   });
 
   const sourceStates: WorkspaceSourceState[] = [
-    sourceState('screener', validCandidate ? 'fresh' : 'idle', {
-      dataAsOf: validCandidate?.lastBar ?? null,
-    }),
+    sourceState(
+      'screener',
+      validCandidate && screenerRun && validCandidate.dataSourceSummary?.marketData?.provider
+        ? 'fresh'
+        : validCandidate ? 'partial' : 'idle',
+      {
+        provider: validCandidate?.dataSourceSummary?.marketData?.provider ?? null,
+        dataAsOf: validCandidate?.lastBar ?? screenerRun?.asOf ?? null,
+        missingInputs: [
+          validCandidate && !screenerRun ? 'screenerRunMetadata' : null,
+          validCandidate && !validCandidate.dataSourceSummary?.marketData?.provider
+            ? 'screenerProvider'
+            : null,
+        ].filter((value): value is string => value !== null),
+      },
+    ),
     sourceState('prices', queryPhase({ ...pricesQuery, data: pricesData }), {
       dataAsOf: priceHistory?.[priceHistory.length - 1]?.date ?? null,
       fetchedAt: fetchedAt(pricesQuery.dataUpdatedAt),
@@ -146,13 +170,52 @@ export function useSymbolWorkspaceData({
           : null,
       },
     ),
-    sourceState('evidence', validCandidate?.dataSourceSummary ? 'fresh' : 'idle'),
+    sourceState(
+      'evidence',
+      evidenceRefresh
+        ? evidenceRefresh.status === 'failed' ? 'failed'
+          : evidenceRefresh.status === 'partial' ? 'partial'
+            : 'fresh'
+        : evidenceDiagnostic?.status === 'failed' ? 'failed'
+          : 'partial',
+      {
+        provider: evidenceRefresh?.sources.map(({ provider }) => provider).join(', ') || null,
+        dataAsOf: evidenceRefresh?.sources.map(({ asOf }) => asOf).sort().slice(-1)[0]
+          ?? evidenceDiagnostic?.asOf
+          ?? null,
+        fetchedAt: evidenceRefresh?.refreshedAt ?? intelligenceData?.generatedAt ?? null,
+        missingInputs: evidenceRefresh
+          ? []
+          : [evidenceDiagnostic ? 'evidenceProvider' : 'evidenceDiagnostics'],
+        error: evidenceRefresh?.sources.some(({ status }) => status === 'failed')
+          ? {
+              message: evidenceRefresh.sources.find(({ status }) => status === 'failed')?.message
+                ?? 'evidence_provider_failed',
+              retryable: true,
+            }
+          : evidenceDiagnostic?.status === 'failed'
+            ? {
+                message: evidenceDiagnostic.message ?? 'evidence_provider_failed',
+                retryable: true,
+              }
+            : null,
+      },
+    ),
     sourceState(
       'intelligence',
-      queryPhase({ ...intelligenceQuery, data: intelligenceData }),
+      intelligenceData && !('provider' in intelligenceData)
+        ? 'partial'
+        : queryPhase({ ...intelligenceQuery, data: intelligenceData }),
       {
+        provider:
+          'provider' in (intelligenceData ?? {})
+            ? String((intelligenceData as unknown as { provider: string }).provider)
+            : null,
         dataAsOf: intelligenceData?.generatedAt ?? null,
-        fetchedAt: fetchedAt(intelligenceQuery.dataUpdatedAt),
+        fetchedAt: intelligenceData?.generatedAt ?? fetchedAt(intelligenceQuery.dataUpdatedAt),
+        missingInputs: intelligenceData && !('provider' in intelligenceData)
+          ? ['intelligenceProvider']
+          : [],
         error: intelligenceQuery.error
           ? { message: intelligenceQuery.error.message, retryable: true }
           : null,

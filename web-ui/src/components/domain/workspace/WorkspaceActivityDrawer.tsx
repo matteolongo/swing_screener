@@ -16,6 +16,10 @@ export default function WorkspaceActivityDrawer({
   onDismiss,
   selectedSourceId = null,
 }: WorkspaceActivityDrawerProps) {
+  const displayError = (message: string | undefined) =>
+    message === 'evidence_provider_failed' || message === 'Evidence provider failed.'
+      ? t('workspacePage.intelligence.evidenceProviderFailed')
+      : message;
   const incomingSelection = activities[0]
     ? `${activities[0].ticker}:${activities[0].selectionVersion}`
     : null;
@@ -129,12 +133,21 @@ export default function WorkspaceActivityDrawer({
               ['cacheOrigin', selectedActivity.cacheOrigin],
               ['missingInputs', selectedActivity.missingInputs.length
                 ? selectedActivity.missingInputs.map((input) =>
-                    input === 'positions' || input === 'orders' || input === 'freshnessMetadata'
-                      ? t(`workspacePage.data.details.inputs.${input}`)
+                    [
+                      'positions',
+                      'orders',
+                      'freshnessMetadata',
+                      'evidenceDiagnostics',
+                      'evidenceProvider',
+                      'screenerRunMetadata',
+                      'screenerProvider',
+                      'intelligenceProvider',
+                    ].includes(input)
+                      ? t(`workspacePage.data.details.inputs.${input}` as Parameters<typeof t>[0])
                       : input,
                   ).join(', ')
                 : t('workspacePage.data.details.none')],
-              ['diagnostics', selectedActivity.error?.message],
+              ['diagnostics', displayError(selectedActivity.error?.message)],
             ].map(([key, value]) => (
               <div key={key}>
                 <dt className="text-muted">
@@ -149,7 +162,7 @@ export default function WorkspaceActivityDrawer({
       <ul className="space-y-2">
         {visibleFailures.map((activity) => (
           <li key={activity.id} className="flex items-center gap-2 text-xs text-danger">
-            <span className="min-w-0 flex-1">{activity.error?.message}</span>
+            <span className="min-w-0 flex-1">{displayError(activity.error?.message)}</span>
             {activity.error?.retryable && onRetry ? (
               <button
                 type="button"

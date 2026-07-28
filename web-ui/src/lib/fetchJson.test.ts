@@ -27,6 +27,18 @@ describe('fetchJson', () => {
     await expect(fetchJson('/api/thing')).rejects.toThrow('Symbol not found');
   });
 
+  it('throws the safe message from a structured provider error', async () => {
+    mockFetch(() => new Response(JSON.stringify({
+      detail: {
+        code: 'market_data_provider_failed',
+        message: 'Market data provider failed.',
+        provider: 'mock',
+      },
+    }), { status: 502 }));
+
+    await expect(fetchJson('/api/thing')).rejects.toThrow('Market data provider failed.');
+  });
+
   it('falls back to the provided errorMessage when there is no detail', async () => {
     mockFetch(() => new Response(JSON.stringify({}), { status: 500 }));
     await expect(fetchJson('/api/thing', { errorMessage: 'Failed to load thing' })).rejects.toThrow(
