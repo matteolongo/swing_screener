@@ -19,10 +19,12 @@ export default function WorkspaceActivityDrawer({
     : null;
   const selectionRef = useRef(incomingSelection);
   const [retainedFailures, setRetainedFailures] = useState<WorkspaceSourceState[]>(() =>
-    activities.filter(({ phase, error }) => phase === 'failed' && error),
+    activities.filter(({ phase, error }) => (phase === 'failed' || phase === 'partial') && error),
   );
   const [dismissedFailures, setDismissedFailures] = useState<Set<string>>(() => new Set());
-  const hasNewFailure = activities.some(({ phase, error }) => phase === 'failed' && error);
+  const hasNewFailure = activities.some(
+    ({ phase, error }) => (phase === 'failed' || phase === 'partial') && error,
+  );
 
   useEffect(() => {
     if (incomingSelection && incomingSelection !== selectionRef.current) {
@@ -43,7 +45,7 @@ export default function WorkspaceActivityDrawer({
       for (const activity of activities) {
         const failureIdentity = `${activity.ticker}:${activity.selectionVersion}:${activity.id}:${activity.error?.message ?? ''}`;
         if (
-          activity.phase === 'failed' &&
+          (activity.phase === 'failed' || activity.phase === 'partial') &&
           activity.error &&
           !dismissedFailures.has(failureIdentity)
         ) {

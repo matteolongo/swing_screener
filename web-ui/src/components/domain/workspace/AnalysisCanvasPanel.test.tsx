@@ -194,6 +194,197 @@ describe('AnalysisCanvasPanel', () => {
     useScreenerStore.setState({ lastResult: null });
   });
 
+  const reliabilityFixtures = [
+    { name: 'no-data', phase: 'idle', data: undefined, error: null, loading: false, fetching: false, cached: false },
+    { name: 'fresh', phase: 'fresh', data: buildSnapshot(), error: null, loading: false, fetching: false, cached: false },
+    { name: 'cached', phase: 'cached', data: buildSnapshot(), error: null, loading: false, fetching: false, cached: true },
+    { name: 'stale', phase: 'stale', data: { ...buildSnapshot(), freshnessStatus: 'stale' as const }, error: null, loading: false, fetching: false, cached: false },
+    { name: 'refreshing-with-data', phase: 'loading', data: buildSnapshot(), error: null, loading: false, fetching: true, cached: false },
+    { name: 'partial', phase: 'partial', data: buildSnapshot(), error: new Error('Fundamentals source partial'), loading: false, fetching: false, cached: false },
+    { name: 'failed', phase: 'failed', data: undefined, error: new Error('Fundamentals source failed'), loading: false, fetching: false, cached: false },
+    { name: 'timeout', phase: 'failed', data: undefined, error: new Error('Fundamentals request timed out'), loading: false, fetching: false, cached: false },
+    { name: 'malformed', phase: 'failed', data: undefined, error: new Error('Fundamentals response malformed'), loading: false, fetching: false, cached: false },
+  ] as const;
+  const reliabilityTabs = ['overview', 'fundamentals', 'intelligence', 'volumeZones'] as const;
+
+  it.each(
+    reliabilityTabs.flatMap((tab) =>
+      reliabilityFixtures.map((fixture) => ({ tab, fixture })),
+    ),
+  )('renders $fixture.name state visibly in the $tab tab', ({ tab, fixture }) => {
+    useWorkspaceStore.setState({ analysisTab: tab });
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: fixture.data,
+      dataUpdatedAt: Date.parse('2026-07-27T18:30:00Z'),
+      error: fixture.error,
+      isError: fixture.error != null,
+      isFetching: fixture.fetching,
+      isLoading: fixture.loading,
+      isFetchedAfterMount: !fixture.cached,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.getByRole('tabpanel')).toBeVisible();
+    expect(screen.getByTestId('workspace-data-status')).toHaveTextContent(
+      t(`workspacePage.data.phases.${fixture.phase}`),
+    );
+    if (fixture.error) {
+      expect(screen.getAllByText(fixture.error.message).length).toBeGreaterThan(0);
+    }
+    if (fixture.fetching && fixture.data) {
+      expect(screen.getAllByText(fixture.data.provider).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps header, failure drawer, and analysis tabs in the keyboard traversal', async () => {
+    const failure = new Error('Fundamentals keyboard failure');
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: failure,
+      isError: true,
+      isFetching: false,
+      isLoading: false,
+      isFetchedAfterMount: true,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+    const traversedNames: string[] = [];
+
+    for (let index = 0; index < 8; index += 1) {
+      await user.tab();
+      traversedNames.push(document.activeElement?.getAttribute('aria-label')
+        ?? document.activeElement?.textContent?.trim()
+        ?? '');
+    }
+
+    expect(traversedNames).toEqual([
+      t('workspacePage.controls.backToList'),
+      t('workspacePage.controls.collapse'),
+      t('workspacePage.controls.fullscreen'),
+      t('workspacePage.controls.close'),
+      t('workspacePage.data.retry'),
+      t('workspacePage.data.dismiss'),
+      t('workspacePage.panels.analysis.tabs.fundamentals'),
+      t('workspacePage.fundamentals.run'),
+    ]);
+  });
+
+  it('keeps a source refresh scoped while the user switches tabs', async () => {
+    let finishRefresh!: (snapshot: FundamentalSnapshot) => void;
+    const mutateAsync = vi.fn(
+      () => new Promise<FundamentalSnapshot>((resolve) => {
+        finishRefresh = resolve;
+      }),
+    );
+    useWorkspaceStore.setState({ analysisTab: 'fundamentals' });
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: buildSnapshot(),
+      dataUpdatedAt: Date.parse('2026-03-19T10:00:00Z'),
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      isFetchedAfterMount: true,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', { name: t('workspacePage.fundamentals.refresh') }));
+    await user.click(screen.getByRole('tab', {
+      name: t('workspacePage.panels.analysis.tabs.intelligence'),
+    }));
+
+    expect(screen.getByRole('tab', {
+      name: t('workspacePage.panels.analysis.tabs.intelligence'),
+    })).toHaveAttribute('aria-selected', 'true');
+    expect(mutateAsync).toHaveBeenCalledWith('AAPL');
+
+    await act(async () => finishRefresh(buildSnapshot()));
+    expect(screen.getByRole('tabpanel')).toBeVisible();
+  });
+
+  it('ignores intelligence completion after the workspace unmounts', async () => {
+    let callbacks: {
+      onSuccess?: (result: SymbolIntelligence) => void;
+      onSettled?: () => Promise<void>;
+    } = {};
+    const mutate = vi.fn((_input, options) => {
+      callbacks = options as typeof callbacks;
+    });
+    useWorkspaceStore.setState({ analysisTab: 'intelligence' });
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate,
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { user, unmount } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.intelligence.generate'),
+    }));
+    unmount();
+    await act(async () => {
+      callbacks.onSuccess?.({
+        symbol: 'AAPL',
+        generatedAt: '2026-07-28T00:00:00Z',
+        action: 'WATCH',
+        conviction: 'low',
+        catalystUrgency: 'low',
+        summaryLine: 'Late result',
+        narrative: 'Late result',
+        upcomingEvents: [],
+        positionSignal: null,
+        sources: [],
+        evidenceLedger: null,
+        classifiedCatalysts: [],
+      });
+      await callbacks.onSettled?.();
+    });
+
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
   it('runs fundamentals analysis for the selected symbol from the canvas', async () => {
     const mutateAsync = vi.fn().mockResolvedValue(buildSnapshot());
 

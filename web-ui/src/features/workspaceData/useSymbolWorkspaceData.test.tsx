@@ -150,6 +150,47 @@ describe('useSymbolWorkspaceData', () => {
     });
   });
 
+  it('keeps fundamentals and intelligence timestamps unchanged after a screener rerun', async () => {
+    fetchSnapshot.mockResolvedValue(snapshot('AAPL'));
+    intelligenceResult.current.data = {
+      symbol: 'AAPL',
+      generatedAt: '2026-07-27T17:00:00Z',
+    };
+    const queryClient = createQueryClient();
+    const { result, rerender } = renderHook(
+      ({ lastBar }) =>
+        useSymbolWorkspaceData({
+          ticker: 'AAPL',
+          selectionVersion: 1,
+          candidate: { ticker: 'AAPL', lastBar } as never,
+          position: null,
+        }),
+      {
+        initialProps: { lastBar: '2026-07-26' },
+        wrapper: wrapper(queryClient),
+      },
+    );
+    await waitFor(() => expect(result.current.fundamentals.data).toBeDefined());
+    const fundamentalsTime = result.current.sourceStates.find(
+      ({ id }) => id === 'fundamentals',
+    )?.fetchedAt;
+    const intelligenceTime = result.current.sourceStates.find(
+      ({ id }) => id === 'intelligence',
+    )?.dataAsOf;
+
+    rerender({ lastBar: '2026-07-27' });
+
+    expect(result.current.sourceStates.find(({ id }) => id === 'screener')?.dataAsOf).toBe(
+      '2026-07-27',
+    );
+    expect(result.current.sourceStates.find(({ id }) => id === 'fundamentals')?.fetchedAt).toBe(
+      fundamentalsTime,
+    );
+    expect(result.current.sourceStates.find(({ id }) => id === 'intelligence')?.dataAsOf).toBe(
+      intelligenceTime,
+    );
+  });
+
   it('does not expose candle data tagged for another ticker', () => {
     tickerCandlesResult.current.data = {
       ticker: 'AAPL',

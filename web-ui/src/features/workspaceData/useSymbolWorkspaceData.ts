@@ -40,7 +40,7 @@ function queryPhase(query: {
   isFetchedAfterMount?: boolean;
 }): WorkspaceSourcePhase {
   if (query.isLoading || query.isFetching) return 'loading';
-  if (query.isError) return 'failed';
+  if (query.isError) return query.data === undefined ? 'failed' : 'partial';
   if (query.data === undefined) return 'idle';
   return query.isFetchedAfterMount === false ? 'cached' : 'fresh';
 }

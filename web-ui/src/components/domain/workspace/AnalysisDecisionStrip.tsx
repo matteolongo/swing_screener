@@ -55,13 +55,17 @@ function isPositiveNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
-function compactValue(label: string, value: string, secondary?: string) {
+function metricRow(label: string, value: string, secondary?: string) {
   return (
-    <div className="min-w-0 rounded-md border border-border bg-surface/90 px-2.5 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-muted">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
-      {secondary ? <div className="mt-0.5 text-[10px] text-muted">{secondary}</div> : null}
-    </div>
+    <tr>
+      <th scope="row" className="rounded-l-md border border-r-0 border-border bg-surface/90 px-2.5 py-2 text-left text-[10px] font-normal uppercase tracking-wide text-muted">
+        {label}
+      </th>
+      <td className="rounded-r-md border border-l-0 border-border bg-surface/90 px-2.5 py-2">
+        <div className="text-sm font-semibold text-foreground">{value}</div>
+        {secondary ? <div className="mt-0.5 text-[10px] text-muted">{secondary}</div> : null}
+      </td>
+    </tr>
   );
 }
 
@@ -210,18 +214,14 @@ export default function AnalysisDecisionStrip({
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-1" aria-label={t('workspacePage.overview.tradePlan')}>
             <tbody>
-              <tr>
-                <th scope="row">{compactValue(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}</th>
-                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), stop != null ? formatCurrency(stop, currency) : '—')}</th>
-                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), target != null ? formatCurrency(target, currency) : '—')}</th>
-                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}</th>
-              </tr>
-              <tr>
-                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), rr != null ? `${formatNumber(rr, 1)}x` : '—')}</th>
-                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent'), riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}</th>
-                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}</th>
-                <th scope="row">{compactValue(t('workspacePage.overview.invalidation'), summary?.explanation?.whatInvalidatesIt?.[0] ?? summary?.mainRisk ?? '—')}</th>
-              </tr>
+              {metricRow(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}
+              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), stop != null ? formatCurrency(stop, currency) : '—')}
+              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), target != null ? formatCurrency(target, currency) : '—')}
+              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
+              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), rr != null ? `${formatNumber(rr, 1)}x` : '—')}
+              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent'), riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
+              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
+              {metricRow(t('workspacePage.overview.invalidation'), summary?.explanation?.whatInvalidatesIt?.[0] ?? summary?.mainRisk ?? '—')}
             </tbody>
           </table>
         </div>

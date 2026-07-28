@@ -52,7 +52,7 @@ describe('AnalysisDecisionStrip — % to target cell', () => {
     const candidate = buildCandidate({ entry: 200, stop: 190 });
     render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} />);
     const toTargetLabel = screen.getByText('To Target');
-    const cell = toTargetLabel.closest('div[class*="min-w"]');
+    const cell = toTargetLabel.closest('tr');
     expect(cell?.textContent).toContain('—');
   });
 });
@@ -180,7 +180,7 @@ describe('AnalysisDecisionStrip — Risk % cell', () => {
     render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} />);
 
     const riskLabel = screen.getAllByText('Risk %')[0];
-    const cell = riskLabel.closest('div[class*="min-w"]');
+    const cell = riskLabel.closest('tr');
     expect(cell?.textContent).toContain('—');
     expect(cell?.textContent).not.toContain('0.00%');
   });
@@ -249,13 +249,13 @@ describe('AnalysisDecisionStrip — planned pullback entry', () => {
     render(<AnalysisDecisionStrip ticker="BESI.AS" candidate={candidate} />);
 
     const entryLabel = screen.getByText('Planned entry');
-    const entryCell = entryLabel.closest('div[class*="min-w"]');
+    const entryCell = entryLabel.closest('tr');
     expect(entryCell?.textContent).toContain('€285.04');
     expect(entryCell?.textContent).toContain('Close €287.60');
     expect(entryCell?.textContent).not.toContain('Entry (close)');
 
     const oneRLabel = screen.getByText('1R');
-    const oneRCell = oneRLabel.closest('div[class*="min-w"]');
+    const oneRCell = oneRLabel.closest('tr');
     expect(oneRCell?.textContent).toContain('€7.67');
   });
 });

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { t } from '@/i18n/t';
@@ -88,8 +88,14 @@ describe('SymbolOverviewTab', () => {
     renderWithProviders(<SymbolOverviewTab model={buildModel()} />);
 
     expect(screen.getAllByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toHaveLength(1);
-    expect(screen.getByRole('table', { name: t('workspacePage.overview.tradePlan') })).toBeVisible();
-    expect(screen.getAllByRole('rowheader')).toHaveLength(8);
+    const tradePlan = screen.getByRole('table', { name: t('workspacePage.overview.tradePlan') });
+    expect(tradePlan).toBeVisible();
+    const metricRows = within(tradePlan).getAllByRole('row');
+    expect(metricRows).toHaveLength(8);
+    for (const row of metricRows) {
+      expect(within(row).getAllByRole('rowheader')).toHaveLength(1);
+      expect(within(row).getAllByRole('cell')).toHaveLength(1);
+    }
     expect(screen.getByRole('link', { name: t('workspacePage.overview.openFundamentals') })).toBeVisible();
     expect(screen.getAllByRole('listitem', { name: t('workspacePage.overview.supportingSignal') })).toHaveLength(3);
     expect(screen.getAllByRole('listitem', { name: t('workspacePage.overview.opposingSignal') })).toHaveLength(3);

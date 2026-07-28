@@ -92,4 +92,28 @@ describe('SymbolBacktestTab', () => {
       expect(screen.queryByText(t('backtest.results.title'))).not.toBeInTheDocument(),
     );
   });
+
+  it('can run again for the newly selected symbol after the user-triggered reset', async () => {
+    const postedTickers: string[][] = [];
+    server.use(
+      http.post('*/api/backtest/event-study', async ({ request }) => {
+        const body = (await request.json()) as { tickers: string[] };
+        postedTickers.push(body.tickers);
+        return HttpResponse.json(resultFor(body.tickers[0]), { status: 200 });
+      }),
+    );
+
+    const { user, rerender } = renderWithProviders(<SymbolBacktestTab ticker="AAPL" />);
+    await user.click(screen.getByRole('button', { name: t('backtest.form.run') }));
+    expect(await screen.findByText(t('backtest.results.title'))).toBeInTheDocument();
+
+    rerender(<SymbolBacktestTab ticker="MSFT" />);
+    await waitFor(() =>
+      expect(screen.queryByText(t('backtest.results.title'))).not.toBeInTheDocument(),
+    );
+    await user.click(screen.getByRole('button', { name: t('backtest.form.run') }));
+
+    expect(await screen.findByText(t('backtest.results.title'))).toBeInTheDocument();
+    expect(postedTickers).toEqual([['AAPL'], ['MSFT']]);
+  });
 });
