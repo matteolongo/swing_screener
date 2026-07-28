@@ -75,11 +75,14 @@ export default function AnalysisCanvasPanel() {
             runAsOf={selectedCandidate ? lastScreenerResult?.asofDate ?? null : null}
             runFreshness={selectedCandidate ? lastScreenerResult?.dataFreshness ?? null : null}
             health={workspaceData.health}
-            isRefreshing={workspaceData.sourceStates.some(
-              ({ id, phase }) =>
-                (id === 'fundamentals' || id === 'prices' || id === 'positionOrders')
-                && phase === 'loading',
-            )}
+            isRefreshing={
+              workspaceData.fundamentalsRefreshing
+              || workspaceData.sourceStates.some(
+                ({ id, phase }) =>
+                  (id === 'fundamentals' || id === 'prices' || id === 'positionOrders')
+                  && phase === 'loading',
+              )
+            }
             onRefreshAll={() => void workspaceData.refreshAllNonIntelligence()}
             fullscreen={fullscreen}
             onClose={clearSelectedTicker}

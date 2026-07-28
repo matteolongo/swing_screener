@@ -274,6 +274,51 @@ describe('AnalysisCanvasPanel', () => {
     })).toBeEnabled());
   });
 
+  it('keeps refresh-all disabled until its fundamentals mutation completes', async () => {
+    let finishRefresh!: (snapshot: FundamentalSnapshot) => void;
+    const mutateAsync = vi.fn(
+      () => new Promise<FundamentalSnapshot>((resolve) => {
+        finishRefresh = resolve;
+      }),
+    );
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: buildSnapshot(),
+      dataUpdatedAt: Date.parse('2026-03-19T10:00:00Z'),
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      isFetchedAfterMount: true,
+    } as never);
+    const mutationResult = {
+      mutate: vi.fn(),
+      mutateAsync,
+      isPending: false,
+      isError: false,
+      error: null,
+    };
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation)
+      .mockImplementation(() => mutationResult as never);
+    const { user, rerender } = renderWithProviders(<AnalysisCanvasPanel />);
+    const refreshAll = await screen.findByRole('button', {
+      name: t('workspacePage.controls.refreshAll'),
+    });
+    await waitFor(() => expect(refreshAll).toBeEnabled());
+
+    await user.click(refreshAll);
+    mutationResult.isPending = true;
+    rerender(<AnalysisCanvasPanel />);
+
+    expect(refreshAll).toBeDisabled();
+    await user.click(refreshAll);
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+
+    await act(async () => finishRefresh(buildSnapshot()));
+    mutationResult.isPending = false;
+    rerender(<AnalysisCanvasPanel />);
+    await waitFor(() => expect(refreshAll).toBeEnabled());
+  });
+
   it('keeps a source refresh scoped while the user switches tabs', async () => {
     let finishRefresh!: (snapshot: FundamentalSnapshot) => void;
     const mutateAsync = vi.fn(
