@@ -53,6 +53,25 @@ describe('WorkspaceActivityDrawer', () => {
     expect(screen.getByRole('button', { name: t('workspacePage.data.retry') })).toBeEnabled();
   });
 
+  it('localizes a missing server freshness-metadata input', () => {
+    renderWithProviders(
+      <WorkspaceActivityDrawer
+        activities={[{
+          ...failedActivity,
+          id: 'positionOrders',
+          phase: 'partial',
+          missingInputs: ['freshnessMetadata'],
+          error: null,
+        }]}
+        selectedSourceId="positionOrders"
+      />,
+    );
+
+    expect(screen.getByTestId('workspace-source-detail')).toHaveTextContent(
+      t('workspacePage.data.details.inputs.freshnessMetadata'),
+    );
+  });
+
   it('drops retained failures when the workspace selection changes', () => {
     const { rerender } = renderWithProviders(
       <WorkspaceActivityDrawer activities={[failedActivity]} />,

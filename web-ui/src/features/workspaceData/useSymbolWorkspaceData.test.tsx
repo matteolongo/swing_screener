@@ -201,6 +201,26 @@ describe('useSymbolWorkspaceData', () => {
     expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')?.phase).toBe('stale');
   });
 
+  it('reports loaded legacy snapshots without freshness metadata as partial', () => {
+    positionsResult.current = { data: [], isStale: true };
+    ordersResult.current = { data: [], isStale: true };
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        candidate: null,
+        position: null,
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')).toMatchObject({
+      phase: 'partial',
+      missingInputs: ['freshnessMetadata'],
+    });
+  });
+
   it('does not expose an AAPL completion in an MSFT workspace session', async () => {
     let finishAapl!: (value: ReturnType<typeof snapshot>) => void;
     fetchSnapshot.mockImplementation(

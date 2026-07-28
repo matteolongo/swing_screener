@@ -129,7 +129,7 @@ export default function WorkspaceActivityDrawer({
               ['cacheOrigin', selectedActivity.cacheOrigin],
               ['missingInputs', selectedActivity.missingInputs.length
                 ? selectedActivity.missingInputs.map((input) =>
-                    input === 'positions' || input === 'orders'
+                    input === 'positions' || input === 'orders' || input === 'freshnessMetadata'
                       ? t(`workspacePage.data.details.inputs.${input}`)
                       : input,
                   ).join(', ')

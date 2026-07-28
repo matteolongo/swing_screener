@@ -93,6 +93,10 @@ export function useSymbolWorkspaceData({
       positionsQuery.data?.snapshotFreshness === 'stale' ||
       ordersQuery.data?.snapshotFreshness === 'stale'
     ) return 'stale';
+    if (
+      positionsQuery.data?.snapshotFreshness !== 'fresh' ||
+      ordersQuery.data?.snapshotFreshness !== 'fresh'
+    ) return 'partial';
     if (positionsQuery.isFetchedAfterMount === false && ordersQuery.isFetchedAfterMount === false) {
       return 'cached';
     }
@@ -165,6 +169,17 @@ export function useSymbolWorkspaceData({
       missingInputs: [
         positionsQuery.data === undefined ? 'positions' : null,
         ordersQuery.data === undefined ? 'orders' : null,
+        (
+          positionsQuery.data !== undefined &&
+          positionsQuery.data.snapshotFreshness !== 'fresh' &&
+          positionsQuery.data.snapshotFreshness !== 'stale'
+        ) || (
+          ordersQuery.data !== undefined &&
+          ordersQuery.data.snapshotFreshness !== 'fresh' &&
+          ordersQuery.data.snapshotFreshness !== 'stale'
+        )
+          ? 'freshnessMetadata'
+          : null,
       ].filter((value): value is string => value !== null),
       error: positionsQuery.error || ordersQuery.error
         ? {

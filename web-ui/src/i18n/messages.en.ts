@@ -832,6 +832,7 @@ export const messagesEn = {
         inputs: {
           positions: 'Open positions',
           orders: 'Orders',
+          freshnessMetadata: 'Server freshness metadata',
         },
       },
       sources: {

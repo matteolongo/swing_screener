@@ -30,6 +30,30 @@ describe('portfolio api', () => {
     expect(orders.snapshotStaleAfterDays).toBe(1);
   });
 
+  it('marks an older additive response with omitted metadata as unknown', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ orders: [], asof: '2026-07-20' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
+
+    const orders = await fetchOrders('all');
+
+    expect(orders.snapshotFreshness).toBe('unknown');
+  });
+
+  it('keeps local persistence freshness unknown without synthesizing a client policy', async () => {
+    vi.stubEnv('VITE_PERSISTENCE_MODE', 'local');
+
+    const orders = await fetchOrders('all');
+
+    expect(orders.snapshotFreshness).toBe('unknown');
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
