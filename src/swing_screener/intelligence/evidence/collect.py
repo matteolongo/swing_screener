@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Callable
@@ -18,9 +19,24 @@ from swing_screener.intelligence.evidence.models import SourceEvidence
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["attempted_source_ids", "collect_evidence"]
+__all__ = [
+    "EvidenceCacheSummary",
+    "attempted_source_ids",
+    "collect_evidence",
+    "read_latest_cached_evidence_summary",
+]
 
 _CACHE_ROOT = Path("data/intelligence/evidence")
+
+
+@dataclass(frozen=True)
+class EvidenceCacheSummary:
+    """Read-only metadata for the newest valid persisted evidence cache."""
+
+    ticker: str
+    cached_at: str
+    item_count: int
+    providers: list[str]
 
 
 def attempted_source_ids(cfg: EvidenceConfig, *, refresh_sources: bool = False) -> list[str]:
@@ -56,6 +72,42 @@ def _write_cache(path: Path, items: list[SourceEvidence]) -> None:
         path.write_text(json.dumps([item.model_dump() for item in items]))
     except OSError:
         logger.warning("Failed to write evidence cache %s", path, exc_info=True)
+
+
+def read_latest_cached_evidence_summary(
+    ticker: str,
+    *,
+    cache_root: Path | None = None,
+) -> EvidenceCacheSummary | None:
+    """Return metadata for the newest valid cache without collecting evidence."""
+    root = cache_root or _CACHE_ROOT
+    normalized = ticker.strip().upper()
+    if not normalized or not root.exists():
+        return None
+
+    dated_directories: list[tuple[date, Path]] = []
+    try:
+        for directory in root.iterdir():
+            if not directory.is_dir():
+                continue
+            try:
+                dated_directories.append((date.fromisoformat(directory.name), directory))
+            except ValueError:
+                continue
+    except OSError:
+        return None
+
+    for cached_date, directory in sorted(dated_directories, reverse=True):
+        items = _read_cache(directory / f"{normalized}.json")
+        if items is None:
+            continue
+        return EvidenceCacheSummary(
+            ticker=normalized,
+            cached_at=cached_date.isoformat(),
+            item_count=len(items),
+            providers=sorted({item.publisher for item in items if item.publisher}),
+        )
+    return None
 
 
 def collect_evidence(

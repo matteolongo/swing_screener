@@ -64,3 +64,33 @@ def test_refresh_evidence_rejects_invalid_ticker_before_calling_collectors():
     assert response.status_code == 422
     assert response.json()["detail"] == "Invalid ticker."
     collect.assert_not_called()
+
+
+def test_latest_evidence_summary_returns_cache_metadata_without_collecting():
+    summary = type(
+        "Summary",
+        (),
+        {
+            "ticker": "AAPL",
+            "cached_at": "2026-07-27",
+            "item_count": 8,
+            "providers": ["REFINITIV_LATEST_NEWS"],
+        },
+    )()
+    with (
+        patch(
+            "api.routers.intelligence.read_latest_cached_evidence_summary",
+            return_value=summary,
+        ),
+        patch("api.routers.intelligence.collect_evidence") as collect,
+    ):
+        response = TestClient(app).get("/api/intelligence/aapl/evidence/latest")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ticker": "AAPL",
+        "cached_at": "2026-07-27",
+        "item_count": 8,
+        "providers": ["REFINITIV_LATEST_NEWS"],
+    }
+    collect.assert_not_called()

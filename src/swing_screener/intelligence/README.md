@@ -24,6 +24,7 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 
 ```
 POST /api/intelligence/{ticker}            — run analysis; cache result
+GET  /api/intelligence/{ticker}/evidence/latest — newest persisted evidence-cache metadata; no collection or LLM
 POST /api/intelligence/{ticker}/evidence/refresh — refresh evidence only; no LLM or trading mutation
 GET  /api/intelligence/{ticker}/latest     — return most-recent cached result
 GET  /api/intelligence/{ticker}/history    — return per-symbol analysis history (newest-first, capped)
@@ -151,6 +152,11 @@ updates their normal curated evidence cache, and returns only a sanitized
 per-provider manifest with freshness, count, and failure status. It never writes
 analysis/history/metrics, calls an LLM, or mutates portfolio/order state. Raw
 collector exceptions remain server-side.
+
+`GET /api/intelligence/{ticker}/evidence/latest` scans the persisted evidence
+cache newest-first and returns only sanitized cache metadata (date, item count,
+and publishers). It is used to disclose prior-day evidence in the workspace;
+it never calls collectors or the analyzer.
 
 `POST /api/intelligence/position/{position_id}` enriches the same way: it runs
 `enrich_intelligence_request` (fundamentals + earnings) and then `enrich_with_technicals`,
