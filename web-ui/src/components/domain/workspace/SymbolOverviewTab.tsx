@@ -8,6 +8,8 @@ import type { CatalystOpportunity } from '@/features/intelligence/catalysts/type
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
 import { formatDateTime, formatNumber, formatPercent } from '@/utils/formatters';
+import type { WorkspaceSourceState } from '@/features/workspaceData/types';
+import SourceHealthSummary from './SourceHealthSummary';
 
 interface QuerySummary<T> {
   data: T | null | undefined;
@@ -23,6 +25,7 @@ export interface SymbolOverviewModel {
   fundamentals: QuerySummary<FundamentalSnapshot>;
   catalyst: QuerySummary<CatalystOpportunity>;
   intelligenceOutdated: boolean;
+  sources?: WorkspaceSourceState[];
   onOpenFundamentals: () => void;
   onOpenIntelligence: () => void;
   onPrepareOrder?: () => void;
@@ -59,6 +62,7 @@ export default function SymbolOverviewTab({ model }: { model: SymbolOverviewMode
 
   return (
     <div className="space-y-3">
+      <SourceHealthSummary sources={model.sources ?? []} />
       <AnalysisDecisionStrip
         ticker={model.ticker}
         candidate={candidate}

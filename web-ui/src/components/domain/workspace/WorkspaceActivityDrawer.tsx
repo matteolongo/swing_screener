@@ -7,12 +7,14 @@ interface WorkspaceActivityDrawerProps {
   activities: WorkspaceSourceState[];
   onRetry?: (sourceId: WorkspaceSourceId) => void;
   onDismiss?: (sourceId: WorkspaceSourceId) => void;
+  selectedSourceId?: WorkspaceSourceId | null;
 }
 
 export default function WorkspaceActivityDrawer({
   activities,
   onRetry,
   onDismiss,
+  selectedSourceId = null,
 }: WorkspaceActivityDrawerProps) {
   const incomingSelection = activities[0]
     ? `${activities[0].ticker}:${activities[0].selectionVersion}`
@@ -101,7 +103,8 @@ export default function WorkspaceActivityDrawer({
       !incomingSelection || `${ticker}:${selectionVersion}` === incomingSelection,
   );
 
-  if (visibleFailures.length === 0) return null;
+  const selectedActivity = activities.find(({ id }) => id === selectedSourceId);
+  if (visibleFailures.length === 0 && !selectedActivity) return null;
 
   return (
     <aside
@@ -109,6 +112,14 @@ export default function WorkspaceActivityDrawer({
       role={hasNewFailure ? 'alert' : 'status'}
       aria-label={t('workspacePage.data.activity')}
     >
+      {selectedActivity ? (
+        <div className="mb-2 text-xs text-foreground" data-testid="workspace-source-detail">
+          <span className="font-semibold">{t(`workspacePage.data.sources.${selectedActivity.id}`)}</span>
+          {' · '}
+          <span>{t(`workspacePage.data.phases.${selectedActivity.phase}`)}</span>
+          {selectedActivity.provider ? <> · <span>{selectedActivity.provider}</span></> : null}
+        </div>
+      ) : null}
       <ul className="space-y-2">
         {visibleFailures.map((activity) => (
           <li key={activity.id} className="flex items-center gap-2 text-xs text-danger">

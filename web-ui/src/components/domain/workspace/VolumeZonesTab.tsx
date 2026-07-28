@@ -10,6 +10,8 @@ import {
 import { VolumeAnalysisIdentityError } from '@/features/volumeZones/types';
 import { t } from '@/i18n/t';
 import type { MessageKey } from '@/i18n/types';
+import type { WorkspaceSourceState } from '@/features/workspaceData/types';
+import SourceHealthSummary from './SourceHealthSummary';
 
 const K = 'workspacePage.panels.analysis.volumeZones';
 const tk = (leaf: string) => t(`${K}.${leaf}` as MessageKey);
@@ -32,12 +34,14 @@ interface VolumeZonesTabProps {
   ticker: string;
   lookback?: number;
   minRr?: number;
+  sources?: WorkspaceSourceState[];
 }
 
 export default function VolumeZonesTab({
   ticker,
   lookback = DEFAULT_VOLUME_LOOKBACK,
   minRr = DEFAULT_VOLUME_MIN_RR,
+  sources = [],
 }: VolumeZonesTabProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const analysisQuery = useVolumeAnalysisQuery(normalizedTicker, true, lookback, minRr);
@@ -81,6 +85,7 @@ export default function VolumeZonesTab({
 
   return (
     <div className="space-y-3">
+      <SourceHealthSummary sources={sources} />
       {analysisQuery.isLoading && !analysis && (
         <div className="text-sm text-muted">{tk('loading')}</div>
       )}

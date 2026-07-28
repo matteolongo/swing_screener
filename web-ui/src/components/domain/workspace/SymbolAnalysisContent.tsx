@@ -339,6 +339,9 @@ export default function SymbolAnalysisContent({
                   error: catalystQuery.error,
                 },
                 intelligenceOutdated,
+                sources: (intelligenceWorkflow?.sources ?? []).filter(
+                  ({ id }) => id === 'fundamentals' || id === 'evidence' || id === 'intelligence',
+                ),
                 onOpenFundamentals: () => onTabChange('fundamentals'),
                 onOpenIntelligence: () => onTabChange('intelligence'),
                 onPrepareOrder: canReviewOrder ? () => onTabChange('order') : undefined,
@@ -355,7 +358,14 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
 
-        {activeTab === 'volumeZones' && <VolumeZonesTab ticker={ticker} />}
+        {activeTab === 'volumeZones' && (
+          <VolumeZonesTab
+            ticker={ticker}
+            sources={(intelligenceWorkflow?.sources ?? []).filter(
+              ({ id }) => id === 'prices' || id === 'screener',
+            )}
+          />
+        )}
 
         {activeTab === 'intelligence' && (
           <SymbolIntelligenceTab

@@ -9,9 +9,12 @@ import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
 import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
+import type { WorkspaceSourceState } from '@/features/workspaceData/types';
+import SourceHealthSummary from './SourceHealthSummary';
 
 interface ActionPanelProps {
   ticker: string;
+  source?: WorkspaceSourceState;
 }
 
 function buildDefaultNotes(
@@ -44,7 +47,7 @@ function buildDefaultNotes(
   });
 }
 
-export default function ActionPanel({ ticker }: ActionPanelProps) {
+export default function ActionPanel({ ticker, source }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const activeStrategyQuery = useActiveStrategyQuery();
   const configDefaultsQuery = useConfigDefaultsQuery();
@@ -77,7 +80,9 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
 
   if (!canReviewOrder) {
     return (
-      <div className="rounded-lg border border-border bg-surface p-4 space-y-2">
+      <div className="space-y-2">
+        <SourceHealthSummary sources={source ? [source] : []} />
+        <div className="rounded-lg border border-border bg-surface p-4 space-y-2">
         <h3 className="text-sm font-semibold text-foreground">
           {t('workspacePage.panels.analysis.orderUnavailable.title')}
         </h3>
@@ -86,6 +91,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
             ? formatWorkflowNextStep(candidate.recommendation.nextStep)
             : t('workspacePage.panels.analysis.orderUnavailable.noCandidate')}
         </p>
+        </div>
       </div>
     );
   }
@@ -118,12 +124,15 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
   };
 
   return (
-    <OrderActionPanel
+    <div className="space-y-2">
+      <SourceHealthSummary sources={source ? [source] : []} />
+      <OrderActionPanel
       context={context}
       risk={risk}
       defaultNotes={defaultNotes}
       showManualOrderHint={!candidate}
       onSubmitOrder={(request) => createOrderMutation.mutateAsync(request)}
-    />
+      />
+    </div>
   );
 }

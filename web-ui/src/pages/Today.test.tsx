@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import Today from './Today';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useScreenerStore } from '@/stores/screenerStore';
 
 function makeCloseItem(ticker: string, positionId: string) {
   return {
@@ -136,19 +137,93 @@ describe('Today page — expanded workspace', () => {
   });
 
   it('supports a keyboard journey through the rail, source status, drawer, header, and every analysis tab', async () => {
+    let fundamentalsRequests = 0;
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [], asof: '2026-05-16' })
       ),
       http.get('*/api/daily-review', () => HttpResponse.json(threeCloseItemReview)),
-      http.get('*/api/fundamentals/snapshot/NVDA', () =>
-        HttpResponse.json({ detail: 'Fundamentals keyboard failure' }, { status: 503 })
-      ),
+      http.get('*/api/fundamentals/snapshot/NVDA', () => {
+        fundamentalsRequests += 1;
+        return fundamentalsRequests === 1
+          ? HttpResponse.json({ detail: 'Fundamentals keyboard failure' }, { status: 503 })
+          : HttpResponse.json({
+              symbol: 'NVDA',
+              asof_date: '2026-05-16',
+              provider: 'test',
+              updated_at: '2026-05-16T20:00:00Z',
+              instrument_type: 'equity',
+              supported: true,
+              coverage_status: 'supported',
+              freshness_status: 'current',
+              pillars: {},
+              historical_series: {},
+              metric_context: {},
+              data_quality_status: 'high',
+              data_quality_flags: [],
+              red_flags: [],
+              highlights: [],
+              metric_sources: {},
+            });
+      }),
       http.get('*/api/intelligence/NVDA/runs', () =>
         HttpResponse.json({ entries: [] })
       ),
     );
     useWorkspaceStore.getState().clearSelectedTicker();
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-05-16',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [{
+          ticker: 'NVDA',
+          recommendation: {
+            workflowStatus: 'ready',
+            nextStep: { code: 'review_order' },
+            verdict: 'RECOMMENDED',
+            reasonsShort: [],
+            reasonsDetailed: [],
+            risk: {
+              entry: 100,
+              stop: 95,
+              target: 110,
+              desiredTarget: 110,
+              targetSource: 'structural',
+              rr: 2,
+              riskAmount: 50,
+              riskPct: 0.001,
+              positionSize: 1000,
+              shares: 10,
+            },
+            costs: {
+              commissionEstimate: 0,
+              fxEstimate: 0,
+              slippageEstimate: 0,
+              totalCost: 0,
+              feeToRiskPct: 0,
+            },
+            checklist: [],
+            decisionGates: {
+              setup: { status: 'PASS', explanation: 'Qualified.' },
+              trigger: { status: 'PASS', explanation: 'Triggered.' },
+              plan: { status: 'PASS', explanation: 'Reconciled.' },
+              portfolio: { status: 'UNKNOWN', explanation: 'Checked on submit.' },
+              readyToOrder: true,
+            },
+            education: {
+              commonBiasWarning: '',
+              whatToLearn: '',
+              whatWouldMakeValid: [],
+            },
+          },
+          close: 100,
+          entry: 100,
+          stop: 95,
+          shares: 10,
+        }],
+      } as never,
+    });
     const { user } = renderWithProviders(<Today />);
     const railSymbol = await screen.findByRole('button', { name: /NVDA/i });
 
@@ -162,8 +237,11 @@ describe('Today page — expanded workspace', () => {
     fundamentalsSource.focus();
     await user.keyboard('{Enter}');
     expect(fundamentalsSource).toHaveFocus();
+    expect(await screen.findByTestId('workspace-source-detail')).toHaveTextContent(
+      t('workspacePage.data.sources.fundamentals'),
+    );
 
-    for (const tabKey of ['overview', 'fundamentals', 'intelligence', 'backtest', 'volumeZones'] as const) {
+    for (const tabKey of ['overview', 'fundamentals', 'intelligence', 'backtest', 'volumeZones', 'order'] as const) {
       const tab = screen.getByRole('tab', {
         name: t(`workspacePage.panels.analysis.tabs.${tabKey}`),
       });
@@ -177,10 +255,20 @@ describe('Today page — expanded workspace', () => {
         name: t(`workspacePage.controls.${controlKey}`),
       })).toBeEnabled();
     }
-    expect((await screen.findAllByRole('button', { name: t('workspacePage.data.retry') }))
-      .some((button) => !button.hasAttribute('disabled'))).toBe(true);
-    expect(screen.getAllByRole('button', { name: t('workspacePage.data.dismiss') })
-      .some((button) => !button.hasAttribute('disabled'))).toBe(true);
+    const fullscreenControl = screen.getByRole('button', {
+      name: t('workspacePage.controls.fullscreen'),
+    });
+    fullscreenControl.focus();
+    await user.keyboard('{Enter}');
+    expect(useWorkspaceStore.getState().fullscreen).toBe(true);
+
+    const drawer = screen.getByRole('alert', { name: t('workspacePage.data.activity') });
+    const retry = within(drawer).getAllByRole('button', { name: t('workspacePage.data.retry') })[0];
+    retry.focus();
+    await user.keyboard('{Enter}');
+    const dismiss = within(drawer).getAllByRole('button', { name: t('workspacePage.data.dismiss') })[0];
+    dismiss.focus();
+    await user.keyboard(' ');
   });
 });
 

@@ -137,17 +137,30 @@ describe('ActionPanel', () => {
 
   it.each([
     { name: 'no-data', arrange: () => useScreenerStore.setState({ lastResult: null }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
-    { name: 'fresh', arrange: () => setCandidate({ dataStatus: 'current' }), expected: 'Order ticket' },
-    { name: 'cached', arrange: () => setCandidate({ dataStatus: 'current', executionNote: 'Cached signed candidate' }), expected: 'Order ticket' },
-    { name: 'stale', arrange: () => setCandidate({ dataStatus: 'stale' }), expected: 'Order ticket' },
-    { name: 'refreshing-with-data', arrange: () => setCandidate({ dataStatus: 'current' }), expected: 'Order ticket' },
+    { name: 'fresh', phase: 'fresh', arrange: () => setCandidate({ dataStatus: 'current' }), expected: t('workspacePage.data.phases.fresh') },
+    { name: 'cached', phase: 'cached', arrange: () => setCandidate({ dataStatus: 'current' }), expected: t('workspacePage.data.phases.cached') },
+    { name: 'stale', phase: 'stale', arrange: () => setCandidate({ dataStatus: 'stale' }), expected: t('workspacePage.data.phases.stale') },
+    { name: 'refreshing-with-data', phase: 'loading', arrange: () => setCandidate({ dataStatus: 'current' }), expected: t('workspacePage.data.phases.loading') },
     { name: 'partial', arrange: () => setCandidate({ recommendation: { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } } }), expected: t('workspacePage.panels.analysis.orderUnavailable.title') },
     { name: 'failed', arrange: () => setCandidate({ recommendation: undefined }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
     { name: 'timeout', arrange: () => setCandidate({ recommendation: { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } } }), expected: t('workspacePage.panels.analysis.orderUnavailable.title') },
     { name: 'malformed', arrange: () => setCandidate({ recommendation: null }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
-  ])('renders its own $name workflow contract without an empty order panel', ({ arrange, expected }) => {
+  ])('renders its own $name workflow contract without an empty order panel', (testCase) => {
+    const { arrange, expected } = testCase;
     arrange();
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    const source = 'phase' in testCase ? {
+      id: 'positionOrders' as const,
+      ticker: 'AAPL',
+      selectionVersion: 1,
+      phase: testCase.phase as 'fresh' | 'cached' | 'stale' | 'loading',
+      provider: 'local',
+      dataAsOf: '2026-03-02',
+      fetchedAt: '2026-03-02T20:00:00Z',
+      cacheOrigin: testCase.phase === 'cached' ? 'memory' as const : 'network' as const,
+      missingInputs: [],
+      error: null,
+    } : undefined;
+    renderWithProviders(<ActionPanel ticker="AAPL" source={source} />);
     expect(screen.getByText(expected)).toBeVisible();
   });
 

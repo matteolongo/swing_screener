@@ -56,10 +56,10 @@ describe('VolumeZonesTab', () => {
     );
   const reliabilityCases = [
     { name: 'no-data', analysis: payload({ volume_zones: [], rationale: [] }), candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.summary') },
-    { name: 'fresh', analysis: payload(), candles: candleSuccess(), expected: 'Long' },
-    { name: 'cached', analysis: payload(), candles: candleSuccess(), expected: new Date('2026-07-27T20:00:00Z').toLocaleString() },
-    { name: 'stale', analysis: payload({ warnings: ['Stale volume snapshot'] }), candles: candleSuccess(), expected: 'Stale volume snapshot' },
-    { name: 'refreshing-with-data', analysis: payload(), candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.summary') },
+    { name: 'fresh', phase: 'fresh', analysis: payload(), candles: candleSuccess(), expected: t('workspacePage.data.phases.fresh') },
+    { name: 'cached', phase: 'cached', analysis: payload(), candles: candleSuccess(), expected: t('workspacePage.data.phases.cached') },
+    { name: 'stale', phase: 'stale', analysis: payload({ warnings: ['Stale volume snapshot'] }), candles: candleSuccess(), expected: t('workspacePage.data.phases.stale') },
+    { name: 'refreshing-with-data', phase: 'loading', analysis: payload(), candles: candleSuccess(), expected: t('workspacePage.data.phases.loading') },
     { name: 'partial', analysis: payload(), candles: http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () => HttpResponse.json({ detail: 'partial candles' }, { status: 503 })), expected: t('workspacePage.data.partial') },
     { name: 'failed', analysis: { detail: 'failed' }, analysisStatus: 500, candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.loadError') },
     { name: 'timeout', analysis: { detail: 'timeout' }, analysisStatus: 504, candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.loadError') },
@@ -69,13 +69,25 @@ describe('VolumeZonesTab', () => {
   it.each(reliabilityCases)('renders its own $name contract without an empty panel', async (testCase) => {
     const { analysis, candles, expected } = testCase;
     const analysisStatus = 'analysisStatus' in testCase ? testCase.analysisStatus : 200;
+    const sources = 'phase' in testCase ? [{
+      id: 'prices' as const,
+      ticker: 'AAPL',
+      selectionVersion: 1,
+      phase: testCase.phase,
+      provider: 'mock',
+      dataAsOf: '2026-07-27',
+      fetchedAt: '2026-07-27T20:00:00Z',
+      cacheOrigin: testCase.phase === 'cached' ? 'memory' as const : 'network' as const,
+      missingInputs: [],
+      error: null,
+    }] : [];
     server.use(
       http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () =>
         HttpResponse.json(analysis, { status: analysisStatus }),
       ),
       candles,
     );
-    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" sources={sources} />);
     expect(await screen.findByText(expected)).toBeVisible();
   });
 

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import DataStatusBar from '@/components/domain/workspace/DataStatusBar';
@@ -9,8 +11,10 @@ import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorksp
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
+import type { WorkspaceSourceId } from '@/features/workspaceData/types';
 
 export default function AnalysisCanvasPanel() {
+  const [selectedSourceId, setSelectedSourceId] = useState<WorkspaceSourceId | null>(null);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const selectionVersion = useWorkspaceStore((state) => state.selectionVersion);
@@ -59,9 +63,13 @@ export default function AnalysisCanvasPanel() {
             onCollapse={collapseWorkspace}
             onFullscreenChange={setFullscreen}
           />
-          <DataStatusBar sources={workspaceData.sourceStates} />
+          <DataStatusBar
+            sources={workspaceData.sourceStates}
+            onSourceSelect={setSelectedSourceId}
+          />
           <WorkspaceActivityDrawer
             activities={workspaceData.sourceStates}
+            selectedSourceId={selectedSourceId}
             onRetry={(sourceId) => void workspaceData.refreshSource(sourceId)}
           />
           <SymbolAnalysisContent
@@ -71,7 +79,12 @@ export default function AnalysisCanvasPanel() {
             position={openPosition}
             activeTab={activeTab}
             onTabChange={setAnalysisTab}
-            orderPanel={<ActionPanel ticker={selectedTicker} />}
+            orderPanel={
+              <ActionPanel
+                ticker={selectedTicker}
+                source={workspaceData.sourceStates.find(({ id }) => id === 'positionOrders')}
+              />
+            }
             intelligenceOutdated={workspaceData.intelligenceOutdated}
             intelligenceWorkflow={{
               sources: workspaceData.sourceStates,

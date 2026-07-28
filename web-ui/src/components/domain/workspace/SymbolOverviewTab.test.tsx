@@ -84,6 +84,18 @@ function buildModel(overrides: Partial<SymbolOverviewModel> = {}): SymbolOvervie
 }
 
 describe('SymbolOverviewTab', () => {
+  const sourceState = (phase: 'fresh' | 'cached' | 'stale' | 'loading') => ({
+    id: 'fundamentals' as const,
+    ticker: 'AAPL',
+    selectionVersion: 1,
+    phase,
+    provider: 'sec-companyfacts',
+    dataAsOf: '2026-07-27',
+    fetchedAt: '2026-07-27T19:00:00Z',
+    cacheOrigin: phase === 'cached' ? 'memory' as const : 'network' as const,
+    missingInputs: [],
+    error: null,
+  });
   const sourceFailure = (message: string) => ({
     data: null,
     isLoading: false,
@@ -105,17 +117,18 @@ describe('SymbolOverviewTab', () => {
     },
     {
       name: 'fresh',
-      overrides: {},
-      expected: t('workspacePage.overview.openFundamentals'),
+      overrides: { sources: [sourceState('fresh')] },
+      expected: t('workspacePage.data.phases.fresh'),
     },
-    { name: 'cached', overrides: {}, expected: 'Product launch supports demand.' },
-    { name: 'stale', overrides: { intelligenceOutdated: true }, expected: t('workspacePage.overview.intelligenceOutdated') },
+    { name: 'cached', overrides: { sources: [sourceState('cached')] }, expected: t('workspacePage.data.phases.cached') },
+    { name: 'stale', overrides: { intelligenceOutdated: true, sources: [sourceState('stale')] }, expected: t('workspacePage.data.phases.stale') },
     {
       name: 'refreshing-with-data',
       overrides: {
         fundamentals: { ...buildModel().fundamentals, isLoading: true },
+        sources: [sourceState('loading')],
       },
-      expected: t('workspacePage.overview.openFundamentals'),
+      expected: t('workspacePage.data.phases.loading'),
     },
     { name: 'partial', overrides: { fundamentals: sourceFailure('Overview partial') }, expected: t('workspacePage.data.partial') },
     {
