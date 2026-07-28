@@ -270,6 +270,35 @@ describe('useSymbolWorkspaceData', () => {
     });
   });
 
+  it('keeps an empty failed evidence manifest retryable through the shared action', async () => {
+    const refreshEvidence = vi.fn();
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        candidate: null,
+        position: null,
+        evidenceRefresh: {
+          ticker: 'AAPL',
+          refreshedAt: '2026-07-28T20:00:00Z',
+          status: 'failed',
+          sources: [],
+        },
+        refreshEvidence,
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    expect(result.current.sourceStates.find(({ id }) => id === 'evidence')).toMatchObject({
+      phase: 'failed',
+      error: { message: 'evidence_provider_failed', retryable: true },
+    });
+
+    await act(async () => result.current.refreshSource('evidence'));
+    expect(refreshEvidence).toHaveBeenCalledOnce();
+  });
+
   it('does not expose an AAPL completion in an MSFT workspace session', async () => {
     let finishAapl!: (value: ReturnType<typeof snapshot>) => void;
     fetchSnapshot.mockImplementation(

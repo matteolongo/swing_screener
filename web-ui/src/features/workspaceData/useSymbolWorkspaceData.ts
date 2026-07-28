@@ -28,6 +28,7 @@ interface SymbolWorkspaceDataInput {
     freshness: 'final_close' | 'intraday';
   } | null;
   evidenceRefresh?: EvidenceRefreshResponse | null;
+  refreshEvidence?: () => void | Promise<void>;
 }
 
 function normalizedTicker(value: string | null | undefined): string | null {
@@ -59,6 +60,7 @@ export function useSymbolWorkspaceData({
   position,
   screenerRun = null,
   evidenceRefresh = null,
+  refreshEvidence,
 }: SymbolWorkspaceDataInput) {
   const queryClient = useQueryClient();
   const currentTicker = normalizedTicker(ticker) ?? '';
@@ -187,7 +189,8 @@ export function useSymbolWorkspaceData({
         missingInputs: evidenceRefresh
           ? []
           : [evidenceDiagnostic ? 'evidenceProvider' : 'evidenceDiagnostics'],
-        error: evidenceRefresh?.sources.some(({ status }) => status === 'failed')
+        error: evidenceRefresh?.status === 'failed'
+          || evidenceRefresh?.sources.some(({ status }) => status === 'failed')
           ? {
               message: evidenceRefresh.sources.find(({ status }) => status === 'failed')?.message
                 ?? 'evidence_provider_failed',
@@ -263,6 +266,8 @@ export function useSymbolWorkspaceData({
         queryClient.invalidateQueries({ queryKey: queryKeys.positions() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.orders() }),
       ]);
+    } else if (sourceId === 'evidence') {
+      await refreshEvidence?.();
     } else if (sourceId === 'intelligence') {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.intelligence.latest(currentTicker),

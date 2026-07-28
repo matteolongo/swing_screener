@@ -815,6 +815,7 @@ export const messagesEn = {
       positionMode: 'Open position',
       researchMode: 'Research',
       runAsOf: 'Screener run {{date}}',
+      runUnavailable: 'No screener run for this symbol',
       health: 'Workspace health: {{health}}',
       healthValues: {
         fresh: 'Fresh',

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
@@ -17,6 +17,7 @@ import type { EvidenceRefreshResponse } from '@/features/intelligence/types';
 export default function AnalysisCanvasPanel() {
   const [selectedSourceId, setSelectedSourceId] = useState<WorkspaceSourceId | null>(null);
   const [evidenceRefresh, setEvidenceRefresh] = useState<EvidenceRefreshResponse | null>(null);
+  const evidenceRefreshActionRef = useRef<(() => void) | null>(null);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const selectionVersion = useWorkspaceStore((state) => state.selectionVersion);
@@ -43,10 +44,11 @@ export default function AnalysisCanvasPanel() {
     selectionVersion,
     candidate: selectedCandidate ?? null,
     position: openPosition,
-    screenerRun: lastScreenerResult
+    screenerRun: selectedCandidate && lastScreenerResult
       ? { asOf: lastScreenerResult.asofDate, freshness: lastScreenerResult.dataFreshness }
       : null,
     evidenceRefresh,
+    refreshEvidence: () => evidenceRefreshActionRef.current?.(),
   });
   return (
     <Card
@@ -70,10 +72,14 @@ export default function AnalysisCanvasPanel() {
             ticker={selectedTicker}
             companyName={workspaceData.fundamentals.data?.companyName ?? selectedCandidate?.name}
             mode={openPosition ? 'position' : selectedCandidate ? 'candidate' : 'research'}
-            runAsOf={lastScreenerResult?.asofDate ?? null}
-            runFreshness={lastScreenerResult?.dataFreshness ?? null}
+            runAsOf={selectedCandidate ? lastScreenerResult?.asofDate ?? null : null}
+            runFreshness={selectedCandidate ? lastScreenerResult?.dataFreshness ?? null : null}
             health={workspaceData.health}
-            isRefreshing={workspaceData.sourceStates.some(({ phase }) => phase === 'loading')}
+            isRefreshing={workspaceData.sourceStates.some(
+              ({ id, phase }) =>
+                (id === 'fundamentals' || id === 'prices' || id === 'positionOrders')
+                && phase === 'loading',
+            )}
             onRefreshAll={() => void workspaceData.refreshAllNonIntelligence()}
             fullscreen={fullscreen}
             onClose={clearSelectedTicker}
@@ -106,6 +112,7 @@ export default function AnalysisCanvasPanel() {
             intelligenceWorkflow={{
               sources: workspaceData.sourceStates,
               onEvidenceRefresh: setEvidenceRefresh,
+              evidenceRefreshActionRef,
             }}
             fundamentals={{
               data: workspaceData.fundamentals.data,

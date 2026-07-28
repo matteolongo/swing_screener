@@ -41,4 +41,24 @@ describe('SymbolWorkspaceHeader', () => {
     expect(onCollapse).toHaveBeenCalledTimes(2);
     expect(onFullscreenChange).toHaveBeenCalledWith(true);
   });
+
+  it.each([
+    ['position', 'workspacePage.header.positionMode'],
+    ['research', 'workspacePage.header.researchMode'],
+  ] as const)('does not show unrelated run provenance in %s mode', (mode, modeKey) => {
+    renderWithProviders(
+      <SymbolWorkspaceHeader
+        ticker="MSFT"
+        fullscreen={false}
+        mode={mode}
+        onClose={vi.fn()}
+        onCollapse={vi.fn()}
+        onFullscreenChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(t(modeKey))).toBeVisible();
+    expect(screen.getByText(t('workspacePage.header.runUnavailable'))).toBeVisible();
+    expect(screen.queryByText(/Screener run/)).not.toBeInTheDocument();
+  });
 });

@@ -51,7 +51,9 @@ export default function SymbolWorkspaceHeader({
         </h2>
         <div className="flex flex-wrap gap-x-2 text-xs text-muted">
           <span>{t(`workspacePage.header.${mode}Mode`)}</span>
-          {runAsOf ? <span>{t('workspacePage.header.runAsOf', { date: runAsOf })}</span> : null}
+          {runAsOf
+            ? <span>{t('workspacePage.header.runAsOf', { date: runAsOf })}</span>
+            : <span>{t('workspacePage.header.runUnavailable')}</span>}
           {runFreshness ? (
             <span>{t(`workspacePage.panels.screener.freshness.${runFreshness === 'final_close' ? 'finalClose' : 'intraday'}`)}</span>
           ) : null}

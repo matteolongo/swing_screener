@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, useEffect, useId, useRef, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
 import {
   findRunByAttemptId,
@@ -42,6 +42,7 @@ interface SymbolAnalysisContentProps {
   intelligenceWorkflow?: {
     sources: WorkspaceSourceState[];
     onEvidenceRefresh?: (result: EvidenceRefreshResponse) => void;
+    evidenceRefreshActionRef?: MutableRefObject<(() => void) | null>;
   };
   fundamentals?: {
     data?: FundamentalSnapshot;
@@ -175,6 +176,9 @@ export default function SymbolAnalysisContent({
       },
     });
   };
+  if (intelligenceWorkflow?.evidenceRefreshActionRef) {
+    intelligenceWorkflow.evidenceRefreshActionRef.current = handleRefreshEvidence;
+  }
 
   useEffect(() => {
     setIntelligenceResult(null);

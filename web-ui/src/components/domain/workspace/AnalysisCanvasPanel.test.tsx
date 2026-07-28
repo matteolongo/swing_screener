@@ -241,6 +241,39 @@ describe('AnalysisCanvasPanel', () => {
     ]);
   });
 
+  it('keeps refresh-all enabled while only intelligence is loading', async () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: buildSnapshot(),
+      dataUpdatedAt: Date.parse('2026-03-19T10:00:00Z'),
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      isFetchedAfterMount: true,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isFetching: true,
+      isError: false,
+      error: null,
+      dataUpdatedAt: 0,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    await waitFor(() => expect(screen.getByRole('button', {
+      name: t('workspacePage.controls.refreshAll'),
+    })).toBeEnabled());
+  });
+
   it('keeps a source refresh scoped while the user switches tabs', async () => {
     let finishRefresh!: (snapshot: FundamentalSnapshot) => void;
     const mutateAsync = vi.fn(
