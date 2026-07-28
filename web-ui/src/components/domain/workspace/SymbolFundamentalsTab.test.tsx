@@ -53,6 +53,27 @@ function model(
 }
 
 describe('SymbolFundamentalsTab', () => {
+  const reliabilityCases: Array<{
+    name: string;
+    overrides: Partial<SymbolFundamentalsTabModel>;
+    expected: string;
+  }> = [
+    { name: 'no-data', overrides: { snapshot: undefined }, expected: t('workspacePage.fundamentals.noSnapshot') },
+    { name: 'fresh', overrides: { snapshot: { ...staleSnapshot, freshnessStatus: 'current' } }, expected: staleSnapshot.companyName! },
+    { name: 'cached', overrides: { snapshot: { ...staleSnapshot, freshnessStatus: 'current' } }, expected: formatDateTime(staleSnapshot.updatedAt) },
+    { name: 'stale', overrides: {}, expected: t('workspacePage.data.stale') },
+    { name: 'refreshing-with-data', overrides: { isRefreshing: true }, expected: t('workspacePage.data.refreshing') },
+    { name: 'partial', overrides: { error: new Error('Fundamentals partial') }, expected: 'Fundamentals partial' },
+    { name: 'failed', overrides: { snapshot: undefined, error: new Error('Fundamentals failed') }, expected: 'Fundamentals failed' },
+    { name: 'timeout', overrides: { snapshot: undefined, error: new Error('Fundamentals timed out') }, expected: 'Fundamentals timed out' },
+    { name: 'malformed', overrides: { snapshot: undefined, error: new Error('Fundamentals malformed') }, expected: 'Fundamentals malformed' },
+  ];
+
+  it.each(reliabilityCases)('renders its own $name contract without an empty panel', ({ overrides, expected }) => {
+    renderWithProviders(<SymbolFundamentalsTab model={model(overrides)} />);
+    expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+  });
+
   it('shows a stale snapshot with its original timestamp while refreshing', async () => {
     const { user } = renderWithProviders(
       <SymbolFundamentalsTab model={model({ isRefreshing: true })} />,

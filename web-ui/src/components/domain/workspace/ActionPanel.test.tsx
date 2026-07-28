@@ -135,6 +135,22 @@ describe('ActionPanel', () => {
     setCandidate();
   });
 
+  it.each([
+    { name: 'no-data', arrange: () => useScreenerStore.setState({ lastResult: null }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
+    { name: 'fresh', arrange: () => setCandidate({ dataStatus: 'current' }), expected: 'Order ticket' },
+    { name: 'cached', arrange: () => setCandidate({ dataStatus: 'current', executionNote: 'Cached signed candidate' }), expected: 'Order ticket' },
+    { name: 'stale', arrange: () => setCandidate({ dataStatus: 'stale' }), expected: 'Order ticket' },
+    { name: 'refreshing-with-data', arrange: () => setCandidate({ dataStatus: 'current' }), expected: 'Order ticket' },
+    { name: 'partial', arrange: () => setCandidate({ recommendation: { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } } }), expected: t('workspacePage.panels.analysis.orderUnavailable.title') },
+    { name: 'failed', arrange: () => setCandidate({ recommendation: undefined }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
+    { name: 'timeout', arrange: () => setCandidate({ recommendation: { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } } }), expected: t('workspacePage.panels.analysis.orderUnavailable.title') },
+    { name: 'malformed', arrange: () => setCandidate({ recommendation: null }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
+  ])('renders its own $name workflow contract without an empty order panel', ({ arrange, expected }) => {
+    arrange();
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    expect(screen.getByText(expected)).toBeVisible();
+  });
+
   it('defaults to BUY_STOP when backend guidance suggests it', () => {
     setCandidate({
       suggestedOrderType: 'BUY_STOP',

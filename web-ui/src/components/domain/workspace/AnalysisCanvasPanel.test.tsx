@@ -194,57 +194,6 @@ describe('AnalysisCanvasPanel', () => {
     useScreenerStore.setState({ lastResult: null });
   });
 
-  const reliabilityFixtures = [
-    { name: 'no-data', phase: 'idle', data: undefined, error: null, loading: false, fetching: false, cached: false },
-    { name: 'fresh', phase: 'fresh', data: buildSnapshot(), error: null, loading: false, fetching: false, cached: false },
-    { name: 'cached', phase: 'cached', data: buildSnapshot(), error: null, loading: false, fetching: false, cached: true },
-    { name: 'stale', phase: 'stale', data: { ...buildSnapshot(), freshnessStatus: 'stale' as const }, error: null, loading: false, fetching: false, cached: false },
-    { name: 'refreshing-with-data', phase: 'loading', data: buildSnapshot(), error: null, loading: false, fetching: true, cached: false },
-    { name: 'partial', phase: 'partial', data: buildSnapshot(), error: new Error('Fundamentals source partial'), loading: false, fetching: false, cached: false },
-    { name: 'failed', phase: 'failed', data: undefined, error: new Error('Fundamentals source failed'), loading: false, fetching: false, cached: false },
-    { name: 'timeout', phase: 'failed', data: undefined, error: new Error('Fundamentals request timed out'), loading: false, fetching: false, cached: false },
-    { name: 'malformed', phase: 'failed', data: undefined, error: new Error('Fundamentals response malformed'), loading: false, fetching: false, cached: false },
-  ] as const;
-  const reliabilityTabs = ['overview', 'fundamentals', 'intelligence', 'volumeZones'] as const;
-
-  it.each(
-    reliabilityTabs.flatMap((tab) =>
-      reliabilityFixtures.map((fixture) => ({ tab, fixture })),
-    ),
-  )('renders $fixture.name state visibly in the $tab tab', ({ tab, fixture }) => {
-    useWorkspaceStore.setState({ analysisTab: tab });
-    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
-      data: fixture.data,
-      dataUpdatedAt: Date.parse('2026-07-27T18:30:00Z'),
-      error: fixture.error,
-      isError: fixture.error != null,
-      isFetching: fixture.fetching,
-      isLoading: fixture.loading,
-      isFetchedAfterMount: !fixture.cached,
-    } as never);
-    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn(),
-      data: undefined,
-      isPending: false,
-      isError: false,
-      error: null,
-    } as never);
-
-    renderWithProviders(<AnalysisCanvasPanel />);
-
-    expect(screen.getByRole('tabpanel')).toBeVisible();
-    expect(screen.getByTestId('workspace-data-status')).toHaveTextContent(
-      t(`workspacePage.data.phases.${fixture.phase}`),
-    );
-    if (fixture.error) {
-      expect(screen.getAllByText(fixture.error.message).length).toBeGreaterThan(0);
-    }
-    if (fixture.fetching && fixture.data) {
-      expect(screen.getAllByText(fixture.data.provider).length).toBeGreaterThan(0);
-    }
-  });
-
   it('keeps header, failure drawer, and analysis tabs in the keyboard traversal', async () => {
     const failure = new Error('Fundamentals keyboard failure');
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
@@ -266,7 +215,7 @@ describe('AnalysisCanvasPanel', () => {
     const { user } = renderWithProviders(<AnalysisCanvasPanel />);
     const traversedNames: string[] = [];
 
-    for (let index = 0; index < 8; index += 1) {
+    for (let index = 0; index < 14; index += 1) {
       await user.tab();
       traversedNames.push(document.activeElement?.getAttribute('aria-label')
         ?? document.activeElement?.textContent?.trim()
@@ -278,6 +227,12 @@ describe('AnalysisCanvasPanel', () => {
       t('workspacePage.controls.collapse'),
       t('workspacePage.controls.fullscreen'),
       t('workspacePage.controls.close'),
+      t('workspacePage.data.sources.screener'),
+      t('workspacePage.data.sources.prices'),
+      t('workspacePage.data.sources.fundamentals'),
+      t('workspacePage.data.sources.evidence'),
+      t('workspacePage.data.sources.intelligence'),
+      t('workspacePage.data.sources.positionOrders'),
       t('workspacePage.data.retry'),
       t('workspacePage.data.dismiss'),
       t('workspacePage.panels.analysis.tabs.fundamentals'),

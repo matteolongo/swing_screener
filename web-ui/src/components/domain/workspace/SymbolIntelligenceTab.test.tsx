@@ -81,6 +81,30 @@ const baseModel: SymbolIntelligenceTabModel = {
 };
 
 describe('SymbolIntelligenceTab guided flow', () => {
+  const reliabilityCases: Array<{
+    name: string;
+    model: SymbolIntelligenceTabModel;
+    expected: string;
+  }> = [
+    { name: 'no-data', model: { ...baseModel, sources: [] }, expected: t('workspacePage.data.phases.idle') },
+    { name: 'fresh', model: { ...baseModel, analysis }, expected: 'narrative report' },
+    { name: 'cached', model: { ...baseModel, analysis, isCachedAnalysis: true, sources: [source('fundamentals', { phase: 'cached' })] }, expected: t('workspacePage.intelligence.status.cached') },
+    { name: 'stale', model: { ...baseModel, analysis, intelligenceOutdated: true }, expected: t('workspacePage.intelligence.outdated') },
+    { name: 'refreshing-with-data', model: { ...baseModel, analysis, isRefreshingEvidence: true }, expected: t('workspacePage.intelligence.refreshingEvidence') },
+    { name: 'partial', model: { ...baseModel, analysis, sources: [source('evidence', { phase: 'partial', error: { message: 'Evidence partial', retryable: true } })] }, expected: 'Evidence partial' },
+    { name: 'failed', model: { ...baseModel, generationError: new Error('Intelligence failed') }, expected: 'Intelligence failed' },
+    { name: 'timeout', model: { ...baseModel, refreshError: new Error('Intelligence timed out') }, expected: 'Intelligence timed out' },
+    { name: 'malformed', model: { ...baseModel, generationError: new Error('Intelligence malformed') }, expected: 'Intelligence malformed' },
+  ];
+
+  it.each(reliabilityCases)('renders its own $name contract without hiding the manifest', ({ model, expected }) => {
+    renderWithProviders(<SymbolIntelligenceTab model={model} />);
+    expect(
+      screen.getByRole('table', { name: t('workspacePage.intelligence.inputs.title') }),
+    ).toBeVisible();
+    expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+  });
+
   it('requires an explicit generation action and shows the input manifest first', () => {
     const onGenerate = vi.fn();
     renderWithProviders(

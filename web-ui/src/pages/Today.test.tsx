@@ -134,6 +134,54 @@ describe('Today page — expanded workspace', () => {
 
     expect(tickerButton).toHaveFocus();
   });
+
+  it('supports a keyboard journey through the rail, source status, drawer, header, and every analysis tab', async () => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [], asof: '2026-05-16' })
+      ),
+      http.get('*/api/daily-review', () => HttpResponse.json(threeCloseItemReview)),
+      http.get('*/api/fundamentals/snapshot/NVDA', () =>
+        HttpResponse.json({ detail: 'Fundamentals keyboard failure' }, { status: 503 })
+      ),
+      http.get('*/api/intelligence/NVDA/runs', () =>
+        HttpResponse.json({ entries: [] })
+      ),
+    );
+    useWorkspaceStore.getState().clearSelectedTicker();
+    const { user } = renderWithProviders(<Today />);
+    const railSymbol = await screen.findByRole('button', { name: /NVDA/i });
+
+    railSymbol.focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('symbol-rail')).toBeVisible();
+
+    const fundamentalsSource = await screen.findByRole('button', {
+      name: t('workspacePage.data.sources.fundamentals'),
+    });
+    fundamentalsSource.focus();
+    await user.keyboard('{Enter}');
+    expect(fundamentalsSource).toHaveFocus();
+
+    for (const tabKey of ['overview', 'fundamentals', 'intelligence', 'backtest', 'volumeZones'] as const) {
+      const tab = screen.getByRole('tab', {
+        name: t(`workspacePage.panels.analysis.tabs.${tabKey}`),
+      });
+      tab.focus();
+      await user.keyboard('{Enter}');
+      expect(tab).toHaveAttribute('aria-selected', 'true');
+    }
+
+    for (const controlKey of ['backToList', 'collapse', 'fullscreen', 'close'] as const) {
+      expect(screen.getByRole('button', {
+        name: t(`workspacePage.controls.${controlKey}`),
+      })).toBeEnabled();
+    }
+    expect((await screen.findAllByRole('button', { name: t('workspacePage.data.retry') }))
+      .some((button) => !button.hasAttribute('disabled'))).toBe(true);
+    expect(screen.getAllByRole('button', { name: t('workspacePage.data.dismiss') })
+      .some((button) => !button.hasAttribute('disabled'))).toBe(true);
+  });
 });
 
 describe('Today page — pending orders badge', () => {

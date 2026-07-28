@@ -84,6 +84,60 @@ function buildModel(overrides: Partial<SymbolOverviewModel> = {}): SymbolOvervie
 }
 
 describe('SymbolOverviewTab', () => {
+  const sourceFailure = (message: string) => ({
+    data: null,
+    isLoading: false,
+    isError: true,
+    error: new Error(message),
+  });
+  const reliabilityCases: Array<{
+    name: string;
+    overrides: Partial<SymbolOverviewModel>;
+    expected: string;
+  }> = [
+    {
+      name: 'no-data',
+      overrides: {
+        fundamentals: { data: null, isLoading: false, isError: false, error: null },
+        catalyst: { data: null, isLoading: false, isError: false, error: null },
+      },
+      expected: t('workspacePage.overview.notAvailable'),
+    },
+    {
+      name: 'fresh',
+      overrides: {},
+      expected: t('workspacePage.overview.openFundamentals'),
+    },
+    { name: 'cached', overrides: {}, expected: 'Product launch supports demand.' },
+    { name: 'stale', overrides: { intelligenceOutdated: true }, expected: t('workspacePage.overview.intelligenceOutdated') },
+    {
+      name: 'refreshing-with-data',
+      overrides: {
+        fundamentals: { ...buildModel().fundamentals, isLoading: true },
+      },
+      expected: t('workspacePage.overview.openFundamentals'),
+    },
+    { name: 'partial', overrides: { fundamentals: sourceFailure('Overview partial') }, expected: t('workspacePage.data.partial') },
+    {
+      name: 'failed',
+      overrides: {
+        fundamentals: sourceFailure('Overview fundamentals failed'),
+        catalyst: sourceFailure('Overview catalysts failed'),
+      },
+      expected: t('workspacePage.data.partial'),
+    },
+    { name: 'timeout', overrides: { fundamentals: sourceFailure('Overview timed out') }, expected: t('workspacePage.data.partial') },
+    { name: 'malformed', overrides: { catalyst: sourceFailure('Overview malformed') }, expected: t('workspacePage.data.partial') },
+  ];
+
+  it.each(reliabilityCases)('keeps its decision and $name source contract visible', ({ overrides, expected }) => {
+    renderWithProviders(<SymbolOverviewTab model={buildModel(overrides)} />);
+    expect(
+      screen.getAllByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow')),
+    ).toHaveLength(1);
+    expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+  });
+
   it('renders one canonical action and groups the trade plan as a table', () => {
     renderWithProviders(<SymbolOverviewTab model={buildModel()} />);
 

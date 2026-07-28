@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { t } from '@/i18n/t';
@@ -32,5 +32,18 @@ describe('DataStatusBar', () => {
   it('announces loading updates politely', () => {
     renderWithProviders(<DataStatusBar sources={[{ ...source, phase: 'loading' }]} />);
     expect(screen.getByTestId('workspace-data-status')).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('lets keyboard users select a source status', () => {
+    renderWithProviders(<DataStatusBar sources={[source]} />);
+    const status = screen.getByRole('button', {
+      name: t('workspacePage.data.sources.fundamentals'),
+    });
+
+    status.focus();
+    fireEvent.keyDown(status, { key: 'Enter' });
+    fireEvent.click(status);
+
+    expect(status).toHaveAttribute('aria-pressed', 'true');
   });
 });

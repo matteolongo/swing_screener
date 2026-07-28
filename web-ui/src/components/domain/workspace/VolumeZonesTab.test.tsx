@@ -42,6 +42,43 @@ function payload(overrides: Record<string, unknown> = {}) {
 }
 
 describe('VolumeZonesTab', () => {
+  const candleSuccess = () =>
+    http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () =>
+      HttpResponse.json({
+        ticker: 'AAPL',
+        provider: 'mock',
+        interval: '1d',
+        data_as_of: '2026-07-27',
+        fetched_at: '2026-07-27T20:00:00Z',
+        price_history: [],
+        patterns: [],
+      }),
+    );
+  const reliabilityCases = [
+    { name: 'no-data', analysis: payload({ volume_zones: [], rationale: [] }), candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.summary') },
+    { name: 'fresh', analysis: payload(), candles: candleSuccess(), expected: 'Long' },
+    { name: 'cached', analysis: payload(), candles: candleSuccess(), expected: new Date('2026-07-27T20:00:00Z').toLocaleString() },
+    { name: 'stale', analysis: payload({ warnings: ['Stale volume snapshot'] }), candles: candleSuccess(), expected: 'Stale volume snapshot' },
+    { name: 'refreshing-with-data', analysis: payload(), candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.summary') },
+    { name: 'partial', analysis: payload(), candles: http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () => HttpResponse.json({ detail: 'partial candles' }, { status: 503 })), expected: t('workspacePage.data.partial') },
+    { name: 'failed', analysis: { detail: 'failed' }, analysisStatus: 500, candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.loadError') },
+    { name: 'timeout', analysis: { detail: 'timeout' }, analysisStatus: 504, candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.loadError') },
+    { name: 'malformed', analysis: { symbol: 'AAPL' }, candles: candleSuccess(), expected: t('workspacePage.panels.analysis.volumeZones.loadError') },
+  ] as const;
+
+  it.each(reliabilityCases)('renders its own $name contract without an empty panel', async (testCase) => {
+    const { analysis, candles, expected } = testCase;
+    const analysisStatus = 'analysisStatus' in testCase ? testCase.analysisStatus : 200;
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () =>
+        HttpResponse.json(analysis, { status: analysisStatus }),
+      ),
+      candles,
+    );
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+    expect(await screen.findByText(expected)).toBeVisible();
+  });
+
   it('renders the action, confidence and the approximate-profile warning', async () => {
     server.use(
       http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () => HttpResponse.json(payload())),

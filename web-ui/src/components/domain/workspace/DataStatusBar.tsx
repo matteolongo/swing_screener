@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import { t } from '@/i18n/t';
 
@@ -7,6 +9,7 @@ interface DataStatusBarProps {
 
 export default function DataStatusBar({ sources }: DataStatusBarProps) {
   const isLoading = sources.some(({ phase }) => phase === 'loading');
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
 
   return (
     <div
@@ -15,8 +18,12 @@ export default function DataStatusBar({ sources }: DataStatusBarProps) {
       aria-live={isLoading ? 'polite' : undefined}
     >
       {sources.map((source) => (
-        <div
+        <button
+          type="button"
           key={source.id}
+          aria-label={t(`workspacePage.data.sources.${source.id}`)}
+          aria-pressed={selectedSource === source.id}
+          onClick={() => setSelectedSource((current) => current === source.id ? null : source.id)}
           className="flex shrink-0 items-center gap-1.5 rounded-full bg-foreground/5 px-2.5 py-1"
         >
           <span>{t(`workspacePage.data.sources.${source.id}`)}</span>
@@ -25,7 +32,7 @@ export default function DataStatusBar({ sources }: DataStatusBarProps) {
           </span>
           {source.provider ? <span>{source.provider}</span> : null}
           {source.fetchedAt ? <time dateTime={source.fetchedAt}>{new Date(source.fetchedAt).toLocaleString()}</time> : null}
-        </div>
+        </button>
       ))}
     </div>
   );
