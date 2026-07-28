@@ -11,11 +11,11 @@ const failedActivity: WorkspaceSourceState = {
   ticker: 'AAPL',
   selectionVersion: 1,
   phase: 'failed',
-  provider: null,
-  dataAsOf: null,
-  fetchedAt: null,
-  cacheOrigin: null,
-  missingInputs: [],
+  provider: 'polygon',
+  dataAsOf: '2026-07-27',
+  fetchedAt: '2026-07-27T20:00:00Z',
+  cacheOrigin: 'memory',
+  missingInputs: ['daily close'],
   error: { message: 'Price history is unavailable', retryable: true },
 };
 
@@ -32,6 +32,25 @@ describe('WorkspaceActivityDrawer', () => {
 
     rerender(<WorkspaceActivityDrawer activities={[]} onRetry={onRetry} />);
     expect(screen.getByRole('status')).toHaveTextContent(failedActivity.error!.message);
+  });
+
+  it('shows selected-source provenance, freshness, diagnostics, and retry context', () => {
+    renderWithProviders(
+      <WorkspaceActivityDrawer
+        activities={[failedActivity]}
+        selectedSourceId="prices"
+        onRetry={vi.fn()}
+      />,
+    );
+
+    const detail = screen.getByTestId('workspace-source-detail');
+    expect(detail).toHaveTextContent('polygon');
+    expect(detail).toHaveTextContent('2026-07-27');
+    expect(detail).toHaveTextContent(new Date(failedActivity.fetchedAt!).toLocaleString());
+    expect(detail).toHaveTextContent('memory');
+    expect(detail).toHaveTextContent('daily close');
+    expect(detail).toHaveTextContent(failedActivity.error!.message);
+    expect(screen.getByRole('button', { name: t('workspacePage.data.retry') })).toBeEnabled();
   });
 
   it('drops retained failures when the workspace selection changes', () => {

@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { intelligenceResult, tickerCandlesResult } = vi.hoisted(() => ({
+const { intelligenceResult, tickerCandlesResult, positionsResult, ordersResult } = vi.hoisted(() => ({
   intelligenceResult: {
     current: {
       data: undefined as { symbol: string; generatedAt: string } | undefined,
@@ -17,6 +17,8 @@ const { intelligenceResult, tickerCandlesResult } = vi.hoisted(() => ({
       dataUpdatedAt: 0,
     },
   },
+  positionsResult: { current: {} as Record<string, unknown> },
+  ordersResult: { current: {} as Record<string, unknown> },
 }));
 
 vi.mock('@/features/fundamentals/api', () => ({
@@ -41,6 +43,30 @@ vi.mock('@/features/intelligence/hooks', () => ({
     isError: false,
     isFetching: false,
     isLoading: false,
+  }),
+}));
+vi.mock('@/features/portfolio/hooks', () => ({
+  useOpenPositions: () => ({
+    data: [],
+    dataUpdatedAt: 100,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    isStale: false,
+    isFetchedAfterMount: true,
+    ...positionsResult.current,
+  }),
+  useOrders: () => ({
+    data: [],
+    dataUpdatedAt: 200,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    isStale: false,
+    isFetchedAfterMount: true,
+    ...ordersResult.current,
   }),
 }));
 
@@ -92,6 +118,43 @@ describe('useSymbolWorkspaceData', () => {
     intelligenceResult.current.data = undefined;
     tickerCandlesResult.current.data = undefined;
     tickerCandlesResult.current.dataUpdatedAt = 0;
+    positionsResult.current = {};
+    ordersResult.current = {};
+  });
+
+  it('derives position and order health from both canonical query observers', () => {
+    fetchSnapshot.mockResolvedValue(snapshot('AAPL'));
+    positionsResult.current = {
+      data: [{ ticker: 'AAPL' }],
+      dataUpdatedAt: 500,
+      isFetching: true,
+    };
+    ordersResult.current = {
+      data: [],
+      dataUpdatedAt: 400,
+      isFetchedAfterMount: false,
+    };
+    const queryClient = createQueryClient();
+    const { result, rerender } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        candidate: null,
+        position: null,
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')).toMatchObject({
+      phase: 'loading',
+      provider: 'local portfolio',
+      fetchedAt: new Date(500).toISOString(),
+    });
+
+    positionsResult.current = { data: [], isFetching: false, isStale: true };
+    ordersResult.current = { data: [], isStale: false };
+    rerender();
+    expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')?.phase).toBe('stale');
   });
 
   it('does not expose an AAPL completion in an MSFT workspace session', async () => {

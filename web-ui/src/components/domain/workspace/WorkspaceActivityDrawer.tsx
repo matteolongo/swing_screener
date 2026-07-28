@@ -114,10 +114,36 @@ export default function WorkspaceActivityDrawer({
     >
       {selectedActivity ? (
         <div className="mb-2 text-xs text-foreground" data-testid="workspace-source-detail">
-          <span className="font-semibold">{t(`workspacePage.data.sources.${selectedActivity.id}`)}</span>
-          {' · '}
-          <span>{t(`workspacePage.data.phases.${selectedActivity.phase}`)}</span>
-          {selectedActivity.provider ? <> · <span>{selectedActivity.provider}</span></> : null}
+          <div className="font-semibold">
+            {t(`workspacePage.data.sources.${selectedActivity.id}`)}
+            {' · '}
+            {t(`workspacePage.data.phases.${selectedActivity.phase}`)}
+          </div>
+          <dl className="mt-2 grid gap-1 sm:grid-cols-2">
+            {[
+              ['provider', selectedActivity.provider],
+              ['dataAsOf', selectedActivity.dataAsOf],
+              ['fetchedAt', selectedActivity.fetchedAt
+                ? new Date(selectedActivity.fetchedAt).toLocaleString()
+                : null],
+              ['cacheOrigin', selectedActivity.cacheOrigin],
+              ['missingInputs', selectedActivity.missingInputs.length
+                ? selectedActivity.missingInputs.map((input) =>
+                    input === 'positions' || input === 'orders'
+                      ? t(`workspacePage.data.details.inputs.${input}`)
+                      : input,
+                  ).join(', ')
+                : t('workspacePage.data.details.none')],
+              ['diagnostics', selectedActivity.error?.message],
+            ].map(([key, value]) => (
+              <div key={key}>
+                <dt className="text-muted">
+                  {t(`workspacePage.data.details.${key}` as Parameters<typeof t>[0])}
+                </dt>
+                <dd>{value || t('workspacePage.data.details.unavailable')}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       ) : null}
       <ul className="space-y-2">

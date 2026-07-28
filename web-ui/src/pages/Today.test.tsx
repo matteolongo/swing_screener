@@ -229,7 +229,18 @@ describe('Today page — expanded workspace', () => {
 
     railSymbol.focus();
     await user.keyboard('{Enter}');
-    expect(screen.getByTestId('symbol-rail')).toBeVisible();
+    const expandedRail = screen.getByTestId('symbol-rail');
+    expect(expandedRail).toBeVisible();
+
+    const neighboringSymbol = within(expandedRail).getByRole('button', { name: /VALE/i });
+    neighboringSymbol.focus();
+    await user.keyboard('{Enter}');
+    expect(useWorkspaceStore.getState().selectedTicker).toBe('VALE');
+
+    const nvdaRailControl = within(expandedRail).getByRole('button', { name: /NVDA/i });
+    nvdaRailControl.focus();
+    await user.keyboard('{Enter}');
+    expect(useWorkspaceStore.getState().selectedTicker).toBe('NVDA');
 
     const fundamentalsSource = await screen.findByRole('button', {
       name: t('workspacePage.data.sources.fundamentals'),
@@ -578,6 +589,7 @@ const reviewWithPendingOrders = {
 
 describe('Today page — pending orders review section', () => {
   beforeEach(() => {
+    useWorkspaceStore.getState().clearSelectedTicker();
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [], asof: '2026-05-16' })

@@ -7,6 +7,7 @@ import {
 } from '@/features/fundamentals/hooks';
 import { useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
+import { useOpenPositions, useOrders } from '@/features/portfolio/hooks';
 import { useTickerCandles } from '@/features/screener/hooks';
 import { queryKeys } from '@/lib/queryKeys';
 import { aggregateWorkspaceHealth, isIntelligenceOutdated } from './health';
@@ -57,6 +58,8 @@ export function useSymbolWorkspaceData({
   const pricesQuery = useTickerCandles(currentTicker);
   const intelligenceQuery = useIntelligenceLatestQuery(currentTicker, Boolean(currentTicker));
   const refreshFundamentals = useRefreshFundamentalSnapshotMutation();
+  const positionsQuery = useOpenPositions();
+  const ordersQuery = useOrders('all');
 
   const validCandidate =
     normalizedTicker(candidate?.ticker) === currentTicker ? candidate : null;
@@ -75,6 +78,19 @@ export function useSymbolWorkspaceData({
       ? pricesQuery.data
       : undefined;
   const priceHistory = pricesData?.priceHistory;
+  const positionOrdersPhase = (() => {
+    const hasData = positionsQuery.data !== undefined || ordersQuery.data !== undefined;
+    if (positionsQuery.isLoading || ordersQuery.isLoading || positionsQuery.isFetching || ordersQuery.isFetching) {
+      return 'loading';
+    }
+    if (positionsQuery.isError || ordersQuery.isError) return hasData ? 'partial' : 'failed';
+    if (!hasData) return 'idle';
+    if (positionsQuery.isStale || ordersQuery.isStale) return 'stale';
+    if (positionsQuery.isFetchedAfterMount === false && ordersQuery.isFetchedAfterMount === false) {
+      return 'cached';
+    }
+    return 'fresh';
+  })();
 
   const sourceState = (
     id: WorkspaceSourceId,
@@ -131,7 +147,24 @@ export function useSymbolWorkspaceData({
           : null,
       },
     ),
-    sourceState('positionOrders', validPosition ? 'fresh' : 'idle'),
+    sourceState('positionOrders', positionOrdersPhase, {
+      provider: 'local portfolio',
+      fetchedAt: fetchedAt(Math.max(positionsQuery.dataUpdatedAt, ordersQuery.dataUpdatedAt)),
+      cacheOrigin:
+        positionsQuery.isFetchedAfterMount === false && ordersQuery.isFetchedAfterMount === false
+          ? 'memory'
+          : 'network',
+      missingInputs: [
+        positionsQuery.data === undefined ? 'positions' : null,
+        ordersQuery.data === undefined ? 'orders' : null,
+      ].filter((value): value is string => value !== null),
+      error: positionsQuery.error || ordersQuery.error
+        ? {
+            message: positionsQuery.error?.message ?? ordersQuery.error?.message ?? '',
+            retryable: true,
+          }
+        : null,
+    }),
   ];
 
   async function refreshSource(sourceId: WorkspaceSourceId): Promise<void> {

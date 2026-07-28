@@ -820,6 +820,20 @@ export const messagesEn = {
       retryAnalysis: 'Retry volume analysis',
       identityMismatch: 'Response identity does not match this symbol or request.',
       dismiss: 'Dismiss',
+      details: {
+        provider: 'Provider',
+        dataAsOf: 'Data as of',
+        fetchedAt: 'Fetched at',
+        cacheOrigin: 'Cache origin',
+        missingInputs: 'Missing inputs',
+        diagnostics: 'Diagnostics',
+        unavailable: 'Unavailable',
+        none: 'None',
+        inputs: {
+          positions: 'Open positions',
+          orders: 'Orders',
+        },
+      },
       sources: {
         screener: 'Screener',
         prices: 'Prices',
