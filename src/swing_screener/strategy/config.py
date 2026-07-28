@@ -58,6 +58,7 @@ def build_manage_config(strategy: dict) -> ManageConfig:
         time_stop_days=raw.get("time_stop_days", 15),
         time_stop_min_r=raw.get("time_stop_min_r", 0.5),
         benchmark=raw.get("benchmark", "SPY"),
+        exit_signal_days=raw.get("exit_signal_days", 2),
     )
 
 
