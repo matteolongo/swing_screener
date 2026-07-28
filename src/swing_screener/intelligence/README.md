@@ -401,6 +401,13 @@ Controlled by `config.evidence` in `config/intelligence.yaml`:
 
 Curated evidence is cached lazily at `data/intelligence/evidence/{date}/{ticker}.json` (regenerable; not committed). No schema migration required.
 
+`GET /api/intelligence/{ticker}/evidence/latest` reads only the newest valid
+cache metadata; it never collects sources or invokes an LLM. Its
+`freshness_status` is server-owned: same-day evidence is `fresh`, evidence no
+older than `config.evidence.cache_stale_after_days` is `cached`, and older
+evidence is `stale`. A missing cache is the neutral `evidence_not_cached`
+condition, not a provider failure.
+
 ### Prompt injection
 
 `collect.py` is called during `enrich_intelligence_request` and the curated items are passed into the LLM prompt as a `--- Catalyst evidence ---` block.

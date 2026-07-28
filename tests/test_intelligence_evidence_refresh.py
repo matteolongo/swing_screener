@@ -75,6 +75,7 @@ def test_latest_evidence_summary_returns_cache_metadata_without_collecting():
             "cached_at": "2026-07-27",
             "item_count": 8,
             "providers": ["REFINITIV_LATEST_NEWS"],
+            "freshness_status": "cached",
         },
     )()
     with (
@@ -92,5 +93,6 @@ def test_latest_evidence_summary_returns_cache_metadata_without_collecting():
         "cached_at": "2026-07-27",
         "item_count": 8,
         "providers": ["REFINITIV_LATEST_NEWS"],
+        "freshness_status": "cached",
     }
     collect.assert_not_called()

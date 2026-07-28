@@ -4,6 +4,7 @@ import {
   getIntelligenceChat,
   getIntelligenceHistory,
   getIntelligenceLatest,
+  getLatestEvidenceSummary,
   getRunTrace,
   getTickerRuns,
   postPositionReview,
@@ -19,6 +20,7 @@ import {
 import { transformIntelligence } from '@/features/intelligence/types';
 import type {
   EvidenceRefreshResponse,
+  EvidenceCacheSummary,
   HistoryEntry,
   IntelligenceChatResponse,
   SymbolIntelligence,
@@ -90,6 +92,7 @@ export function useEvidenceRefreshMutation() {
         queryKeys.intelligence.evidence(ticker),
         response,
       );
+      queryClient.invalidateQueries({ queryKey: queryKeys.intelligence.evidenceLatest(ticker) });
     },
   });
 }
@@ -101,6 +104,16 @@ export function useIntelligenceLatestQuery(ticker: string, enabled: boolean) {
       const api = await getIntelligenceLatest(ticker);
       return transformIntelligence(api);
     },
+    enabled,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useLatestEvidenceSummaryQuery(ticker: string, enabled: boolean) {
+  return useQuery<EvidenceCacheSummary, Error>({
+    queryKey: queryKeys.intelligence.evidenceLatest(ticker),
+    queryFn: () => getLatestEvidenceSummary(ticker),
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,

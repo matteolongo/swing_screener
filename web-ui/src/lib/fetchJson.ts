@@ -1,5 +1,17 @@
 import { apiFetch } from './apiFetch';
 
+export class ApiHttpError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+
+  constructor(message: string, status: number, code: string | null = null) {
+    super(message);
+    this.name = 'ApiHttpError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export interface FetchJsonInit extends RequestInit {
   /** Fallback error message when the response has no `detail` field. */
   errorMessage?: string;
@@ -17,8 +29,14 @@ export async function fetchJson<T>(endpoint: string, init: FetchJsonInit = {}): 
 
   if (!response.ok) {
     let detail: string | undefined;
+    let code: string | null = null;
     try {
       const body = await response.json();
+      code = typeof body?.code === 'string'
+        ? body.code
+        : typeof body?.detail?.code === 'string'
+          ? body.detail.code
+          : null;
       detail = typeof body?.detail === 'string'
         ? body.detail
         : typeof body?.detail?.message === 'string'
@@ -27,7 +45,11 @@ export async function fetchJson<T>(endpoint: string, init: FetchJsonInit = {}): 
     } catch {
       // non-JSON error body; fall through to errorMessage/status
     }
-    throw new Error(detail || errorMessage || `Request failed with status ${response.status}`);
+    throw new ApiHttpError(
+      detail || errorMessage || `Request failed with status ${response.status}`,
+      response.status,
+      code,
+    );
   }
 
   const text = await response.text();

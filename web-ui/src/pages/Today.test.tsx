@@ -136,7 +136,7 @@ describe('Today page — expanded workspace', () => {
     expect(tickerButton).toHaveFocus();
   });
 
-  it('supports a keyboard journey through the rail, source status, drawer, header, and every analysis tab', async () => {
+  it('supports a keyboard journey through the rail, source status, header, and every analysis tab', async () => {
     let fundamentalsRequests = 0;
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
@@ -273,13 +273,6 @@ describe('Today page — expanded workspace', () => {
     await user.keyboard('{Enter}');
     expect(useWorkspaceStore.getState().fullscreen).toBe(true);
 
-    const drawer = screen.getByRole('alert', { name: t('workspacePage.data.activity') });
-    const retry = within(drawer).getAllByRole('button', { name: t('workspacePage.data.retry') })[0];
-    retry.focus();
-    await user.keyboard('{Enter}');
-    const dismiss = within(drawer).getAllByRole('button', { name: t('workspacePage.data.dismiss') })[0];
-    dismiss.focus();
-    await user.keyboard(' ');
   });
 });
 

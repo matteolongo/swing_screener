@@ -31,6 +31,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The symbol workspace now distinguishes normal absence of today's analysis or
+  saved evidence from provider failures, preserves cached-evidence freshness
+  from the server, and explains when a newly fetched fundamentals snapshot
+  contains an older reporting period.
 - Screener candidates now use one gate-derived workflow status and concrete next
   action across Last Run, Today, symbol details, and order review, preventing an
   analytical `Buy on Pullback` opinion from appearing beside `No valid setup`.

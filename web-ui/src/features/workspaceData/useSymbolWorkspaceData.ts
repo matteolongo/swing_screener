@@ -6,6 +6,8 @@ import {
   useRefreshFundamentalSnapshotMutation,
 } from '@/features/fundamentals/hooks';
 import { useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
+import { useLatestEvidenceSummaryQuery } from '@/features/intelligence/hooks';
+import { ApiHttpError } from '@/lib/fetchJson';
 import type { EvidenceRefreshResponse } from '@/features/intelligence/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useOpenPositions, useOrders } from '@/features/portfolio/hooks';
@@ -67,6 +69,7 @@ export function useSymbolWorkspaceData({
   const fundamentalsQuery = useFundamentalSnapshotQuery(currentTicker);
   const pricesQuery = useTickerCandles(currentTicker);
   const intelligenceQuery = useIntelligenceLatestQuery(currentTicker, Boolean(currentTicker));
+  const evidenceLatestQuery = useLatestEvidenceSummaryQuery(currentTicker, Boolean(currentTicker));
   const refreshFundamentals = useRefreshFundamentalSnapshotMutation();
   const positionsQuery = useOpenPositions();
   const ordersQuery = useOrders('all');
@@ -83,6 +86,16 @@ export function useSymbolWorkspaceData({
     normalizedTicker(intelligenceQuery.data?.symbol) === currentTicker
       ? intelligenceQuery.data
       : undefined;
+  const evidenceLatestData =
+    normalizedTicker(evidenceLatestQuery.data?.ticker) === currentTicker
+      ? evidenceLatestQuery.data
+      : undefined;
+  const intelligenceNotGeneratedToday =
+    intelligenceQuery.error instanceof ApiHttpError
+    && intelligenceQuery.error.code === 'analysis_not_generated_today';
+  const evidenceNotCached =
+    evidenceLatestQuery.error instanceof ApiHttpError
+    && evidenceLatestQuery.error.code === 'evidence_not_cached';
   const pricesData =
     normalizedTicker(pricesQuery.data?.ticker) === currentTicker
       ? pricesQuery.data
@@ -178,17 +191,29 @@ export function useSymbolWorkspaceData({
         ? evidenceRefresh.status === 'failed' ? 'failed'
           : evidenceRefresh.status === 'partial' ? 'partial'
             : 'fresh'
-        : evidenceDiagnostic?.status === 'failed' ? 'failed'
-          : 'partial',
+        : evidenceLatestData
+          ? evidenceLatestData.freshnessStatus
+          : evidenceNotCached
+            ? 'idle'
+            : evidenceDiagnostic?.status === 'failed' ? 'failed'
+              : evidenceLatestQuery.isError ? 'failed'
+                : queryPhase(evidenceLatestQuery),
       {
-        provider: evidenceRefresh?.sources.map(({ provider }) => provider).join(', ') || null,
+        provider: evidenceRefresh?.sources.map(({ provider }) => provider).join(', ')
+          || evidenceLatestData?.providers.join(', ')
+          || null,
         dataAsOf: evidenceRefresh?.sources.map(({ asOf }) => asOf).sort().slice(-1)[0]
+          ?? evidenceLatestData?.cachedAt
           ?? evidenceDiagnostic?.asOf
           ?? null,
-        fetchedAt: evidenceRefresh?.refreshedAt ?? intelligenceData?.generatedAt ?? null,
+        fetchedAt: evidenceRefresh?.refreshedAt
+          ?? fetchedAt(evidenceLatestQuery.dataUpdatedAt)
+          ?? intelligenceData?.generatedAt
+          ?? null,
         missingInputs: evidenceRefresh
           ? []
           : [evidenceDiagnostic ? 'evidenceProvider' : 'evidenceDiagnostics'],
+        stateReason: evidenceNotCached ? 'evidenceNotCached' : undefined,
         error: evidenceRefresh?.status === 'failed'
           || evidenceRefresh?.sources.some(({ status }) => status === 'failed')
           ? {
@@ -196,7 +221,9 @@ export function useSymbolWorkspaceData({
                 ?? 'evidence_provider_failed',
               retryable: true,
             }
-          : evidenceDiagnostic?.status === 'failed'
+            : evidenceLatestQuery.error && !evidenceNotCached
+              ? { message: evidenceLatestQuery.error.message, retryable: true }
+              : evidenceDiagnostic?.status === 'failed'
             ? {
                 message: evidenceDiagnostic.message ?? 'evidence_provider_failed',
                 retryable: true,
@@ -206,7 +233,9 @@ export function useSymbolWorkspaceData({
     ),
     sourceState(
       'intelligence',
-      intelligenceData && !('provider' in intelligenceData)
+      intelligenceNotGeneratedToday
+        ? 'idle'
+        : intelligenceData && !('provider' in intelligenceData)
         ? 'partial'
         : queryPhase({ ...intelligenceQuery, data: intelligenceData }),
       {
@@ -219,7 +248,8 @@ export function useSymbolWorkspaceData({
         missingInputs: intelligenceData && !('provider' in intelligenceData)
           ? ['intelligenceProvider']
           : [],
-        error: intelligenceQuery.error
+        stateReason: intelligenceNotGeneratedToday ? 'analysisNotGeneratedToday' : undefined,
+        error: intelligenceQuery.error && !intelligenceNotGeneratedToday
           ? { message: intelligenceQuery.error.message, retryable: true }
           : null,
       },

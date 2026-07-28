@@ -120,9 +120,28 @@ def test_latest_cached_evidence_summary_uses_newest_valid_ticker_cache(tmp_path)
             )
         )
 
-    summary = read_latest_cached_evidence_summary(" aapl ", cache_root=tmp_path)
+    summary = read_latest_cached_evidence_summary(
+        " aapl ", cache_root=tmp_path, current_date=date(2026, 7, 29),
+    )
 
     assert summary.ticker == "AAPL"
     assert summary.cached_at == "2026-07-28"
     assert summary.item_count == 2
     assert summary.providers == ["Latest source"]
+    assert summary.freshness_status == "cached"
+
+
+def test_latest_cached_evidence_summary_marks_old_cache_stale(tmp_path):
+    path = tmp_path / "2026-07-27" / "AAPL.json"
+    path.parent.mkdir()
+    path.write_text(json.dumps([_ev().model_dump()]))
+
+    summary = read_latest_cached_evidence_summary(
+        "AAPL",
+        cache_root=tmp_path,
+        current_date=date(2026, 7, 30),
+        cfg=EvidenceConfig(cache_stale_after_days=1),
+    )
+
+    assert summary is not None
+    assert summary.freshness_status == "stale"

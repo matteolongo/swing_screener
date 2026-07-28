@@ -34,6 +34,7 @@ const staleSnapshot: FundamentalSnapshot = {
   redFlags: [],
   highlights: ['Revenue remains supportive.'],
   metricSources: {},
+  mostRecentQuarter: '2026-03-28',
 };
 
 function model(
@@ -94,6 +95,19 @@ describe('SymbolFundamentalsTab', () => {
         }),
       ),
     ).toBeVisible();
+  });
+
+  it('distinguishes a current fetch from a stale reported quarter', () => {
+    renderWithProviders(
+      <SymbolFundamentalsTab model={model({
+        snapshot: { ...staleSnapshot, updatedAt: '2026-07-28T13:26:01Z' },
+      })} />,
+    );
+
+    expect(screen.getByText(t('workspacePage.fundamentals.reportingPeriodStale', {
+      updatedAt: formatDateTime('2026-07-28T13:26:01Z'),
+      date: '2026-03-28',
+    }))).toBeVisible();
   });
 
   it('groups unavailable metrics instead of rendering repeated n/a cards', () => {

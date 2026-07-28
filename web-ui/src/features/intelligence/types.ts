@@ -266,6 +266,32 @@ export interface EvidenceRefreshResponse {
   sources: EvidenceRefreshSource[];
 }
 
+export interface EvidenceCacheSummaryAPI {
+  ticker: string;
+  cached_at: string;
+  item_count: number;
+  providers: string[];
+  freshness_status: 'fresh' | 'cached' | 'stale';
+}
+
+export interface EvidenceCacheSummary {
+  ticker: string;
+  cachedAt: string;
+  itemCount: number;
+  providers: string[];
+  freshnessStatus: 'fresh' | 'cached' | 'stale';
+}
+
+export function transformEvidenceCacheSummary(api: EvidenceCacheSummaryAPI): EvidenceCacheSummary {
+  return {
+    ticker: api.ticker.trim().toUpperCase(),
+    cachedAt: api.cached_at,
+    itemCount: api.item_count,
+    providers: api.providers ?? [],
+    freshnessStatus: api.freshness_status,
+  };
+}
+
 export function transformEvidenceRefresh(
   api: EvidenceRefreshResponseAPI,
 ): EvidenceRefreshResponse {

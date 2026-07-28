@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -37,6 +37,7 @@ class EvidenceCacheSummary:
     cached_at: str
     item_count: int
     providers: list[str]
+    freshness_status: str
 
 
 def attempted_source_ids(cfg: EvidenceConfig, *, refresh_sources: bool = False) -> list[str]:
@@ -78,9 +79,13 @@ def read_latest_cached_evidence_summary(
     ticker: str,
     *,
     cache_root: Path | None = None,
+    current_date: date | None = None,
+    cfg: EvidenceConfig | None = None,
 ) -> EvidenceCacheSummary | None:
     """Return metadata for the newest valid cache without collecting evidence."""
     root = cache_root or _CACHE_ROOT
+    current_date = current_date or datetime.now(timezone.utc).date()
+    cfg = cfg or load_evidence_config()
     normalized = ticker.strip().upper()
     if not normalized or not root.exists():
         return None
@@ -101,11 +106,20 @@ def read_latest_cached_evidence_summary(
         items = _read_cache(directory / f"{normalized}.json")
         if items is None:
             continue
+        cache_age_days = (current_date - cached_date).days
+        freshness_status = (
+            "fresh"
+            if cache_age_days <= 0
+            else "cached"
+            if cache_age_days <= cfg.cache_stale_after_days
+            else "stale"
+        )
         return EvidenceCacheSummary(
             ticker=normalized,
             cached_at=cached_date.isoformat(),
             item_count=len(items),
             providers=sorted({item.publisher for item in items if item.publisher}),
+            freshness_status=freshness_status,
         )
     return None
 

@@ -280,6 +280,12 @@ function Pipeline({ model }: { model: SymbolIntelligenceTabModel }) {
 
 export default function SymbolIntelligenceTab({ model }: { model: SymbolIntelligenceTabModel }) {
   const hasAnalysis = Boolean(model.analysis?.narrative.trim());
+  const intelligenceNotGeneratedToday = model.sources.some(
+    (source) => source.id === 'intelligence' && source.stateReason === 'analysisNotGeneratedToday',
+  );
+  const evidenceNotCached = model.sources.some(
+    (source) => source.id === 'evidence' && source.stateReason === 'evidenceNotCached',
+  );
   const resultStatus = model.intelligenceOutdated
     ? 'outdated'
     : model.analysis?.degradedReasons?.length
@@ -300,6 +306,12 @@ export default function SymbolIntelligenceTab({ model }: { model: SymbolIntellig
           </p>
         </div>
         <ManifestTable model={model} />
+        {intelligenceNotGeneratedToday ? (
+          <p className="text-sm text-muted">{t('workspacePage.intelligence.notGeneratedToday')}</p>
+        ) : null}
+        {evidenceNotCached ? (
+          <p className="text-sm text-muted">{t('workspacePage.intelligence.evidenceNotCached')}</p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
