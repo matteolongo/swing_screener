@@ -89,6 +89,7 @@ describe('SymbolOverviewTab', () => {
 
     expect(screen.getAllByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toHaveLength(1);
     expect(screen.getByRole('table', { name: t('workspacePage.overview.tradePlan') })).toBeVisible();
+    expect(screen.getAllByRole('rowheader')).toHaveLength(8);
     expect(screen.getByRole('link', { name: t('workspacePage.overview.openFundamentals') })).toBeVisible();
     expect(screen.getAllByRole('listitem', { name: t('workspacePage.overview.supportingSignal') })).toHaveLength(3);
     expect(screen.getAllByRole('listitem', { name: t('workspacePage.overview.opposingSignal') })).toHaveLength(3);

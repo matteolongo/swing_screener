@@ -7,6 +7,20 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The Today page now expands a selected symbol into a decision-first workspace
+  with a context-preserving symbol rail, full-screen and mobile layouts,
+  canonical fundamentals, explicit evidence and intelligence actions, and
+  per-source provenance, freshness, progress, degraded-input, and failure
+  reporting.
+
+### Changed
+
+- Symbol analysis now follows an answer, evidence, trust, and detail hierarchy
+  across Overview, Fundamentals, News & Intelligence, actions, and Volume
+  Zones while preserving the existing Backtest workflow.
+
 ### Fixed
 
 - Screener candidates now use one gate-derived workflow status and concrete next

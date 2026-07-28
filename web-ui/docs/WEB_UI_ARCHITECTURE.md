@@ -1,7 +1,7 @@
 # Web UI Architecture
 
 > Status: current.  
-> Last reviewed: 2026-06-01.
+> Last reviewed: 2026-07-28.
 
 ## Directory Structure
 
@@ -32,6 +32,30 @@
 - Server state: React Query (auto-caching and invalidation via query keys).
 - Client/UI state: Zustand stores in `src/stores/`.
 - No local persistence by default (`VITE_PERSISTENCE_MODE=api`).
+
+### Symbol workspace ownership
+
+The Today workspace keeps only session and layout state in
+`workspaceStore`: normalized selected ticker, selection version, source,
+active analysis tab, expanded/split mode, full-screen mode, and activity-drawer
+visibility. Selecting a different ticker increments the selection version;
+late completions must match both ticker and version before presentation.
+
+React Query remains the sole owner of fundamentals, OHLCV, intelligence,
+position, and order server data. `features/workspaceData/useSymbolWorkspaceData`
+composes those canonical queries into source-health read models without copying
+responses into Zustand. A screener rerun updates only screener-owned state;
+fundamentals and intelligence retain their own timestamps. Refreshing
+fundamentals replaces the canonical snapshot shared by Overview and
+Fundamentals and can mark older intelligence outdated.
+
+The sticky workspace header, per-source status bar, and activity drawer expose
+provider, data/fetch time, cached/stale/partial states, active work, and durable
+failures. Evidence collection uses its dedicated read-only refresh endpoint.
+Intelligence generation is a separate explicit action and records the precise
+input manifest and per-source degradation. Neither action mutates trading
+state. Backtest is not included in this health model and preserves its existing
+query and run/reset behavior.
 
 ## Testing
 

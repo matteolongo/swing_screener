@@ -211,16 +211,16 @@ export default function AnalysisDecisionStrip({
           <table className="w-full border-separate border-spacing-1" aria-label={t('workspacePage.overview.tradePlan')}>
             <tbody>
               <tr>
-                <td>{compactValue(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}</td>
-                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), stop != null ? formatCurrency(stop, currency) : '—')}</td>
-                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), target != null ? formatCurrency(target, currency) : '—')}</td>
-                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}</td>
+                <th scope="row">{compactValue(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}</th>
+                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), stop != null ? formatCurrency(stop, currency) : '—')}</th>
+                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), target != null ? formatCurrency(target, currency) : '—')}</th>
+                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}</th>
               </tr>
               <tr>
-                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), rr != null ? `${formatNumber(rr, 1)}x` : '—')}</td>
-                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent'), riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}</td>
-                <td>{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}</td>
-                <td>{compactValue(t('workspacePage.overview.invalidation'), summary?.explanation?.whatInvalidatesIt?.[0] ?? summary?.mainRisk ?? '—')}</td>
+                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), rr != null ? `${formatNumber(rr, 1)}x` : '—')}</th>
+                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent'), riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}</th>
+                <th scope="row">{compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}</th>
+                <th scope="row">{compactValue(t('workspacePage.overview.invalidation'), summary?.explanation?.whatInvalidatesIt?.[0] ?? summary?.mainRisk ?? '—')}</th>
               </tr>
             </tbody>
           </table>

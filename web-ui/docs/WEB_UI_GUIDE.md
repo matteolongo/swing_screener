@@ -1,7 +1,7 @@
 # Web UI Guide
 
 > Status: current.  
-> Last reviewed: 2026-07-03.
+> Last reviewed: 2026-07-28.
 
 ## Purpose
 
@@ -49,6 +49,13 @@ Charts (`components/domain/market/`): `CandleChart` is a responsive hand-rolled 
 
 Symbol analysis overview (`components/domain/workspace/SymbolOverviewTab.tsx`): one decision-first view owns the screener action and next step, discursive rationale, table-based trade plan and invalidation, capped supporting/opposing evidence, compact fundamentals/catalyst summaries, and the chart plus technical detail. Partial source failures name the unavailable dependency while preserving available content, and stale intelligence is explicit. For a held symbol `ManagePositionPanel` remains folded into Overview and the trade plan uses the real position entry/stop/target. Watch/unwatch and server-authoritative order review remain available here; the decision strip is not repeated above the other tabs.
 
+All redesigned workspace tabs use the same four-layer information hierarchy:
+**answer** (trade implication), **evidence** (supporting and opposing facts),
+**trust** (source, timestamp, freshness, and completeness), then **detail**
+(metrics, history, raw evidence, and technical traces). The canonical screener
+decision remains authoritative; intelligence is advisory context and cannot
+silently replace the workflow action.
+
 Symbol intelligence tab (`components/domain/workspace/SymbolIntelligenceTab.tsx`): follows an explicit evidence-first flow. It shows the current source manifest and enrichment diagnostics before any generation action. **Refresh evidence sources** calls the dedicated read-only `POST /api/intelligence/{ticker}/evidence/refresh` collector endpoint and updates the per-provider manifest without invoking analysis; **Generate analysis** and **Force-refresh analysis** remain separate actions, and selection never generates automatically. Active and failed pipeline stages are derived from the mutation and the exact ticker-run trace started by that request, including failures where no prior analysis exists; a retry preserves whether the failed request was normal or forced. Current, partial, and outdated results remain readable as a discursive recap followed by structured evidence. Position review and strategic context remain optional collapsed advisory actions even before narrative generation; chat is available once analysis context exists. History and the technical trace are collapsed separately. All mutation-local results, including evidence refreshes, are scoped to the normalized ticker and workspace selection version, so late responses from a previous symbol/session are ignored. Position review remains read-only and calls `POST /api/intelligence/position-review/{position_id}` for held positions or `POST /api/intelligence/{ticker}/position-review` for symbol-only review. `NarrativeAnalysisCard` retains pre-open outlook, thesis delta, evidence balance, dated events/news, and analysis history. Chat remains persisted per ticker/day and advisory-only.
 
 Generation attempts carry a stable client attempt ID persisted in both the run
@@ -57,6 +64,9 @@ without clock correlation. An untraced preflight failure never falls back to an
 older trace; after reload, attempt-aware runs take precedence over the cached
 result and legacy history. Retry uses the persisted normal/force mode. Refreshed evidence providers render
 as distinct rows and do not inherit aggregate evidence diagnostics.
+
+Backtest remains an intentionally excluded tab: its event-study controls,
+run/reset lifecycle, and results are unchanged by workspace health aggregation.
 
 ## Shared primitives
 
