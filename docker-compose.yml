@@ -23,6 +23,23 @@ services:
       - DEGIRO_ONE_TIME_PASSWORD=${DEGIRO_ONE_TIME_PASSWORD:-}
       - SEC_CONTACT_EMAIL=${SEC_CONTACT_EMAIL:-}
 
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: >-
+      jupyter server --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+      --ServerApp.root_dir=/app/notebooks --IdentityProvider.token=''
+      --PasswordIdentityProvider.hashed_password=''
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+      - ./notebooks:/app/notebooks
+    environment:
+      - PYTHONUNBUFFERED=1
+      - APP_ENV=development
+
   web:
     build:
       context: .
