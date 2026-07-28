@@ -13,6 +13,11 @@ Low-level shared defaults for the system:
 - intelligence defaults
 - backend provider catalogs and operational fallback values
 
+`app_config.portfolio_snapshot_stale_after_days` (default `1`) is the
+server-owned calendar-age policy for persisted position and order ledgers.
+Portfolio endpoints return the derived freshness; clients must not substitute
+their cache/refetch timers for this domain status.
+
 Candlestick pattern + structural-stop settings live under `low_level`:
 
 - `low_level.candles` — thresholds for the deterministic candlestick engine

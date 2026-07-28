@@ -181,7 +181,8 @@ Universes (`/api/universes`):
 - `POST /api/universes/{universe_id}/benchmark`
 
 Portfolio (`/api/portfolio`):
-- `GET /api/portfolio/positions`
+- `GET /api/portfolio/positions` — includes additive server-derived
+  `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
 - `GET /api/portfolio/positions/{position_id}`
 - `GET /api/portfolio/positions/{position_id}/metrics`
 - `PUT /api/portfolio/positions/{position_id}/stop`
@@ -195,7 +196,8 @@ Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/earnings-proximity/{ticker}`
 - `GET /api/portfolio/analytics/regime-breakdown`
 - `POST /api/portfolio/orders`
-- `GET /api/portfolio/orders/local`
+- `GET /api/portfolio/orders/local` — includes the same freshness metadata for
+  the persisted order ledger.
 - `POST /api/portfolio/orders/{order_id}/fill`
 - `DELETE /api/portfolio/orders/{order_id}`
 

@@ -72,10 +72,7 @@ vi.mock('@/features/portfolio/hooks', () => ({
 
 import * as fundamentalsApi from '@/features/fundamentals/api';
 import { queryKeys } from '@/lib/queryKeys';
-import {
-  POSITION_ORDERS_FRESHNESS_MS,
-  useSymbolWorkspaceData,
-} from './useSymbolWorkspaceData';
+import { useSymbolWorkspaceData } from './useSymbolWorkspaceData';
 
 function createQueryClient() {
   return new QueryClient({
@@ -132,17 +129,21 @@ describe('useSymbolWorkspaceData', () => {
 
   it('derives position and order health from both canonical query observers', () => {
     fetchSnapshot.mockResolvedValue(snapshot('AAPL'));
-    const now = Date.parse('2026-07-28T12:00:00Z');
-    vi.spyOn(Date, 'now').mockReturnValue(now);
     positionsResult.current = {
-      data: [{ ticker: 'AAPL' }],
-      dataUpdatedAt: now - 1_000,
+      data: Object.assign([{ ticker: 'AAPL' }], {
+        snapshotAsOf: '2026-07-28',
+        snapshotFreshness: 'fresh',
+      }),
+      dataUpdatedAt: 500,
       isFetching: true,
       isStale: true,
     };
     ordersResult.current = {
-      data: [],
-      dataUpdatedAt: now - 2_000,
+      data: Object.assign([], {
+        snapshotAsOf: '2026-07-28',
+        snapshotFreshness: 'fresh',
+      }),
+      dataUpdatedAt: 400,
       isFetchedAfterMount: false,
       isStale: true,
     };
@@ -160,18 +161,22 @@ describe('useSymbolWorkspaceData', () => {
     expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')).toMatchObject({
       phase: 'loading',
       provider: 'local portfolio',
-      fetchedAt: new Date(now - 1_000).toISOString(),
+      dataAsOf: '2026-07-28',
     });
 
     positionsResult.current = {
-      data: [],
-      dataUpdatedAt: now - 1_000,
+      data: Object.assign([], {
+        snapshotAsOf: '2026-07-28',
+        snapshotFreshness: 'fresh',
+      }),
       isFetching: false,
       isStale: true,
     };
     ordersResult.current = {
-      data: [],
-      dataUpdatedAt: now - 2_000,
+      data: Object.assign([], {
+        snapshotAsOf: '2026-07-28',
+        snapshotFreshness: 'fresh',
+      }),
       isFetchedAfterMount: true,
       isStale: true,
     };
@@ -179,13 +184,17 @@ describe('useSymbolWorkspaceData', () => {
     expect(result.current.sourceStates.find(({ id }) => id === 'positionOrders')?.phase).toBe('fresh');
 
     positionsResult.current = {
-      data: [],
-      dataUpdatedAt: now - POSITION_ORDERS_FRESHNESS_MS - 1,
+      data: Object.assign([], {
+        snapshotAsOf: '2026-07-20',
+        snapshotFreshness: 'stale',
+      }),
       isStale: true,
     };
     ordersResult.current = {
-      data: [],
-      dataUpdatedAt: now - POSITION_ORDERS_FRESHNESS_MS - 2,
+      data: Object.assign([], {
+        snapshotAsOf: '2026-07-28',
+        snapshotFreshness: 'fresh',
+      }),
       isStale: true,
     };
     rerender();

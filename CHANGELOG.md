@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Portfolio position/order workspace freshness is now derived by the API from
+  persisted ledger dates and the YAML-backed staleness policy, rather than from
+  browser cache timing.
+
 - Symbol analysis now follows an answer, evidence, trust, and detail hierarchy
   across Overview, Fundamentals, News & Intelligence, actions, and Volume
   Zones while preserving the existing Backtest workflow.

@@ -24,11 +24,6 @@ interface SymbolWorkspaceDataInput {
   position: PositionWithMetrics | null;
 }
 
-// Position/order state is an EOD operational snapshot. React Query's default
-// `isStale` only controls refetch eligibility (staleTime defaults to zero), so
-// domain freshness instead expires 24 hours after the last successful observer update.
-export const POSITION_ORDERS_FRESHNESS_MS = 24 * 60 * 60 * 1000;
-
 function normalizedTicker(value: string | null | undefined): string | null {
   const normalized = value?.trim().toUpperCase();
   return normalized || null;
@@ -83,10 +78,10 @@ export function useSymbolWorkspaceData({
       ? pricesQuery.data
       : undefined;
   const priceHistory = pricesData?.priceHistory;
-  const positionOrdersUpdatedAt = Math.max(
-    positionsQuery.dataUpdatedAt,
-    ordersQuery.dataUpdatedAt,
-  );
+  const positionOrdersAsOf = [
+    positionsQuery.data?.snapshotAsOf,
+    ordersQuery.data?.snapshotAsOf,
+  ].filter((value): value is string => Boolean(value)).sort()[0] ?? null;
   const positionOrdersPhase = (() => {
     const hasData = positionsQuery.data !== undefined || ordersQuery.data !== undefined;
     if (positionsQuery.isLoading || ordersQuery.isLoading || positionsQuery.isFetching || ordersQuery.isFetching) {
@@ -95,8 +90,8 @@ export function useSymbolWorkspaceData({
     if (positionsQuery.isError || ordersQuery.isError) return hasData ? 'partial' : 'failed';
     if (!hasData) return 'idle';
     if (
-      positionOrdersUpdatedAt > 0 &&
-      Date.now() - positionOrdersUpdatedAt > POSITION_ORDERS_FRESHNESS_MS
+      positionsQuery.data?.snapshotFreshness === 'stale' ||
+      ordersQuery.data?.snapshotFreshness === 'stale'
     ) return 'stale';
     if (positionsQuery.isFetchedAfterMount === false && ordersQuery.isFetchedAfterMount === false) {
       return 'cached';
@@ -161,7 +156,8 @@ export function useSymbolWorkspaceData({
     ),
     sourceState('positionOrders', positionOrdersPhase, {
       provider: 'local portfolio',
-      fetchedAt: fetchedAt(positionOrdersUpdatedAt),
+      dataAsOf: positionOrdersAsOf,
+      fetchedAt: null,
       cacheOrigin:
         positionsQuery.isFetchedAfterMount === false && ordersQuery.isFetchedAfterMount === false
           ? 'memory'

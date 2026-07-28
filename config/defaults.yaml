@@ -35,6 +35,8 @@ app_config:
     reentry_lookback_days: 30
   positions_file: data/positions.json
   orders_file: data/orders.json
+  # Persisted portfolio ledgers older than this calendar age are stale in API/UI health.
+  portfolio_snapshot_stale_after_days: 1
 
 strategy:
   id: default

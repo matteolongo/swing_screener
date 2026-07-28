@@ -1,10 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { closePosition, createOrder, fillOrder, partialClosePosition } from '@/features/portfolio/api';
+import { closePosition, createOrder, fetchOrders, fillOrder, partialClosePosition } from '@/features/portfolio/api';
 
 describe('portfolio api', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_PERSISTENCE_MODE', 'api');
     vi.unstubAllGlobals();
+  });
+
+  it('transforms server-owned snapshot freshness at the API boundary', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({
+          orders: [],
+          asof: '2026-07-20',
+          snapshot_freshness: 'stale',
+          stale_after_days: 1,
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
+
+    const orders = await fetchOrders('all');
+
+    expect(orders.snapshotAsOf).toBe('2026-07-20');
+    expect(orders.snapshotFreshness).toBe('stale');
+    expect(orders.snapshotStaleAfterDays).toBe(1);
   });
 
   afterEach(() => {

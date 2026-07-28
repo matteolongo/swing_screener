@@ -89,3 +89,8 @@ class AppConfig(BaseModel):
     manage: ManageConfig
     positions_file: str = "data/positions.json"
     orders_file: str = "data/orders.json"
+    portfolio_snapshot_stale_after_days: int = Field(
+        default=1,
+        ge=0,
+        description="Calendar age after which persisted position/order snapshots are stale",
+    )

@@ -61,10 +61,16 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
-    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
-    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"VALE": [16.30, 16.65]})
+    mock_provider.fetch_latest_price.side_effect = ConnectionError(
+        "no live quote in test"
+    )
+    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes(
+        {"VALE": [16.30, 16.65]}
+    )
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-VALE-1/metrics")
@@ -81,7 +87,9 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
     assert data["total_risk"] == pytest.approx(7.74, abs=0.01)
 
 
-def test_position_metrics_subtracts_recorded_fees(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+def test_position_metrics_subtracts_recorded_fees(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
     positions_file = tmp_path / "positions.json"
     positions_file.write_text(
         json.dumps(
@@ -108,10 +116,16 @@ def test_position_metrics_subtracts_recorded_fees(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
-    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
-    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"BAMNB.AS": [9.98, 10.0]})
+    mock_provider.fetch_latest_price.side_effect = ConnectionError(
+        "no live quote in test"
+    )
+    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes(
+        {"BAMNB.AS": [9.98, 10.0]}
+    )
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-BAMNB.AS-1/metrics")
@@ -128,6 +142,7 @@ def test_position_metrics_subtracts_recorded_fees_usd(
     """Test that fees are converted using EURUSD rate for USD-denominated positions."""
     # Clear EURUSD cache to ensure fresh fetch
     import api.services.portfolio_service as ps
+
     ps._eurusd_cache.clear()
 
     positions_file = tmp_path / "positions.json"
@@ -156,7 +171,9 @@ def test_position_metrics_subtracts_recorded_fees_usd(
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
-    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
+    mock_provider.fetch_latest_price.side_effect = ConnectionError(
+        "no live quote in test"
+    )
 
     def mock_fetch_ohlcv(tickers, **kwargs):
         if "EURUSD=X" in tickers:
@@ -165,7 +182,9 @@ def test_position_metrics_subtracts_recorded_fees_usd(
 
     mock_provider.fetch_ohlcv = mock_fetch_ohlcv
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-INTC-USD-1/metrics")
@@ -220,10 +239,16 @@ def test_positions_endpoint_returns_precomputed_metrics(
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
-    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
-    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"VALE": [16.30, 16.65]})
+    mock_provider.fetch_latest_price.side_effect = ConnectionError(
+        "no live quote in test"
+    )
+    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes(
+        {"VALE": [16.30, 16.65]}
+    )
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions")
@@ -231,9 +256,13 @@ def test_positions_endpoint_returns_precomputed_metrics(
 
     data = res.json()
     assert data["asof"] == "2026-02-08"
+    assert data["snapshot_freshness"] == "stale"
+    assert data["stale_after_days"] == 1
     assert len(data["positions"]) == 2
 
-    vale = next(position for position in data["positions"] if position["ticker"] == "VALE")
+    vale = next(
+        position for position in data["positions"] if position["ticker"] == "VALE"
+    )
     assert vale["status"] == "open"
     assert vale["current_price"] == pytest.approx(16.65, abs=0.01)
     assert vale["pnl"] == pytest.approx(4.56, abs=0.01)
@@ -244,7 +273,9 @@ def test_positions_endpoint_returns_precomputed_metrics(
     assert vale["per_share_risk"] == pytest.approx(1.29, abs=0.01)
     assert vale["total_risk"] == pytest.approx(7.74, abs=0.01)
 
-    intc = next(position for position in data["positions"] if position["ticker"] == "INTC")
+    intc = next(
+        position for position in data["positions"] if position["ticker"] == "INTC"
+    )
     assert intc["status"] == "closed"
     assert intc["current_price"] is None
     assert intc["pnl"] == pytest.approx(-0.71, abs=0.01)
@@ -305,7 +336,9 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
     _set_account_size(monkeypatch, account_size=1000.0)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
-    mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
+    mock_provider.fetch_latest_price.side_effect = ConnectionError(
+        "no live quote in test"
+    )
 
     def mock_fetch_ohlcv(tickers, **kwargs):
         if "EURUSD=X" in tickers:
@@ -319,7 +352,9 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
 
     mock_provider.fetch_ohlcv.side_effect = mock_fetch_ohlcv
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
 
     client = TestClient(app)
     res = client.get("/api/portfolio/summary")
@@ -347,7 +382,9 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
     assert data["win_rate"] == pytest.approx(100.0, abs=0.01)
 
 
-def test_portfolio_summary_endpoint_no_open_positions(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+def test_portfolio_summary_endpoint_no_open_positions(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
     positions_file = tmp_path / "positions.json"
     positions_file.write_text(
         json.dumps(
@@ -376,7 +413,9 @@ def test_portfolio_summary_endpoint_no_open_positions(monkeypatch: pytest.Monkey
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"INTC": [48.0, 48.0]})
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(
+        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+    )
 
     client = TestClient(app)
     res = client.get("/api/portfolio/summary")
