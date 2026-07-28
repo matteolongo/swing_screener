@@ -46,7 +46,8 @@ dev = [
   "pytest-cov",
   "black",
   "ruff",
-  "TA-Lib>=0.4.28"
+  "TA-Lib>=0.4.28",
+  "jupyter-server>=2.0"
 ]
 llm = [
   "langchain-core>=0.3.0",
