@@ -1,6 +1,6 @@
 import clsx from 'clsx';
-import { useAppStore } from '../../store/useAppStore';
-import { useI18n } from '../../i18n';
+import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '@/i18n';
 
 export default function ModeToggle() {
   const { mode, setMode } = useAppStore();

@@ -1,8 +1,8 @@
 import { X } from 'lucide-react';
 import clsx from 'clsx';
 import { useState } from 'react';
-import { useAIStore } from '../../store/useAIStore';
-import { useI18n } from '../../i18n';
+import { useAIStore } from '@/store/useAIStore';
+import { useI18n } from '@/i18n';
 import AnalysisView from './AnalysisView';
 import ThesisView from './ThesisView';
 import PlanView from './PlanView';

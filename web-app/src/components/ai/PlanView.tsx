@@ -1,6 +1,6 @@
-import type { AIAnalysis } from '../../types/api';
-import { useI18n } from '../../i18n';
-import OrderTicket from '../order/OrderTicket';
+import type { AIAnalysis } from '@/types/api';
+import { useI18n } from '@/i18n';
+import OrderTicket from '@/components/order/OrderTicket';
 
 interface Props {
   analysis: AIAnalysis;

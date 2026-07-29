@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { requestPositionReview } from '../../services/api/aiApi';
-import { useI18n } from '../../i18n';
+import { requestPositionReview } from '@/services/api/aiApi';
+import { useI18n } from '@/i18n';
 
 interface Props {
   positionId: string;

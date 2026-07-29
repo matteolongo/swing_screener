@@ -1,6 +1,6 @@
 import { BarChart3, Eye, Brain, ClipboardList } from 'lucide-react';
-import { useAppStore, type TabId } from '../../store/useAppStore';
-import { useI18n } from '../../i18n';
+import { useAppStore, type TabId } from '@/store/useAppStore';
+import { useI18n } from '@/i18n';
 import ProfileMenu from './ProfileMenu';
 import ModeToggle from './ModeToggle';
 

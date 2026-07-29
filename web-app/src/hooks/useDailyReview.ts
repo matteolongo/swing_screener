@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getDailyReview } from '../services/api/portfolioApi';
-import type { DailyReview } from '../types/api';
+import { getDailyReview } from '@/services/api/portfolioApi';
+import type { DailyReview } from '@/types/api';
 
 export function useDailyReview() {
   const [data, setData] = useState<DailyReview | null>(null);

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { useAppStore } from '../../store/useAppStore';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { useI18n } from '../../i18n';
+import { useAppStore } from '@/store/useAppStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { useI18n } from '@/i18n';
 
 const alertLabelsConfig: { key: string; i18nKey: string }[] = [
   { key: 'exhaustion', i18nKey: 'settings.alerts.exhaustion' },

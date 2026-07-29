@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useScreenerStore } from '../store/useScreenerStore';
-import { useAppStore } from '../store/useAppStore';
-import { runScreener, getPoolPresets } from '../services/api/screenerApi';
-import type { TaxonomyFilter, PoolPreset } from '../types/api';
+import { useScreenerStore } from '@/store/useScreenerStore';
+import { useAppStore } from '@/store/useAppStore';
+import { runScreener, getPoolPresets } from '@/services/api/screenerApi';
+import type { TaxonomyFilter, PoolPreset } from '@/types/api';
 
 function universeToFilter(universe: string): Partial<TaxonomyFilter> {
   switch (universe) {

@@ -1,5 +1,5 @@
 import { Activity, AlertTriangle, Flame } from 'lucide-react';
-import { useI18n } from '../../i18n';
+import { useI18n } from '@/i18n';
 
 interface Props {
   score: number | null;

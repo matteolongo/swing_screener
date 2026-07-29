@@ -1,6 +1,6 @@
-import { useScreener } from '../../hooks/useScreener';
-import { useScreenerStore } from '../../store/useScreenerStore';
-import { useI18n } from '../../i18n';
+import { useScreener } from '@/hooks/useScreener';
+import { useScreenerStore } from '@/store/useScreenerStore';
+import { useI18n } from '@/i18n';
 
 export default function PresetFilter() {
   const { t } = useI18n();

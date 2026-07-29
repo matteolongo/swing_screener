@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { Position, DailyReview } from '../types/api';
-import { getPositions, getDailyReview, getStopPreview } from '../services/api/portfolioApi';
+import type { Position, DailyReview } from '@/types/api';
+import { getPositions, getDailyReview, getStopPreview } from '@/services/api/portfolioApi';
 
 interface PortfolioState {
   positions: Position[];

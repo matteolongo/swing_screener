@@ -1,13 +1,13 @@
 import { Loader2 } from 'lucide-react';
-import { useScreener } from '../../hooks/useScreener';
-import { useAIStore } from '../../store/useAIStore';
-import { useAppStore } from '../../store/useAppStore';
-import { useI18n } from '../../i18n';
+import { useScreener } from '@/hooks/useScreener';
+import { useAIStore } from '@/store/useAIStore';
+import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '@/i18n';
 import UniverseSelector from './UniverseSelector';
 import PresetFilter from './PresetFilter';
 import SortControls from './SortControls';
 import CandidateRow from './CandidateRow';
-import AISidePanel from '../ai/AISidePanel';
+import AISidePanel from '@/components/ai/AISidePanel';
 
 export default function ScreenerTab() {
   const { t } = useI18n();

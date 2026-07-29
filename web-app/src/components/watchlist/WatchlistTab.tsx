@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Loader2, Search, Plus, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
-import { useWatchlist } from '../../hooks/useWatchlist';
-import { useAIStore } from '../../store/useAIStore';
-import { useAppStore } from '../../store/useAppStore';
-import { useI18n } from '../../i18n';
+import { useWatchlist } from '@/hooks/useWatchlist';
+import { useAIStore } from '@/store/useAIStore';
+import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '@/i18n';
 import WatchlistRow from './WatchlistRow';
 import AddSymbolDialog from './AddSymbolDialog';
-import AISidePanel from '../ai/AISidePanel';
+import AISidePanel from '@/components/ai/AISidePanel';
 
 type SortField = 'symbol' | 'price' | 'change_pct';
 

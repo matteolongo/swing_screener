@@ -13,5 +13,17 @@ export default defineConfig({
     environment: 'happy-dom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'html'],
+      thresholds: {
+        lines: 80,
+        branches: 75,
+        functions: 75,
+        statements: 80,
+      },
+      exclude: ['node_modules/', 'dist/', 'src/test/**'],
+      include: ['src/**/*.{ts,tsx}'],
+    },
   },
 });

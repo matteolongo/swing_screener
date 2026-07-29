@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import { Send } from 'lucide-react';
-import type { ChatMessage } from '../../store/useAIStore';
-import { useI18n } from '../../i18n';
+import type { ChatMessage } from '@/store/useAIStore';
+import { useI18n } from '@/i18n';
 
 interface Props {
   messages: ChatMessage[];

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
-import { useWatchlistStore } from '../store/useWatchlistStore';
-import { runScreener } from '../services/api/screenerApi';
-import type { TaxonomyFilter } from '../types/api';
+import { useWatchlistStore } from '@/store/useWatchlistStore';
+import { runScreener } from '@/services/api/screenerApi';
+import type { TaxonomyFilter } from '@/types/api';
 
 export function useWatchlist() {
   const {

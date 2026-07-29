@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
-import { useAppStore } from '../../store/useAppStore';
-import { usePortfolioStore } from '../../store/usePortfolioStore';
+import { useAppStore } from '@/store/useAppStore';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
 
 const dotColors: Record<string, string> = {
   exhaustion: 'bg-warning',

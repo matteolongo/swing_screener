@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CandidateRow } from '../types/api';
+import type { CandidateRow } from '@/types/api';
 
 type SortField = 'score' | 'rr' | 'price';
 

@@ -1,6 +1,6 @@
 import clsx from 'clsx';
-import { useScreenerStore } from '../../store/useScreenerStore';
-import { useI18n } from '../../i18n';
+import { useScreenerStore } from '@/store/useScreenerStore';
+import { useI18n } from '@/i18n';
 
 const options: { value: 'score' | 'rr' | 'price'; i18nKey: string }[] = [
   { value: 'score', i18nKey: 'screener.sort.score' },

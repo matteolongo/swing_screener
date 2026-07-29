@@ -1,8 +1,8 @@
 import clsx from 'clsx';
 import { Circle } from 'lucide-react';
-import type { Position } from '../../types/api';
-import { usePortfolioStore } from '../../store/usePortfolioStore';
-import { useI18n } from '../../i18n';
+import type { Position } from '@/types/api';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { useI18n } from '@/i18n';
 
 interface Props {
   positions: Position[];

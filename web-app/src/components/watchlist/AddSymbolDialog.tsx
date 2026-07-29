@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
-import { getSymbolPool } from '../../services/api/screenerApi';
-import type { PoolSymbol } from '../../types/api';
-import { useI18n } from '../../i18n';
+import { getSymbolPool } from '@/services/api/screenerApi';
+import type { PoolSymbol } from '@/types/api';
+import { useI18n } from '@/i18n';
 
 interface Props {
   onSelect: (ticker: string) => void;

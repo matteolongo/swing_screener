@@ -1,10 +1,10 @@
-import { useAppStore } from '../../store/useAppStore';
-import { usePortfolioStore } from '../../store/usePortfolioStore';
-import ScreenerTab from '../screener/ScreenerTab';
-import WatchlistTab from '../watchlist/WatchlistTab';
-import AITab from '../ai/AITab';
-import DailyReviewTab from '../dailyreview/DailyReviewTab';
-import PositionDetailPanel from '../positions/PositionDetailPanel';
+import { useAppStore } from '@/store/useAppStore';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
+import ScreenerTab from '@/components/screener/ScreenerTab';
+import WatchlistTab from '@/components/watchlist/WatchlistTab';
+import AITab from '@/components/ai/AITab';
+import DailyReviewTab from '@/components/dailyreview/DailyReviewTab';
+import PositionDetailPanel from '@/components/positions/PositionDetailPanel';
 import SettingsDrawer from './SettingsDrawer';
 import IntradayBanner from './IntradayBanner';
 

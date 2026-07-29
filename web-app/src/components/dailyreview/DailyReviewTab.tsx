@@ -1,12 +1,12 @@
 import clsx from 'clsx';
-import { useAppStore } from '../../store/useAppStore';
-import { useI18n } from '../../i18n';
-import { useDailyReview } from '../../hooks/useDailyReview';
+import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '@/i18n';
+import { useDailyReview } from '@/hooks/useDailyReview';
 import KPICards from './KPICards';
 import PositionsList from './PositionsList';
 import ScreenerResultsList from './ScreenerResultsList';
 import StepTracker from './StepTracker';
-import type { AlertItem, Position } from '../../types/api';
+import type { AlertItem, Position } from '@/types/api';
 
 function severityColor(type: string): string {
   if (type === 'exhaustion' || type === 'stop-trigger') return 'border-danger';

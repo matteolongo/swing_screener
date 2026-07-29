@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { AIAnalysis, HistoryEntry } from '@/types/api';
-import type { ChatMessage as AIChatMessage } from '../store/useAIStore';
-import { analyzeTicker, getAIHistory, getAILatest, postChat } from '../services/api/aiApi';
+import type { ChatMessage as AIChatMessage } from '@/store/useAIStore';
+import { analyzeTicker, getAIHistory, getAILatest, postChat } from '@/services/api/aiApi';
 
 export function useAIConsole() {
   const [selectedSymbol, setSelectedSymbolState] = useState<string | null>(null);

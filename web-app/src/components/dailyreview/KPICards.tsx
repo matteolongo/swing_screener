@@ -1,6 +1,6 @@
 import clsx from 'clsx';
-import type { KPI, Position, CandidateRow, AlertItem } from '../../types/api';
-import { useI18n } from '../../i18n';
+import type { KPI, Position, CandidateRow, AlertItem } from '@/types/api';
+import { useI18n } from '@/i18n';
 
 interface Props {
   kpis: KPI[];

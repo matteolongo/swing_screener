@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { RefreshCw, Search, Info } from 'lucide-react';
-import { useAIConsole } from '../../hooks/useAIConsole';
-import { usePortfolioStore } from '../../store/usePortfolioStore';
-import { useAppStore } from '../../store/useAppStore';
-import { useI18n } from '../../i18n';
-import { getSymbolPool } from '../../services/api/screenerApi';
+import { useAIConsole } from '@/hooks/useAIConsole';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '@/i18n';
+import { getSymbolPool } from '@/services/api/screenerApi';
 import type { PoolSymbol } from '@/types/api';
 import AnalysisHistory from './AnalysisHistory';
 import IntelligencePanel from './IntelligencePanel';

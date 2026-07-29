@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import clsx from 'clsx';
-import type { AIAnalysis, OrderDraft } from '../../types/api';
-import { useAIStore } from '../../store/useAIStore';
-import { useAppStore } from '../../store/useAppStore';
-import { useI18n } from '../../i18n';
+import type { AIAnalysis, OrderDraft } from '@/types/api';
+import { useAIStore } from '@/store/useAIStore';
+import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '@/i18n';
 
 interface Props {
   analysis: AIAnalysis;

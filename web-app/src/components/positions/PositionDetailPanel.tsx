@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { X, ExternalLink } from 'lucide-react';
-import { usePortfolioStore } from '../../store/usePortfolioStore';
-import { useAIStore } from '../../store/useAIStore';
-import { useAppStore } from '../../store/useAppStore';
-import { useI18n } from '../../i18n';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { useAIStore } from '@/store/useAIStore';
+import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '@/i18n';
 import TrailStatus from './TrailStatus';
 import type { TrailData } from './TrailStatus';
 import ExhaustionBadge from './ExhaustionBadge';

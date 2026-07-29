@@ -1,5 +1,5 @@
-import { useScreenerStore } from '../../store/useScreenerStore';
-import { useI18n } from '../../i18n';
+import { useScreenerStore } from '@/store/useScreenerStore';
+import { useI18n } from '@/i18n';
 
 const universes: { value: string; i18nKey: string }[] = [
   { value: 'us_sp500', i18nKey: 'screener.universe.us_sp500' },

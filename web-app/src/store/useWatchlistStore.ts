@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import type { WatchlistItem } from '../types/api';
+import type { WatchlistItem } from '@/types/api';
 import {
   getWatchlist,
   addWatchlistItem,
   removeWatchlistItem,
-} from '../services/api/watchlistApi';
+} from '@/services/api/watchlistApi';
 
 interface WatchlistState {
   items: WatchlistItem[];

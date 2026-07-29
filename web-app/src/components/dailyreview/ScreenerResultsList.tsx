@@ -1,7 +1,7 @@
 import clsx from 'clsx';
-import { useAppStore } from '../../store/useAppStore';
-import type { CandidateRow as CandidateRowType } from '../../types/api';
-import { useI18n } from '../../i18n';
+import { useAppStore } from '@/store/useAppStore';
+import type { CandidateRow as CandidateRowType } from '@/types/api';
+import { useI18n } from '@/i18n';
 
 interface Props {
   candidates: CandidateRowType[];

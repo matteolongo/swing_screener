@@ -1,6 +1,6 @@
 import clsx from 'clsx';
-import type { StepStatus } from '../../types/api';
-import { useI18n } from '../../i18n';
+import type { StepStatus } from '@/types/api';
+import { useI18n } from '@/i18n';
 
 interface Props {
   steps: StepStatus[];

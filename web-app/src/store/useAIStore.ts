@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { AIAnalysis, OrderDraft } from '../types/api';
-import { analyzeTicker } from '../services/api/aiApi';
+import type { AIAnalysis, OrderDraft } from '@/types/api';
+import { analyzeTicker } from '@/services/api/aiApi';
 
 interface ChatMessage {
   role: 'user' | 'assistant';

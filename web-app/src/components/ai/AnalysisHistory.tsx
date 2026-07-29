@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import type { HistoryEntry } from '@/types/api';
-import { useI18n } from '../../i18n';
+import { useI18n } from '@/i18n';
 
 interface Props {
   entries: HistoryEntry[];

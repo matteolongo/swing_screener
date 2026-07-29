@@ -1,4 +1,4 @@
-import { useI18n } from '../../i18n';
+import { useI18n } from '@/i18n';
 
 export interface TrailData {
   method: 'SMA20' | 'ATR' | 'fixed' | 'manual';

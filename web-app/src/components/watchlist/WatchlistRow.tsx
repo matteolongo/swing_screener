@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import { Circle, MoreVertical } from 'lucide-react';
-import type { WatchlistItem } from '../../types/api';
-import { useI18n } from '../../i18n';
+import type { WatchlistItem } from '@/types/api';
+import { useI18n } from '@/i18n';
 
 interface Props {
   item: WatchlistItem;
