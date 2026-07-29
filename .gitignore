@@ -103,12 +103,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # =========================
-# Web UI build artifacts
+# Old web-ui (replaced by web-app/)
 # =========================
-web-ui/dist/
-web-ui/.vite/
-web-ui/coverage/
-web-ui/.audit/
+web-ui/
 
 # =========================
 # web-app build / coverage

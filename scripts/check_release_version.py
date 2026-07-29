@@ -27,25 +27,25 @@ def check_release_version(project_root: Path) -> list[str]:
     version = get_version(project_root)
     errors: list[str] = []
 
-    package_path = project_root / "web-ui" / "package.json"
+    package_path = project_root / "web-app" / "package.json"
     package = _read_json(package_path)
     package_version = package.get("version")
     if package_version != version:
         errors.append(
-            f"web-ui/package.json version is {package_version}; expected {version}"
+            f"web-app/package.json version is {package_version}; expected {version}"
         )
 
-    lock_path = project_root / "web-ui" / "package-lock.json"
+    lock_path = project_root / "web-app" / "package-lock.json"
     lock = _read_json(lock_path)
     lock_version = lock.get("version")
     if lock_version != version:
         errors.append(
-            f"web-ui/package-lock.json version is {lock_version}; expected {version}"
+            f"web-app/package-lock.json version is {lock_version}; expected {version}"
         )
     lock_root_version = lock.get("packages", {}).get("", {}).get("version")
     if lock_root_version != version:
         errors.append(
-            "web-ui/package-lock.json packages[''] version is "
+            "web-app/package-lock.json packages[''] version is "
             f"{lock_root_version}; expected {version}"
         )
 

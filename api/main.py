@@ -63,7 +63,7 @@ AUTH_SETTINGS = get_auth_settings()
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _USER_DOC = get_settings_manager().load_user_document()
 _API_SETTINGS = _USER_DOC.get("api", {}) if isinstance(_USER_DOC.get("api", {}), dict) else {}
-_DEFAULT_WEB_UI_DIST = get_settings_manager().resolve_runtime_path("web_ui_dist_dir", PROJECT_ROOT / "web-ui" / "dist")
+_DEFAULT_WEB_UI_DIST = get_settings_manager().resolve_runtime_path("web_ui_dist_dir", PROJECT_ROOT / "web-app" / "dist")
 WEB_UI_DIST_DIR = Path(os.getenv("WEB_UI_DIST_DIR", str(_DEFAULT_WEB_UI_DIST))).resolve()
 WEB_UI_INDEX_FILE = WEB_UI_DIST_DIR / "index.html"
 

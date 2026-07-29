@@ -18,8 +18,8 @@ Start with [`docs/overview/INDEX.md`](docs/overview/INDEX.md) — the full doc c
 | Working on… | Read first |
 |---|---|
 | A REST endpoint (request/response shapes) | [`api/README.md`](api/README.md) |
-| A React page or feature | [`web-ui/docs/WEB_UI_GUIDE.md`](web-ui/docs/WEB_UI_GUIDE.md) |
-| Web UI structure / API contract / state rules | [`web-ui/docs/WEB_UI_ARCHITECTURE.md`](web-ui/docs/WEB_UI_ARCHITECTURE.md) |
+| A React page or feature | [`web-app/docs/README.md`](web-app/docs/README.md) |
+| Web UI structure / API contract / state rules | [`web-app/docs/WEB_UI_ARCHITECTURE.md`](web-app/docs/WEB_UI_ARCHITECTURE.md) |
 | Any config key | [`config/README.md`](config/README.md) |
 | Runtime state schema (positions, orders) | [`data/README.md`](data/README.md) |
 | The LLM / intelligence pipeline | [`src/swing_screener/intelligence/README.md`](src/swing_screener/intelligence/README.md) |
@@ -61,7 +61,7 @@ python -m uvicorn api.main:app --port 8000 --reload
 
 ### Frontend (TypeScript)
 ```bash
-cd web-ui && npm install
+cd web-app && npm install
 
 npm run dev          # dev server (Vite)
 npm run build        # production build
@@ -69,13 +69,13 @@ npm test             # Vitest (run before and after changes)
 npm run typecheck    # tsc --noEmit
 npm run lint         # ESLint strict, zero warnings allowed
 npm run test:coverage
-npx vitest run src/features/portfolio  # single directory
-npx vitest -t "renders positions"      # by test name
+npx vitest run src/components/portfolio  # single directory
+npx vitest -t "renders positions"        # by test name
 ```
 
 ### Full test suite before committing
 ```bash
-pytest -q && cd web-ui && npm test
+pytest -q && cd web-app && npm test
 ```
 
 ## Versioning and releases
@@ -90,8 +90,8 @@ smallest compatible bump that describes the release:
 - **Major** (`X+1.0.0`) for incompatible API, persisted-data, config, or
   operational changes that require a consumer action or migration.
 
-`pyproject.toml` is the canonical application version. `web-ui/package.json`
-and both root version fields in `web-ui/package-lock.json` are required release
+`pyproject.toml` is the canonical application version. `web-app/package.json`
+and both root version fields in `web-app/package-lock.json` are required release
 mirrors. The FastAPI/OpenAPI version must use `swing_screener.version.get_version()`;
 do not add a second literal version there.
 
@@ -114,9 +114,9 @@ changelog section. Do not create a release tag for an unmerged PR.
 |-------|------|------|
 | Core library | `src/swing_screener/` | Pure trading logic |
 | API | `api/routers/` + `api/services/` + `api/repositories/` | FastAPI REST, business logic, JSON/SQLite I/O |
-| Web UI | `web-ui/` | React 18 + TypeScript, Zustand, React Query |
+| Web UI | `web-app/` | React 18 + TypeScript, Zustand, React Query |
 
-See `docs/engineering/MODULE_ARCHITECTURE.md` for the canonical backend module list and `web-ui/docs/WEB_UI_GUIDE.md` for the frontend page and feature map.
+See `docs/engineering/MODULE_ARCHITECTURE.md` for the canonical backend module list and `web-app/docs/WEB_UI_GUIDE.md` for the frontend page and feature map.
 
 ## Critical Conventions
 
@@ -132,7 +132,7 @@ All risk and position management uses R: `1R = entry_price - stop_price`. Never 
 Backend uses `snake_case`, frontend uses `camelCase`. Transform **only** at the API boundary using the existing `transformPosition()`, `transformOrder()`, etc. functions.
 
 ### i18n (Frontend)
-All user-facing strings go through `web-ui/src/i18n/`. No hardcoded UI strings in components or test assertions — source expected text from the same i18n keys the UI uses.
+All user-facing strings go through `web-app/src/i18n/`. No hardcoded UI strings in components or test assertions — source expected text from the same i18n keys the UI uses.
 
 ### Cross-layer Contract Changes
 API model changes and corresponding Web UI type changes must be in the **same commit/PR**.
@@ -177,7 +177,7 @@ Before finishing any code change, go through this checklist:
 1. **Nearest README** — does the module/layer you touched have a `README.md`? If the behavior, contract, or public interface changed, update it.
 2. **Config docs** — if you added or changed a config key, update `config/README.md` and the relevant YAML file's inline comments.
 3. **API surface** — if you added, removed, or changed an endpoint signature, update `api/README.md`.
-4. **Web UI feature map** — if you added or removed a page or feature directory, update `web-ui/docs/WEB_UI_GUIDE.md`.
+4. **Web UI feature map** — if you added or removed a page or feature directory, update `web-app/docs/README.md`.
 5. **Schema changes** — if `data/*.json` schema changed, add migration/backfill notes in the nearest `README.md`.
 6. **New doc files** — if you created a new doc, add it to `docs/overview/INDEX.md`.
 7. **Intelligence module** — if you changed the analysis pipeline, cache, or API surface, update `src/swing_screener/intelligence/README.md`.
@@ -212,7 +212,7 @@ Use the branch the work was created from as `<base>`, not `main`, unless the wor
 
 ### UI screenshots in PR descriptions
 
-When a change affects the Web UI (`web-ui/` pages, components, styling, visible copy, or user flows), capture one or more screenshots that show the changed UI state before delivery. Attach or embed those screenshots in the PR description under a `Screenshots` section so reviewers can verify the visual impact without running the app locally.
+When a change affects the Web UI (`web-app/` pages, components, styling, visible copy, or user flows), capture one or more screenshots that show the changed UI state before delivery. Attach or embed those screenshots in the PR description under a `Screenshots` section so reviewers can verify the visual impact without running the app locally.
 
 If the work is pushed directly to `main` and no GitHub PR will be opened, still include the screenshot links or file references in the delivery note or `prs.md` description. If a screenshot cannot be captured because of an environment limitation, document the exact limitation in the PR description instead of omitting the section.
 
@@ -252,7 +252,7 @@ When a feature needs more than one branch (refactor that unblocks a feature, lar
 For deeper context on a specific area:
 - Backend modules: `docs/engineering/MODULE_ARCHITECTURE.md`
 - API surface: `api/README.md`
-- Web UI pages and features: `web-ui/docs/WEB_UI_GUIDE.md`
+- Web UI pages and features: `web-app/docs/README.md`
 - Intelligence module: `src/swing_screener/intelligence/README.md`
 - Config options: `config/README.md`
 - Runtime data schema: `data/README.md`

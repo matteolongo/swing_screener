@@ -59,7 +59,7 @@ uv sync
 python -m uvicorn api.main:app --port 8000 --reload
 
 # Frontend (separate terminal)
-cd web-ui && npm install && npm run dev
+cd web-app && npm install && npm run dev
 ```
 
 Open `http://localhost:5173`.
@@ -78,7 +78,7 @@ Copy `.env.example` to `.env` at the repo root before running the API.
 | `SEC_CONTACT_EMAIL` | No (recommended) | Satisfies SEC EDGAR fair-access User-Agent guidance |
 | `SWING_SCREENER_PROJECT_ROOT` | No | Runtime path override; defaults work for local repo |
 
-Frontend dev server (`web-ui/.env.local`):
+Frontend dev server (`web-app/.env.local`):
 
 | Variable | Description |
 | --- | --- |
@@ -93,14 +93,14 @@ Full config reference: [`config/README.md`](config/README.md).
 ```
 src/swing_screener/    Core trading logic: screening, risk, portfolio, execution, intelligence
 api/                   FastAPI REST layer: routers, services, repositories
-web-ui/                React 18 + TypeScript UI (Zustand, React Query, Vite)
+web-app/               React 18 + TypeScript UI (Zustand, React Query, Vite)
 config/                YAML config (provider, intelligence, risk, LLM)
 data/                  Runtime state: positions.json, orders.json
 ```
 
 Layer responsibilities: [`docs/engineering/MODULE_ARCHITECTURE.md`](docs/engineering/MODULE_ARCHITECTURE.md).
 API surface: [`api/README.md`](api/README.md).
-Frontend guide: [`web-ui/docs/WEB_UI_GUIDE.md`](web-ui/docs/WEB_UI_GUIDE.md).
+Frontend guide: [`web-app/docs/WEB_UI_GUIDE.md`](web-app/docs/WEB_UI_GUIDE.md).
 Intelligence pipeline and observability diagrams: [`src/swing_screener/intelligence/README.md`](src/swing_screener/intelligence/README.md).
 
 ---
@@ -109,14 +109,14 @@ Intelligence pipeline and observability diagrams: [`src/swing_screener/intellige
 
 ```bash
 # Full suite
-pytest -q && cd web-ui && npm test
+pytest -q && cd web-app && npm test
 
 # Backend only
 pytest -q
 pytest -m "not integration" -q   # skip tests requiring API keys
 
 # Frontend only
-cd web-ui && npm test
+cd web-app && npm test
 npm run typecheck
 npm run lint
 ```

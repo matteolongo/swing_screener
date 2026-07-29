@@ -11,7 +11,7 @@ import api.main as main
 
 @pytest.fixture
 def spa_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    """Return a TestClient configured with an ephemeral web-ui dist folder."""
+    """Return a TestClient configured with an ephemeral web-app dist folder."""
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir(parents=True, exist_ok=True)
     (dist_dir / "index.html").write_text("<!doctype html><html><body>SPA</body></html>", encoding="utf-8")
@@ -42,7 +42,7 @@ def test_spa_fallback_serves_index_for_client_routes(spa_client: TestClient):
 
 
 def test_static_asset_is_served_from_dist(spa_client: TestClient):
-    """Built assets should be served directly from web-ui/dist."""
+    """Built assets should be served directly from web-app/dist."""
     response = spa_client.get("/assets/app.js")
     assert response.status_code == 200
     assert "console.log('ok')" in response.text

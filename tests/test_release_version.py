@@ -18,7 +18,7 @@ def _write_release_files(
         f'[project]\nname = "swing-screener"\nversion = "{version}"\n',
         encoding="utf-8",
     )
-    web_directory = root / "web-ui"
+    web_directory = root / "web-app"
     web_directory.mkdir()
     (web_directory / "package.json").write_text(
         json.dumps({"name": "swing-screener-web", "version": resolved_web_version}),
@@ -50,7 +50,7 @@ def test_release_version_check_reports_web_version_mismatch(tmp_path: Path):
     _write_release_files(tmp_path, version="9.8.7", web_version="9.8.6")
 
     assert check_release_version(tmp_path) == [
-        "web-ui/package.json version is 9.8.6; expected 9.8.7",
-        "web-ui/package-lock.json version is 9.8.6; expected 9.8.7",
-        "web-ui/package-lock.json packages[''] version is 9.8.6; expected 9.8.7",
+        "web-app/package.json version is 9.8.6; expected 9.8.7",
+        "web-app/package-lock.json version is 9.8.6; expected 9.8.7",
+        "web-app/package-lock.json packages[''] version is 9.8.6; expected 9.8.7",
     ]

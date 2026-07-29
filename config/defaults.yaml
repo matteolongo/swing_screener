@@ -314,7 +314,7 @@ runtime:
   symbol_sets_file: data/intelligence/symbol_sets.json
   yfinance_cache_dir: .cache/market_data
   alpaca_cache_dir: .cache/alpaca_data
-  web_ui_dist_dir: web-ui/dist
+  web_ui_dist_dir: web-app/dist
   database_file: data/swing_screener.db
 
 ui:

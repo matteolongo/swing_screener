@@ -181,7 +181,7 @@ response. Enforced by `tests/test_services_no_fastapi.py`.
 This refactor was internal to module structure. API routes and frontend endpoint usage remain unchanged:
 
 - API routes are still under `api/routers/*` and mounted in `api/main.py`.
-- Web endpoint constants remain in `web-ui/src/lib/api.ts`.
+- Web endpoint constants remain in `web-app/src/services/api/client.ts`.
 
 ## Contributor Checklist
 

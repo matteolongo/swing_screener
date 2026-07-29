@@ -15,7 +15,7 @@ Use Swing Screener to prepare next-day trades from end-of-day data. The system i
 6. Next trading day: execute at your broker, then mark fills in the UI.
 7. Manage positions and update stops per the plan.
 
-Reference: `../../web-ui/docs/WEB_UI_GUIDE.md`.
+Reference: `../../web-app/docs/WEB_UI_ARCHITECTURE.md`.
 
 ## Optional Workflow (CLI)
 Use the CLI only for automation or headless usage. Run after market close and generate a report for review. Keep the same rules as the Web UI workflow.

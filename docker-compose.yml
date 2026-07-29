@@ -31,8 +31,8 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./web-ui:/app/web-ui
-      - web_node_modules:/app/web-ui/node_modules
+      - ./web-app:/app/web-app
+      - web_node_modules:/app/web-app
     environment:
       - VITE_PROXY_TARGET=http://api:8000
       - VITE_PERSISTENCE_MODE=api

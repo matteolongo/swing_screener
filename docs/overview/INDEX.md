@@ -1,6 +1,6 @@
 # Documentation index
 
-> Last reviewed: 2026-06-28.
+> Last reviewed: 2026-07-29.
 
 ## Entry points
 
@@ -35,10 +35,8 @@
 | API | [`api/README.md`](/api/README.md) | All REST endpoints, request/response shapes |
 | Config | [`config/README.md`](/config/README.md) | Every config file and key |
 | Data | [`data/README.md`](/data/README.md) | Runtime state schema, migration history |
-| Web UI | [`web-ui/README.md`](/web-ui/README.md) | Pages and routes |
-| Web UI guide | [`web-ui/docs/WEB_UI_GUIDE.md`](/web-ui/docs/WEB_UI_GUIDE.md) | Feature directories, shared primitives, workflow |
-| Web UI architecture | [`web-ui/docs/WEB_UI_ARCHITECTURE.md`](/web-ui/docs/WEB_UI_ARCHITECTURE.md) | Directory structure, API contract rules, state management |
-| Design tokens | [`web-ui/docs/DESIGN_TOKENS.md`](/web-ui/docs/DESIGN_TOKENS.md) | Dark-theme semantic token system, ESLint enforcement |
+| Web UI | [`web-app/README.md`](/web-app/README.md) | Pages and routes |
+| Web UI architecture | [`web-app/docs/WEB_UI_ARCHITECTURE.md`](/web-app/docs/WEB_UI_ARCHITECTURE.md) | Directory structure, API contract rules, state management |
 
 ---
 
@@ -65,3 +63,9 @@
 
 - [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/spec.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/spec.md) — approved design for Volume-Zone Stock Analysis V1
 - [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/plan.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/plan.md) — task-by-task implementation plan for Volume-Zone Stock Analysis V1
+
+---
+
+## UX/UI Design Specs
+
+- [`docs/superpowers/specs/2026-07-29-swing-screener-ui-design.md`](../superpowers/specs/2026-07-29-swing-screener-ui-design.md) — Swing Screener v2 full UX/UI redesign spec (dark theme, tab-based navigation, 4 tabs: Screener, Watchlist, AI, Daily Review)
