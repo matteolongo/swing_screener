@@ -111,6 +111,13 @@ web-ui/coverage/
 web-ui/.audit/
 
 # =========================
+# web-app build / coverage
+# =========================
+web-app/dist/
+web-app/coverage/
+web-app/.vite/
+
+# =========================
 # Test artifacts
 # =========================
 test-results.xml
