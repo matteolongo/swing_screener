@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { useAppStore } from '../../store/useAppStore';
 import type { CandidateRow as CandidateRowType } from '../../types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   candidates: CandidateRowType[];
@@ -33,10 +34,11 @@ function SkeletonRow() {
 }
 
 export default function ScreenerResultsList({ candidates, isLoading }: Props) {
+  const { t } = useI18n();
   if (isLoading) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-text-primary mb-2">Screener Results</h3>
+        <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.screenerResults.title')}</h3>
         <table className="w-full text-left">
           <tbody>
             {Array.from({ length: 3 }).map((_, i) => (
@@ -51,9 +53,9 @@ export default function ScreenerResultsList({ candidates, isLoading }: Props) {
   if (candidates.length === 0) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-text-primary mb-2">Screener Results</h3>
+        <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.screenerResults.title')}</h3>
         <div className="text-sm text-text-secondary py-4 text-center">
-          No screener results yet — run the screener.
+          {t('dailyReview.screenerResults.empty')}
         </div>
       </div>
     );
@@ -63,15 +65,15 @@ export default function ScreenerResultsList({ candidates, isLoading }: Props) {
 
   return (
     <div>
-      <h3 className="text-sm font-medium text-text-primary mb-2">Screener Results</h3>
+      <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.screenerResults.title')}</h3>
       <table className="w-full text-left text-[13px]">
         <thead>
           <tr className="text-[11px] text-text-secondary uppercase border-b border-border">
-            <th className="py-1.5 px-2 font-medium">Symbol</th>
-            <th className="py-1.5 px-2 font-medium">Price</th>
-            <th className="py-1.5 px-2 font-medium">Setup</th>
-            <th className="py-1.5 px-2 font-medium">R:R</th>
-            <th className="py-1.5 px-2 font-medium">Sector</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.screenerResults.columns.symbol')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.screenerResults.columns.price')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.screenerResults.columns.setup')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.screenerResults.columns.rMultiple')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.screenerResults.columns.sector')}</th>
           </tr>
         </thead>
         <tbody>
@@ -102,7 +104,7 @@ export default function ScreenerResultsList({ candidates, isLoading }: Props) {
             onClick={() => useAppStore.getState().setActiveTab('screener')}
             className="text-accent text-xs hover:underline cursor-pointer"
           >
-            View all {candidates.length} candidates →
+            {t('dailyReview.screenerResults.viewAll', { count: candidates.length })}
           </button>
         </div>
       )}

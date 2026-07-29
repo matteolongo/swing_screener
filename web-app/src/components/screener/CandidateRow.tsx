@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { Circle, Zap } from 'lucide-react';
 import type { CandidateRow as CandidateRowType } from '../../types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   candidate: CandidateRowType;
@@ -27,6 +28,7 @@ function gainColor(gain: number): string {
 }
 
 export default function CandidateRow({ candidate, isHeld, onAnalyze, simplified }: Props) {
+  const { t } = useI18n();
   const c = candidate;
 
   return (
@@ -106,7 +108,7 @@ export default function CandidateRow({ candidate, isHeld, onAnalyze, simplified 
           )}
           disabled={simplified}
         >
-          Analyze
+          {t('screener.actions.analyze')}
         </button>
       </td>
     </tr>

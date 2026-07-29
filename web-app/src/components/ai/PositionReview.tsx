@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { requestPositionReview } from '../../services/api/aiApi';
+import { useI18n } from '../../i18n';
 
 interface Props {
   positionId: string;
@@ -25,6 +26,7 @@ function statusColor(status: string): string {
 }
 
 export default function PositionReview({ positionId, symbol }: Props) {
+  const { t } = useI18n();
   const [data, setData] = useState<PositionReviewData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function PositionReview({ positionId, symbol }: Props) {
   if (isLoading) {
     return (
       <div className="px-4 py-3 rounded bg-[var(--bg-surface)] border border-[var(--border)]">
-        <p className="text-xs text-[var(--text-secondary)]">Loading position review...</p>
+        <p className="text-xs text-[var(--text-secondary)]">{t('positionReview.loading')}</p>
       </div>
     );
   }
@@ -57,7 +59,7 @@ export default function PositionReview({ positionId, symbol }: Props) {
   if (error || !data) {
     return (
       <div className="px-4 py-3 rounded bg-[var(--bg-surface)] border border-[var(--border)]">
-        <p className="text-xs text-[var(--danger)]">Could not load position review</p>
+        <p className="text-xs text-[var(--danger)]">{t('positionReview.error')}</p>
       </div>
     );
   }
@@ -65,29 +67,29 @@ export default function PositionReview({ positionId, symbol }: Props) {
   return (
     <div className="rounded bg-[var(--bg-surface)] border border-[var(--border)]">
       <div className="px-4 py-2 border-b border-[var(--border)] flex items-center gap-2">
-        <span className="text-xs font-semibold text-[var(--text-primary)]">Position Review</span>
+        <span className="text-xs font-semibold text-[var(--text-primary)]">{t('positionReview.title')}</span>
         <span className="text-xs text-[var(--text-secondary)]">— {symbol}</span>
       </div>
       <div className="p-4 flex flex-col gap-3 text-xs">
         <div>
-          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">Move Explanation</h4>
+          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">{t('positionReview.moveExplanation')}</h4>
           <p className="text-[var(--text-primary)]">{data.move_explanation}</p>
         </div>
 
         <div className="flex items-start gap-2">
-          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase shrink-0 mt-0.5">Thesis Status</h4>
+          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase shrink-0 mt-0.5">{t('positionReview.thesisStatus')}</h4>
           <span className={clsx('px-2 py-0.5 rounded text-[10px] font-semibold border', statusColor(data.thesis_status))}>
             {data.thesis_status}
           </span>
         </div>
 
         <div>
-          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">Profit Protection</h4>
+          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">{t('positionReview.profitProtection')}</h4>
           <p className="text-[var(--text-primary)]">{data.profit_protection_guidance}</p>
         </div>
 
         <div>
-          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">Stop Advice</h4>
+          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">{t('positionReview.stopAdvice')}</h4>
           <p className="text-[var(--text-primary)]">
             {data.stop_advice}
             {data.stop_price && (
@@ -97,7 +99,7 @@ export default function PositionReview({ positionId, symbol }: Props) {
         </div>
 
         <div>
-          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">Macro Overlay</h4>
+          <h4 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">{t('positionReview.macroOverlay')}</h4>
           <p className="text-[var(--text-primary)]">{data.macro_overlay}</p>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 import { useDailyReview } from '../../hooks/useDailyReview';
 import KPICards from './KPICards';
 import PositionsList from './PositionsList';
@@ -13,11 +14,11 @@ function severityColor(type: string): string {
   return 'border-accent';
 }
 
-function PositionsPreview({ positions, isLoading }: { positions: Position[]; isLoading: boolean }) {
+function PositionsPreview({ positions, isLoading, t }: { positions: Position[]; isLoading: boolean; t: (key: string) => string }) {
   if (isLoading) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-text-primary mb-2">Positions Preview</h3>
+        <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.positionsPreview')}</h3>
         <div className="animate-pulse space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-10 bg-elevated rounded" />
@@ -30,8 +31,8 @@ function PositionsPreview({ positions, isLoading }: { positions: Position[]; isL
   if (positions.length === 0) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-text-primary mb-2">Positions Preview</h3>
-        <div className="text-sm text-text-secondary py-4 text-center">No open positions</div>
+        <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.positionsPreview')}</h3>
+        <div className="text-sm text-text-secondary py-4 text-center">{t('dailyReview.positions.empty')}</div>
       </div>
     );
   }
@@ -66,7 +67,7 @@ function PositionsPreview({ positions, isLoading }: { positions: Position[]; isL
                   p.direction === 'long' ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger',
                 )}
               >
-                {p.direction === 'long' ? 'LONG' : 'SHORT'}
+                {p.direction === 'long' ? t('common.long') : t('common.short')}
               </span>
             </div>
           );
@@ -77,6 +78,7 @@ function PositionsPreview({ positions, isLoading }: { positions: Position[]; isL
 }
 
 export default function DailyReviewTab() {
+  const { t } = useI18n();
   const { kpis, positions, candidates, alerts, steps, isLoading } = useDailyReview();
   const accountSize = useAppStore((s) => s.accountSize);
   const mode = useAppStore((s) => s.mode);
@@ -86,7 +88,7 @@ export default function DailyReviewTab() {
     <div className="flex flex-col gap-4 p-4">
       <div className={clsx('grid gap-3', isIntraday ? 'grid-cols-2' : 'grid-cols-4')}>
         <div className="bg-surface rounded-lg p-3">
-          <div className="text-xs text-text-secondary">Open Positions</div>
+          <div className="text-xs text-text-secondary">{t('dailyReview.kpis.openPositions')}</div>
           <div className="text-lg font-semibold text-text-primary mt-0.5">
             {isLoading ? '—' : `${positions.length} positions`}
           </div>
@@ -97,7 +99,7 @@ export default function DailyReviewTab() {
           )}
         </div>
         <div className="bg-surface rounded-lg p-3">
-          <div className="text-xs text-text-secondary">Active Alerts</div>
+          <div className="text-xs text-text-secondary">{t('dailyReview.kpis.activeAlerts')}</div>
           <div className="text-lg font-semibold text-text-primary mt-0.5">
             {isLoading ? '—' : `${alerts.length} alerts`}
           </div>
@@ -118,7 +120,7 @@ export default function DailyReviewTab() {
       {isIntraday ? (
         <div className="grid grid-cols-2 gap-4">
           <PositionsList positions={positions} isLoading={isLoading} />
-          <PositionsPreview positions={positions} isLoading={isLoading} />
+          <PositionsPreview positions={positions} isLoading={isLoading} t={t} />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
@@ -129,7 +131,7 @@ export default function DailyReviewTab() {
 
       {alerts.length > 0 && !isLoading && (
         <div className="bg-surface rounded-lg p-3">
-          <h3 className="text-sm font-medium text-text-primary mb-2">Active Alerts</h3>
+          <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.activeAlerts')}</h3>
           <div className="space-y-1.5">
             {alerts.map((alert: AlertItem) => (
               <div

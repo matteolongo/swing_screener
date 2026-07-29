@@ -1,32 +1,34 @@
 import clsx from 'clsx';
 import type { AIAnalysis } from '../../types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   analysis: AIAnalysis;
 }
 
-function statusBadge(status: string | undefined): { label: string; className: string } {
+function statusBadge(status: string | undefined, t: (key: string) => string): { label: string; className: string } {
   switch (status?.toLowerCase()) {
     case 'confirmed':
       return {
-        label: 'Confirmed',
+        label: t('positionReview.confirmed'),
         className: 'bg-[var(--success)]/20 text-[var(--success)]',
       };
     case 'contradicted':
       return {
-        label: 'Contradicted',
+        label: t('positionReview.contradicted'),
         className: 'bg-[var(--danger)]/20 text-[var(--danger)]',
       };
     default:
       return {
-        label: 'Unresolved',
+        label: t('positionReview.unresolved'),
         className: 'bg-[var(--warning)]/20 text-[var(--warning)]',
       };
   }
 }
 
 export default function ThesisView({ analysis }: Props) {
-  const badge = statusBadge(analysis.thesis_status);
+  const { t } = useI18n();
+  const badge = statusBadge(analysis.thesis_status, t);
 
   const predictionsList = (() => {
     if (!analysis.predictions) return [];
@@ -37,7 +39,7 @@ export default function ThesisView({ analysis }: Props) {
   return (
     <div className="flex flex-col gap-4 text-[13px]">
       <div className="flex items-center gap-3">
-        <span className="text-[11px] text-[var(--text-secondary)]">Status</span>
+        <span className="text-[11px] text-[var(--text-secondary)]">{t('thesisView.status')}</span>
         <span
           className={clsx(
             'inline-block px-2 py-0.5 rounded text-[11px] font-medium',
@@ -51,7 +53,7 @@ export default function ThesisView({ analysis }: Props) {
       {analysis.what_played_out && (
         <div>
           <h3 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">
-            What Played Out
+            {t('thesisView.whatPlayedOut')}
           </h3>
           <p className="text-[var(--text-primary)] leading-relaxed">
             {analysis.what_played_out}
@@ -62,7 +64,7 @@ export default function ThesisView({ analysis }: Props) {
       {analysis.thesis_delta && (
         <div>
           <h3 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">
-            Thesis Delta
+            {t('thesisView.thesisDelta')}
           </h3>
           <p className="text-[var(--warning)] leading-relaxed">
             {analysis.thesis_delta}
@@ -73,7 +75,7 @@ export default function ThesisView({ analysis }: Props) {
       {predictionsList.length > 0 && (
         <div>
           <h3 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-2">
-            Predictions
+            {t('thesisView.predictions')}
           </h3>
           <div className="flex flex-col gap-2">
             {predictionsList.map((p, i) => {

@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useI18n } from '../../i18n';
+
 
 interface Props {
   entry: number;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export default function StopPreview({ entry, currentStop, currentTarget, shares, direction = 'long', onClose }: Props) {
+  const { t } = useI18n();
   const min = entry * 0.95;
   const max = entry * 1.05;
   const [stop, setStop] = useState(currentStop);
@@ -30,12 +33,12 @@ export default function StopPreview({ entry, currentStop, currentTarget, shares,
   return (
     <div className="border border-border rounded-lg p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-text-secondary italic">Preview \u2014 not saved.</span>
-        <button onClick={onClose} className="text-xs text-text-secondary hover:text-text-primary">Close</button>
+        <span className="text-xs text-text-secondary italic">{t('stopPreview.notSaved')}</span>
+        <button onClick={onClose} className="text-xs text-text-secondary hover:text-text-primary">{t('stopPreview.close')}</button>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] text-text-secondary">Stop Price</label>
+        <label className="text-[11px] text-text-secondary">{t('stopPreview.stopPrice')}</label>
         <input
           type="range"
           min={min}
@@ -59,15 +62,15 @@ export default function StopPreview({ entry, currentStop, currentTarget, shares,
         <table className="w-full text-xs">
           <tbody>
             <tr className="border-b border-border">
-              <td className="py-1 text-text-secondary">Stop</td>
+              <td className="py-1 text-text-secondary">{t('stopPreview.stop')}</td>
               <td className="py-1 text-right font-mono text-text-primary">${clamped.toFixed(2)}</td>
             </tr>
             <tr className="border-b border-border">
-              <td className="py-1 text-text-secondary">R:R</td>
+              <td className="py-1 text-text-secondary">{t('stopPreview.rr')}</td>
               <td className="py-1 text-right font-mono text-text-primary">{rr.toFixed(2)}</td>
             </tr>
             <tr>
-              <td className="py-1 text-text-secondary">Risk $</td>
+              <td className="py-1 text-text-secondary">{t('stopPreview.riskDollar')}</td>
               <td className="py-1 text-right font-mono text-text-primary">${risk$.toFixed(2)}</td>
             </tr>
           </tbody>

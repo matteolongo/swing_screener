@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import { Circle } from 'lucide-react';
 import type { Position } from '../../types/api';
 import { usePortfolioStore } from '../../store/usePortfolioStore';
+import { useI18n } from '../../i18n';
 
 interface Props {
   positions: Position[];
@@ -33,11 +34,12 @@ function SkeletonRow() {
 }
 
 export default function PositionsList({ positions, isLoading }: Props) {
+  const { t } = useI18n();
   const setSelectedPositionId = usePortfolioStore((s) => s.setSelectedPositionId);
   if (isLoading) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-text-primary mb-2">Open Positions</h3>
+        <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.positions.title')}</h3>
         <table className="w-full text-left">
           <tbody>
             {Array.from({ length: 3 }).map((_, i) => (
@@ -52,26 +54,26 @@ export default function PositionsList({ positions, isLoading }: Props) {
   if (positions.length === 0) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-text-primary mb-2">Open Positions</h3>
-        <div className="text-sm text-text-secondary py-4 text-center">No open positions</div>
+        <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.positions.title')}</h3>
+        <div className="text-sm text-text-secondary py-4 text-center">{t('dailyReview.positions.empty')}</div>
       </div>
     );
   }
 
   return (
     <div>
-      <h3 className="text-sm font-medium text-text-primary mb-2">Open Positions</h3>
+      <h3 className="text-sm font-medium text-text-primary mb-2">{t('dailyReview.positions.title')}</h3>
       <table className="w-full text-left text-[13px]">
         <thead>
           <tr className="text-[11px] text-text-secondary uppercase border-b border-border">
-            <th className="py-1.5 px-2 font-medium">Ticker</th>
-            <th className="py-1.5 px-2 font-medium">Dir</th>
-            <th className="py-1.5 px-2 font-medium">Entry</th>
-            <th className="py-1.5 px-2 font-medium">Price</th>
-            <th className="py-1.5 px-2 font-medium">P&L (R)</th>
-            <th className="py-1.5 px-2 font-medium">Stop</th>
-            <th className="py-1.5 px-2 font-medium">Trail</th>
-            <th className="py-1.5 px-2 font-medium">Exh</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.positions.columns.ticker')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.positions.columns.direction')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.positions.columns.entry')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.positions.columns.currentPrice')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.positions.columns.pnl')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.positions.columns.stopStatus')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.positions.columns.trailing')}</th>
+            <th className="py-1.5 px-2 font-medium">{t('dailyReview.positions.columns.exhaustion')}</th>
           </tr>
         </thead>
         <tbody>
@@ -95,7 +97,7 @@ export default function PositionsList({ positions, isLoading }: Props) {
                       p.direction === 'long' ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger',
                     )}
                   >
-                    {p.direction === 'long' ? 'LONG' : 'SHORT'}
+                    {p.direction === 'long' ? t('dailyReview.positions.long') : t('dailyReview.positions.short')}
                   </span>
                 </td>
                 <td className="py-2 px-2 price-font">{p.entry_price.toFixed(2)}</td>
@@ -107,7 +109,7 @@ export default function PositionsList({ positions, isLoading }: Props) {
                   <span className="flex items-center gap-1.5 text-[11px]">
                     <Circle size={8} fill={stopHit ? 'var(--danger)' : 'var(--success)'} color={stopHit ? 'var(--danger)' : 'var(--success)'} />
                     <span className={stopHit ? 'text-danger' : 'text-success'}>
-                      {stopHit ? 'Hit' : 'Active'}
+                      {stopHit ? t('dailyReview.positions.stopHit') : t('dailyReview.positions.stopActive')}
                     </span>
                   </span>
                 </td>

@@ -1,8 +1,10 @@
 import clsx from 'clsx';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 
 export default function ModeToggle() {
   const { mode, setMode } = useAppStore();
+  const { t } = useI18n();
 
   return (
     <div className="flex rounded border border-border overflow-hidden" style={{ width: '120px' }}>
@@ -15,7 +17,7 @@ export default function ModeToggle() {
             : 'bg-transparent text-text-secondary hover:text-text-primary',
         )}
       >
-        EOD
+        {t('mode.eod')}
       </button>
       <button
         onClick={() => setMode('intraday')}
@@ -26,7 +28,7 @@ export default function ModeToggle() {
             : 'bg-transparent text-text-secondary hover:text-text-primary',
         )}
       >
-        Intraday
+        {t('mode.intraday')}
       </button>
     </div>
   );

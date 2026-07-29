@@ -1,3 +1,5 @@
+import { useI18n } from '../../i18n';
+
 export interface TrailData {
   method: 'SMA20' | 'ATR' | 'fixed' | 'manual';
   level: number;
@@ -11,10 +13,11 @@ interface Props {
 }
 
 export default function TrailStatus({ trail }: Props) {
+  const { t } = useI18n();
   if (!trail || !trail.active) {
     return (
       <div className="border border-border rounded-lg p-3">
-        <p className="text-sm text-text-secondary italic">No active trail.</p>
+        <p className="text-sm text-text-secondary italic">{t('trailStatus.noTrail')}</p>
       </div>
     );
   }
@@ -36,7 +39,7 @@ export default function TrailStatus({ trail }: Props) {
       </div>
       {trail.lastActionTimestamp && (
         <p className="text-xs text-text-secondary">
-          Last trailing: {trail.lastActionTimestamp}
+          {t('trailStatus.lastTrailing', { timestamp: trail.lastActionTimestamp, actionType: trail.lastActionType ? ` — ${trail.lastActionType}` : '' })}
           {trail.lastActionType ? ` \u2014 ${trail.lastActionType}` : ''}
         </p>
       )}

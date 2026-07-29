@@ -3,6 +3,7 @@ import { X, ExternalLink } from 'lucide-react';
 import { usePortfolioStore } from '../../store/usePortfolioStore';
 import { useAIStore } from '../../store/useAIStore';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 import TrailStatus from './TrailStatus';
 import type { TrailData } from './TrailStatus';
 import ExhaustionBadge from './ExhaustionBadge';
@@ -51,6 +52,7 @@ function unrealizedPLR(p: {
 }
 
 export default function PositionDetailPanel({ positionId, onClose }: Props) {
+  const { t } = useI18n();
   const positions = usePortfolioStore((s) => s.positions);
   const setActiveSymbol = useAIStore((s) => s.setActiveSymbol);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
@@ -92,12 +94,12 @@ export default function PositionDetailPanel({ positionId, onClose }: Props) {
         <div className="fixed inset-0 bg-black/50 z-40" onClick={handleBackdropClick} />
         <div className="fixed left-0 top-0 w-[400px] h-full bg-surface z-50 border-r border-border shadow-2xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-text-primary">Position Detail</h2>
+            <h2 className="text-sm font-medium text-text-primary">{t('positionDetail.headerTitle')}</h2>
             <button onClick={handleClose} className="text-text-secondary hover:text-text-primary">
               <X size={16} />
             </button>
           </div>
-          <p className="text-sm text-text-secondary">Position not found</p>
+          <p className="text-sm text-text-secondary">{t('positionDetail.notFound')}</p>
         </div>
       </>
     );
@@ -133,7 +135,7 @@ export default function PositionDetailPanel({ positionId, onClose }: Props) {
                     : 'bg-danger/20 text-danger'
                 }`}
               >
-                {position.direction === 'long' ? 'LONG' : 'SHORT'}
+                {position.direction === 'long' ? t('positionDetail.long') : t('positionDetail.short')}
               </span>
             </div>
             <div className="text-right">
@@ -151,22 +153,22 @@ export default function PositionDetailPanel({ positionId, onClose }: Props) {
 
           {/* Plan */}
           <div>
-            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">Plan</h3>
+            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">{t('positionDetail.sections.plan')}</h3>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-elevated rounded p-2">
-                <div className="text-[10px] text-text-secondary">Entry</div>
+                <div className="text-[10px] text-text-secondary">{t('positionDetail.plan.entry')}</div>
                 <div className="font-mono text-sm text-text-primary">${position.entry_price.toFixed(2)}</div>
               </div>
               <div className="bg-elevated rounded p-2">
-                <div className="text-[10px] text-text-secondary">Stop</div>
+                <div className="text-[10px] text-text-secondary">{t('positionDetail.plan.stop')}</div>
                 <div className="font-mono text-sm text-text-primary">${stopPrice.toFixed(2)}</div>
               </div>
               <div className="bg-elevated rounded p-2">
-                <div className="text-[10px] text-text-secondary">Target</div>
+                <div className="text-[10px] text-text-secondary">{t('positionDetail.plan.target')}</div>
                 <div className="font-mono text-sm text-text-primary">${position.target_price.toFixed(2)}</div>
               </div>
               <div className="bg-elevated rounded p-2">
-                <div className="text-[10px] text-text-secondary">Shares</div>
+                <div className="text-[10px] text-text-secondary">{t('positionDetail.plan.shares')}</div>
                 <div className="font-mono text-sm text-text-primary">{position.shares}</div>
               </div>
             </div>
@@ -174,24 +176,24 @@ export default function PositionDetailPanel({ positionId, onClose }: Props) {
 
           {/* Current Metrics */}
           <div>
-            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">Current Metrics</h3>
+            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">{t('positionDetail.sections.metrics')}</h3>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-elevated rounded p-2">
-                <div className="text-[10px] text-text-secondary">Market Value</div>
+                <div className="text-[10px] text-text-secondary">{t('positionDetail.metrics.marketValue')}</div>
                 <div className="font-mono text-sm text-text-primary">${position.market_value.toFixed(2)}</div>
               </div>
               <div className="bg-elevated rounded p-2">
-                <div className="text-[10px] text-text-secondary">Unrealized P&amp;L</div>
+                <div className="text-[10px] text-text-secondary">{t('positionDetail.metrics.unrealizedPnl')}</div>
                 <div className={`font-mono text-sm ${plDollar >= 0 ? 'text-success' : 'text-danger'}`}>
                   {plDollar >= 0 ? '+' : ''}${plDollar.toFixed(2)}
                 </div>
               </div>
               <div className="bg-elevated rounded p-2">
-                <div className="text-[10px] text-text-secondary">R:R to Target</div>
+                <div className="text-[10px] text-text-secondary">{t('positionDetail.metrics.rrToTarget')}</div>
                 <div className="font-mono text-sm text-text-primary">{rrToTarget.toFixed(2)}</div>
               </div>
               <div className="bg-elevated rounded p-2">
-                <div className="text-[10px] text-text-secondary">Dist. to Stop</div>
+                <div className="text-[10px] text-text-secondary">{t('positionDetail.metrics.distToStop')}</div>
                 <div className={`font-mono text-sm ${distToStopPct <= 0 ? 'text-danger' : 'text-text-primary'}`}>
                   {distToStopPct.toFixed(1)}%
                 </div>
@@ -201,19 +203,19 @@ export default function PositionDetailPanel({ positionId, onClose }: Props) {
 
           {/* Trail Status */}
           <div>
-            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">Trail</h3>
+            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">{t('positionDetail.sections.trailStatus')}</h3>
             <TrailStatus trail={trailData} />
           </div>
 
           {/* Exhaustion */}
           <div>
-            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">Exhaustion</h3>
+            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">{t('positionDetail.sections.exhaustion')}</h3>
             <ExhaustionBadge score={position.last_exhaustion_score ?? null} />
           </div>
 
           {/* Stop Preview */}
           <div>
-            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">Stop Preview</h3>
+            <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">{t('positionDetail.sections.stopPreview')}</h3>
             <StopPreview
               entry={position.entry_price}
               currentStop={stopPrice}
@@ -229,27 +231,27 @@ export default function PositionDetailPanel({ positionId, onClose }: Props) {
             onClick={handleViewAnalysis}
             className="w-full flex items-center justify-center gap-2 py-2 rounded bg-accent/10 text-accent border border-accent/30 hover:bg-accent/20 transition-colors text-sm font-medium"
           >
-            View Analysis
+            {t('positionDetail.viewAnalysis')}
             <ExternalLink size={14} />
           </button>
 
           {/* Close Controls */}
           <div className="space-y-2">
             <p className="text-xs text-text-secondary text-center">
-              Execute manually in DeGiro
+              {t('positionDetail.close.manualNote')}
             </p>
             <div className="flex gap-2">
               <button
                 disabled
                 className="flex-1 py-2 rounded border border-border text-text-secondary text-sm cursor-not-allowed opacity-60"
               >
-                Close Position
+                {t('positionDetail.close.closePosition')}
               </button>
               <button
                 disabled
                 className="flex-1 py-2 rounded border border-border text-text-secondary text-sm cursor-not-allowed opacity-60"
               >
-                Partial Close
+                {t('positionDetail.close.partialClose')}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import type { HistoryEntry } from '@/types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   entries: HistoryEntry[];
@@ -32,6 +33,7 @@ function convictionWeight(conviction: string): string {
 }
 
 export default function AnalysisHistory({ entries, onSelect, isLoading }: Props) {
+  const { t } = useI18n();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const sorted = [...entries].sort(
     (a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime(),
@@ -50,7 +52,7 @@ export default function AnalysisHistory({ entries, onSelect, isLoading }: Props)
   if (sorted.length === 0) {
     return (
       <div className="py-8 text-center text-[var(--text-secondary)] text-sm">
-        No analysis history yet
+        {t('analysisHistory.empty')}
       </div>
     );
   }
@@ -87,12 +89,12 @@ export default function AnalysisHistory({ entries, onSelect, isLoading }: Props)
             </button>
             {isExpanded && (
               <div className="px-3 pb-3 pt-1 text-xs text-[var(--text-secondary)] space-y-1.5 border-t border-[var(--border)]">
-                <p><span className="text-[var(--text-primary)]">Full thesis:</span> {entry.summary_line}</p>
+                <p><span className="text-[var(--text-primary)]">{t('analysisHistory.fullThesis')}</span> {entry.summary_line}</p>
                 {entry.watch_for && (
-                  <p><span className="text-[var(--text-primary)]">Watch for:</span> {entry.watch_for}</p>
+                  <p><span className="text-[var(--text-primary)]">{t('analysisHistory.watchFor')}</span> {entry.watch_for}</p>
                 )}
                 {entry.pre_open_outlook && (
-                  <p><span className="text-[var(--text-primary)]">Pre-open:</span> {entry.pre_open_outlook}</p>
+                  <p><span className="text-[var(--text-primary)]">{t('analysisHistory.preOpen')}</span> {entry.pre_open_outlook}</p>
                 )}
               </div>
             )}

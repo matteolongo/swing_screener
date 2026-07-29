@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { AIAnalysis } from '@/types/api';
+import { useI18n } from '@/i18n';
 
 interface Props {
   analysis: AIAnalysis | null;
@@ -55,11 +56,12 @@ function Skeleton() {
 }
 
 export default function IntelligencePanel({ analysis, isLoading }: Props) {
+  const { t } = useI18n();
   if (isLoading) return <Skeleton />;
   if (!analysis) {
     return (
       <div className="flex items-center justify-center h-full text-[var(--text-secondary)] text-sm">
-        Select a symbol to view analysis
+        {t('intelligencePanel.noData')}
       </div>
     );
   }
@@ -84,33 +86,33 @@ export default function IntelligencePanel({ analysis, isLoading }: Props) {
     <div className="flex flex-col gap-5 text-[13px]">
       {analysis.pre_open_outlook && (
         <div className="px-3 py-2 rounded bg-[var(--warning)]/10 border border-[var(--warning)]/30">
-          <span className="text-[11px] font-semibold text-[var(--warning)] uppercase tracking-wider">Pre-open Outlook</span>
+          <span className="text-[11px] font-semibold text-[var(--warning)] uppercase tracking-wider">{t('intelligencePanel.preOpenOutlook')}</span>
           <p className="text-[var(--warning)] text-xs mt-1">{analysis.pre_open_outlook}</p>
         </div>
       )}
 
       <div>
-        <SectionHeader title="Thesis" />
+        <SectionHeader title={t('intelligencePanel.thesis')} />
         <p className="text-[var(--text-primary)] leading-relaxed">{analysis.thesis}</p>
       </div>
 
       <div>
-        <SectionHeader title="Trade Plan" />
+        <SectionHeader title={t('intelligencePanel.tradePlan')} />
         <div className="grid grid-cols-3 gap-2 mb-2">
           <div className="px-3 py-2 rounded bg-[var(--bg-surface)]">
-            <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">Entry</div>
+            <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">{t('intelligencePanel.entry')}</div>
             <div className="text-sm font-mono font-medium text-[var(--text-primary)]">
               ${analysis.entry.toFixed(2)}
             </div>
           </div>
           <div className="px-3 py-2 rounded bg-[var(--bg-surface)]">
-            <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">Stop</div>
+            <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">{t('intelligencePanel.stop')}</div>
             <div className="text-sm font-mono font-medium text-[var(--danger)]">
               ${analysis.stop.toFixed(2)}
             </div>
           </div>
           <div className="px-3 py-2 rounded bg-[var(--bg-surface)]">
-            <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">Target</div>
+            <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">{t('intelligencePanel.target')}</div>
             <div className="text-sm font-mono font-medium text-[var(--success)]">
               ${analysis.target.toFixed(2)}
             </div>
@@ -118,13 +120,13 @@ export default function IntelligencePanel({ analysis, isLoading }: Props) {
         </div>
         <div className="flex gap-4 px-1">
           <div>
-            <span className="text-[11px] text-[var(--text-secondary)]">R:R </span>
+            <span className="text-[11px] text-[var(--text-secondary)]">{t('intelligencePanel.rMultiple')} </span>
             <span className={clsx('font-mono font-semibold', rrColor(analysis.rr))}>
               {analysis.rr.toFixed(2)}
             </span>
           </div>
           <div>
-            <span className="text-[11px] text-[var(--text-secondary)]">Risk $ </span>
+            <span className="text-[11px] text-[var(--text-secondary)]">{t('intelligencePanel.risk')} </span>
             <span className="font-mono font-medium text-[var(--text-primary)]">
               ${Math.max(0.01, analysis.entry - analysis.stop).toFixed(2)}
             </span>
@@ -134,7 +136,7 @@ export default function IntelligencePanel({ analysis, isLoading }: Props) {
 
       {evidenceEntries.length > 0 && (
         <div>
-          <SectionHeader title="Evidence Ledger" />
+          <SectionHeader title={t('intelligencePanel.evidenceLedger')} />
           <div className="flex flex-col gap-1.5">
             {evidenceEntries.map(([source, data]) => {
               const entry = data as { excerpt?: string; verdict?: string };
@@ -161,7 +163,7 @@ export default function IntelligencePanel({ analysis, isLoading }: Props) {
 
       {catalystEntries.length > 0 && (
         <div>
-          <SectionHeader title="Classified Catalysts" />
+          <SectionHeader title={t('intelligencePanel.catalysts')} />
           <div className="flex flex-col gap-1.5">
             {catalystEntries.map(([id, data]) => {
               const cat = data as { type?: string; description?: string; citation?: string };
@@ -183,7 +185,7 @@ export default function IntelligencePanel({ analysis, isLoading }: Props) {
 
       {predictionEntries.length > 0 && (
         <div>
-          <SectionHeader title="Predictions" />
+          <SectionHeader title={t('intelligencePanel.predictions')} />
           <div className="flex flex-col gap-1.5">
             {predictionEntries.map(([id, data]) => {
               const pred = data as { direction?: string; reason?: string; reference?: string };
@@ -208,7 +210,7 @@ export default function IntelligencePanel({ analysis, isLoading }: Props) {
 
       {newsItems && newsItems.length > 0 && (
         <div>
-          <SectionHeader title="News Feed" />
+          <SectionHeader title={t('intelligencePanel.newsFeed')} />
           <div className="flex flex-col gap-1.5">
             {newsItems.map((item, i) => (
               <div key={i} className="flex items-start gap-2 px-3 py-2 rounded bg-[var(--bg-surface)]">

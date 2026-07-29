@@ -1,14 +1,16 @@
 import { X } from 'lucide-react';
 import clsx from 'clsx';
+import { useState } from 'react';
 import { useAIStore } from '../../store/useAIStore';
+import { useI18n } from '../../i18n';
 import AnalysisView from './AnalysisView';
 import ThesisView from './ThesisView';
 import PlanView from './PlanView';
-import { useState } from 'react';
 
 type SubTab = 'analysis' | 'thesis' | 'plan';
 
 export default function AISidePanel() {
+  const { t } = useI18n();
   const { activeSymbol, analysisData, setActiveSymbol } = useAIStore();
   const [subTab, setSubTab] = useState<SubTab>('analysis');
 
@@ -16,10 +18,10 @@ export default function AISidePanel() {
 
   const analysis = analysisData[activeSymbol];
 
-  const subTabs: { id: SubTab; label: string }[] = [
-    { id: 'analysis', label: 'Analysis' },
-    { id: 'thesis', label: 'Thesis' },
-    { id: 'plan', label: 'Plan' },
+  const subTabs: { id: SubTab; label: string; i18nKey: string }[] = [
+    { id: 'analysis', label: 'Analysis', i18nKey: 'aiSidePanel.subtabAnalysis' },
+    { id: 'thesis', label: 'Thesis', i18nKey: 'aiSidePanel.subtabThesis' },
+    { id: 'plan', label: 'Plan', i18nKey: 'aiSidePanel.subtabPlan' },
   ];
 
   return (
@@ -42,18 +44,18 @@ export default function AISidePanel() {
         </div>
 
         <div className="flex border-b border-[var(--border)]">
-          {subTabs.map((t) => (
+          {subTabs.map((tab) => (
             <button
-              key={t.id}
-              onClick={() => setSubTab(t.id)}
+              key={tab.id}
+              onClick={() => setSubTab(tab.id)}
               className={clsx(
                 'flex-1 py-2.5 text-xs font-medium transition-colors',
-                subTab === t.id
+                subTab === tab.id
                   ? 'text-[var(--accent)] border-b-2 border-[var(--accent)]'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
               )}
             >
-              {t.label}
+              {t(tab.i18nKey)}
             </button>
           ))}
         </div>
@@ -61,7 +63,7 @@ export default function AISidePanel() {
         <div className="flex-1 overflow-y-auto p-4">
           {!analysis ? (
             <div className="flex items-center justify-center h-full text-[var(--text-secondary)] text-sm">
-              Loading analysis...
+              {t('aiSidePanel.loading')}
             </div>
           ) : subTab === 'analysis' ? (
             <AnalysisView analysis={analysis} />

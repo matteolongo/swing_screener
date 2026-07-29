@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useI18n } from '../../i18n';
 
-const alertLabels: { key: string; label: string }[] = [
-  { key: 'exhaustion', label: 'Exhaustion alerts' },
-  { key: 'stop-trigger', label: 'Stop-trigger alerts' },
-  { key: 'concentration', label: 'Concentration alerts' },
-  { key: 'provider-failure', label: 'Provider failure alerts' },
-  { key: 'intraday-rr', label: 'Intraday R:R change alerts' },
+const alertLabelsConfig: { key: string; i18nKey: string }[] = [
+  { key: 'exhaustion', i18nKey: 'settings.alerts.exhaustion' },
+  { key: 'stop-trigger', i18nKey: 'settings.alerts.stopTrigger' },
+  { key: 'concentration', i18nKey: 'settings.alerts.concentration' },
+  { key: 'provider-failure', i18nKey: 'settings.alerts.providerFailure' },
+  { key: 'intraday-rr', i18nKey: 'settings.alerts.intradayRRChange' },
 ];
 
 export default function SettingsDrawer() {
+  const { t } = useI18n();
   const drawerOpen = useAppStore((s) => s.drawerOpen);
   const setDrawerOpen = useAppStore((s) => s.setDrawerOpen);
   const accountSize = useAppStore((s) => s.accountSize);
@@ -64,7 +66,7 @@ export default function SettingsDrawer() {
       >
         <div className="p-5 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-text-primary">Settings</h2>
+            <h2 className="text-base font-semibold text-text-primary">{t('settings.title')}</h2>
             <button
               onClick={handleClose}
               className="p-1 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
@@ -76,10 +78,10 @@ export default function SettingsDrawer() {
           {/* Account Settings */}
           <section>
             <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3 pb-2 border-b border-border">
-              Account Settings
+              {t('settings.account.title')}
             </h3>
             <div className="space-y-2">
-              <label className="text-sm text-text-primary">Account Size</label>
+              <label className="text-sm text-text-primary">{t('settings.account.accountSize')}</label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-secondary">$</span>
@@ -95,7 +97,7 @@ export default function SettingsDrawer() {
                   disabled={localAccountSize === accountSize}
                   className="px-4 py-2 rounded bg-accent text-white text-sm font-medium hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Save
+                  {t('settings.account.save')}
                 </button>
               </div>
             </div>
@@ -104,12 +106,12 @@ export default function SettingsDrawer() {
           {/* Intraday Settings */}
           <section>
             <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3 pb-2 border-b border-border">
-              Intraday Settings
+              {t('settings.intraday.title')}
             </h3>
             <div className="space-y-3">
               <div>
                 <label className="text-sm text-text-primary" htmlFor="news-window">
-                  Lookback window for intraday news (hours)
+                  {t('settings.intraday.newsWindow')}
                 </label>
                 <input
                   id="news-window"
@@ -122,10 +124,10 @@ export default function SettingsDrawer() {
                 />
               </div>
               <div className="opacity-40">
-                <label className="text-sm text-text-primary">Intraday mode</label>
+                <label className="text-sm text-text-primary">{t('settings.intraday.intradayMode')}</label>
                 <div className="mt-1 flex items-center gap-2">
                   <div className="w-9 h-5 rounded-full bg-bg-elevated border border-border" />
-                  <span className="text-xs text-text-secondary">Coming soon</span>
+                  <span className="text-xs text-text-secondary">{t('settings.intraday.comingSoon')}</span>
                 </div>
               </div>
             </div>
@@ -134,15 +136,15 @@ export default function SettingsDrawer() {
           {/* Alert Toggles */}
           <section>
             <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3 pb-2 border-b border-border">
-              Alert Toggles
+              {t('settings.alerts.title')}
             </h3>
             <div className="space-y-2">
-              {alertLabels.map(({ key, label }) => (
+              {alertLabelsConfig.map(({ key, i18nKey }) => (
                 <label
                   key={key}
                   className="flex items-center justify-between py-1.5 cursor-pointer"
                 >
-                  <span className="text-sm text-text-primary">{label}</span>
+                  <span className="text-sm text-text-primary">{t(i18nKey)}</span>
                   <button
                     type="button"
                     role="switch"
@@ -166,10 +168,10 @@ export default function SettingsDrawer() {
           {/* Sound */}
           <section>
             <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3 pb-2 border-b border-border">
-              Sound
+              {t('settings.sound.title')}
             </h3>
             <label className="flex items-center justify-between py-1.5 cursor-pointer">
-              <span className="text-sm text-text-primary">Play sound on alerts</span>
+              <span className="text-sm text-text-primary">{t('settings.sound.enabled')}</span>
               <button
                 type="button"
                 role="switch"

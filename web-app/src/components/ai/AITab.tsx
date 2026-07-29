@@ -3,6 +3,7 @@ import { RefreshCw, Search, Info } from 'lucide-react';
 import { useAIConsole } from '../../hooks/useAIConsole';
 import { usePortfolioStore } from '../../store/usePortfolioStore';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 import { getSymbolPool } from '../../services/api/screenerApi';
 import type { PoolSymbol } from '@/types/api';
 import AnalysisHistory from './AnalysisHistory';
@@ -11,8 +12,16 @@ import ChatPanel from './ChatPanel';
 import PositionReview from './PositionReview';
 
 const TIME_RANGES = ['1h', '4h', '12h', '24h', 'All'] as const;
+const TIME_RANGE_KEYS: Record<string, string> = {
+  '1h': 'aiTab.timeRange.1h',
+  '4h': 'aiTab.timeRange.4h',
+  '12h': 'aiTab.timeRange.12h',
+  '24h': 'aiTab.timeRange.24h',
+  'All': 'aiTab.timeRange.all',
+};
 
 export default function AITab() {
+  const { t } = useI18n();
   const {
     selectedSymbol, historyEntries, latestAnalysis, chatMessages,
     isLoading, error, setSelectedSymbol, sendChatMessage, forceRefresh,
@@ -85,7 +94,7 @@ export default function AITab() {
       {mode === 'intraday' && (
         <div className="flex items-center gap-2 px-3 py-2 rounded bg-accent/5 border border-accent/20 text-xs text-text-secondary">
           <Info size={14} className="text-accent shrink-0" />
-          Showing intraday intelligence (live data, not final close).
+          {t('aiTab.intradayNote')}
         </div>
       )}
       <div className="flex items-center gap-3 flex-wrap">
@@ -100,7 +109,7 @@ export default function AITab() {
             }}
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Search symbol..."
+            placeholder={t('aiTab.symbolSearchPlaceholder')}
             className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded pl-8 pr-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)]"
           />
           {showSuggestions && suggestions.length > 0 && (
@@ -127,7 +136,7 @@ export default function AITab() {
           className="flex items-center gap-1.5 px-3 py-2 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-xs text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-          Force Refresh
+          {t('aiTab.forceRefresh')}
         </button>
 
         <div className="flex items-center gap-1 bg-[var(--bg-surface)] rounded border border-[var(--border)]">
@@ -141,7 +150,7 @@ export default function AITab() {
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              {r}
+              {t(TIME_RANGE_KEYS[r])}
             </button>
           ))}
         </div>

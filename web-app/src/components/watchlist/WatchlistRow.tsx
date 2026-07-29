@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import { Circle, MoreVertical } from 'lucide-react';
 import type { WatchlistItem } from '../../types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   item: WatchlistItem;
@@ -19,6 +20,7 @@ function formatChange(pct: number): string {
 }
 
 export default function WatchlistRow({ item, onAnalyze, onRemove, onRunScreener }: Props) {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -127,14 +129,14 @@ export default function WatchlistRow({ item, onAnalyze, onRemove, onRunScreener 
             className="absolute right-0 top-full mt-1 z-30 w-40 rounded border border-border bg-bg-elevated shadow-xl"
           >
             <button onClick={handleRunScreener} className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-bg-surface transition-colors">
-              Run Screener
+              {t('watchlist.actions.runScreener')}
             </button>
             <button onClick={handleAnalyze} className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-bg-surface transition-colors">
-              Analyze
+              {t('watchlist.actions.analyze')}
             </button>
             <div className="border-t border-border" />
             <button onClick={handleRemove} className="w-full text-left px-3 py-2 text-xs text-danger hover:bg-bg-surface transition-colors">
-              Remove
+              {t('watchlist.actions.remove')}
             </button>
           </div>
         )}
@@ -146,14 +148,14 @@ export default function WatchlistRow({ item, onAnalyze, onRemove, onRunScreener 
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button onClick={handleRunScreener} className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-bg-surface transition-colors">
-            Run Screener
+            {t('watchlist.actions.runScreener')}
           </button>
           <button onClick={handleAnalyze} className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-bg-surface transition-colors">
-            Analyze
+            {t('watchlist.actions.analyze')}
           </button>
           <div className="border-t border-border" />
           <button onClick={handleRemove} className="w-full text-left px-3 py-2 text-xs text-danger hover:bg-bg-surface transition-colors">
-            Remove
+            {t('watchlist.actions.remove')}
           </button>
         </div>
       )}

@@ -1,15 +1,16 @@
 import clsx from 'clsx';
 import { useScreenerStore } from '../../store/useScreenerStore';
+import { useI18n } from '../../i18n';
 
-const options: { value: 'score' | 'rr' | 'price'; label: string }[] = [
-  { value: 'score', label: 'Score' },
-  { value: 'rr', label: 'R:R' },
-  { value: 'price', label: 'Price' },
+const options: { value: 'score' | 'rr' | 'price'; i18nKey: string }[] = [
+  { value: 'score', i18nKey: 'screener.sort.score' },
+  { value: 'rr', i18nKey: 'screener.sort.rr' },
+  { value: 'price', i18nKey: 'screener.sort.price' },
 ];
 
-const simplifiedOptions: { value: 'rr' | 'price'; label: string }[] = [
-  { value: 'rr', label: 'R:R' },
-  { value: 'price', label: 'Price' },
+const simplifiedOptions: { value: 'rr' | 'price'; i18nKey: string }[] = [
+  { value: 'rr', i18nKey: 'screener.sort.rr' },
+  { value: 'price', i18nKey: 'screener.sort.price' },
 ];
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function SortControls({ simplified }: Props) {
+  const { t } = useI18n();
   const { sortBy, setSortBy } = useScreenerStore();
   const items = simplified ? simplifiedOptions : options;
 
@@ -33,7 +35,7 @@ export default function SortControls({ simplified }: Props) {
               : 'border-border text-text-secondary hover:text-text-primary',
           )}
         >
-          {opt.label}
+          {t(opt.i18nKey)}
         </button>
       ))}
     </div>

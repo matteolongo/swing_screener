@@ -4,19 +4,21 @@ import clsx from 'clsx';
 import { useWatchlist } from '../../hooks/useWatchlist';
 import { useAIStore } from '../../store/useAIStore';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 import WatchlistRow from './WatchlistRow';
 import AddSymbolDialog from './AddSymbolDialog';
 import AISidePanel from '../ai/AISidePanel';
 
 type SortField = 'symbol' | 'price' | 'change_pct';
 
-const sortOptions: { value: SortField; label: string }[] = [
-  { value: 'symbol', label: 'Symbol' },
-  { value: 'price', label: 'Price' },
-  { value: 'change_pct', label: 'Change %' },
+const sortOptions: { value: SortField; i18nKey: string }[] = [
+  { value: 'symbol', i18nKey: 'watchlist.sort.symbol' },
+  { value: 'price', i18nKey: 'watchlist.sort.price' },
+  { value: 'change_pct', i18nKey: 'watchlist.sort.changePct' },
 ];
 
 export default function WatchlistTab() {
+  const { t } = useI18n();
   const {
     items, isLoading, error,
     addWatchlistItem, removeWatchlistItem, runScreenerOnWatchlist,
@@ -54,7 +56,7 @@ export default function WatchlistTab() {
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary" />
           <input
             type="text"
-            placeholder="Search watchlist..."
+            placeholder={t('watchlist.searchPlaceholder')}
             className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-border bg-bg-primary text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent transition-colors"
           />
         </div>
@@ -64,7 +66,7 @@ export default function WatchlistTab() {
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded bg-accent text-white hover:opacity-90 transition-opacity"
         >
           <Plus size={12} />
-          Add
+          {t('watchlist.add')}
         </button>
 
         <button
@@ -77,7 +79,7 @@ export default function WatchlistTab() {
           ) : (
             <RefreshCw size={12} />
           )}
-          Run Screener on Watchlist
+          {t('watchlist.runScreener')}
         </button>
 
         <div className="flex gap-1 ml-auto">
@@ -92,7 +94,7 @@ export default function WatchlistTab() {
                   : 'border-border text-text-secondary hover:text-text-primary',
               )}
             >
-              {opt.label}
+              {t(opt.i18nKey)}
             </button>
           ))}
         </div>
@@ -108,13 +110,13 @@ export default function WatchlistTab() {
         {isLoading && items.length === 0 && (
           <div className="flex items-center justify-center h-32 text-text-secondary text-sm">
             <Loader2 size={16} className="animate-spin mr-2" />
-            Loading watchlist...
+            {t('watchlist.loading')}
           </div>
         )}
 
         {!isLoading && items.length === 0 && (
           <div className="flex items-center justify-center h-32 text-text-secondary text-sm">
-            Your watchlist is empty — add symbols above
+            {t('watchlist.empty')}
           </div>
         )}
 
@@ -122,14 +124,14 @@ export default function WatchlistTab() {
           <table className="w-full text-left">
             <thead>
               <tr className="text-[11px] text-text-secondary uppercase border-b border-border bg-bg-surface sticky top-0">
-                <th className="py-2 px-3 font-medium">Symbol</th>
-                <th className="py-2 px-3 font-medium">Price</th>
-                <th className="py-2 px-3 font-medium">Change %</th>
-                <th className="py-2 px-3 font-medium">Setup</th>
-                <th className="py-2 px-3 font-medium">R:R</th>
-                <th className="py-2 px-3 font-medium">Sector</th>
-                <th className="py-2 px-3 font-medium">Held</th>
-                <th className="py-2 px-3 font-medium">Actions</th>
+                <th className="py-2 px-3 font-medium">{t('watchlist.columns.symbol')}</th>
+                <th className="py-2 px-3 font-medium">{t('watchlist.columns.price')}</th>
+                <th className="py-2 px-3 font-medium">{t('watchlist.columns.changePct')}</th>
+                <th className="py-2 px-3 font-medium">{t('watchlist.columns.setup')}</th>
+                <th className="py-2 px-3 font-medium">{t('watchlist.columns.rMultiple')}</th>
+                <th className="py-2 px-3 font-medium">{t('watchlist.columns.sector')}</th>
+                <th className="py-2 px-3 font-medium">{t('watchlist.columns.held')}</th>
+                <th className="py-2 px-3 font-medium">{t('watchlist.columns.actions')}</th>
               </tr>
             </thead>
             <tbody>

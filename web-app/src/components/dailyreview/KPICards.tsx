@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { KPI, Position, CandidateRow, AlertItem } from '../../types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   kpis: KPI[];
@@ -46,6 +47,7 @@ function KpiCard({
 }
 
 export default function KPICards({ kpis, positions, candidates, alerts, accountSize, isLoading }: Props) {
+  const { t } = useI18n();
   if (isLoading) {
     return (
       <div className="grid grid-cols-4 gap-3">
@@ -74,23 +76,23 @@ export default function KPICards({ kpis, positions, candidates, alerts, accountS
   return (
     <div className="grid grid-cols-4 gap-3">
       <KpiCard
-        label="Open Positions"
+        label={t('dailyReview.kpis.openPositions')}
         value={`${posCount} positions`}
         detail={totalValue > 0 ? `$${totalValue.toLocaleString()} · R ${avgRR.toFixed(2)}` : undefined}
         interactive
       />
       <KpiCard
-        label="Screener Candidates"
+        label={t('dailyReview.kpis.screenerCandidates')}
         value={`${candidateCount} candidates`}
         detail={typeof newCount === 'number' && newCount > 0 ? `${newCount} new` : undefined}
       />
       <KpiCard
-        label="Active Alerts"
+        label={t('dailyReview.kpis.activeAlerts')}
         value={`${alertCount} alerts`}
         interactive
       />
       <KpiCard
-        label="Account"
+        label={t('dailyReview.kpis.account')}
         value={`$${accountSize.toLocaleString()}`}
         detail={`$${used.toLocaleString()} used · $${remaining.toLocaleString()} remaining`}
       />

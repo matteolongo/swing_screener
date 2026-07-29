@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import { getSymbolPool } from '../../services/api/screenerApi';
 import type { PoolSymbol } from '../../types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   onSelect: (ticker: string) => void;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function AddSymbolDialog({ onSelect, onClose }: Props) {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PoolSymbol[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function AddSymbolDialog({ onSelect, onClose }: Props) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search symbol..."
+            placeholder={t('addSymbolDialog.searchPlaceholder')}
             className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-secondary focus:outline-none"
           />
           {loading && <Loader2 size={14} className="animate-spin text-text-secondary" />}
@@ -75,7 +77,7 @@ export default function AddSymbolDialog({ onSelect, onClose }: Props) {
         <div className="max-h-64 overflow-y-auto">
           {results.length === 0 && query.trim() && !loading && (
             <div className="px-4 py-6 text-center text-text-secondary text-xs">
-              No symbols found
+              {t('addSymbolDialog.empty')}
             </div>
           )}
 

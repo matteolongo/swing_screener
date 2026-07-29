@@ -1,18 +1,19 @@
 import clsx from 'clsx';
 import type { StepStatus } from '../../types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   steps: StepStatus[];
   isLoading: boolean;
 }
 
-const DEFAULT_STEPS = [
-  { name: 'Screen', status: 'pending' as const },
-  { name: 'Analyze', status: 'pending' as const },
-  { name: 'Size', status: 'pending' as const },
-  { name: 'Order', status: 'pending' as const },
-  { name: 'Review', status: 'pending' as const },
-  { name: 'Exit', status: 'pending' as const },
+const DEFAULT_STEP_KEYS = [
+  'dailyReview.stepTracker.screen',
+  'dailyReview.stepTracker.analyze',
+  'dailyReview.stepTracker.size',
+  'dailyReview.stepTracker.order',
+  'dailyReview.stepTracker.review',
+  'dailyReview.stepTracker.exit',
 ];
 
 function statusIcon(status: 'done' | 'pending' | 'skipped'): string {
@@ -33,6 +34,7 @@ function SkeletonStep() {
 }
 
 export default function StepTracker({ steps, isLoading }: Props) {
+  const { t } = useI18n();
   if (isLoading) {
     return (
       <div className="flex items-center justify-center gap-2 py-3">
@@ -43,7 +45,7 @@ export default function StepTracker({ steps, isLoading }: Props) {
     );
   }
 
-  const displaySteps = steps.length > 0 ? steps : DEFAULT_STEPS;
+  const displaySteps = steps.length > 0 ? steps : DEFAULT_STEP_KEYS.map((k) => ({ name: t(k), status: 'pending' as const }));
 
   return (
     <div className="flex items-center justify-center gap-0 py-3">

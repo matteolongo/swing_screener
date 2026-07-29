@@ -1,0 +1,378 @@
+{
+  "app": {
+    "title": "Swing Screener"
+  },
+  "tabs": {
+    "screener": "Screener",
+    "watchlist": "Watchlist",
+    "ai": "AI",
+    "dailyReview": "Daily Review"
+  },
+  "mode": {
+    "eod": "EOD",
+    "intraday": "Intraday",
+    "finalClose": "final_close",
+    "intradayLabel": "intraday"
+  },
+  "intradayBanner": {
+    "message": "Intraday preview — read-only. End-of-day actions require final close data.",
+    "dismissAriaLabel": "Dismiss intraday banner"
+  },
+  "screener": {
+    "title": "Screener",
+    "run": "Run",
+    "runIntradayScreen": "Run Intraday Screen",
+    "badgeFinalClose": "final_close",
+    "badgeIntraday": "intraday",
+    "columns": {
+      "rank": "#",
+      "symbol": "Symbol",
+      "price": "Price",
+      "entry": "Entry",
+      "stop": "Stop",
+      "rMultiple": "R:R",
+      "risk": "Risk $",
+      "shares": "Shares",
+      "sector": "Sector",
+      "close": "Close",
+      "catalyst": "Catalyst",
+      "gain": "Gain",
+      "held": "Held",
+      "ai": "AI",
+      "setup": "Setup"
+    },
+    "sort": {
+      "score": "Score",
+      "rr": "R:R",
+      "price": "Price"
+    },
+    "universe": {
+      "us_sp500": "S&P 500",
+      "us_nasdaq100": "Nasdaq 100",
+      "us_dow30": "Dow 30",
+      "eu_midcap": "EU Mid-Cap",
+      "nl_amsterdam": "Amsterdam",
+      "all": "All",
+      "favorites": "Favorites"
+    },
+    "filter": {
+      "none": "None"
+    },
+    "actions": {
+      "analyze": "Analyze"
+    },
+    "empty": "No candidates found — adjust filters and run the screener.",
+    "loading": "Running screener..."
+  },
+  "watchlist": {
+    "title": "Watchlist",
+    "searchPlaceholder": "Search watchlist...",
+    "add": "Add",
+    "runScreener": "Run Screener on Watchlist",
+    "empty": "Your watchlist is empty — add symbols above",
+    "loading": "Loading watchlist...",
+    "columns": {
+      "symbol": "Symbol",
+      "price": "Price",
+      "changePct": "Change %",
+      "setup": "Setup",
+      "rMultiple": "R:R",
+      "sector": "Sector",
+      "held": "Held",
+      "actions": "Actions"
+    },
+    "sort": {
+      "symbol": "Symbol",
+      "price": "Price",
+      "changePct": "Change %"
+    },
+    "actions": {
+      "analyze": "Analyze",
+      "remove": "Remove",
+      "runScreener": "Run Screener"
+    }
+  },
+  "addSymbolDialog": {
+    "title": "Add Symbol",
+    "searchPlaceholder": "Search symbol...",
+    "loading": "Searching...",
+    "empty": "No symbols found",
+    "error": "Failed to load symbols"
+  },
+  "aiTab": {
+    "title": "AI Console",
+    "symbolSearchPlaceholder": "Search symbol...",
+    "forceRefresh": "Force Refresh",
+    "intradayNote": "Showing intraday intelligence (live data, not final close).",
+    "timeRange": {
+      "1h": "1h",
+      "4h": "4h",
+      "12h": "12h",
+      "24h": "24h",
+      "all": "All"
+    },
+    "empty": "Select a symbol to view analysis"
+  },
+  "analysisHistory": {
+    "title": "Analysis History",
+    "loading": "Loading analyses...",
+    "empty": "No analysis history yet",
+    "fullThesis": "Full thesis:",
+    "watchFor": "Watch for:",
+    "preOpen": "Pre-open:"
+  },
+  "chatPanel": {
+    "empty": "Ask a follow-up question about this analysis",
+    "inputPlaceholder": "Ask a follow-up question about this analysis",
+    "send": "Send",
+    "evidenceUsed": "Evidence used",
+    "disabled": "Select a symbol to chat"
+  },
+  "intelligencePanel": {
+    "thesis": "Thesis",
+    "tradePlan": "Trade Plan",
+    "evidenceLedger": "Evidence Ledger",
+    "catalysts": "Classified Catalysts",
+    "predictions": "Predictions",
+    "preOpenOutlook": "Pre-open Outlook",
+    "newsFeed": "News Feed",
+    "entry": "Entry",
+    "stop": "Stop",
+    "target": "Target",
+    "rMultiple": "R:R",
+    "risk": "Risk $",
+    "noData": "Select a symbol to view analysis",
+    "loading": "Loading analysis...",
+    "verdictSupportive": "supportive",
+    "verdictContradicts": "contradicts"
+  },
+  "positionReview": {
+    "title": "Position Review",
+    "moveExplanation": "Move Explanation",
+    "thesisStatus": "Thesis Status",
+    "confirmed": "Confirmed",
+    "contradicted": "Contradicted",
+    "unresolved": "Unresolved",
+    "profitProtection": "Profit Protection",
+    "stopAdvice": "Stop Advice",
+    "macroOverlay": "Macro Overlay",
+    "loading": "Loading position review...",
+    "error": "Could not load position review"
+  },
+  "dailyReview": {
+    "title": "Daily Review",
+    "kpis": {
+      "openPositions": "Open Positions",
+      "screenerCandidates": "Screener Candidates",
+      "activeAlerts": "Active Alerts",
+      "account": "Account"
+    },
+    "positionsPreview": "Positions Preview",
+    "positions": {
+      "title": "Open Positions",
+      "empty": "No open positions",
+      "columns": {
+        "ticker": "Ticker",
+        "direction": "Dir",
+        "entry": "Entry",
+        "currentPrice": "Price",
+        "pnl": "P&L (R)",
+        "stopStatus": "Stop",
+        "trailing": "Trail",
+        "exhaustion": "Exh"
+      },
+      "stopActive": "Active",
+      "stopHit": "Hit",
+      "noTrail": "No active trail",
+      "long": "LONG",
+      "short": "SHORT",
+      "manual": "Manual"
+    },
+    "screenerResults": {
+      "title": "Screener Results",
+      "viewAll": "View all {count} candidates →",
+      "empty": "No screener results yet — run the screener.",
+      "columns": {
+        "symbol": "Symbol",
+        "price": "Price",
+        "setup": "Setup",
+        "rMultiple": "R:R",
+        "sector": "Sector"
+      }
+    },
+    "stepTracker": {
+      "screen": "Screen",
+      "analyze": "Analyze",
+      "size": "Size",
+      "order": "Order",
+      "review": "Review",
+      "exit": "Exit"
+    },
+    "activeAlerts": "Active Alerts"
+  },
+  "alertStrip": {
+    "dismissAriaLabel": "Dismiss"
+  },
+  "positionDetail": {
+    "title": "Position Details",
+    "notFound": "Position not found",
+    "headerTitle": "Position Detail",
+    "sections": {
+      "plan": "Plan",
+      "metrics": "Current Metrics",
+      "trailStatus": "Trail",
+      "exhaustion": "Exhaustion",
+      "stopPreview": "Stop Preview",
+      "intelligence": "Intelligence",
+      "close": "Close Position"
+    },
+    "plan": {
+      "entry": "Entry",
+      "stop": "Stop",
+      "target": "Target",
+      "shares": "Shares"
+    },
+    "metrics": {
+      "marketValue": "Market Value",
+      "unrealizedPnl": "Unrealized P&L",
+      "rrToTarget": "R:R to Target",
+      "distToStop": "Dist. to Stop"
+    },
+    "close": {
+      "manualNote": "Execute manually in DeGiro",
+      "closePosition": "Close Position",
+      "partialClose": "Partial Close",
+      "disabled": "Disabled in intraday mode"
+    },
+    "viewAnalysis": "View Analysis",
+    "long": "LONG",
+    "short": "SHORT"
+  },
+  "stopPreview": {
+    "title": "Stop Preview",
+    "notSaved": "Preview — not saved.",
+    "close": "Close",
+    "stopPrice": "Stop Price",
+    "stop": "Stop",
+    "rr": "R:R",
+    "riskDollar": "Risk $"
+  },
+  "trailStatus": {
+    "noTrail": "No active trail.",
+    "lastTrailing": "Last trailing: {timestamp}{actionType}"
+  },
+  "exhaustionBadge": {
+    "healthy": "Healthy",
+    "watch": "Watch",
+    "exhausted": "Exhausted",
+    "noData": "—"
+  },
+  "orderTicket": {
+    "title": "Order Ticket",
+    "disabledMessage": "Order entry disabled in intraday mode",
+    "orderType": "Order Type",
+    "ticker": "Ticker",
+    "side": "Side",
+    "buyStop": "BUY STOP",
+    "buyLimit": "BUY LIMIT",
+    "shares": "Shares",
+    "entry": "Entry",
+    "stop": "Stop",
+    "target": "Target",
+    "oneR": "1R",
+    "rr": "R:R",
+    "riskDollar": "Risk $",
+    "positionValue": "Position Value",
+    "pctAccount": "% Account",
+    "estimatedFee": "Est. Fees",
+    "feeGate": "Fee Gate",
+    "concentration": "Concentration",
+    "pass": "PASS",
+    "fail": "FAIL",
+    "concentrationDanger": ">30% cap",
+    "concentrationWarning": "20% cap",
+    "dash": "—",
+    "submit": "Submit Order",
+    "submitDisabled": "Complete all fields to submit",
+    "saveDraft": "Save draft",
+    "saved": "Saved!",
+    "copyToClipboard": "Copy to clipboard",
+    "copied": "Copied!",
+    "reset": "Reset",
+    "sideBuy": "BUY"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": {
+      "title": "Account Settings",
+      "accountSize": "Account Size",
+      "save": "Save"
+    },
+    "intraday": {
+      "title": "Intraday Settings",
+      "newsWindow": "Lookback window for intraday news (hours)",
+      "intradayMode": "Intraday mode",
+      "comingSoon": "Coming soon"
+    },
+    "alerts": {
+      "title": "Alert Toggles",
+      "exhaustion": "Exhaustion alerts",
+      "stopTrigger": "Stop-trigger alerts",
+      "concentration": "Concentration alerts",
+      "providerFailure": "Provider failure alerts",
+      "intradayRRChange": "Intraday R:R change alerts"
+    },
+    "sound": {
+      "title": "Sound",
+      "enabled": "Play sound on alerts"
+    },
+    "profileMenuTitle": "Settings"
+  },
+  "aiSidePanel": {
+    "title": "AI Analysis",
+    "subtabAnalysis": "Analysis",
+    "subtabThesis": "Thesis",
+    "subtabPlan": "Plan",
+    "loading": "Loading analysis..."
+  },
+  "analysisView": {
+    "thesis": "Thesis",
+    "evidence": "Evidence",
+    "citations": "Citations",
+    "recentNews": "Recent News",
+    "entry": "Entry",
+    "stop": "Stop",
+    "target": "Target",
+    "rr": "R:R",
+    "risk": "Risk $"
+  },
+  "thesisView": {
+    "status": "Status",
+    "whatPlayedOut": "What Played Out",
+    "thesisDelta": "Thesis Delta",
+    "predictions": "Predictions"
+  },
+  "planView": {
+    "description": "Review and adjust the trade plan below."
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "noResults": "No results",
+    "long": "LONG",
+    "short": "SHORT"
+  },
+  "errors": {
+    "loadWatchlist": "Failed to load watchlist",
+    "addSymbol": "Failed to add symbol",
+    "removeSymbol": "Failed to remove symbol",
+    "loadPool": "Failed to load symbols"
+  }
+}

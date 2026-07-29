@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { AIAnalysis } from '../../types/api';
+import { useI18n } from '../../i18n';
 
 interface Props {
   analysis: AIAnalysis;
@@ -19,6 +20,7 @@ function sentimentColor(s: string): string {
 }
 
 export default function AnalysisView({ analysis }: Props) {
+  const { t } = useI18n();
   const oneR = Math.max(0.01, analysis.entry - analysis.stop);
   const riskDollars = oneR;
 
@@ -44,19 +46,19 @@ export default function AnalysisView({ analysis }: Props) {
 
       <div className="grid grid-cols-3 gap-3">
         <div className="px-3 py-2 rounded bg-[var(--bg-surface)]">
-          <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">Entry</div>
+          <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">{t('analysisView.entry')}</div>
           <div className="text-sm font-mono font-medium text-[var(--text-primary)]">
             ${analysis.entry.toFixed(2)}
           </div>
         </div>
         <div className="px-3 py-2 rounded bg-[var(--bg-surface)]">
-          <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">Stop</div>
+          <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">{t('analysisView.stop')}</div>
           <div className="text-sm font-mono font-medium text-[var(--danger)]">
             ${analysis.stop.toFixed(2)}
           </div>
         </div>
         <div className="px-3 py-2 rounded bg-[var(--bg-surface)]">
-          <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">Target</div>
+          <div className="text-[11px] text-[var(--text-secondary)] mb-0.5">{t('analysisView.target')}</div>
           <div className="text-sm font-mono font-medium text-[var(--success)]">
             ${analysis.target.toFixed(2)}
           </div>
@@ -65,13 +67,13 @@ export default function AnalysisView({ analysis }: Props) {
 
       <div className="flex gap-4">
         <div>
-          <span className="text-[11px] text-[var(--text-secondary)]">R:R </span>
+          <span className="text-[11px] text-[var(--text-secondary)]">{t('analysisView.rr')} </span>
           <span className={clsx('font-mono font-semibold', rrColor(analysis.rr))}>
             {analysis.rr.toFixed(2)}
           </span>
         </div>
         <div>
-          <span className="text-[11px] text-[var(--text-secondary)]">Risk $ </span>
+          <span className="text-[11px] text-[var(--text-secondary)]">{t('analysisView.risk')} </span>
           <span className="font-mono font-medium text-[var(--text-primary)]">
             ${riskDollars.toFixed(2)}
           </span>
@@ -80,7 +82,7 @@ export default function AnalysisView({ analysis }: Props) {
 
       <div>
         <h3 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-1">
-          Thesis
+          {t('analysisView.thesis')}
         </h3>
         <p className="text-[var(--text-primary)] leading-relaxed">{analysis.thesis}</p>
       </div>
@@ -88,7 +90,7 @@ export default function AnalysisView({ analysis }: Props) {
       {evidenceEntries.length > 0 && (
         <div>
           <h3 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-2">
-            Evidence
+            {t('analysisView.evidence')}
           </h3>
           <div className="flex flex-col gap-2">
             {evidenceEntries.map(([source, excerpt]) => (
@@ -109,7 +111,7 @@ export default function AnalysisView({ analysis }: Props) {
       {citations && citations.length > 0 && (
         <div>
           <h3 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-2">
-            Citations
+            {t('analysisView.citations')}
           </h3>
           <div className="flex flex-col gap-1.5">
             {citations.map((c, i) => (
@@ -128,7 +130,7 @@ export default function AnalysisView({ analysis }: Props) {
       {newsItems && newsItems.length > 0 && (
         <div>
           <h3 className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase mb-2">
-            Recent News
+            {t('analysisView.recentNews')}
           </h3>
           <div className="flex flex-col gap-1.5">
             {newsItems.slice(-3).map((item, i) => (
