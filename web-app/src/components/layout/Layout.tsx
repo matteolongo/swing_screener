@@ -1,12 +1,14 @@
 import { useAppStore } from '../../store/useAppStore';
 import ScreenerTab from '../screener/ScreenerTab';
 import WatchlistTab from '../watchlist/WatchlistTab';
+import AITab from '../ai/AITab';
 
 export default function Layout() {
   const { activeTab } = useAppStore();
 
   if (activeTab === 'screener') return <ScreenerTab />;
   if (activeTab === 'watchlist') return <WatchlistTab />;
+  if (activeTab === 'ai') return <AITab />;
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-6">
