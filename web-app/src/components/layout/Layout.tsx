@@ -1,18 +1,14 @@
 import { useAppStore } from '../../store/useAppStore';
-
-const tabContent: Record<string, string> = {
-  screener: 'Screener — coming soon',
-  watchlist: 'Watchlist — coming soon',
-  ai: 'AI — coming soon',
-  'daily-review': 'Daily Review — coming soon',
-};
+import ScreenerTab from '../screener/ScreenerTab';
 
 export default function Layout() {
   const { activeTab } = useAppStore();
 
+  if (activeTab === 'screener') return <ScreenerTab />;
+
   return (
     <main className="mx-auto max-w-7xl px-6 py-6">
-      <p className="text-text-secondary">{tabContent[activeTab]}</p>
+      <p className="text-text-secondary">{activeTab} — coming soon</p>
     </main>
   );
 }
