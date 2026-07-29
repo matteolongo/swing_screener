@@ -181,6 +181,7 @@ Before finishing any code change, go through this checklist:
 5. **Schema changes** — if `data/*.json` schema changed, add migration/backfill notes in the nearest `README.md`.
 6. **New doc files** — if you created a new doc, add it to `docs/overview/INDEX.md`.
 7. **Intelligence module** — if you changed the analysis pipeline, cache, or API surface, update `src/swing_screener/intelligence/README.md`.
+8. **Notebooks** — if you changed a module's public API (function signature, config key, return type, class name), update the corresponding notebook in `notebooks/`. Run the notebook end-to-end before committing.
 
 When in doubt: read the relevant doc, check if it still describes what the code does, and update any section that no longer matches.
 
