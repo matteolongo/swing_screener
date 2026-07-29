@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { RefreshCw, Search } from 'lucide-react';
+import { RefreshCw, Search, Info } from 'lucide-react';
 import { useAIConsole } from '../../hooks/useAIConsole';
 import { usePortfolioStore } from '../../store/usePortfolioStore';
+import { useAppStore } from '../../store/useAppStore';
 import { getSymbolPool } from '../../services/api/screenerApi';
 import type { PoolSymbol } from '@/types/api';
 import AnalysisHistory from './AnalysisHistory';
@@ -18,10 +19,11 @@ export default function AITab() {
   } = useAIConsole();
 
   const positions = usePortfolioStore((s) => s.positions);
+  const mode = useAppStore((s) => s.mode);
   const [searchInput, setSearchInput] = useState('');
   const [suggestions, setSuggestions] = useState<PoolSymbol[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [timeRange, setTimeRange] = useState<string>('All');
+  const [timeRange, setTimeRange] = useState<string>(mode === 'intraday' ? '4h' : 'All');
   const searchRef = useRef<HTMLDivElement>(null);
 
   const matchedPosition = selectedSymbol
@@ -80,6 +82,12 @@ export default function AITab() {
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-4 h-full">
+      {mode === 'intraday' && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded bg-accent/5 border border-accent/20 text-xs text-text-secondary">
+          <Info size={14} className="text-accent shrink-0" />
+          Showing intraday intelligence (live data, not final close).
+        </div>
+      )}
       <div className="flex items-center gap-3 flex-wrap">
         <div ref={searchRef} className="relative flex-1 max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />

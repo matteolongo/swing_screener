@@ -1,6 +1,7 @@
 import { BarChart3, Eye, Brain, ClipboardList } from 'lucide-react';
 import { useAppStore, type TabId } from '../../store/useAppStore';
 import ProfileMenu from './ProfileMenu';
+import ModeToggle from './ModeToggle';
 
 const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'screener', label: 'Screener', icon: <BarChart3 size={16} /> },
@@ -10,7 +11,7 @@ const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function TabBar() {
-  const { activeTab, setActiveTab, mode, setMode } = useAppStore();
+  const { activeTab, setActiveTab } = useAppStore();
 
   return (
     <div className="flex items-center border-b border-border px-4">
@@ -31,12 +32,7 @@ export default function TabBar() {
         ))}
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <button
-          onClick={() => setMode(mode === 'eod' ? 'intraday' : 'eod')}
-          className="px-3 py-1.5 text-xs rounded border border-border text-text-secondary hover:text-text-primary transition-colors"
-        >
-          {mode === 'eod' ? 'End-of-Day' : 'Intraday'}
-        </button>
+        <ModeToggle />
         <ProfileMenu />
       </div>
     </div>

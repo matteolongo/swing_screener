@@ -7,12 +7,22 @@ const options: { value: 'score' | 'rr' | 'price'; label: string }[] = [
   { value: 'price', label: 'Price' },
 ];
 
-export default function SortControls() {
+const simplifiedOptions: { value: 'rr' | 'price'; label: string }[] = [
+  { value: 'rr', label: 'R:R' },
+  { value: 'price', label: 'Price' },
+];
+
+interface Props {
+  simplified?: boolean;
+}
+
+export default function SortControls({ simplified }: Props) {
   const { sortBy, setSortBy } = useScreenerStore();
+  const items = simplified ? simplifiedOptions : options;
 
   return (
     <div className="flex gap-1">
-      {options.map((opt) => (
+      {items.map((opt) => (
         <button
           key={opt.value}
           onClick={() => setSortBy(opt.value)}

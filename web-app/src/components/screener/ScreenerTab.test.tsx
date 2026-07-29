@@ -61,6 +61,40 @@ it('renders table headers and candidate rows', () => {
   expect(screen.getByText('final_close')).toBeInTheDocument();
 });
 
+it('renders simplified columns in intraday mode', () => {
+  useAppStore.setState({ mode: 'intraday' });
+  vi.mocked(useScreener).mockReturnValue({
+    candidates: mockCandidates,
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    universe: 'us_sp500',
+    setUniverse: vi.fn(),
+    preset: null,
+    setPreset: vi.fn(),
+    sortBy: 'score',
+    setSortBy: vi.fn(),
+    presets: [],
+  });
+
+  render(<ScreenerTab />);
+
+  expect(screen.getByText('AAPL')).toBeInTheDocument();
+  expect(screen.getByText('Symbol')).toBeInTheDocument();
+  expect(screen.getAllByText('R:R').length).toBeGreaterThanOrEqual(1);
+  expect(screen.getByText('Run Intraday Screen')).toBeInTheDocument();
+  expect(screen.getByText('intraday')).toBeInTheDocument();
+
+  expect(screen.queryByText('Risk $')).not.toBeInTheDocument();
+  expect(screen.queryByText('Shares')).not.toBeInTheDocument();
+  expect(screen.queryByText('Catalyst')).not.toBeInTheDocument();
+  expect(screen.queryByText('Gain')).not.toBeInTheDocument();
+  expect(screen.queryByText('Entry')).not.toBeInTheDocument();
+  expect(screen.queryByText('Stop')).not.toBeInTheDocument();
+
+  useAppStore.setState({ mode: 'eod' });
+});
+
 it('shows loading spinner when isLoading', () => {
   vi.mocked(useScreener).mockReturnValue({
     candidates: [],

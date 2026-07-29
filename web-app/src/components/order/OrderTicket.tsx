@@ -16,7 +16,9 @@ const CONCENTRATION_DANGER = 0.30;
 
 export default function OrderTicket({ analysis, onSave }: Props) {
   const accountSize = useAppStore((s) => s.accountSize);
+  const mode = useAppStore((s) => s.mode);
   const setDraft = useAIStore((s) => s.setDraft);
+  const intradayDisabled = mode === 'intraday';
 
   const [quantity, setQuantity] = useState(0);
   const [entryPrice, setEntryPrice] = useState(analysis.entry);
@@ -85,6 +87,11 @@ export default function OrderTicket({ analysis, onSave }: Props) {
 
   return (
     <div className="flex flex-col gap-3 text-[13px]">
+      {intradayDisabled && (
+        <div className="px-3 py-2 rounded bg-warning/10 border border-warning/30 text-warning text-xs text-center">
+          Order entry disabled in intraday mode
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
         <div>
           <label className="text-[11px] text-[var(--text-secondary)]">Ticker</label>
@@ -101,11 +108,13 @@ export default function OrderTicket({ analysis, onSave }: Props) {
             <button
               type="button"
               onClick={() => setOrderType('BUY STOP')}
+              disabled={intradayDisabled}
               className={clsx(
                 'flex-1 py-1.5 text-xs rounded border font-medium transition-colors',
                 orderType === 'BUY STOP'
                   ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
                   : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                intradayDisabled && 'opacity-50 cursor-not-allowed',
               )}
             >
               BUY STOP
@@ -113,11 +122,13 @@ export default function OrderTicket({ analysis, onSave }: Props) {
             <button
               type="button"
               onClick={() => setOrderType('BUY LIMIT')}
+              disabled={intradayDisabled}
               className={clsx(
                 'flex-1 py-1.5 text-xs rounded border font-medium transition-colors',
                 orderType === 'BUY LIMIT'
                   ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
                   : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                intradayDisabled && 'opacity-50 cursor-not-allowed',
               )}
             >
               BUY LIMIT
@@ -128,46 +139,50 @@ export default function OrderTicket({ analysis, onSave }: Props) {
         <div className="col-span-2 grid grid-cols-4 gap-2">
           <div>
             <label className="text-[11px] text-[var(--text-secondary)]">Shares</label>
-            <input
-              type="number"
-              min={0}
-              value={quantity}
-              onChange={(e) => setQuantity(Math.max(0, Number(e.target.value)))}
-              className="w-full mt-1 px-2 py-1.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent)]"
-            />
-          </div>
-          <div>
-            <label className="text-[11px] text-[var(--text-secondary)]">Entry</label>
-            <input
-              type="number"
-              step={0.01}
-              min={0.01}
-              value={entryPrice}
-              onChange={(e) => setEntryPrice(Number(e.target.value))}
-              className="w-full mt-1 px-2 py-1.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent)]"
-            />
-          </div>
-          <div>
-            <label className="text-[11px] text-[var(--text-secondary)]">Stop</label>
-            <input
-              type="number"
-              step={0.01}
-              min={0.01}
-              value={stopPrice}
-              onChange={(e) => setStopPrice(Number(e.target.value))}
-              className="w-full mt-1 px-2 py-1.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent)]"
-            />
-          </div>
-          <div>
-            <label className="text-[11px] text-[var(--text-secondary)]">Target</label>
-            <input
-              type="number"
-              step={0.01}
-              min={0.01}
-              value={targetPrice}
-              onChange={(e) => setTargetPrice(Number(e.target.value))}
-              className="w-full mt-1 px-2 py-1.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent)]"
-            />
+              <input
+                type="number"
+                min={0}
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(0, Number(e.target.value)))}
+                disabled={intradayDisabled}
+                className="w-full mt-1 px-2 py-1.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--text-secondary)]">Entry</label>
+              <input
+                type="number"
+                step={0.01}
+                min={0.01}
+                value={entryPrice}
+                onChange={(e) => setEntryPrice(Number(e.target.value))}
+                disabled={intradayDisabled}
+                className="w-full mt-1 px-2 py-1.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--text-secondary)]">Stop</label>
+              <input
+                type="number"
+                step={0.01}
+                min={0.01}
+                value={stopPrice}
+                onChange={(e) => setStopPrice(Number(e.target.value))}
+                disabled={intradayDisabled}
+                className="w-full mt-1 px-2 py-1.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--text-secondary)]">Target</label>
+              <input
+                type="number"
+                step={0.01}
+                min={0.01}
+                value={targetPrice}
+                onChange={(e) => setTargetPrice(Number(e.target.value))}
+                disabled={intradayDisabled}
+                className="w-full mt-1 px-2 py-1.5 rounded bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+              />
           </div>
         </div>
       </div>
@@ -249,19 +264,22 @@ export default function OrderTicket({ analysis, onSave }: Props) {
       <div className="flex gap-2 pt-1">
         <button
           onClick={handleCopy}
-          className="flex-1 py-1.5 text-xs rounded border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
+          disabled={intradayDisabled}
+          className="flex-1 py-1.5 text-xs rounded border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {copied ? 'Copied!' : 'Copy to clipboard'}
         </button>
         <button
           onClick={reset}
-          className="flex-1 py-1.5 text-xs rounded border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--warning)] hover:border-[var(--warning)] transition-colors"
+          disabled={intradayDisabled}
+          className="flex-1 py-1.5 text-xs rounded border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--warning)] hover:border-[var(--warning)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Reset
         </button>
         <button
           onClick={handleSave}
-          className="flex-1 py-1.5 text-xs rounded bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+          disabled={intradayDisabled}
+          className="flex-1 py-1.5 text-xs rounded bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saved ? 'Saved!' : 'Save draft'}
         </button>

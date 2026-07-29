@@ -18,6 +18,7 @@ interface AppState {
   alerts: AlertItem[];
   accountSize: number;
   drawerOpen: boolean;
+  bannerDismissed: boolean;
   setActiveTab: (tab: TabId) => void;
   setMode: (mode: 'eod' | 'intraday') => void;
   addAlert: (alert: AlertItem) => void;
@@ -25,6 +26,7 @@ interface AppState {
   setAccountSize: (size: number) => void;
   toggleDrawer: () => void;
   setDrawerOpen: (open: boolean) => void;
+  setBannerDismissed: (dismissed: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -35,13 +37,15 @@ export const useAppStore = create<AppState>()(
       alerts: [],
       accountSize: 50000,
       drawerOpen: false,
-      setActiveTab: (tab) => set({ activeTab: tab }),
+      bannerDismissed: false,
+      setActiveTab: (tab) => set({ activeTab: tab, bannerDismissed: false }),
       setMode: (mode) => set({ mode }),
       addAlert: (alert) => set((s) => ({ alerts: [...s.alerts, alert] })),
       dismissAlert: (id) => set((s) => ({ alerts: s.alerts.filter((a) => a.id !== id) })),
       setAccountSize: (size) => set({ accountSize: size }),
       toggleDrawer: () => set((s) => ({ drawerOpen: !s.drawerOpen })),
       setDrawerOpen: (open) => set({ drawerOpen: open }),
+      setBannerDismissed: (bannerDismissed) => set({ bannerDismissed }),
     }),
     { name: 'app-store', partialize: (state) => ({ accountSize: state.accountSize }) },
   ),

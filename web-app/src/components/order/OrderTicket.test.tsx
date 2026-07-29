@@ -115,4 +115,19 @@ describe('OrderTicket', () => {
     expect(drafts['AAPL']).toBeDefined();
     expect(drafts['AAPL'].ticker).toBe('AAPL');
   });
+
+  it('disables all inputs and shows warning in intraday mode', () => {
+    useAppStore.setState({ mode: 'intraday' });
+    render(<OrderTicket analysis={mockAnalysis} />);
+    expect(screen.getByText('Order entry disabled in intraday mode')).toBeInTheDocument();
+    const inputs = screen.getAllByRole('spinbutton');
+    inputs.forEach((input) => {
+      expect(input).toBeDisabled();
+    });
+    expect(screen.getByText('BUY STOP')).toBeDisabled();
+    expect(screen.getByText('BUY LIMIT')).toBeDisabled();
+    expect(screen.getByText('Copy to clipboard')).toBeDisabled();
+    expect(screen.getByText('Save draft')).toBeDisabled();
+    useAppStore.setState({ mode: 'eod' });
+  });
 });

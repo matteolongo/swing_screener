@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import AITab from './AITab';
 import { usePortfolioStore } from '../../store/usePortfolioStore';
+import { useAppStore } from '../../store/useAppStore';
 
 const mockGetSymbolPool = vi.fn();
 
@@ -74,6 +75,13 @@ describe('AITab', () => {
   it('renders intelligence panel with thesis', () => {
     render(<AITab />);
     expect(screen.getByText('Strong setup')).toBeInTheDocument();
+  });
+
+  it('shows intraday info banner in intraday mode', () => {
+    useAppStore.setState({ mode: 'intraday' });
+    render(<AITab />);
+    expect(screen.getByText(/Showing intraday intelligence/)).toBeInTheDocument();
+    useAppStore.setState({ mode: 'eod' });
   });
 });
 

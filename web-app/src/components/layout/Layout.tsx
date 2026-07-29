@@ -6,6 +6,7 @@ import AITab from '../ai/AITab';
 import DailyReviewTab from '../dailyreview/DailyReviewTab';
 import PositionDetailPanel from '../positions/PositionDetailPanel';
 import SettingsDrawer from './SettingsDrawer';
+import IntradayBanner from './IntradayBanner';
 
 export default function Layout() {
   const activeTab = useAppStore((s) => s.activeTab);
@@ -14,6 +15,7 @@ export default function Layout() {
 
   return (
     <>
+      <IntradayBanner />
       {activeTab === 'screener' && <ScreenerTab />}
       {activeTab === 'watchlist' && <WatchlistTab />}
       {activeTab === 'ai' && <AITab />}

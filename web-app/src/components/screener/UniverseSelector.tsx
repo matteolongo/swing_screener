@@ -9,8 +9,18 @@ const universes = [
   { value: 'all', label: 'All' },
 ];
 
-export default function UniverseSelector() {
+const simplifiedUniverses = [
+  { value: 'all', label: 'All' },
+  { value: 'favorites', label: 'Favorites' },
+];
+
+interface Props {
+  simplified?: boolean;
+}
+
+export default function UniverseSelector({ simplified }: Props) {
   const { universe, setUniverse } = useScreenerStore();
+  const options = simplified ? simplifiedUniverses : universes;
 
   return (
     <select
@@ -18,7 +28,7 @@ export default function UniverseSelector() {
       onChange={(e) => setUniverse(e.target.value)}
       className="bg-bg-surface border border-border rounded px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
     >
-      {universes.map((u) => (
+      {options.map((u) => (
         <option key={u.value} value={u.value}>{u.label}</option>
       ))}
     </select>
