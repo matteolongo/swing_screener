@@ -7,6 +7,7 @@ beforeEach(() => {
     mode: 'eod',
     alerts: [],
     accountSize: 50000,
+    drawerOpen: false,
   });
   localStorage.clear();
 });

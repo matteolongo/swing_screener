@@ -5,6 +5,7 @@ import WatchlistTab from '../watchlist/WatchlistTab';
 import AITab from '../ai/AITab';
 import DailyReviewTab from '../dailyreview/DailyReviewTab';
 import PositionDetailPanel from '../positions/PositionDetailPanel';
+import SettingsDrawer from './SettingsDrawer';
 
 export default function Layout() {
   const activeTab = useAppStore((s) => s.activeTab);
@@ -23,6 +24,7 @@ export default function Layout() {
           onClose={() => setSelectedPositionId(null)}
         />
       )}
+      <SettingsDrawer />
     </>
   );
 }
