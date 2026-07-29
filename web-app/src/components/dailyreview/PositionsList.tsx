@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { Circle } from 'lucide-react';
 import type { Position } from '../../types/api';
+import { usePortfolioStore } from '../../store/usePortfolioStore';
 
 interface Props {
   positions: Position[];
@@ -32,6 +33,7 @@ function SkeletonRow() {
 }
 
 export default function PositionsList({ positions, isLoading }: Props) {
+  const setSelectedPositionId = usePortfolioStore((s) => s.setSelectedPositionId);
   if (isLoading) {
     return (
       <div>
@@ -80,7 +82,11 @@ export default function PositionsList({ positions, isLoading }: Props) {
             const exhColor = score < 3 ? 'text-success' : score < 7 ? 'text-warning' : 'text-danger';
 
             return (
-              <tr key={p.position_id} className="border-b border-border hover:bg-elevated transition-colors cursor-pointer">
+              <tr
+                key={p.position_id}
+                className="border-b border-border hover:bg-elevated transition-colors cursor-pointer"
+                onClick={() => setSelectedPositionId(p.position_id)}
+              >
                 <td className="py-2 px-2 font-medium text-text-primary">{p.ticker}</td>
                 <td className="py-2 px-2">
                   <span

@@ -7,6 +7,7 @@ interface AlertItem {
   id: string;
   type: 'exhaustion' | 'stop-trigger' | 'concentration' | 'provider-failure' | 'intraday-rr';
   symbol?: string;
+  positionId?: string;
   message: string;
   timestamp: string;
 }
