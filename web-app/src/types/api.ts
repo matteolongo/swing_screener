@@ -60,6 +60,8 @@ export interface AIAnalysis {
   predictions?: Record<string, unknown>;
   pre_open_outlook?: string;
   thesis_status?: string;
+  what_played_out?: string;
+  thesis_delta?: string;
   news?: Array<Record<string, unknown>>;
   source_citations?: Array<Record<string, unknown>>;
 }

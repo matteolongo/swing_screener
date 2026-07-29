@@ -1,12 +1,15 @@
 import { Loader2 } from 'lucide-react';
 import { useScreener } from '../../hooks/useScreener';
+import { useAIStore } from '../../store/useAIStore';
 import UniverseSelector from './UniverseSelector';
 import PresetFilter from './PresetFilter';
 import SortControls from './SortControls';
 import CandidateRow from './CandidateRow';
+import AISidePanel from '../ai/AISidePanel';
 
 export default function ScreenerTab() {
   const { candidates, isLoading, error, refetch } = useScreener();
+  const setActiveSymbol = useAIStore((s) => s.setActiveSymbol);
 
   return (
     <div className="flex flex-col h-full">
@@ -67,12 +70,14 @@ export default function ScreenerTab() {
                   key={c.symbol}
                   candidate={c}
                   isHeld={c.held !== undefined && c.held > 0}
+                  onAnalyze={() => setActiveSymbol(c.symbol)}
                 />
               ))}
             </tbody>
           </table>
         )}
       </div>
+      <AISidePanel />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AIAnalysis } from '../types/api';
+import type { AIAnalysis, OrderDraft } from '../types/api';
 import { analyzeTicker } from '../services/api/aiApi';
 
 interface ChatMessage {
@@ -13,17 +13,20 @@ interface AIState {
   analysisData: Record<string, AIAnalysis>;
   activeSymbol: string | null;
   chatHistory: Record<string, ChatMessage[]>;
+  drafts: Record<string, OrderDraft>;
 
   setActiveSymbol: (symbol: string | null) => void;
   setAnalysis: (ticker: string, analysis: AIAnalysis) => void;
   fetchAnalysis: (ticker: string) => Promise<void>;
   addChatMessage: (ticker: string, msg: ChatMessage) => void;
+  setDraft: (ticker: string, draft: OrderDraft) => void;
 }
 
 export const useAIStore = create<AIState>((set) => ({
   analysisData: {},
   activeSymbol: null,
   chatHistory: {},
+  drafts: {},
 
   setActiveSymbol: (symbol) => set({ activeSymbol: symbol }),
 
@@ -46,6 +49,9 @@ export const useAIStore = create<AIState>((set) => ({
         [ticker]: [...(s.chatHistory[ticker] || []), msg],
       },
     })),
+
+  setDraft: (ticker, draft) =>
+    set((s) => ({ drafts: { ...s.drafts, [ticker]: draft } })),
 }));
 
 export type { ChatMessage };
