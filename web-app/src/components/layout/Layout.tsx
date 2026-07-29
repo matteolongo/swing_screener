@@ -2,6 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import ScreenerTab from '../screener/ScreenerTab';
 import WatchlistTab from '../watchlist/WatchlistTab';
 import AITab from '../ai/AITab';
+import DailyReviewTab from '../dailyreview/DailyReviewTab';
 
 export default function Layout() {
   const { activeTab } = useAppStore();
@@ -9,6 +10,7 @@ export default function Layout() {
   if (activeTab === 'screener') return <ScreenerTab />;
   if (activeTab === 'watchlist') return <WatchlistTab />;
   if (activeTab === 'ai') return <AITab />;
+  if (activeTab === 'daily-review') return <DailyReviewTab />;
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-6">
