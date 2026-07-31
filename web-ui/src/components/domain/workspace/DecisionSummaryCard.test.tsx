@@ -52,7 +52,6 @@ describe('DecisionSummaryCard', () => {
     render(<DecisionSummaryCard summary={buildSummary()} currency="USD" onRefreshFundamentals={() => undefined} />);
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
-    expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
     expect(screen.getByText('Coverage Warnings')).toBeInTheDocument();
     expect(screen.getByText('Fundamentals stale: latest quarter 2024-12-31.')).toBeInTheDocument();
@@ -82,7 +81,8 @@ describe('DecisionSummaryCard', () => {
 
     expect(screen.getByText('Ready for order review')).toBeInTheDocument();
     expect(screen.getByText('Review the proposed order')).toBeInTheDocument();
-    expect(screen.getByText(/Decision Summary.*Wait for Breakout/)).toBeInTheDocument();
+    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
+    expect(screen.queryByText(/Wait for Breakout/)).not.toBeInTheDocument();
   });
 
   it('renders unknown catalyst as a neutral data state', () => {
