@@ -69,14 +69,32 @@ def test_volume_analysis_query_params(monkeypatch):
     assert prov.fetch_ohlcv.called
 
 
-def test_volume_analysis_soft_fail_on_fetch_error(monkeypatch):
+def test_volume_analysis_reports_provider_failure(monkeypatch):
     prov = MagicMock(spec=MarketDataProvider)
-    prov.fetch_ohlcv.side_effect = RuntimeError("boom")
+    prov.fetch_ohlcv.side_effect = RuntimeError("api_key=secret")
     prov.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
         "api.routers.market_data.get_default_provider", lambda *a, **k: prov
     )
     res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
+
+    assert res.status_code == 502
+    assert res.json()["detail"] == {
+        "code": "market_data_provider_failed",
+        "message": "Market data provider failed.",
+        "provider": "mock",
+    }
+    assert "secret" not in res.text
+
+
+def test_volume_analysis_empty_provider_result_is_valid_absence(monkeypatch):
+    monkeypatch.setattr(
+        "api.routers.market_data.get_default_provider",
+        lambda *a, **k: _mock_provider(pd.DataFrame()),
+    )
+
+    res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
+
     assert res.status_code == 200
     data = res.json()
     assert data["action"] == "No Trade"

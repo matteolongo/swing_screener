@@ -27,6 +27,7 @@ import type { FundamentalSnapshot } from '@/features/fundamentals/types';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
@@ -109,6 +110,7 @@ export default function SymbolAnalysisContent({
   const [refreshedEvidence, setRefreshedEvidence] =
     useState<EvidenceRefreshResponse | null>(null);
   const currentSessionRef = useRef(`${ticker.trim().toUpperCase()}:${selectionVersion}`);
+  const mountedRef = useRef(true);
   const tabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
   const tickerRuns = useTickerRuns(ticker, activeTab === 'intelligence');
@@ -131,25 +133,73 @@ export default function SymbolAnalysisContent({
     currentSessionRef.current = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
   }, [ticker, selectionVersion]);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const requestMatchesLiveSession = (
+    requestedSession: string,
+    responseTicker?: string | null,
+  ) => {
+    const normalized = ticker.trim().toUpperCase();
+    const workspace = useWorkspaceStore.getState();
+    const workspaceMatches = selectionVersion === 0
+      || (
+        workspace.selectedTicker === normalized
+        && workspace.selectionVersion === selectionVersion
+      );
+    return mountedRef.current
+      && requestedSession === currentSessionRef.current
+      && workspaceMatches
+      && (responseTicker == null || responseTicker.trim().toUpperCase() === normalized);
+  };
+
   const handleAnalyzeWithAi = (force = false) => {
     const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
     const attemptId = globalThis.crypto.randomUUID();
+    const requestId = globalThis.crypto.randomUUID();
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker,
+      selectionVersion,
+      sourceId: 'intelligence',
+      phase: 'active',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: force ? 'regenerate-analysis' : 'generate-analysis',
+      announced: false,
+    });
     setAttemptedRunId(null);
     setLastAttemptForce(force);
     intelligenceMutation.mutate(
       { ticker, candidate, position, force, attemptId },
       {
         onSuccess: (result) => {
-          if (
-            result.symbol.trim().toUpperCase() === ticker.trim().toUpperCase()
-            && requestedSession === currentSessionRef.current
-          ) {
+          if (requestMatchesLiveSession(requestedSession, result.symbol)) {
             setIntelligenceResult(result);
           }
         },
-        onSettled: async () => {
+        onSettled: async (result, error) => {
           const refreshedRuns = await tickerRuns.refetch();
-          if (requestedSession !== currentSessionRef.current) return;
+          const sessionChanged = !requestMatchesLiveSession(
+            requestedSession,
+            result?.symbol,
+          );
+          useWorkspaceStore.getState().settleActivity(requestId, {
+            phase: sessionChanged ? 'discarded' : error ? 'failed' : 'completed',
+            finishedAt: new Date().toISOString(),
+            message: sessionChanged
+              ? t('workspacePage.data.activitySelectionChanged')
+              : error?.message ?? null,
+            retryable: !sessionChanged && Boolean(error),
+          });
+          if (sessionChanged || !mountedRef.current) return;
           const attemptedRun = findRunByAttemptId(
             refreshedRuns.data ?? [],
             ticker,
@@ -163,16 +213,50 @@ export default function SymbolAnalysisContent({
 
   const handleRefreshEvidence = () => {
     const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+    const requestId = globalThis.crypto.randomUUID();
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker,
+      selectionVersion,
+      sourceId: 'evidence',
+      phase: 'active',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: 'refresh-evidence',
+      announced: false,
+    });
     setRefreshedEvidence(null);
     evidenceRefreshMutation.mutate(ticker, {
       onSuccess: (result) => {
-        if (
-          result.ticker.trim().toUpperCase() === ticker.trim().toUpperCase()
-          && requestedSession === currentSessionRef.current
-        ) {
+        if (requestMatchesLiveSession(requestedSession, result.ticker)) {
           setRefreshedEvidence(result);
           intelligenceWorkflow?.onEvidenceRefresh?.(result);
         }
+      },
+      onSettled: (result, error) => {
+        const sessionChanged = !requestMatchesLiveSession(
+          requestedSession,
+          result?.ticker,
+        );
+        const responseFailed = result?.status === 'failed';
+        const responsePartial = result?.status === 'partial';
+        useWorkspaceStore.getState().settleActivity(requestId, {
+          phase: sessionChanged
+            ? 'discarded'
+            : error || responseFailed ? 'failed'
+              : result?.status === 'partial' ? 'partial' : 'completed',
+          finishedAt: new Date().toISOString(),
+          provider: result?.sources.map(({ provider }) => provider).join(', ') || null,
+          message: sessionChanged
+            ? t('workspacePage.data.activitySelectionChanged')
+            : error?.message
+              ?? result?.sources.find(({ status }) => status === 'failed')?.message
+              ?? null,
+          retryable: !sessionChanged && Boolean(error || responseFailed || responsePartial),
+        });
       },
     });
   };

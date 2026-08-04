@@ -22,10 +22,15 @@ export default function AnalysisCanvasPanel() {
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const selectionVersion = useWorkspaceStore((state) => state.selectionVersion);
   const fullscreen = useWorkspaceStore((state) => state.fullscreen);
+  const activities = useWorkspaceStore((state) => state.activities);
+  const activityDrawerOpen = useWorkspaceStore((state) => state.activityDrawerOpen);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const clearSelectedTicker = useWorkspaceStore((state) => state.clearSelectedTicker);
   const collapseWorkspace = useWorkspaceStore((state) => state.collapseWorkspace);
   const setFullscreen = useWorkspaceStore((state) => state.setFullscreen);
+  const setActivityDrawerOpen = useWorkspaceStore((state) => state.setActivityDrawerOpen);
+  const dismissActivity = useWorkspaceStore((state) => state.dismissActivity);
+  const markActivityAnnounced = useWorkspaceStore((state) => state.markActivityAnnounced);
   const lastScreenerResult = useScreenerStore((state) => state.lastResult);
   const selectedCandidate = lastScreenerResult?.candidates.find(
     (candidate) => candidate.ticker.toUpperCase() === selectedTicker?.toUpperCase()
@@ -34,6 +39,12 @@ export default function AnalysisCanvasPanel() {
   const openPosition = openPositionsQuery.data?.find(
     (p) => p.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   ) ?? null;
+  const visibleActivities = selectedTicker
+    ? activities.filter(
+        (activity) => activity.ticker === selectedTicker.toUpperCase()
+          && activity.selectionVersion === selectionVersion,
+      )
+    : [];
 
   useEffect(() => {
     setEvidenceRefresh(null);
@@ -83,7 +94,9 @@ export default function AnalysisCanvasPanel() {
                   && phase === 'loading',
               )
             }
-            onRefreshAll={() => void workspaceData.refreshAllNonIntelligence()}
+            onRefreshAll={() => {
+              void workspaceData.refreshAllNonIntelligence().catch(() => undefined);
+            }}
             fullscreen={fullscreen}
             onClose={clearSelectedTicker}
             onCollapse={collapseWorkspace}
@@ -91,13 +104,22 @@ export default function AnalysisCanvasPanel() {
           />
           <DataStatusBar
             sources={workspaceData.sourceStates}
-            onSourceSelect={setSelectedSourceId}
+            onSourceSelect={(sourceId) => {
+              setSelectedSourceId(sourceId);
+              setActivityDrawerOpen(true);
+            }}
           />
-          <WorkspaceActivityDrawer
-            activities={workspaceData.sourceStates}
-            selectedSourceId={selectedSourceId}
-            onRetry={(sourceId) => void workspaceData.refreshSource(sourceId)}
-          />
+          {activityDrawerOpen ? (
+            <WorkspaceActivityDrawer
+              activities={visibleActivities}
+              selectedSource={workspaceData.sourceStates.find(({ id }) => id === selectedSourceId)}
+              onRetry={(sourceId) => {
+                void workspaceData.refreshSource(sourceId).catch(() => undefined);
+              }}
+              onDismiss={dismissActivity}
+              onMarkAnnounced={markActivityAnnounced}
+            />
+          ) : null}
           <SymbolAnalysisContent
             ticker={selectedTicker}
             selectionVersion={selectionVersion}
@@ -125,7 +147,9 @@ export default function AnalysisCanvasPanel() {
               error: workspaceData.fundamentals.error,
               isRefreshing: workspaceData.fundamentalsRefreshing,
               refreshError: workspaceData.fundamentalsRefreshError,
-              onRefresh: () => void workspaceData.refreshSource('fundamentals'),
+              onRefresh: () => {
+                void workspaceData.refreshSource('fundamentals').catch(() => undefined);
+              },
             }}
           />
         </>

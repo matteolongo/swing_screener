@@ -132,7 +132,14 @@ def get_ticker_volume_analysis(
         )
     except Exception as exc:
         logger.warning("Volume-analysis OHLCV fetch failed for %s: %s", symbol, exc)
-        ohlcv = None
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "market_data_provider_failed",
+                "message": "Market data provider failed.",
+                "provider": provider_name,
+            },
+        ) from exc
 
     if ohlcv is None or ohlcv.empty:
         ohlcv = pd.DataFrame()

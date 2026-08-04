@@ -1,187 +1,148 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 
-import type { WorkspaceSourceId, WorkspaceSourceState } from '@/features/workspaceData/types';
+import type {
+  WorkspaceActivity,
+  WorkspaceSourceId,
+  WorkspaceSourceState,
+} from '@/features/workspaceData/types';
 import { t } from '@/i18n/t';
 
 interface WorkspaceActivityDrawerProps {
-  activities: WorkspaceSourceState[];
+  activities: WorkspaceActivity[];
   onRetry?: (sourceId: WorkspaceSourceId) => void;
-  onDismiss?: (sourceId: WorkspaceSourceId) => void;
-  selectedSourceId?: WorkspaceSourceId | null;
+  onDismiss?: (requestId: string) => void;
+  onMarkAnnounced?: (requestId: string) => void;
+  selectedSource?: WorkspaceSourceState | null;
+}
+
+function pipelineStepLabel(step: string): string {
+  switch (step) {
+    case 'fetch-prices':
+    case 'fetch-candles':
+      return t('workspacePage.data.pipelineSteps.fetchPrices');
+    case 'fetch-fundamentals':
+      return t('workspacePage.data.pipelineSteps.fetchFundamentals');
+    case 'fetch-evidence':
+      return t('workspacePage.data.pipelineSteps.fetchEvidence');
+    case 'fetch-intelligence':
+      return t('workspacePage.data.pipelineSteps.fetchIntelligence');
+    case 'fetch-positions':
+      return t('workspacePage.data.pipelineSteps.fetchPositions');
+    case 'fetch-orders':
+      return t('workspacePage.data.pipelineSteps.fetchOrders');
+    case 'refresh-fundamentals':
+      return t('workspacePage.data.pipelineSteps.refreshFundamentals');
+    case 'refresh-evidence':
+      return t('workspacePage.data.pipelineSteps.refreshEvidence');
+    case 'generate-analysis':
+      return t('workspacePage.data.pipelineSteps.generateAnalysis');
+    case 'regenerate-analysis':
+      return t('workspacePage.data.pipelineSteps.regenerateAnalysis');
+    default:
+      return t('workspacePage.data.pipelineSteps.unavailable');
+  }
 }
 
 export default function WorkspaceActivityDrawer({
   activities,
   onRetry,
   onDismiss,
-  selectedSourceId = null,
+  onMarkAnnounced,
+  selectedSource = null,
 }: WorkspaceActivityDrawerProps) {
-  const displayError = (message: string | undefined) =>
-    message === 'evidence_provider_failed' || message === 'Evidence provider failed.'
-      ? t('workspacePage.intelligence.evidenceProviderFailed')
-      : message;
-  const incomingSelection = activities[0]
-    ? `${activities[0].ticker}:${activities[0].selectionVersion}`
-    : null;
-  const selectionRef = useRef(incomingSelection);
-  const [retainedFailures, setRetainedFailures] = useState<WorkspaceSourceState[]>(() =>
-    activities.filter(({ phase, error }) => (phase === 'failed' || phase === 'partial') && error),
-  );
-  const [dismissedFailures, setDismissedFailures] = useState<Set<string>>(() => new Set());
-  const hasNewFailure = activities.some(
-    ({ phase, error }) => (phase === 'failed' || phase === 'partial') && error,
+  const unannouncedFailure = activities.find(
+    ({ phase, announced }) => phase === 'failed' && !announced,
   );
 
   useEffect(() => {
-    if (incomingSelection && incomingSelection !== selectionRef.current) {
-      selectionRef.current = incomingSelection;
-      setRetainedFailures([]);
-      setDismissedFailures(new Set());
-    }
+    if (unannouncedFailure) onMarkAnnounced?.(unannouncedFailure.requestId);
+  }, [onMarkAnnounced, unannouncedFailure]);
 
-    setRetainedFailures((current) => {
-      const next = new Map(
-        current
-          .filter(
-            ({ ticker, selectionVersion }) =>
-              `${ticker}:${selectionVersion}` === selectionRef.current,
-          )
-          .map((activity) => [activity.id, activity]),
-      );
-      for (const activity of activities) {
-        const failureIdentity = `${activity.ticker}:${activity.selectionVersion}:${activity.id}:${activity.error?.message ?? ''}`;
-        if (
-          (activity.phase === 'failed' || activity.phase === 'partial') &&
-          activity.error &&
-          !dismissedFailures.has(failureIdentity)
-        ) {
-          next.set(activity.id, activity);
-        } else if (activity.phase === 'fresh' || activity.phase === 'cached') {
-          next.delete(activity.id);
-        }
-      }
-      const updated = [...next.values()];
-      const unchanged =
-        updated.length === current.length &&
-        updated.every(
-          (activity, index) =>
-            activity.id === current[index]?.id &&
-            activity.phase === current[index]?.phase &&
-            activity.error?.message === current[index]?.error?.message,
-        );
-      return unchanged ? current : updated;
-    });
-    setDismissedFailures((current) => {
-      const recoveredSources = new Set(
-        activities
-          .filter(({ phase }) => phase === 'fresh' || phase === 'cached')
-          .map(({ ticker, selectionVersion, id }) => `${ticker}:${selectionVersion}:${id}:`),
-      );
-      if (recoveredSources.size === 0) return current;
-      const updated = new Set(
-        [...current].filter(
-          (identity) => ![...recoveredSources].some((prefix) => identity.startsWith(prefix)),
-        ),
-      );
-      return updated.size === current.size ? current : updated;
-    });
-  }, [activities, dismissedFailures, incomingSelection]);
-
-  function dismiss(sourceId: WorkspaceSourceId) {
-    const activity = retainedFailures.find(({ id }) => id === sourceId);
-    if (activity?.error) {
-      setDismissedFailures((current) => {
-        const updated = new Set(current);
-        updated.add(
-          `${activity.ticker}:${activity.selectionVersion}:${activity.id}:${activity.error?.message ?? ''}`,
-        );
-        return updated;
-      });
-    }
-    setRetainedFailures((current) => current.filter(({ id }) => id !== sourceId));
-    onDismiss?.(sourceId);
-  }
-
-  const visibleFailures = retainedFailures.filter(
-    ({ ticker, selectionVersion }) =>
-      !incomingSelection || `${ticker}:${selectionVersion}` === incomingSelection,
-  );
-
-  const selectedActivity = activities.find(({ id }) => id === selectedSourceId);
-  if (visibleFailures.length === 0 && !selectedActivity) return null;
+  if (activities.length === 0 && !selectedSource) return null;
 
   return (
-    <aside
-      className="shrink-0 rounded-md border border-danger/40 bg-danger/10 p-3"
-      role={hasNewFailure ? 'alert' : 'status'}
-      aria-label={t('workspacePage.data.activity')}
-    >
-      {selectedActivity ? (
-        <div className="mb-2 text-xs text-foreground" data-testid="workspace-source-detail">
-          <div className="font-semibold">
-            {t(`workspacePage.data.sources.${selectedActivity.id}`)}
-            {' · '}
-            {t(`workspacePage.data.phases.${selectedActivity.phase}`)}
-          </div>
-          <dl className="mt-2 grid gap-1 sm:grid-cols-2">
-            {[
-              ['provider', selectedActivity.provider],
-              ['dataAsOf', selectedActivity.dataAsOf],
-              ['fetchedAt', selectedActivity.fetchedAt
-                ? new Date(selectedActivity.fetchedAt).toLocaleString()
-                : null],
-              ['cacheOrigin', selectedActivity.cacheOrigin],
-              ['missingInputs', selectedActivity.missingInputs.length
-                ? selectedActivity.missingInputs.map((input) =>
-                    [
-                      'positions',
-                      'orders',
-                      'freshnessMetadata',
-                      'evidenceDiagnostics',
-                      'evidenceProvider',
-                      'screenerRunMetadata',
-                      'screenerProvider',
-                      'intelligenceProvider',
-                    ].includes(input)
-                      ? t(`workspacePage.data.details.inputs.${input}` as Parameters<typeof t>[0])
-                      : input,
-                  ).join(', ')
-                : t('workspacePage.data.details.none')],
-              ['diagnostics', displayError(selectedActivity.error?.message)],
-            ].map(([key, value]) => (
-              <div key={key}>
-                <dt className="text-muted">
-                  {t(`workspacePage.data.details.${key}` as Parameters<typeof t>[0])}
-                </dt>
-                <dd>{value || t('workspacePage.data.details.unavailable')}</dd>
-              </div>
-            ))}
-          </dl>
+    <>
+      {unannouncedFailure ? (
+        <div className="sr-only" role="alert">
+          {unannouncedFailure.message ?? t('workspacePage.data.activityFailed')}
         </div>
       ) : null}
-      <ul className="space-y-2">
-        {visibleFailures.map((activity) => (
-          <li key={activity.id} className="flex items-center gap-2 text-xs text-danger">
-            <span className="min-w-0 flex-1">{displayError(activity.error?.message)}</span>
-            {activity.error?.retryable && onRetry ? (
-              <button
-                type="button"
-                className="rounded border border-danger/40 px-2 py-1 font-medium"
-                onClick={() => onRetry(activity.id)}
-              >
-                {t('workspacePage.data.retry')}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="rounded px-2 py-1 font-medium"
-              onClick={() => dismiss(activity.id)}
+      <aside
+        className="shrink-0 rounded-md border border-border bg-surface-muted/40 p-3"
+        role="status"
+        aria-label={t('workspacePage.data.activity')}
+      >
+        {selectedSource ? (
+          <div className="mb-2 text-xs text-foreground" data-testid="workspace-source-detail">
+            <div className="font-semibold">
+              {t(`workspacePage.data.sources.${selectedSource.id}`)}
+              {' · '}
+              {t(`workspacePage.data.phases.${selectedSource.phase}`)}
+            </div>
+            <div className="mt-1 text-muted">
+              {selectedSource.provider ?? t('workspacePage.data.details.unavailable')}
+              {' · '}
+              {selectedSource.dataAsOf ?? t('workspacePage.data.details.unavailable')}
+            </div>
+          </div>
+        ) : null}
+        <ul className="space-y-2">
+          {activities.map((activity) => (
+            <li
+              key={activity.requestId}
+              className="rounded border border-border/70 bg-surface px-2 py-2 text-xs"
             >
-              {t('workspacePage.data.dismiss')}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </aside>
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-foreground">
+                    {t(`workspacePage.data.sources.${activity.sourceId}`)}
+                    {' · '}
+                    {t(`workspacePage.data.activityPhases.${activity.phase}`)}
+                  </div>
+                  <div className="mt-1 text-muted">
+                    {activity.ticker}
+                    {' · '}
+                    {activity.requestId}
+                    {activity.provider ? ` · ${activity.provider}` : ''}
+                    {activity.pipelineStep ? ` · ${pipelineStepLabel(activity.pipelineStep)}` : ''}
+                  </div>
+                  {activity.message ? (
+                    <div className={activity.phase === 'failed' ? 'mt-1 text-danger' : 'mt-1 text-muted'}>
+                      {activity.message}
+                    </div>
+                  ) : null}
+                </div>
+                {activity.retryable && onRetry ? (
+                  <button
+                    type="button"
+                    className="rounded border border-danger/40 px-2 py-1 font-medium text-danger"
+                    onClick={() => onRetry(activity.sourceId)}
+                    aria-label={t('workspacePage.data.retryActivity', {
+                      source: t(`workspacePage.data.sources.${activity.sourceId}`),
+                      ticker: activity.ticker,
+                    })}
+                  >
+                    {t('workspacePage.data.retry')}
+                  </button>
+                ) : null}
+                {onDismiss ? (
+                  <button
+                    type="button"
+                    className="rounded px-2 py-1 font-medium text-muted"
+                    onClick={() => onDismiss(activity.requestId)}
+                    aria-label={t('workspacePage.data.dismissActivity', {
+                      source: t(`workspacePage.data.sources.${activity.sourceId}`),
+                      ticker: activity.ticker,
+                    })}
+                  >
+                    {t('workspacePage.data.dismiss')}
+                  </button>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    </>
   );
 }

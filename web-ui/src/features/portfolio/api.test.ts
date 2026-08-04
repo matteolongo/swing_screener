@@ -8,19 +8,20 @@ describe('portfolio api', () => {
   });
 
   it('transforms server-owned snapshot freshness at the API boundary', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        orders: [],
+        asof: '2026-07-20',
+        snapshot_freshness: 'stale',
+        stale_after_days: 1,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({
-          orders: [],
-          asof: '2026-07-20',
-          snapshot_freshness: 'stale',
-          stale_after_days: 1,
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      ),
+      fetchMock,
     );
 
     const orders = await fetchOrders('all');
@@ -28,6 +29,21 @@ describe('portfolio api', () => {
     expect(orders.snapshotAsOf).toBe('2026-07-20');
     expect(orders.snapshotFreshness).toBe('stale');
     expect(orders.snapshotStaleAfterDays).toBe(1);
+    expect(String(fetchMock.mock.calls[0][0])).not.toContain('status=all');
+  });
+
+  it('sends a concrete order status to the API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ orders: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchOrders('pending');
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('status=pending');
   });
 
   it('marks an older additive response with omitted metadata as unknown', async () => {
