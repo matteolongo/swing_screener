@@ -4,14 +4,17 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/features/intelligence/api', () => ({
+  getIntelligenceLatest: vi.fn(),
   getRunTrace: vi.fn(),
   getTickerRuns: vi.fn(),
 }));
 
 import * as intelligenceApi from '@/features/intelligence/api';
 import {
+  IntelligenceIdentityError,
   findRunByAttemptId,
   resolveRunId,
+  useIntelligenceLatestQuery,
   useRunTrace,
   useTickerRuns,
 } from '@/features/intelligence/hooks';
@@ -25,6 +28,37 @@ function createWrapper(queryClient: QueryClient) {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
+
+describe('useIntelligenceLatestQuery', () => {
+  const mockedGetIntelligenceLatest = vi.mocked(intelligenceApi.getIntelligenceLatest);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rejects a response tagged for a different symbol', async () => {
+    mockedGetIntelligenceLatest.mockResolvedValue({
+      symbol: 'MSFT',
+      generated_at: '2026-07-29T08:00:00Z',
+      action: 'WATCH',
+      conviction: 'medium',
+      catalyst_urgency: 'none',
+      summary_line: 'Wrong symbol.',
+      narrative: 'Wrong symbol payload.',
+      upcoming_events: [],
+      position_signal: null,
+      sources: ['openai'],
+    });
+
+    const { result } = renderHook(() => useIntelligenceLatestQuery(' aapl ', true), {
+      wrapper: createWrapper(createQueryClient()),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeInstanceOf(IntelligenceIdentityError);
+    expect(result.current.data).toBeUndefined();
+  });
+});
 
 describe('useRunTrace', () => {
   const mockedGetRunTrace = vi.mocked(intelligenceApi.getRunTrace);

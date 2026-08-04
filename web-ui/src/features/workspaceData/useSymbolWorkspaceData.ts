@@ -101,6 +101,16 @@ export function useSymbolWorkspaceData({
       ? pricesQuery.data
       : undefined;
   const priceHistory = pricesData?.priceHistory;
+  const intelligencePhase = (() => {
+    if (intelligenceNotGeneratedToday) return 'idle';
+    if (intelligenceData?.dataStatus === 'stale') return 'stale';
+    if (
+      intelligenceData?.dataStatus === 'intraday'
+      || intelligenceData?.dataStatus === 'unknown'
+      || (intelligenceData?.degradedReasons?.length ?? 0) > 0
+    ) return 'partial';
+    return queryPhase({ ...intelligenceQuery, data: intelligenceData });
+  })();
   const evidenceDiagnostic = intelligenceData?.inputsUsed?.enrichmentDiagnostics?.find(
     ({ source }) => source === 'evidence',
   );
@@ -165,8 +175,11 @@ export function useSymbolWorkspaceData({
       },
     ),
     sourceState('prices', queryPhase({ ...pricesQuery, data: pricesData }), {
-      dataAsOf: priceHistory?.[priceHistory.length - 1]?.date ?? null,
-      fetchedAt: fetchedAt(pricesQuery.dataUpdatedAt),
+      provider: pricesData?.provider ?? null,
+      dataAsOf: pricesData?.dataAsOf
+        ?? priceHistory?.[priceHistory.length - 1]?.date
+        ?? null,
+      fetchedAt: pricesData?.fetchedAt ?? null,
       error: pricesQuery.error
         ? { message: pricesQuery.error.message, retryable: true }
         : null,
@@ -233,21 +246,12 @@ export function useSymbolWorkspaceData({
     ),
     sourceState(
       'intelligence',
-      intelligenceNotGeneratedToday
-        ? 'idle'
-        : intelligenceData && !('provider' in intelligenceData)
-        ? 'partial'
-        : queryPhase({ ...intelligenceQuery, data: intelligenceData }),
+      intelligencePhase,
       {
-        provider:
-          'provider' in (intelligenceData ?? {})
-            ? String((intelligenceData as unknown as { provider: string }).provider)
-            : null,
+        provider: intelligenceData?.sources?.join(', ') || null,
         dataAsOf: intelligenceData?.generatedAt ?? null,
-        fetchedAt: intelligenceData?.generatedAt ?? fetchedAt(intelligenceQuery.dataUpdatedAt),
-        missingInputs: intelligenceData && !('provider' in intelligenceData)
-          ? ['intelligenceProvider']
-          : [],
+        fetchedAt: intelligenceData?.generatedAt ?? null,
+        missingInputs: intelligenceData?.degradedReasons ?? [],
         stateReason: intelligenceNotGeneratedToday ? 'analysisNotGeneratedToday' : undefined,
         error: intelligenceQuery.error && !intelligenceNotGeneratedToday
           ? { message: intelligenceQuery.error.message, retryable: true }
@@ -331,7 +335,9 @@ export function useSymbolWorkspaceData({
       [
         validCandidate?.lastBar ?? null,
         fundamentalsData?.updatedAt ?? null,
-        pricesData ? fetchedAt(pricesQuery.dataUpdatedAt) : null,
+        pricesData?.dataAsOf
+          ?? priceHistory?.[priceHistory.length - 1]?.date
+          ?? null,
       ],
     ),
     refreshSource,

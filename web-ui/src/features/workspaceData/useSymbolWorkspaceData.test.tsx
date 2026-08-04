@@ -6,7 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const { intelligenceResult, evidenceLatestResult, tickerCandlesResult, positionsResult, ordersResult } = vi.hoisted(() => ({
   intelligenceResult: {
     current: {
-      data: undefined as { symbol: string; generatedAt: string } | undefined,
+      data: undefined as {
+        symbol: string;
+        generatedAt: string;
+        dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+        degradedReasons?: string[];
+        sources?: string[];
+      } | undefined,
     },
   },
   evidenceLatestResult: {
@@ -18,7 +24,14 @@ const { intelligenceResult, evidenceLatestResult, tickerCandlesResult, positions
   tickerCandlesResult: {
     current: {
       data: undefined as
-        | { ticker: string; priceHistory: Array<{ date: string; close: number }>; patterns: [] }
+        | {
+            ticker: string;
+            provider?: string;
+            dataAsOf?: string;
+            fetchedAt?: string;
+            priceHistory: Array<{ date: string; close: number }>;
+            patterns: [];
+          }
         | undefined,
       dataUpdatedAt: 0,
     },
@@ -457,6 +470,46 @@ describe('useSymbolWorkspaceData', () => {
       { wrapper: wrapper(queryClient) },
     );
 
+    expect(result.current.intelligenceOutdated).toBe(false);
+  });
+
+  it('uses server-owned price provenance and intelligence completeness', () => {
+    intelligenceResult.current.data = {
+      symbol: 'AAPL',
+      generatedAt: '2026-07-29T08:00:00Z',
+      dataStatus: 'current',
+      degradedReasons: [],
+      sources: ['openai'],
+    };
+    tickerCandlesResult.current.data = {
+      ticker: 'AAPL',
+      provider: 'polygon',
+      dataAsOf: '2026-07-28',
+      fetchedAt: '2026-07-29T09:00:00Z',
+      priceHistory: [{ date: '2026-07-28', close: 210 }],
+      patterns: [],
+    };
+    tickerCandlesResult.current.dataUpdatedAt = Date.parse('2026-08-01T09:00:00Z');
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 2,
+        candidate: null,
+        position: null,
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    expect(result.current.sourceStates.find(({ id }) => id === 'prices')).toMatchObject({
+      provider: 'polygon',
+      dataAsOf: '2026-07-28',
+      fetchedAt: '2026-07-29T09:00:00Z',
+    });
+    expect(result.current.sourceStates.find(({ id }) => id === 'intelligence')).toMatchObject({
+      provider: 'openai',
+      phase: 'fresh',
+    });
     expect(result.current.intelligenceOutdated).toBe(false);
   });
 });
