@@ -21,6 +21,7 @@ describe('Universes page', () => {
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.runScreener') }))
 
     expect(await screen.findByText('Screener Results for Discovered Symbols')).toBeInTheDocument()
+    expect(screen.getByText(t('universesPage.discovery.columns.nextAction'))).toBeInTheDocument()
     expect(screen.getByText('AAPL')).toBeInTheDocument()
     expect(screen.getByText('500 screened')).toBeInTheDocument()
 
@@ -41,5 +42,6 @@ describe('Universes page', () => {
     await user.click(screen.getByText('AAPL'))
 
     expect(await screen.findByText('AAPL Details')).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).not.toBeInTheDocument()
   })
 })

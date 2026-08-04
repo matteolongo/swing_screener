@@ -27,7 +27,7 @@ describe('useScreenerStore', () => {
     });
   });
 
-  it('prioritizes candidates by decision action on setLastResult', () => {
+  it('preserves server rank instead of reordering by compatibility action', () => {
     const { result } = renderHook(() => useScreenerStore());
 
     act(() =>
@@ -36,7 +36,7 @@ describe('useScreenerStore', () => {
       )
     );
 
-    expect(result.current.lastResult?.candidates[0].ticker).toBe('TOP');
+    expect(result.current.lastResult?.candidates[0].ticker).toBe('LOW');
   });
 
   it('clears the stored result', () => {

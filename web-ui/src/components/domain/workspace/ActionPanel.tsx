@@ -3,7 +3,7 @@ import type { OrderReviewContext } from '@/components/domain/orders/OrderReviewE
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useCreateOrderMutation, useOpenPositions } from '@/features/portfolio/hooks';
-import type { SameSymbolCandidateContext } from '@/features/screener/types';
+import type { SameSymbolCandidateContext, ScreenerCandidate } from '@/features/screener/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
@@ -11,6 +11,15 @@ import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/
 
 interface ActionPanelProps {
   ticker: string;
+  candidate?: ScreenerCandidate | null;
+}
+
+type PositionEntryContext = SameSymbolCandidateContext & { mode: 'ADD_ON' | 'SCALE_BACK' };
+
+function isPositionEntryContext(
+  context?: SameSymbolCandidateContext,
+): context is PositionEntryContext {
+  return context?.mode === 'ADD_ON' || context?.mode === 'SCALE_BACK';
 }
 
 function resolveSameSymbolContext(
@@ -23,8 +32,9 @@ function resolveSameSymbolContext(
       }
     | undefined,
 ): SameSymbolCandidateContext | undefined {
-  if (candidate?.sameSymbol?.mode === 'ADD_ON') {
-    return candidate.sameSymbol;
+  const candidateContext = candidate?.sameSymbol;
+  if (isPositionEntryContext(candidateContext)) {
+    return candidateContext;
   }
 
   if (openPosition?.positionId) {
@@ -54,7 +64,7 @@ function buildDefaultNotes(
     return t('workspacePage.panels.analysis.manualOrderNotes', { ticker: normalizedTicker });
   }
 
-  if (sameSymbol?.mode === 'ADD_ON') {
+  if (isPositionEntryContext(sameSymbol)) {
     return t('screener.addOnNotes', {
       score: formatScreenerScore(candidate.score ?? 0),
       confidence: formatConfidencePercent(candidate.confidence ?? 0),
@@ -75,16 +85,17 @@ function buildDefaultNotes(
   });
 }
 
-export default function ActionPanel({ ticker }: ActionPanelProps) {
+export default function ActionPanel({ ticker, candidate: candidateOverride }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const activeStrategyQuery = useActiveStrategyQuery();
   const configDefaultsQuery = useConfigDefaultsQuery();
   const risk = activeStrategyQuery.data?.risk ?? configDefaultsQuery.data?.risk;
   const openPositionsQuery = useOpenPositions();
   const openPosition = openPositionsQuery.data?.find((position) => position.ticker.toUpperCase() === normalizedTicker);
-  const candidate = useScreenerStore((state) =>
+  const storeCandidate = useScreenerStore((state) =>
     state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === normalizedTicker)
   );
+  const candidate = candidateOverride === undefined ? storeCandidate : candidateOverride;
   const createOrderMutation = useCreateOrderMutation();
 
   const sameSymbol = resolveSameSymbolContext(candidate ?? null, openPosition);
@@ -106,7 +117,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
     signal: candidate?.signal,
     close: candidate?.close,
     entry: candidate?.entry,
-    stop: sameSymbol?.mode === 'ADD_ON' && sameSymbol.executionStop != null ? sameSymbol.executionStop : candidate?.stop,
+    stop: isPositionEntryContext(sameSymbol) && sameSymbol.executionStop != null ? sameSymbol.executionStop : candidate?.stop,
     shares: candidate?.shares,
     recommendation: candidate?.recommendation,
     sector: candidate?.sector ?? undefined,

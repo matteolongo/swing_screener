@@ -1,46 +1,15 @@
 import Badge from '@/components/common/Badge';
+import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
-import type { DecisionAction, DecisionEntryCondition, DecisionSummary } from '@/features/screener/types';
+import type { DecisionSummary } from '@/features/screener/types';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
+import { t } from '@/i18n/t';
 import { formatCurrency } from '@/utils/formatters';
 
 interface IntelligenceDecisionBriefProps {
   candidate?: SymbolAnalysisCandidate | null;
   intelligence?: SymbolIntelligence | null;
-}
-
-function actionLabel(action: DecisionAction): string {
-  return action.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function conditionCopy(summary: DecisionSummary, currency: string): string {
-  const { entryCondition, triggerPrice, triggerNote } = summary.tradePlan;
-  const price = triggerPrice == null ? null : formatCurrency(triggerPrice, currency);
-  const copy: Record<DecisionEntryCondition, string> = {
-    buy_now: price ? `Eligible now near ${price}.` : 'Eligible now within the current trade plan.',
-    pullback_to_price: price ? `Wait for a pullback to ${price}.` : 'Wait for a pullback to the planned entry area.',
-    breakout_above_price: price ? `Wait for a confirmed move above ${price}.` : 'Wait for a confirmed breakout.',
-    wait_for_confirmation: 'Wait for a confirmed breakout before entering.',
-    no_entry: 'No entry condition is active right now.',
-    manage_position: 'Manage the existing position; do not open a new one.',
-  };
-
-  return triggerNote || copy[entryCondition ?? fallbackCondition(summary.action)];
-}
-
-function fallbackCondition(action: DecisionAction): DecisionEntryCondition {
-  if (action === 'BUY_NOW') return 'buy_now';
-  if (action === 'BUY_ON_PULLBACK') return 'pullback_to_price';
-  if (action === 'WAIT_FOR_BREAKOUT') return 'wait_for_confirmation';
-  if (action === 'MANAGE_ONLY') return 'manage_position';
-  return 'no_entry';
-}
-
-function actionVariant(action: DecisionAction): 'success' | 'warning' | 'error' | 'default' {
-  if (action === 'BUY_NOW') return 'success';
-  if (action === 'AVOID') return 'error';
-  if (action === 'WATCH' || action === 'MANAGE_ONLY') return 'default';
-  return 'warning';
 }
 
 function convictionVariant(conviction: DecisionSummary['conviction']): 'success' | 'primary' | 'warning' {
@@ -63,6 +32,7 @@ export default function IntelligenceDecisionBrief({ candidate, intelligence }: I
   if (!summary) return null;
 
   const currency = candidate?.currency ?? 'USD';
+  const operationalNextStep = formatWorkflowNextStep(candidate?.recommendation?.nextStep);
   const warnings = summary.explanation?.confidenceNotes ?? summary.drivers.warnings;
   const staleFundamentals = candidate?.fundamentalsFreshnessStatus === 'stale'
     || summary.drivers.staleFundamentals
@@ -84,12 +54,12 @@ export default function IntelligenceDecisionBrief({ candidate, intelligence }: I
             Decision for {summary.symbol}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge variant={actionVariant(summary.action)}>{actionLabel(summary.action)}</Badge>
+            <RecommendationBadge recommendation={candidate?.recommendation} />
             <Badge variant={convictionVariant(summary.conviction)}>{summary.conviction} confidence</Badge>
           </div>
-          <p className="mt-3 text-base font-semibold text-foreground">{conditionCopy(summary, currency)}</p>
+          <p className="mt-3 text-base font-semibold text-foreground">{operationalNextStep}</p>
           <p className="mt-1 text-sm text-muted">
-            {summary.explanation?.summaryLine || summary.whatToDo}
+            {summary.explanation?.summaryLine || summary.whyNow}
           </p>
         </div>
         {intelligence?.generatedAt ? (
@@ -107,13 +77,13 @@ export default function IntelligenceDecisionBrief({ candidate, intelligence }: I
 
       {hasConflict && (
         <div className="mt-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
-          The AI report uses a different action label. Follow the screener decision above and review the supporting evidence before acting.
+          {t('workspacePage.panels.analysis.intelligence.secondOpinion')}
         </div>
       )}
 
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        <Metric label="Entry trigger" value={summary.tradePlan.triggerPrice != null
-          ? formatCurrency(summary.tradePlan.triggerPrice, currency)
+        <Metric label="Entry trigger" value={candidate?.recommendation?.nextStep.triggerPrice != null
+          ? formatCurrency(candidate.recommendation.nextStep.triggerPrice, candidate.recommendation.nextStep.currency ?? currency)
           : 'Confirmation required'} />
         <Metric label="Stop" value={summary.tradePlan.stop != null ? formatCurrency(summary.tradePlan.stop, currency) : '—'} />
         <Metric label="Target" value={summary.tradePlan.target != null ? formatCurrency(summary.tradePlan.target, currency) : '—'} />
@@ -126,7 +96,7 @@ export default function IntelligenceDecisionBrief({ candidate, intelligence }: I
         </div>
         <div>
           <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">What to do</dt>
-          <dd className="mt-1 text-sm text-foreground">{summary.explanation?.nextBestAction || summary.whatToDo}</dd>
+          <dd className="mt-1 text-sm text-foreground">{operationalNextStep}</dd>
         </div>
         <div>
           <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">What invalidates it</dt>

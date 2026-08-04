@@ -169,7 +169,18 @@ Each candidate recommendation exposes additive `workflow_status` and
 pullback/breakout waits, `next_step` also contains `trigger_price` plus
 `currency`. These fields are the canonical execution-workflow authority.
 `decision_summary.action` remains an analytical compatibility field and must
-not be used to authorize order review.
+not be used to authorize order review. The API model normalizes contradictory
+status/code pairs, missing waiting-trigger parameters, malformed or unknown
+currency codes, and non-finite or non-positive trigger prices to
+`needs_review` / `refresh_data`.
+
+Same-symbol add-on evaluation replaces the fresh setup stop with the current
+live position stop, recalculates reward:risk and fee-to-risk, and rechecks
+`risk.min_rr` plus `risk.max_fee_risk_pct`. A live-stop plan outside either
+threshold is retained as `MANAGE_ONLY` with a `needs_review` recommendation; it
+cannot inherit the fresh setup's ready state.
+Valid adjusted recommendations preserve the independently validated target and
+its `target_source` metadata.
 
 Symbol pool (`/api/pool`):
 - `GET /api/pool/symbols` — browse the unified pool with taxonomy query params (`region`, `market_cap_tier`, `sector`, `index_memberships`, `instrument_type_detail`, `provider`, `currency`, `exchange_mics`, `liquidity_tier`), paginated (`page`, `page_size`). Returns `{symbols, total, page, page_size}`.

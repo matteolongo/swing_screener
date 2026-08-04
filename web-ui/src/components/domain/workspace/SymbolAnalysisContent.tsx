@@ -166,7 +166,7 @@ export default function SymbolAnalysisContent({
 
   const heldMode = Boolean(position);
   const canAddOn = Boolean(
-    candidate?.sameSymbol?.mode === 'ADD_ON'
+    (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
       && candidate.recommendation?.workflowStatus === 'ready',
   );
   const candidateCanReviewOrder = !candidate || candidate.recommendation?.workflowStatus === 'ready';
@@ -274,6 +274,7 @@ export default function SymbolAnalysisContent({
           <>
             <DecisionWhyPanel
               summary={candidate?.decisionSummary}
+              recommendation={candidate?.recommendation}
             />
             <FundamentalsStrip
               trailingPe={fundamentalsQuery.data?.trailingPe ?? null}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 import { formatDate } from '@/utils/formatters';
 import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection, GapDirection, GapMagnitude, PreOpenConfidence, ThesisDeltaStatus, PositionSignalAction, ThesisStatus, ProfitManagement, OpportunityCost, ExpectedHoldingPeriod, BalanceLabel } from '@/features/intelligence/types';
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
@@ -285,7 +286,10 @@ export default function NarrativeAnalysisCard({
 
   const decisionHighlights = [
     { label: t('workspacePage.panels.analysis.intelligence.whyNow'), value: summary?.whyNow },
-    { label: t('workspacePage.panels.analysis.intelligence.whatToDo'), value: summary?.whatToDo },
+    {
+      label: t('workspacePage.panels.analysis.intelligence.whatToDo'),
+      value: summary ? formatWorkflowNextStep(candidate?.recommendation?.nextStep) : undefined,
+    },
     { label: t('workspacePage.panels.analysis.intelligence.watchFor'), value: summary?.mainRisk || warnings[0] },
   ].filter((item) => item.value);
 
@@ -312,10 +316,7 @@ export default function NarrativeAnalysisCard({
         )}
         {!positionMode && candidate?.decisionSummary?.action && action !== candidate.decisionSummary.action && (
           <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
-            {t('workspacePage.panels.analysis.intelligence.secondOpinion', {
-              aiAction: actionLabel(action),
-              screenerAction: actionLabel(candidate.decisionSummary.action),
-            })}
+            {t('workspacePage.panels.analysis.intelligence.secondOpinion')}
           </div>
         )}
 

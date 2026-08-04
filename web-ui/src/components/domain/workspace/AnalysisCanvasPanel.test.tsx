@@ -302,7 +302,8 @@ describe('AnalysisCanvasPanel', () => {
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Buy Now/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(t('recommendation.workflow.nextStep.refresh_data')).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Buy Now/)).not.toBeInTheDocument();
   });
 
   it('renders the price chart before the catalyst card in overview', () => {

@@ -35,7 +35,7 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
 
   const setActiveTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const canAdd = Boolean(
-    candidate?.sameSymbol?.mode === 'ADD_ON'
+    (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
       && candidate.recommendation?.workflowStatus === 'ready',
   );
 

@@ -174,6 +174,24 @@ describe('ActionPanel', () => {
     expect(screen.queryAllByText(t('order.setupGuidance.signals.breakout.label'))).toHaveLength(0);
   });
 
+  it('uses an explicit discovery candidate instead of a conflicting store candidate', () => {
+    const storedCandidate = useScreenerStore.getState().lastResult!.candidates[0];
+    const discoveryCandidate = {
+      ...storedCandidate,
+      recommendation: {
+        ...storedCandidate.recommendation!,
+        verdict: 'NOT_RECOMMENDED' as const,
+        workflowStatus: 'no_setup' as const,
+        nextStep: { code: 'observe' as const },
+      },
+    };
+
+    renderWithProviders(<ActionPanel ticker="AAPL" candidate={discoveryCandidate} />);
+
+    expect(screen.getByText((content) => content.includes(t('order.review.decisionLocked')))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('order.candidateModal.createAction') })).toBeDisabled();
+  });
+
   it('does not allow a signed candidate order type to be overridden in API mode', async () => {
     const user = userEvent.setup();
     setCandidate({
