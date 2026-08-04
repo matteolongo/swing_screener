@@ -1,17 +1,19 @@
 import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
 import type { useRunScreenerMutation } from '@/features/screener/hooks';
+import type { ScreenerCandidate } from '@/features/screener/types';
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
+import { t } from '@/i18n/t';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
-import { actionLabel } from './universesShared';
 
 interface UniverseScreenerTabProps {
   discoveryScreenerMutation: ReturnType<typeof useRunScreenerMutation>;
-  onSelectTicker: (ticker: string) => void;
+  onSelectCandidate: (candidate: ScreenerCandidate) => void;
 }
 
 export default function UniverseScreenerTab({
   discoveryScreenerMutation,
-  onSelectTicker,
+  onSelectCandidate,
 }: UniverseScreenerTabProps) {
   const discoveryScreenerResult = discoveryScreenerMutation.data;
 
@@ -45,7 +47,7 @@ export default function UniverseScreenerTab({
                 <tr>
                   <th className="px-3 py-2">Rank</th>
                   <th className="px-3 py-2">Symbol</th>
-                  <th className="px-3 py-2">Signal</th>
+                  <th className="px-3 py-2">{t('universesPage.discovery.columns.nextAction')}</th>
                   <th className="px-3 py-2 text-right">Close</th>
                   <th className="px-3 py-2 text-right">Score</th>
                   <th className="px-3 py-2 text-right">6M momentum</th>
@@ -58,7 +60,7 @@ export default function UniverseScreenerTab({
                 {discoveryScreenerResult.candidates.map((candidate) => (
                   <tr
                     key={candidate.ticker}
-                    onClick={() => onSelectTicker(candidate.ticker)}
+                    onClick={() => onSelectCandidate(candidate)}
                     className="cursor-pointer hover:bg-foreground/5"
                   >
                     <td className="px-3 py-2 font-medium text-foreground">#{candidate.priorityRank ?? candidate.rank}</td>
@@ -69,7 +71,7 @@ export default function UniverseScreenerTab({
                         {candidate.sector ? ` · ${candidate.sector}` : ''}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-muted">{actionLabel(candidate)}</td>
+                    <td className="px-3 py-2 text-muted">{formatWorkflowNextStep(candidate.recommendation?.nextStep)}</td>
                     <td className="px-3 py-2 text-right font-mono text-foreground">{formatCurrency(candidate.close, candidate.currency)}</td>
                     <td className="px-3 py-2 text-right font-mono text-foreground">{candidate.score.toFixed(1)}</td>
                     <td className="px-3 py-2 text-right font-mono text-foreground">{formatPercent(candidate.momentum6m, 1)}</td>

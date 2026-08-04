@@ -1170,7 +1170,7 @@ export const messagesEn = {
           pastTrades: 'Past trades on {{symbol}}',
           fullRationale: 'Structured rationale',
           aiAnalysisTitle: 'AI analysis',
-          secondOpinion: 'AI second opinion: {{aiAction}} — differs from the screener verdict ({{screenerAction}}). The screener verdict stands.',
+          secondOpinion: 'The AI report differs from the screener decision. Follow the canonical next step and review the supporting evidence before acting.',
           preOpen: {
             title: 'Pre-open outlook',
             gapUp: 'Gap up',
@@ -2859,6 +2859,7 @@ export const messagesEn = {
         volume: 'Volume',
         marketCap: 'Market Cap',
         source: 'Source',
+        nextAction: 'Next action',
       },
     },
   },

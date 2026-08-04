@@ -205,7 +205,7 @@ export default function SymbolAnalysisContent({
 
   const heldMode = Boolean(position);
   const canAddOn = Boolean(
-    candidate?.sameSymbol?.mode === 'ADD_ON'
+    (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
       && candidate.recommendation?.workflowStatus === 'ready',
   );
   const candidateCanReviewOrder = candidate?.recommendation?.workflowStatus === 'ready';

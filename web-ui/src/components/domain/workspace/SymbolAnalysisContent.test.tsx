@@ -37,6 +37,17 @@ describe('SymbolAnalysisContent held mode', () => {
     expect(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).toBeInTheDocument();
   });
 
+  it('shows the Order tab for a canonical ready scale-back entry', () => {
+    const candidate = {
+      sameSymbol: { mode: 'SCALE_BACK' },
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+    } as any;
+    renderWithProviders(
+      <SymbolAnalysisContent ticker="LRCX" candidate={candidate} position={position} activeTab="overview" onTabChange={() => {}} orderPanel={<div>order</div>} />,
+    );
+    expect(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).toBeInTheDocument();
+  });
+
   it('hides the Order tab for a held candidate that is not canonically ready', () => {
     const candidate = {
       sameSymbol: { mode: 'ADD_ON' },

@@ -1,12 +1,15 @@
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 import type { DecisionSummary } from '@/features/screener/types';
 import { t } from '@/i18n/t';
+import type { Recommendation } from '@/types/recommendation';
 
 interface DecisionWhyPanelProps {
   summary?: DecisionSummary | null;
+  recommendation?: Pick<Recommendation, 'nextStep'> | null;
   aiSummaryLine?: string | null;
 }
 
-export default function DecisionWhyPanel({ summary, aiSummaryLine }: DecisionWhyPanelProps) {
+export default function DecisionWhyPanel({ summary, recommendation, aiSummaryLine }: DecisionWhyPanelProps) {
   if (!summary) {
     return (
       <div className="rounded-lg border border-border bg-surface p-3">
@@ -19,7 +22,10 @@ export default function DecisionWhyPanel({ summary, aiSummaryLine }: DecisionWhy
 
   const whyNow = [summary.whyNow, aiSummaryLine].filter(Boolean).join(' · ');
   const rows = [
-    { label: t('workspacePage.panels.analysis.decisionWhy.whatToDo'), value: summary.whatToDo },
+    {
+      label: t('workspacePage.panels.analysis.decisionWhy.whatToDo'),
+      value: formatWorkflowNextStep(recommendation?.nextStep),
+    },
     { label: t('workspacePage.panels.analysis.decisionWhy.whyNow'), value: whyNow },
     { label: t('workspacePage.panels.analysis.decisionWhy.watchFor'), value: summary.mainRisk },
   ].filter((r) => r.value);

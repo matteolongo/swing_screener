@@ -39,6 +39,16 @@ describe('ManagePositionPanel', () => {
     expect(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).toBeInTheDocument();
   });
 
+  it('shows Add-to-position for a canonical ready scale-back entry', () => {
+    const candidate = {
+      sameSymbol: { mode: 'SCALE_BACK' },
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      decisionSummary: { action: 'WATCH' },
+    } as any;
+    renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
+    expect(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).toBeInTheDocument();
+  });
+
   it('does not promote a BUY_ON_PULLBACK opinion without ready workflow status', () => {
     const candidate = {
       sameSymbol: { mode: 'ADD_ON' },

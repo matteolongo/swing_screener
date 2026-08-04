@@ -26,6 +26,10 @@ const baseIntelligence: SymbolIntelligence = {
 const baseCandidate: SymbolAnalysisCandidate = {
   ticker: 'AAPL',
   currency: 'USD',
+  recommendation: {
+    workflowStatus: 'no_setup',
+    nextStep: { code: 'observe' },
+  } as never,
   decisionSummary: {
     symbol: 'AAPL',
     action: 'BUY_NOW',
@@ -177,6 +181,7 @@ describe('NarrativeAnalysisCard', () => {
     };
     render(<NarrativeAnalysisCard intelligence={buyNowIntelligence} candidate={watchCandidate} />);
     expect(screen.queryByText(/—\s*Buy Now/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Buy.')).not.toBeInTheDocument();
     expect(
       screen.getByText(new RegExp(t('workspacePage.panels.analysis.intelligence.aiAnalysisTitle'), 'i'))
     ).toBeInTheDocument();
@@ -195,10 +200,7 @@ describe('NarrativeAnalysisCard', () => {
       },
     };
     render(<NarrativeAnalysisCard intelligence={buyNowIntelligence} candidate={watchCandidate} />);
-    const note = t('workspacePage.panels.analysis.intelligence.secondOpinion', {
-      aiAction: t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'),
-      screenerAction: t('workspacePage.panels.analysis.decisionSummary.actions.watch'),
-    });
+    const note = t('workspacePage.panels.analysis.intelligence.secondOpinion');
     expect(screen.getByText(note)).toBeInTheDocument();
   });
 
@@ -635,10 +637,8 @@ describe('NarrativeAnalysisCard second opinion', () => {
     render(
       <NarrativeAnalysisCard intelligence={intelligence} candidate={candidate} isPosition={false} />,
     );
-    const banner = t('workspacePage.panels.analysis.intelligence.secondOpinion', {
-      aiAction: t('workspacePage.panels.analysis.decisionSummary.actions.watch'),
-      screenerAction: t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly'),
-    });
+    const banner = t('workspacePage.panels.analysis.intelligence.secondOpinion');
     expect(screen.getByText(banner)).toBeInTheDocument();
+    expect(screen.queryByText(/Watch.*Manage Only/)).not.toBeInTheDocument();
   });
 });

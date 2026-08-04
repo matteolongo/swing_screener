@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 RecommendationVerdict = Literal["RECOMMENDED", "NOT_RECOMMENDED"]
 DecisionGateStatus = Literal["PASS", "WAIT", "BLOCK", "UNKNOWN"]
@@ -96,9 +97,30 @@ class ExecutionNextStepModel(BaseModel):
     trigger_price: Optional[float] = None
     currency: Optional[str] = None
 
+    @field_validator("trigger_price")
+    @classmethod
+    def normalize_trigger_price(cls, value: Optional[float]) -> Optional[float]:
+        if value is None or not math.isfinite(value) or value <= 0:
+            return None
+        return value
+
+    @field_validator("currency")
+    @classmethod
+    def normalize_currency(cls, value: Optional[str]) -> Optional[str]:
+        normalized = str(value or "").strip().upper()
+        valid_shape = (
+            len(normalized) == 3
+            and normalized.isascii()
+            and normalized.isalpha()
+            and normalized != "UNKNOWN"
+        )
+        return normalized if valid_shape else None
+
 
 def _unknown_decision_gates() -> DecisionGateStateModel:
-    unknown = lambda text: DecisionGateModel(status="UNKNOWN", explanation=text)
+    def unknown(text: str) -> DecisionGateModel:
+        return DecisionGateModel(status="UNKNOWN", explanation=text)
+
     return DecisionGateStateModel(
         setup=unknown("Setup gate was not evaluated."),
         trigger=unknown("Trigger gate was not evaluated."),
@@ -131,3 +153,41 @@ class Recommendation(BaseModel):
     thesis: Optional[dict] = (
         None  # Trade Thesis (structured explanation, includes beginner_explanation + education_generated)
     )
+
+    @model_validator(mode="after")
+    def normalize_execution_workflow(self) -> "Recommendation":
+        step = self.next_step
+        has_parameters = step.trigger_price is not None or step.currency is not None
+        review_codes = {
+            "define_target",
+            "refresh_data",
+            "fix_stop",
+            "inspect_gate_conflict",
+        }
+        coherent = (
+            (
+                self.workflow_status == "ready"
+                and step.code == "review_order"
+                and not has_parameters
+            )
+            or (
+                self.workflow_status == "waiting_trigger"
+                and step.code in {"wait_pullback", "wait_breakout_close"}
+                and step.trigger_price is not None
+                and step.currency is not None
+            )
+            or (
+                self.workflow_status == "needs_review"
+                and step.code in review_codes
+                and not has_parameters
+            )
+            or (
+                self.workflow_status == "no_setup"
+                and step.code == "observe"
+                and not has_parameters
+            )
+        )
+        if not coherent:
+            self.workflow_status = "needs_review"
+            self.next_step = ExecutionNextStepModel(code="refresh_data")
+        return self

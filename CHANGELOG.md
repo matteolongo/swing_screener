@@ -36,8 +36,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the server, and explains when a newly fetched fundamentals snapshot
   contains an older reporting period.
 - Screener candidates now use one gate-derived workflow status and concrete next
-  action across Last Run, Today, symbol details, and order review, preventing an
-  analytical `Buy on Pullback` opinion from appearing beside `No valid setup`.
+  action across Last Run, Today, Universe discovery, symbol details, and order
+  review. Discovery rows retain their exact recommendation, malformed workflow
+  pairs fail closed, and same-symbol add-ons recheck minimum R:R against the
+  current live stop before remaining eligible for review.
 - Applied universe refreshes now persist review metadata when index membership is
   unchanged, preventing verified snapshots from expiring immediately afterward.
 - Volume Zones now preserves available candle or analysis content during partial

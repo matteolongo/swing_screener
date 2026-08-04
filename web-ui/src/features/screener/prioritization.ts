@@ -1,52 +1,17 @@
 import type {
   DecisionAction,
-  DecisionConviction,
   ScreenerCandidate,
 } from '@/features/screener/types';
 
 export type DecisionActionFilter = 'all' | DecisionAction;
 
-const ACTION_PRIORITY: Record<DecisionAction, number> = {
-  BUY_NOW: 6,
-  BUY_ON_PULLBACK: 5,
-  WAIT_FOR_BREAKOUT: 4,
-  WATCH: 3,
-  TACTICAL_ONLY: 2,
-  MANAGE_ONLY: 1,
-  AVOID: 0,
-};
-
-const CONVICTION_PRIORITY: Record<DecisionConviction, number> = {
-  high: 2,
-  medium: 1,
-  low: 0,
-};
-
-function actionPriority(candidate: ScreenerCandidate): number {
-  const action = candidate.decisionSummary?.action;
-  return action ? ACTION_PRIORITY[action] : -1;
-}
-
-function convictionPriority(candidate: ScreenerCandidate): number {
-  const conviction = candidate.decisionSummary?.conviction;
-  return conviction ? CONVICTION_PRIORITY[conviction] : -1;
-}
-
 export function prioritizeCandidates(candidates: ScreenerCandidate[]): ScreenerCandidate[] {
   return [...candidates]
     .sort((left, right) => {
-      const actionDelta = actionPriority(right) - actionPriority(left);
-      if (actionDelta !== 0) {
-        return actionDelta;
-      }
-
-      const convictionDelta = convictionPriority(right) - convictionPriority(left);
-      if (convictionDelta !== 0) {
-        return convictionDelta;
-      }
-
-      if (left.rank !== right.rank) {
-        return left.rank - right.rank;
+      const leftRank = left.priorityRank ?? left.rank;
+      const rightRank = right.priorityRank ?? right.rank;
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank;
       }
 
       if (left.confidence !== right.confidence) {
@@ -55,9 +20,9 @@ export function prioritizeCandidates(candidates: ScreenerCandidate[]): ScreenerC
 
       return left.ticker.localeCompare(right.ticker);
     })
-    .map((candidate, index) => ({
+    .map((candidate) => ({
       ...candidate,
-      priorityRank: index + 1,
+      priorityRank: candidate.priorityRank ?? candidate.rank,
     }));
 }
 
@@ -72,7 +37,7 @@ export function filterCandidates(
   }
 ): ScreenerCandidate[] {
   return candidates.filter((candidate) => {
-    if (recommendedOnly && candidate.recommendation?.verdict !== 'RECOMMENDED') {
+    if (recommendedOnly && candidate.recommendation?.workflowStatus !== 'ready') {
       return false;
     }
     if (actionFilter !== 'all' && candidate.decisionSummary?.action !== actionFilter) {

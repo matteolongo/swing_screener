@@ -2,8 +2,13 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from api.models.recommendation import (
     ChecklistGate,
+    DecisionGateModel,
+    DecisionGateStateModel,
+    ExecutionNextStepModel,
     Recommendation,
     RecommendationCosts,
     RecommendationEducation,
@@ -18,7 +23,13 @@ from api.services.same_symbol_reentry import (
 from tests.api._test_helpers import make_order, make_position
 
 
-def _make_recommendation(*, verdict: str = "RECOMMENDED", entry: float = 23.0, stop: float = 21.62, shares: int = 5) -> Recommendation:
+def _make_recommendation(
+    *,
+    verdict: str = "RECOMMENDED",
+    entry: float = 23.0,
+    stop: float = 21.62,
+    shares: int = 5,
+) -> Recommendation:
     risk_amount = (entry - stop) * shares
     return Recommendation(
         verdict=verdict,
@@ -34,6 +45,8 @@ def _make_recommendation(*, verdict: str = "RECOMMENDED", entry: float = 23.0, s
             entry=entry,
             stop=stop,
             target=entry + ((entry - stop) * 2),
+            desired_target=entry + ((entry - stop) * 2),
+            target_source="structural",
             rr=2.0,
             risk_amount=risk_amount,
             risk_pct=0.0138,
@@ -48,7 +61,20 @@ def _make_recommendation(*, verdict: str = "RECOMMENDED", entry: float = 23.0, s
             total_cost=0.0,
             fee_to_risk_pct=0.0,
         ),
-        checklist=[ChecklistGate(gate_name="signal", passed=True, explanation="Signal active.")],
+        checklist=[
+            ChecklistGate(gate_name="signal", passed=True, explanation="Signal active.")
+        ],
+        decision_gates=DecisionGateStateModel(
+            setup=DecisionGateModel(status="PASS", explanation="Setup qualified."),
+            trigger=DecisionGateModel(status="PASS", explanation="Trigger observed."),
+            plan=DecisionGateModel(status="PASS", explanation="Plan reconciled."),
+            portfolio=DecisionGateModel(
+                status="UNKNOWN", explanation="Checked on submit."
+            ),
+            ready_to_order=False,
+        ),
+        workflow_status="ready",
+        next_step=ExecutionNextStepModel(code="review_order"),
         education=RecommendationEducation(
             common_bias_warning="None",
             what_to_learn="None",
@@ -109,6 +135,7 @@ def test_same_symbol_reentry_marks_fresh_symbols_as_new_entry():
         risk_pct_target=0.02,
         max_position_pct=0.4,
         min_shares=1,
+        min_rr=2.0,
     )
 
     assert enriched is not None
@@ -118,6 +145,43 @@ def test_same_symbol_reentry_marks_fresh_symbols_as_new_entry():
 
 
 def test_same_symbol_reentry_uses_live_stop_for_add_on():
+    evaluator = SameSymbolReentryEvaluator(_FakePortfolioService(action="NO_ACTION"))
+    candidate = _make_candidate()
+    position = make_position(
+        ticker="REP.MC",
+        position_id="POS-REP-1",
+        entry_price=19.63,
+        current_price=23.0,
+        stop_price=21.8,
+        shares=5,
+    )
+
+    enriched, context = evaluator.evaluate(
+        candidate,
+        positions=[position],
+        orders=[],
+        account_size=1000.0,
+        risk_pct_target=0.03,
+        max_position_pct=0.6,
+        min_shares=1,
+        min_rr=2.0,
+    )
+
+    assert enriched is not None
+    assert context.mode == "ADD_ON"
+    assert enriched.same_symbol is not None
+    assert enriched.same_symbol.current_position_stop == 21.8
+    assert enriched.same_symbol.fresh_setup_stop == 21.62
+    assert enriched.stop == 21.8
+    assert enriched.recommendation is not None
+    assert enriched.recommendation.risk.stop == 21.8
+    assert enriched.recommendation.risk.target_source == "structural"
+    assert enriched.recommendation.risk.desired_target == pytest.approx(25.76)
+    assert enriched.shares == 5
+    assert "Live stop 21.80 is used for execution" in (enriched.execution_note or "")
+
+
+def test_same_symbol_reentry_rejects_add_on_when_live_stop_breaks_minimum_rr():
     evaluator = SameSymbolReentryEvaluator(_FakePortfolioService(action="NO_ACTION"))
     candidate = _make_candidate()
     position = make_position(
@@ -137,18 +201,66 @@ def test_same_symbol_reentry_uses_live_stop_for_add_on():
         risk_pct_target=0.03,
         max_position_pct=0.6,
         min_shares=1,
+        min_rr=2.0,
     )
 
-    assert enriched is not None
-    assert context.mode == "ADD_ON"
-    assert enriched.same_symbol is not None
-    assert enriched.same_symbol.current_position_stop == 19.63
-    assert enriched.same_symbol.fresh_setup_stop == 21.62
-    assert enriched.stop == 19.63
-    assert enriched.recommendation is not None
-    assert enriched.recommendation.risk.stop == 19.63
-    assert enriched.shares == 5
-    assert "Live stop 19.63 is used for execution" in (enriched.execution_note or "")
+    assert enriched is candidate
+    assert context.mode == "MANAGE_ONLY"
+    assert candidate.recommendation is not None
+    assert candidate.recommendation.risk.stop == 19.63
+    assert candidate.recommendation.risk.rr == 0.819
+    assert candidate.recommendation.workflow_status == "needs_review"
+    assert candidate.recommendation.next_step.code == "define_target"
+    assert (
+        context.reason == "The live-stop reward:risk is below the configured minimum."
+    )
+
+
+def test_same_symbol_reentry_rejects_add_on_when_live_stop_breaks_fee_limit():
+    evaluator = SameSymbolReentryEvaluator(_FakePortfolioService(action="NO_ACTION"))
+    candidate = _make_candidate()
+    assert candidate.recommendation is not None
+    candidate.recommendation.costs = RecommendationCosts(
+        commission_estimate=0.8,
+        fx_estimate=0.0,
+        slippage_estimate=0.5,
+        total_cost=1.3,
+        fee_to_risk_pct=0.1884,
+    )
+    position = make_position(
+        ticker="REP.MC",
+        position_id="POS-REP-1",
+        entry_price=19.63,
+        current_price=23.0,
+        stop_price=21.8,
+        shares=5,
+    )
+
+    enriched, context = evaluator.evaluate(
+        candidate,
+        positions=[position],
+        orders=[],
+        account_size=1000.0,
+        risk_pct_target=0.03,
+        max_position_pct=0.6,
+        min_shares=1,
+        min_rr=2.0,
+        max_fee_risk_pct=0.2,
+    )
+
+    assert enriched is candidate
+    assert context.mode == "MANAGE_ONLY"
+    assert candidate.recommendation is not None
+    assert candidate.recommendation.costs.fee_to_risk_pct == pytest.approx(0.2167)
+    fee_gate = next(
+        gate
+        for gate in candidate.recommendation.checklist
+        if gate.gate_name == "fee_to_risk"
+    )
+    assert fee_gate.passed is False
+    assert candidate.recommendation.decision_gates.plan.status == "BLOCK"
+    assert candidate.recommendation.workflow_status == "needs_review"
+    assert candidate.recommendation.next_step.code == "inspect_gate_conflict"
 
 
 def test_same_symbol_adjusted_risk_preserves_missing_cross_currency_fx():
@@ -169,6 +281,8 @@ def test_same_symbol_adjusted_risk_preserves_missing_cross_currency_fx():
     assert adjusted.risk.risk_amount_account is None
     assert adjusted.risk.position_size_account is None
     assert adjusted.risk.risk_pct == 0.0
+    assert adjusted.risk.target_source == "structural"
+    assert adjusted.risk.desired_target == pytest.approx(25.76)
 
 
 def test_same_symbol_reentry_converts_account_budget_for_cross_currency_add_on():
@@ -203,6 +317,7 @@ def test_same_symbol_reentry_converts_account_budget_for_cross_currency_add_on()
         risk_pct_target=0.03,
         max_position_pct=1.0,
         min_shares=1,
+        min_rr=0.75,
     )
 
     assert enriched is not None
@@ -235,6 +350,7 @@ def test_same_symbol_reentry_suppresses_when_pending_entry_exists():
         risk_pct_target=0.03,
         max_position_pct=0.6,
         min_shares=1,
+        min_rr=2.0,
     )
 
     assert enriched is not None
@@ -276,6 +392,7 @@ def test_same_symbol_reentry_allows_add_on_after_prior_filled_add_on():
         risk_pct_target=0.03,
         max_position_pct=0.6,
         min_shares=1,
+        min_rr=0.75,
     )
 
     assert enriched is not None
@@ -284,7 +401,9 @@ def test_same_symbol_reentry_allows_add_on_after_prior_filled_add_on():
 
 
 def test_same_symbol_reentry_suppresses_close_state_positions():
-    evaluator = SameSymbolReentryEvaluator(_FakePortfolioService(action="CLOSE_STOP_HIT"))
+    evaluator = SameSymbolReentryEvaluator(
+        _FakePortfolioService(action="CLOSE_STOP_HIT")
+    )
     candidate = _make_candidate()
     position = make_position(
         ticker="REP.MC",
@@ -303,6 +422,7 @@ def test_same_symbol_reentry_suppresses_close_state_positions():
         risk_pct_target=0.03,
         max_position_pct=0.6,
         min_shares=1,
+        min_rr=2.0,
     )
 
     assert enriched is not None
