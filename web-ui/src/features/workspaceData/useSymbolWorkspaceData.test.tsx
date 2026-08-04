@@ -3,10 +3,16 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { intelligenceResult, evidenceLatestResult, tickerCandlesResult, positionsResult, ordersResult } = vi.hoisted(() => ({
+const { intelligenceResult, evidenceLatestResult, tickerCandlesResult, tickerCandlesRefetch, positionsResult, ordersResult } = vi.hoisted(() => ({
   intelligenceResult: {
     current: {
-      data: undefined as { symbol: string; generatedAt: string } | undefined,
+      data: undefined as {
+        symbol: string;
+        generatedAt: string;
+        dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+        degradedReasons?: string[];
+        sources?: string[];
+      } | undefined,
     },
   },
   evidenceLatestResult: {
@@ -18,11 +24,23 @@ const { intelligenceResult, evidenceLatestResult, tickerCandlesResult, positions
   tickerCandlesResult: {
     current: {
       data: undefined as
-        | { ticker: string; priceHistory: Array<{ date: string; close: number }>; patterns: [] }
+        | {
+            ticker: string;
+            provider?: string;
+            dataAsOf?: string;
+            fetchedAt?: string;
+            priceHistory: Array<{ date: string; close: number }>;
+            patterns: [];
+          }
         | undefined,
       dataUpdatedAt: 0,
+      error: null as Error | null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
     },
   },
+  tickerCandlesRefetch: vi.fn().mockResolvedValue(undefined),
   positionsResult: { current: {} as Record<string, unknown> },
   ordersResult: { current: {} as Record<string, unknown> },
 }));
@@ -32,13 +50,8 @@ vi.mock('@/features/fundamentals/api', () => ({
 }));
 vi.mock('@/features/screener/hooks', () => ({
   useTickerCandles: () => ({
-    data: tickerCandlesResult.current.data,
-    dataUpdatedAt: tickerCandlesResult.current.dataUpdatedAt,
-    error: null,
-    isError: false,
-    isFetching: false,
-    isLoading: false,
-    refetch: vi.fn().mockResolvedValue(undefined),
+    ...tickerCandlesResult.current,
+    refetch: tickerCandlesRefetch,
   }),
 }));
 vi.mock('@/features/intelligence/hooks', () => ({
@@ -86,6 +99,7 @@ vi.mock('@/features/portfolio/hooks', () => ({
 
 import * as fundamentalsApi from '@/features/fundamentals/api';
 import { queryKeys } from '@/lib/queryKeys';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSymbolWorkspaceData } from './useSymbolWorkspaceData';
 
 function createQueryClient() {
@@ -135,8 +149,19 @@ describe('useSymbolWorkspaceData', () => {
     evidenceLatestResult.current.error = null;
     tickerCandlesResult.current.data = undefined;
     tickerCandlesResult.current.dataUpdatedAt = 0;
+    tickerCandlesResult.current.error = null;
+    tickerCandlesResult.current.isError = false;
+    tickerCandlesResult.current.isFetching = false;
+    tickerCandlesResult.current.isLoading = false;
+    tickerCandlesRefetch.mockReset().mockResolvedValue(undefined);
     positionsResult.current = {};
     ordersResult.current = {};
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectionVersion: 1,
+      activities: [],
+      activityDrawerOpen: false,
+    });
   });
 
   afterEach(() => {
@@ -364,11 +389,91 @@ describe('useSymbolWorkspaceData', () => {
 
     await act(async () => result.current.refreshAllNonIntelligence());
 
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.positions() });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.orders() });
+    expect(invalidate).toHaveBeenCalledWith(
+      { queryKey: queryKeys.positions() },
+      { throwOnError: true },
+    );
+    expect(invalidate).toHaveBeenCalledWith(
+      { queryKey: queryKeys.orders() },
+      { throwOnError: true },
+    );
     expect(invalidate).not.toHaveBeenCalledWith({
       queryKey: queryKeys.intelligence.latest('AAPL'),
     });
+  });
+
+  it('tracks each query fetching transition through completion', () => {
+    const queryClient = createQueryClient();
+    const { rerender } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        candidate: null,
+        position: null,
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    tickerCandlesResult.current.isFetching = true;
+    rerender();
+    expect(useWorkspaceStore.getState().activities[0]).toMatchObject({
+      ticker: 'AAPL',
+      selectionVersion: 1,
+      sourceId: 'prices',
+      phase: 'active',
+      pipelineStep: 'fetch-prices',
+    });
+
+    tickerCandlesResult.current.isFetching = false;
+    rerender();
+    expect(useWorkspaceStore.getState().activities[0]).toMatchObject({
+      sourceId: 'prices',
+      phase: 'completed',
+    });
+  });
+
+  it('settles a failed query transition as retryable', () => {
+    const queryClient = createQueryClient();
+    const { rerender } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        candidate: null,
+        position: null,
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    tickerCandlesResult.current.isFetching = true;
+    rerender();
+    tickerCandlesResult.current.isFetching = false;
+    tickerCandlesResult.current.isError = true;
+    tickerCandlesResult.current.error = new Error('prices unavailable');
+    rerender();
+
+    expect(useWorkspaceStore.getState().activities[0]).toMatchObject({
+      sourceId: 'prices',
+      phase: 'failed',
+      message: 'prices unavailable',
+      retryable: true,
+    });
+  });
+
+  it('does not suppress a failed explicit query refresh', async () => {
+    tickerCandlesRefetch.mockRejectedValueOnce(new Error('prices unavailable'));
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        candidate: null,
+        position: null,
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    await expect(result.current.refreshSource('prices')).rejects.toThrow('prices unavailable');
+    expect(tickerCandlesRefetch).toHaveBeenCalledWith({ throwOnError: true });
   });
 
   it('keeps fundamentals and intelligence timestamps unchanged after a screener rerun', async () => {
@@ -457,6 +562,46 @@ describe('useSymbolWorkspaceData', () => {
       { wrapper: wrapper(queryClient) },
     );
 
+    expect(result.current.intelligenceOutdated).toBe(false);
+  });
+
+  it('uses server-owned price provenance and intelligence completeness', () => {
+    intelligenceResult.current.data = {
+      symbol: 'AAPL',
+      generatedAt: '2026-07-29T08:00:00Z',
+      dataStatus: 'current',
+      degradedReasons: [],
+      sources: ['openai'],
+    };
+    tickerCandlesResult.current.data = {
+      ticker: 'AAPL',
+      provider: 'polygon',
+      dataAsOf: '2026-07-28',
+      fetchedAt: '2026-07-29T09:00:00Z',
+      priceHistory: [{ date: '2026-07-28', close: 210 }],
+      patterns: [],
+    };
+    tickerCandlesResult.current.dataUpdatedAt = Date.parse('2026-08-01T09:00:00Z');
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL',
+        selectionVersion: 2,
+        candidate: null,
+        position: null,
+      }),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    expect(result.current.sourceStates.find(({ id }) => id === 'prices')).toMatchObject({
+      provider: 'polygon',
+      dataAsOf: '2026-07-28',
+      fetchedAt: '2026-07-29T09:00:00Z',
+    });
+    expect(result.current.sourceStates.find(({ id }) => id === 'intelligence')).toMatchObject({
+      provider: 'openai',
+      phase: 'fresh',
+    });
     expect(result.current.intelligenceOutdated).toBe(false);
   });
 });

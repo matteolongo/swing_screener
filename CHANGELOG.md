@@ -25,6 +25,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   persisted ledger dates and the YAML-backed staleness policy, rather than from
   browser cache timing.
 
+- Expanded Today, Last Run, and Watchlist views now render a compact symbol rail
+  from their existing mounted data owner, preserving tab and filter state when
+  the full panel is restored.
+
 - Symbol analysis now follows an answer, evidence, trust, and detail hierarchy
   across Overview, Fundamentals, News & Intelligence, actions, and Volume
   Zones while preserving the existing Backtest workflow.
@@ -46,6 +50,12 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   failures, rejects mismatched response and parameter identities, reports each
   source's provenance without conflating candle and fetch times, and offers
   source-specific retries.
+- Workspace refresh and intelligence activity now keeps a bounded request-ID
+  history, records late selection callbacks as discarded, and announces each
+  new failure once while retaining status history for review.
+- Evidence refreshes now use UTC cache dates and atomic writes, preserve usable
+  cached items through provider failures, and reject future-dated cache entries
+  as stale.
 
 ## [3.0.0] - Unreleased
 

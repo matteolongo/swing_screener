@@ -1,7 +1,7 @@
 # Workspace Status Truthfulness
 
-**Date:** 2026-07-28  
-**Status:** Approved design pending written-spec review  
+**Date:** 2026-07-28
+**Status:** Approved design pending written-spec review
 **Scope:** Follow-up to the symbol workspace redesign; no Backtest changes
 
 ## Problem

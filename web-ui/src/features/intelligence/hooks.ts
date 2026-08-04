@@ -97,12 +97,23 @@ export function useEvidenceRefreshMutation() {
   });
 }
 
+export class IntelligenceIdentityError extends Error {
+  constructor() {
+    super('Intelligence identity mismatch');
+    this.name = 'IntelligenceIdentityError';
+  }
+}
+
 export function useIntelligenceLatestQuery(ticker: string, enabled: boolean) {
   return useQuery<SymbolIntelligence, Error>({
     queryKey: queryKeys.intelligence.latest(ticker),
     queryFn: async () => {
       const api = await getIntelligenceLatest(ticker);
-      return transformIntelligence(api);
+      const intelligence = transformIntelligence(api);
+      if (intelligence.symbol.trim().toUpperCase() !== ticker.trim().toUpperCase()) {
+        throw new IntelligenceIdentityError();
+      }
+      return intelligence;
     },
     enabled,
     retry: false,

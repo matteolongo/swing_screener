@@ -38,8 +38,15 @@
 The Today workspace keeps only session and layout state in
 `workspaceStore`: normalized selected ticker, selection version, source,
 active analysis tab, expanded/split mode, full-screen mode, and activity-drawer
-visibility. Selecting a different ticker increments the selection version;
-late completions must match both ticker and version before presentation.
+visibility plus a bounded history of 20 request activities per ticker/version
+session. The drawer filters history to the live selection so an earlier symbol
+cannot be retried against the current workspace.
+Each activity has a request ID and an active/completed/partial/failed/discarded
+lifecycle. Query fetching transitions and explicit mutations both allocate
+request IDs, and a successful same-source retry supersedes its older failure.
+Selecting a different ticker increments the selection version; late completions
+are retained as discarded history but cannot update or appear in the current
+symbol presentation.
 
 React Query remains the sole owner of fundamentals, OHLCV, intelligence,
 position, and order server data. `features/workspaceData/useSymbolWorkspaceData`
@@ -47,7 +54,9 @@ composes those canonical queries into source-health read models without copying
 responses into Zustand. A screener rerun updates only screener-owned state;
 fundamentals and intelligence retain their own timestamps. Refreshing
 fundamentals replaces the canonical snapshot shared by Overview and
-Fundamentals and can mark older intelligence outdated.
+Fundamentals and can mark older intelligence outdated. Source health is a
+current snapshot derived from server-owned provenance and content dates; it is
+separate from request activity history.
 
 The sticky workspace header, per-source status bar, and activity drawer expose
 provider, data/fetch time, cached/stale/partial states, active work, and durable
@@ -56,6 +65,11 @@ Intelligence generation is a separate explicit action and records the precise
 input manifest and per-source degradation. Neither action mutates trading
 state. Backtest is not included in this health model and preserves its existing
 query and run/reset behavior.
+
+When the Today workspace is expanded, the mounted Today, Last Run, or Watchlist
+panel renders its compact symbol-rail variant from the same loaded collection.
+Collapsing switches that same component back to its full controls and table, so
+tab, filter, and query ownership do not move or reset.
 
 ## Testing
 

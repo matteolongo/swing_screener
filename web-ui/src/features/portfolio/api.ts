@@ -239,7 +239,7 @@ export async function fetchOrders(status: OrderFilterStatus): Promise<SnapshotCo
   if (isLocalPersistenceMode()) {
     return attachSnapshotMetadata(listOrdersLocal(status), {});
   }
-  const params = status ? `?status=${status}` : '';
+  const params = status !== 'all' ? `?status=${status}` : '';
   const data = await fetchJson<{
     orders?: OrderApiResponse[];
     asof?: string;

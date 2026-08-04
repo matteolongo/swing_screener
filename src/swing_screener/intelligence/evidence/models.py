@@ -5,10 +5,11 @@ collector and consumed by the analyzer prompt.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SourceEvidence(BaseModel):
+    source_id: str | None = Field(default=None, exclude=True)
     title: str
     url: str
     publisher: str | None = None

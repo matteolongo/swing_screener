@@ -45,6 +45,16 @@ const threeCloseItemReview = {
   },
 };
 
+beforeEach(() => {
+  useWorkspaceStore.setState({
+    selectedTicker: null,
+    selectedTickerSource: null,
+    workspaceMode: 'split',
+    fullscreen: false,
+    analysisTab: 'overview',
+  });
+});
+
 describe('Today page — keyboard navigation syncs with click', () => {
   it('pressing j after clicking the second item advances to the third, not from keyboard position 0', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error');
@@ -61,7 +71,6 @@ describe('Today page — keyboard navigation syncs with click', () => {
 
     // Wait for all three rows to appear
     const nvdaButton = await screen.findByRole('button', { name: /NVDA/i });
-    const msftButton = screen.getByRole('button', { name: /MSFT/i });
 
     // Click the second item (NVDA, flat-list index 1)
     fireEvent.click(nvdaButton);
@@ -70,7 +79,10 @@ describe('Today page — keyboard navigation syncs with click', () => {
     // Without the fix, j moves from focusedIndex -1 → 0 (AMAT), not NVDA → MSFT
     fireEvent.keyDown(window, { key: 'j' });
 
-    expect(msftButton).toHaveClass('ring-1');
+    expect(useWorkspaceStore.getState().selectedTicker).toBe('MSFT');
+    expect(
+      within(screen.getByTestId('symbol-rail')).getByRole('button', { name: /MSFT/i }),
+    ).toHaveAttribute('aria-current', 'true');
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(
       consoleErrorSpy.mock.calls.some(([message]) =>
@@ -133,7 +145,9 @@ describe('Today page — expanded workspace', () => {
     await user.click(tickerButton);
     await user.click(screen.getByRole('button', { name: t(controlKey) }));
 
-    expect(tickerButton).toHaveFocus();
+    expect(
+      within(screen.getByTestId('today-symbol-table')).getByRole('button', { name: /NVDA/i }),
+    ).toHaveFocus();
   });
 
   it('supports a keyboard journey through the rail, source status, header, and every analysis tab', async () => {
@@ -231,6 +245,10 @@ describe('Today page — expanded workspace', () => {
     await user.keyboard('{Enter}');
     const expandedRail = screen.getByTestId('symbol-rail');
     expect(expandedRail).toBeVisible();
+    expect(within(expandedRail).getByTestId('symbol-rail-list')).toBeInTheDocument();
+    expect(within(expandedRail).queryByRole('button', {
+      name: t('dailyReview.header.refreshTitle'),
+    })).not.toBeInTheDocument();
 
     const neighboringSymbol = within(expandedRail).getByRole('button', { name: /VALE/i });
     neighboringSymbol.focus();

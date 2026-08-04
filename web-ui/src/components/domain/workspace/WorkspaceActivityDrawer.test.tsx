@@ -1,113 +1,114 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { WorkspaceActivity, WorkspaceActivityPhase } from '@/features/workspaceData/types';
 import { t } from '@/i18n/t';
 import { renderWithProviders } from '@/test/utils';
-import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import WorkspaceActivityDrawer from './WorkspaceActivityDrawer';
 
-const failedActivity: WorkspaceSourceState = {
-  id: 'prices',
-  ticker: 'AAPL',
-  selectionVersion: 1,
-  phase: 'failed',
-  provider: 'polygon',
-  dataAsOf: '2026-07-27',
-  fetchedAt: '2026-07-27T20:00:00Z',
-  cacheOrigin: 'memory',
-  missingInputs: ['daily close'],
-  error: { message: 'Price history is unavailable', retryable: true },
-};
+function activity(
+  requestId: string,
+  phase: WorkspaceActivityPhase,
+  announced = true,
+): WorkspaceActivity {
+  return {
+    requestId,
+    ticker: 'AAPL',
+    selectionVersion: 1,
+    sourceId: 'prices',
+    phase,
+    startedAt: '2026-07-29T09:00:00Z',
+    finishedAt: phase === 'active' ? null : '2026-07-29T09:01:00Z',
+    provider: 'polygon',
+    message: phase === 'failed' ? 'Price history is unavailable' : null,
+    retryable: phase === 'failed',
+    pipelineStep: 'fetch-candles',
+    announced,
+  };
+}
 
 describe('WorkspaceActivityDrawer', () => {
-  it('announces a persistent source failure and allows retry', async () => {
-    const onRetry = vi.fn();
-    const { user, rerender } = renderWithProviders(
-      <WorkspaceActivityDrawer activities={[failedActivity]} onRetry={onRetry} />,
-    );
-
-    expect(screen.getByRole('alert')).toHaveTextContent(failedActivity.error!.message);
-    await user.click(screen.getByRole('button', { name: t('workspacePage.data.retry') }));
-    expect(onRetry).toHaveBeenCalledWith('prices');
-
-    rerender(<WorkspaceActivityDrawer activities={[]} onRetry={onRetry} />);
-    expect(screen.getByRole('status')).toHaveTextContent(failedActivity.error!.message);
-  });
-
-  it('shows selected-source provenance, freshness, diagnostics, and retry context', () => {
+  it('shows every request lifecycle and its request ID', () => {
+    const phases: WorkspaceActivityPhase[] = [
+      'active',
+      'completed',
+      'partial',
+      'failed',
+      'discarded',
+    ];
     renderWithProviders(
       <WorkspaceActivityDrawer
-        activities={[failedActivity]}
-        selectedSourceId="prices"
-        onRetry={vi.fn()}
+        activities={phases.map((phase) => activity(`request-${phase}`, phase))}
       />,
     );
 
-    const detail = screen.getByTestId('workspace-source-detail');
-    expect(detail).toHaveTextContent('polygon');
-    expect(detail).toHaveTextContent('2026-07-27');
-    expect(detail).toHaveTextContent(new Date(failedActivity.fetchedAt!).toLocaleString());
-    expect(detail).toHaveTextContent('memory');
-    expect(detail).toHaveTextContent('daily close');
-    expect(detail).toHaveTextContent(failedActivity.error!.message);
-    expect(screen.getByRole('button', { name: t('workspacePage.data.retry') })).toBeEnabled();
+    const status = screen.getByRole('status');
+    for (const phase of phases) {
+      expect(status).toHaveTextContent(t(`workspacePage.data.activityPhases.${phase}`));
+      expect(status).toHaveTextContent(`request-${phase}`);
+    }
   });
 
-  it('localizes a missing server freshness-metadata input', () => {
-    renderWithProviders(
-      <WorkspaceActivityDrawer
-        activities={[{
-          ...failedActivity,
-          id: 'positionOrders',
-          phase: 'partial',
-          missingInputs: ['freshnessMetadata'],
-          error: null,
-        }]}
-        selectedSourceId="positionOrders"
-      />,
-    );
-
-    expect(screen.getByTestId('workspace-source-detail')).toHaveTextContent(
-      t('workspacePage.data.details.inputs.freshnessMetadata'),
-    );
-  });
-
-  it('drops retained failures when the workspace selection changes', () => {
+  it('announces a new failure once while keeping persistent content as status', () => {
+    const onMarkAnnounced = vi.fn();
+    const failed = activity('request-failed', 'failed', false);
     const { rerender } = renderWithProviders(
-      <WorkspaceActivityDrawer activities={[failedActivity]} />,
-    );
-
-    rerender(
       <WorkspaceActivityDrawer
-        activities={[
-          {
-            ...failedActivity,
-            ticker: 'MSFT',
-            selectionVersion: 2,
-            phase: 'loading',
-            error: null,
-          },
-        ]}
+        activities={[failed]}
+        onMarkAnnounced={onMarkAnnounced}
       />,
     );
 
-    expect(screen.queryByText(failedActivity.error!.message)).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Price history is unavailable');
+    expect(screen.getByRole('status')).toHaveTextContent('Price history is unavailable');
+    expect(onMarkAnnounced).toHaveBeenCalledWith('request-failed');
+
+    rerender(
+      <WorkspaceActivityDrawer
+        activities={[{ ...failed, announced: true }]}
+        onMarkAnnounced={onMarkAnnounced}
+      />,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Price history is unavailable');
   });
 
-  it('keeps a dismissed failure hidden across parent rerenders until recovery or a new failure', async () => {
-    const { user, rerender } = renderWithProviders(
-      <WorkspaceActivityDrawer activities={[failedActivity]} />,
-    );
-
-    await user.click(screen.getByRole('button', { name: t('workspacePage.data.dismiss') }));
-    rerender(<WorkspaceActivityDrawer activities={[{ ...failedActivity }]} />);
-    expect(screen.queryByText(failedActivity.error!.message)).not.toBeInTheDocument();
-
-    rerender(
+  it('retries by source and dismisses by request ID', async () => {
+    const onRetry = vi.fn();
+    const onDismiss = vi.fn();
+    const { user } = renderWithProviders(
       <WorkspaceActivityDrawer
-        activities={[{ ...failedActivity, error: { message: 'A new price failure', retryable: true } }]}
+        activities={[activity('request-failed', 'failed')]}
+        onRetry={onRetry}
+        onDismiss={onDismiss}
       />,
     );
-    expect(screen.getByText('A new price failure')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.data.retryActivity', {
+        source: t('workspacePage.data.sources.prices'),
+        ticker: 'AAPL',
+      }),
+    }));
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.data.dismissActivity', {
+        source: t('workspacePage.data.sources.prices'),
+        ticker: 'AAPL',
+      }),
+    }));
+
+    expect(onRetry).toHaveBeenCalledWith('prices');
+    expect(onDismiss).toHaveBeenCalledWith('request-failed');
+  });
+
+  it('localizes pipeline steps instead of exposing internal identifiers', () => {
+    renderWithProviders(
+      <WorkspaceActivityDrawer activities={[activity('request-failed', 'failed')]} />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      t('workspacePage.data.pipelineSteps.fetchPrices'),
+    );
+    expect(screen.getByRole('status')).not.toHaveTextContent('fetch-candles');
   });
 });
