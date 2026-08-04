@@ -55,6 +55,23 @@ Docs:
 - `http://localhost:8000/docs`
 - `http://localhost:8000/openapi.json`
 
+## Jupyter notebooks in Docker Compose
+
+Start the local notebook server with:
+
+```bash
+docker compose up jupyter
+```
+
+It mounts the repository's `notebooks/` directory at `/app/notebooks` and is
+available at `http://localhost:8888`. In VS Code, run **Jupyter: Specify
+Jupyter Server for Connections**, choose an existing server, and enter that
+URL before opening a notebook.
+
+The Compose Jupyter service has no token or password so VS Code can connect
+without prompting. It is strictly for trusted local development; never expose
+port 8888 on an untrusted network.
+
 ## Data + Concurrency
 - Orders, positions, and idempotency records use one SQL database. Development
   defaults to `sqlite:///data/swing_screener.db`; production requires
