@@ -1,10 +1,14 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import TodayActionList from './TodayActionList';
 import { useScreenerStore, type TodayRunSnapshot } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+
+const { positionsClose } = vi.hoisted(() => ({
+  positionsClose: { current: [] as Array<Record<string, unknown>> },
+}));
 
 // Minimal daily-review payload: one open position that is NO_ACTION (hold).
 vi.mock('@/features/dailyReview/api', () => ({
@@ -12,7 +16,7 @@ vi.mock('@/features/dailyReview/api', () => ({
     data: {
       summary: { reviewDate: '2026-06-26', newCandidates: 0, updateStop: 0, closePositions: 0 },
       watchlistNearTrigger: [],
-      positionsClose: [],
+      positionsClose: positionsClose.current,
       positionsUpdateStop: [],
       positionsExitSignal: [],
       pendingOrdersReview: [],
@@ -40,6 +44,7 @@ vi.mock('@/features/portfolio/hooks', async (orig) => {
 
 describe('TodayActionList holdings', () => {
   beforeEach(() => {
+    positionsClose.current = [];
     useScreenerStore.setState({
       lastResult: null,
       lastRunContext: null,
@@ -64,6 +69,21 @@ describe('TodayActionList holdings', () => {
     expect(screen.queryByRole('button', {
       name: t('dailyReview.header.refreshTitle'),
     })).not.toBeInTheDocument();
+  });
+
+  it('prioritizes an urgent close over the generic held-position row', () => {
+    positionsClose.current = [{
+      ticker: 'LRCX',
+      positionId: 'POS-1',
+      reason: 'Stop breached',
+    }];
+    renderWithProviders(<TodayActionList compact onTickerSelect={() => {}} />);
+
+    const rail = screen.getByTestId('symbol-rail-list');
+    expect(within(rail).getByText(t('todayPage.actionList.close'))).toBeInTheDocument();
+    expect(within(rail).getByText('Stop breached')).toBeInTheDocument();
+    expect(within(rail).queryByText(t('todayPage.actionList.openPositions')))
+      .not.toBeInTheDocument();
   });
 
   it('renders opportunities from the pinned run, not candidate rows returned by portfolio refresh', () => {

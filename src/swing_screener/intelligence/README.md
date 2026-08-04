@@ -402,7 +402,13 @@ Controlled by `config.evidence` in `config/intelligence.yaml`:
 
 ### Cache
 
-Curated evidence is cached lazily at `data/intelligence/evidence/{date}/{ticker}.json` (regenerable; not committed). No schema migration required.
+Curated evidence is cached lazily at
+`data/intelligence/evidence/{date}/{ticker}.json` (regenerable; not committed).
+New cache entries include an internal collector `source_id` so a partial refresh
+can retain only entries from providers that failed. Legacy entries without that
+tag remain readable, but the next refresh with any successful collector replaces
+them because their provider ownership cannot be established safely. No manual
+schema migration is required.
 
 `GET /api/intelligence/{ticker}/evidence/latest` reads only the newest valid
 cache metadata; it never collects sources or invokes an LLM. Its

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { screen, act } from '@testing-library/react';
+import { screen, act, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 
@@ -77,16 +77,30 @@ describe('ScreenerInboxPanel', () => {
         candidates: [{
           ticker: 'NVDA',
           close: 120,
-          recommendation: { workflowStatus: 'ready' },
+          recommendation: {
+            workflowStatus: 'ready',
+            nextStep: { code: 'review_order' },
+          },
           decisionSummary: { action: 'BUY_NOW' },
         }],
       } as never,
     });
 
-    renderWithProviders(<ScreenerInboxPanel compact />);
+    const { rerender } = renderWithProviders(<ScreenerInboxPanel compact />);
 
-    expect(await screen.findByTestId('symbol-rail-list')).toBeInTheDocument();
+    const rail = await screen.findByTestId('symbol-rail-list');
+    expect(within(rail).getByText(t('recommendation.workflow.status.ready'))).toBeInTheDocument();
+    expect(within(rail).getByText(t('recommendation.workflow.nextStep.review_order'))).toBeInTheDocument();
+    expect(within(rail).queryByText('BUY_NOW')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /NVDA/i })).toHaveAttribute('aria-current', 'true');
     expect(screen.queryByRole('button', { name: 'Advanced filters' })).not.toBeInTheDocument();
+
+    const mountedFormToggle = await screen.findByRole('button', {
+      name: 'Advanced filters',
+      hidden: true,
+    });
+    expect(mountedFormToggle.closest('[hidden]')).toHaveClass('h-full', 'min-h-0');
+    rerender(<ScreenerInboxPanel compact={false} />);
+    expect(screen.getByRole('button', { name: 'Advanced filters' })).toBe(mountedFormToggle);
   });
 });

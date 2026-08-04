@@ -111,8 +111,7 @@ export default function WatchlistPipelinePanel({
     );
   }
 
-  if (compact) {
-    return (
+  const compactRail = compact ? (
       <div className="space-y-1" data-testid="symbol-rail-list">
         {items.map((item) => (
           <SymbolRailRow
@@ -133,11 +132,17 @@ export default function WatchlistPipelinePanel({
           />
         ))}
       </div>
-    );
-  }
+  ) : null;
 
   return (
-    <div className="space-y-4">
+    <>
+      {compactRail}
+      <div
+        className="space-y-4"
+        hidden={compact}
+        aria-hidden={compact || undefined}
+        {...(compact ? { inert: '' } : {})}
+      >
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">{t('watchlist.pipeline.title')}</h2>
@@ -202,6 +207,7 @@ export default function WatchlistPipelinePanel({
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

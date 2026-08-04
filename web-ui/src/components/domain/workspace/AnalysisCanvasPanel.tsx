@@ -39,6 +39,12 @@ export default function AnalysisCanvasPanel() {
   const openPosition = openPositionsQuery.data?.find(
     (p) => p.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   ) ?? null;
+  const visibleActivities = selectedTicker
+    ? activities.filter(
+        (activity) => activity.ticker === selectedTicker.toUpperCase()
+          && activity.selectionVersion === selectionVersion,
+      )
+    : [];
 
   useEffect(() => {
     setEvidenceRefresh(null);
@@ -88,7 +94,9 @@ export default function AnalysisCanvasPanel() {
                   && phase === 'loading',
               )
             }
-            onRefreshAll={() => void workspaceData.refreshAllNonIntelligence()}
+            onRefreshAll={() => {
+              void workspaceData.refreshAllNonIntelligence().catch(() => undefined);
+            }}
             fullscreen={fullscreen}
             onClose={clearSelectedTicker}
             onCollapse={collapseWorkspace}
@@ -103,9 +111,11 @@ export default function AnalysisCanvasPanel() {
           />
           {activityDrawerOpen ? (
             <WorkspaceActivityDrawer
-              activities={activities}
+              activities={visibleActivities}
               selectedSource={workspaceData.sourceStates.find(({ id }) => id === selectedSourceId)}
-              onRetry={(sourceId) => void workspaceData.refreshSource(sourceId)}
+              onRetry={(sourceId) => {
+                void workspaceData.refreshSource(sourceId).catch(() => undefined);
+              }}
               onDismiss={dismissActivity}
               onMarkAnnounced={markActivityAnnounced}
             />
@@ -137,7 +147,9 @@ export default function AnalysisCanvasPanel() {
               error: workspaceData.fundamentals.error,
               isRefreshing: workspaceData.fundamentalsRefreshing,
               refreshError: workspaceData.fundamentalsRefreshError,
-              onRefresh: () => void workspaceData.refreshSource('fundamentals'),
+              onRefresh: () => {
+                void workspaceData.refreshSource('fundamentals').catch(() => undefined);
+              },
             }}
           />
         </>

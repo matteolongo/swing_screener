@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
@@ -57,6 +58,96 @@ function queryPhase(query: {
   return query.isFetchedAfterMount === false ? 'cached' : 'fresh';
 }
 
+interface TrackedQueryState {
+  data: unknown;
+  error: Error | null;
+  isError: boolean;
+  isFetching: boolean;
+}
+
+function useQueryActivity({
+  ticker,
+  selectionVersion,
+  sourceId,
+  pipelineStep,
+  provider,
+  query,
+}: {
+  ticker: string;
+  selectionVersion: number;
+  sourceId: WorkspaceSourceId;
+  pipelineStep: string;
+  provider: string | null;
+  query: TrackedQueryState;
+}) {
+  const requestRef = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    if (!requestRef.current) return;
+    useWorkspaceStore.getState().settleActivity(requestRef.current, {
+      phase: 'discarded',
+      finishedAt: new Date().toISOString(),
+      message: t('workspacePage.data.activitySelectionChanged'),
+      retryable: false,
+    });
+    requestRef.current = null;
+  }, [pipelineStep, selectionVersion, sourceId, ticker]);
+
+  useEffect(() => {
+    if (!ticker) return;
+    if (query.isFetching && requestRef.current === null) {
+      const requestId = globalThis.crypto.randomUUID();
+      requestRef.current = requestId;
+      useWorkspaceStore.getState().beginActivity({
+        requestId,
+        ticker,
+        selectionVersion,
+        sourceId,
+        phase: 'active',
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        provider,
+        message: null,
+        retryable: false,
+        pipelineStep,
+        announced: false,
+      });
+      return;
+    }
+    if (query.isFetching || requestRef.current === null) return;
+
+    const requestId = requestRef.current;
+    requestRef.current = null;
+    const workspace = useWorkspaceStore.getState();
+    const sessionChanged = workspace.selectedTicker !== ticker
+      || workspace.selectionVersion !== selectionVersion;
+    const phase = sessionChanged
+      ? 'discarded'
+      : query.isError
+        ? query.data === undefined ? 'failed' : 'partial'
+        : 'completed';
+    workspace.settleActivity(requestId, {
+      phase,
+      finishedAt: new Date().toISOString(),
+      provider,
+      message: sessionChanged
+        ? t('workspacePage.data.activitySelectionChanged')
+        : query.error?.message ?? null,
+      retryable: phase === 'failed' || phase === 'partial',
+    });
+  }, [
+    pipelineStep,
+    provider,
+    query.data,
+    query.error,
+    query.isError,
+    query.isFetching,
+    selectionVersion,
+    sourceId,
+    ticker,
+  ]);
+}
+
 export function useSymbolWorkspaceData({
   ticker,
   selectionVersion,
@@ -102,6 +193,58 @@ export function useSymbolWorkspaceData({
     normalizedTicker(pricesQuery.data?.ticker) === currentTicker
       ? pricesQuery.data
       : undefined;
+  useQueryActivity({
+    ticker: currentTicker,
+    selectionVersion,
+    sourceId: 'prices',
+    pipelineStep: 'fetch-prices',
+    provider: pricesQuery.data?.provider ?? null,
+    query: pricesQuery,
+  });
+  useQueryActivity({
+    ticker: currentTicker,
+    selectionVersion,
+    sourceId: 'fundamentals',
+    pipelineStep: 'fetch-fundamentals',
+    provider: fundamentalsQuery.data?.provider ?? null,
+    query: fundamentalsQuery,
+  });
+  useQueryActivity({
+    ticker: currentTicker,
+    selectionVersion,
+    sourceId: 'evidence',
+    pipelineStep: 'fetch-evidence',
+    provider: evidenceLatestQuery.data?.providers.join(', ') ?? null,
+    query: evidenceNotCached
+      ? { ...evidenceLatestQuery, error: null, isError: false }
+      : evidenceLatestQuery,
+  });
+  useQueryActivity({
+    ticker: currentTicker,
+    selectionVersion,
+    sourceId: 'intelligence',
+    pipelineStep: 'fetch-intelligence',
+    provider: intelligenceQuery.data?.sources?.join(', ') ?? null,
+    query: intelligenceNotGeneratedToday
+      ? { ...intelligenceQuery, error: null, isError: false }
+      : intelligenceQuery,
+  });
+  useQueryActivity({
+    ticker: currentTicker,
+    selectionVersion,
+    sourceId: 'positionOrders',
+    pipelineStep: 'fetch-positions',
+    provider: 'local portfolio',
+    query: positionsQuery,
+  });
+  useQueryActivity({
+    ticker: currentTicker,
+    selectionVersion,
+    sourceId: 'positionOrders',
+    pipelineStep: 'fetch-orders',
+    provider: 'local portfolio',
+    query: ordersQuery,
+  });
   const priceHistory = pricesData?.priceHistory;
   const intelligencePhase = (() => {
     if (intelligenceNotGeneratedToday) return 'idle';
@@ -298,60 +441,66 @@ export function useSymbolWorkspaceData({
       return;
     }
 
-    const requestId = globalThis.crypto.randomUUID();
-    const startedAt = new Date().toISOString();
-    const provider = sourceStates.find(({ id }) => id === sourceId)?.provider ?? null;
-    useWorkspaceStore.getState().beginActivity({
-      requestId,
-      ticker: currentTicker,
-      selectionVersion,
-      sourceId,
-      phase: 'active',
-      startedAt,
-      finishedAt: null,
-      provider,
-      message: null,
-      retryable: false,
-      pipelineStep: `refresh-${sourceId}`,
-      announced: false,
-    });
-
-    try {
-      if (sourceId === 'fundamentals') {
+    if (sourceId === 'fundamentals') {
+      const requestId = globalThis.crypto.randomUUID();
+      useWorkspaceStore.getState().beginActivity({
+        requestId,
+        ticker: currentTicker,
+        selectionVersion,
+        sourceId,
+        phase: 'active',
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        provider: sourceStates.find(({ id }) => id === sourceId)?.provider ?? null,
+        message: null,
+        retryable: false,
+        pipelineStep: 'refresh-fundamentals',
+        announced: false,
+      });
+      try {
         await refreshFundamentals.mutateAsync(currentTicker);
-      } else if (sourceId === 'prices') {
-        await pricesQuery.refetch();
-      } else if (sourceId === 'positionOrders') {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: queryKeys.positions() }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.orders() }),
-        ]);
-      } else if (sourceId === 'intelligence') {
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.intelligence.latest(currentTicker),
+        const current = useWorkspaceStore.getState();
+        const discarded = current.selectedTicker !== currentTicker
+          || current.selectionVersion !== selectionVersion;
+        current.settleActivity(requestId, {
+          phase: discarded ? 'discarded' : 'completed',
+          finishedAt: new Date().toISOString(),
+          message: discarded ? t('workspacePage.data.activitySelectionChanged') : null,
         });
+      } catch (error) {
+        const current = useWorkspaceStore.getState();
+        const discarded = current.selectedTicker !== currentTicker
+          || current.selectionVersion !== selectionVersion;
+        current.settleActivity(requestId, {
+          phase: discarded ? 'discarded' : 'failed',
+          finishedAt: new Date().toISOString(),
+          message: discarded
+            ? t('workspacePage.data.activitySelectionChanged')
+            : error instanceof Error ? error.message : t('workspacePage.data.activityRefreshFailed'),
+          retryable: !discarded,
+        });
+        throw error;
       }
-      const current = useWorkspaceStore.getState();
-      const discarded = current.selectedTicker !== currentTicker
-        || current.selectionVersion !== selectionVersion;
-      current.settleActivity(requestId, {
-        phase: discarded ? 'discarded' : 'completed',
-        finishedAt: new Date().toISOString(),
-        message: discarded ? t('workspacePage.data.activitySelectionChanged') : null,
-      });
-    } catch (error) {
-      const current = useWorkspaceStore.getState();
-      const discarded = current.selectedTicker !== currentTicker
-        || current.selectionVersion !== selectionVersion;
-      current.settleActivity(requestId, {
-        phase: discarded ? 'discarded' : 'failed',
-        finishedAt: new Date().toISOString(),
-        message: discarded
-          ? t('workspacePage.data.activitySelectionChanged')
-          : error instanceof Error ? error.message : t('workspacePage.data.activityRefreshFailed'),
-        retryable: !discarded,
-      });
-      throw error;
+      return;
+    }
+    if (sourceId === 'prices') {
+      await pricesQuery.refetch({ throwOnError: true });
+    } else if (sourceId === 'positionOrders') {
+      await Promise.all([
+        queryClient.invalidateQueries(
+          { queryKey: queryKeys.positions() },
+          { throwOnError: true },
+        ),
+        queryClient.invalidateQueries(
+          { queryKey: queryKeys.orders() },
+          { throwOnError: true },
+        ),
+      ]);
+    } else if (sourceId === 'intelligence') {
+      await queryClient.invalidateQueries(
+        { queryKey: queryKeys.intelligence.latest(currentTicker) },
+        { throwOnError: true },
+      );
     }
   }
 

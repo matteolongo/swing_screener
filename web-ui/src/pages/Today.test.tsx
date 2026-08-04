@@ -145,7 +145,9 @@ describe('Today page — expanded workspace', () => {
     await user.click(tickerButton);
     await user.click(screen.getByRole('button', { name: t(controlKey) }));
 
-    expect(screen.getByRole('button', { name: /NVDA/i })).toHaveFocus();
+    expect(
+      within(screen.getByTestId('today-symbol-table')).getByRole('button', { name: /NVDA/i }),
+    ).toHaveFocus();
   });
 
   it('supports a keyboard journey through the rail, source status, header, and every analysis tab', async () => {

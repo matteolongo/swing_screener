@@ -84,10 +84,31 @@ describe('WorkspaceActivityDrawer', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: t('workspacePage.data.retry') }));
-    await user.click(screen.getByRole('button', { name: t('workspacePage.data.dismiss') }));
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.data.retryActivity', {
+        source: t('workspacePage.data.sources.prices'),
+        ticker: 'AAPL',
+      }),
+    }));
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.data.dismissActivity', {
+        source: t('workspacePage.data.sources.prices'),
+        ticker: 'AAPL',
+      }),
+    }));
 
     expect(onRetry).toHaveBeenCalledWith('prices');
     expect(onDismiss).toHaveBeenCalledWith('request-failed');
+  });
+
+  it('localizes pipeline steps instead of exposing internal identifiers', () => {
+    renderWithProviders(
+      <WorkspaceActivityDrawer activities={[activity('request-failed', 'failed')]} />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      t('workspacePage.data.pipelineSteps.fetchPrices'),
+    );
+    expect(screen.getByRole('status')).not.toHaveTextContent('fetch-candles');
   });
 });

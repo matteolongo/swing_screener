@@ -2,6 +2,7 @@ import json
 from datetime import date
 
 from swing_screener.intelligence.evidence.collect import (
+    _write_cache,
     collect_evidence,
     read_latest_cached_evidence_summary,
 )
@@ -124,6 +125,51 @@ def test_failed_refresh_preserves_existing_cache(tmp_path, monkeypatch):
 
     assert result == []
     assert json.loads(cache_file.read_text()) == [_ev().model_dump()]
+
+
+def test_successful_empty_refresh_invalidates_legacy_unattributed_cache(
+    tmp_path, monkeypatch
+):
+    cache_file = tmp_path / ASOF.isoformat() / "AAPL.json"
+    cache_file.parent.mkdir(parents=True)
+    cache_file.write_text(json.dumps([_ev().model_dump()]))
+
+    monkeypatch.setattr(
+        SecEdgarCatalystCollector,
+        "collect",
+        classmethod(lambda cls, *args, **kwargs: []),
+    )
+
+    result = collect_evidence(
+        "AAPL",
+        asof_date=ASOF,
+        cfg=CFG,
+        cache_root=tmp_path,
+        refresh_sources=True,
+    )
+
+    assert result == []
+    assert json.loads(cache_file.read_text()) == []
+
+
+def test_cache_writer_removes_temporary_file_after_serialization_error(
+    tmp_path, monkeypatch
+):
+    cache_file = tmp_path / ASOF.isoformat() / "AAPL.json"
+
+    def fail_dump(*args, **kwargs):
+        raise TypeError("not serializable")
+
+    monkeypatch.setattr(
+        "swing_screener.intelligence.evidence.collect.json.dump", fail_dump
+    )
+
+    try:
+        _write_cache(cache_file, [_ev()])
+    except TypeError:
+        pass
+
+    assert list(cache_file.parent.glob("*.tmp")) == []
 
 
 def test_partial_refresh_replaces_successful_source_and_preserves_failed_source(

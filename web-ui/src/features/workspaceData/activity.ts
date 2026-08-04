@@ -5,6 +5,12 @@ import type {
 
 export const WORKSPACE_ACTIVITY_LIMIT = 20;
 
+function pipelineKey(pipelineStep: string | null): string | null {
+  if (pipelineStep === 'fetch-candles') return 'fetch-prices';
+  if (pipelineStep === 'fetch-fundamentals') return 'refresh-fundamentals';
+  return pipelineStep;
+}
+
 export function limitActivities(
   activities: WorkspaceActivity[],
   limit = WORKSPACE_ACTIVITY_LIMIT,
@@ -22,10 +28,15 @@ export function prependActivity(
     phase: 'active' as const,
     finishedAt: null,
   };
-  return limitActivities([
-    normalized,
-    ...activities.filter(({ requestId }) => requestId !== normalized.requestId),
-  ]);
+  const retained = activities.filter(({ requestId }) => requestId !== normalized.requestId);
+  const isCurrentSession = (candidate: WorkspaceActivity) =>
+    candidate.ticker === normalized.ticker
+    && candidate.selectionVersion === normalized.selectionVersion;
+  const currentSession = [normalized, ...retained.filter(isCurrentSession)]
+    .slice(0, WORKSPACE_ACTIVITY_LIMIT);
+  const priorSessions = retained.filter((candidate) => !isCurrentSession(candidate))
+    .slice(0, WORKSPACE_ACTIVITY_LIMIT);
+  return [...currentSession, ...priorSessions];
 }
 
 export function settleActivity(
@@ -33,8 +44,17 @@ export function settleActivity(
   requestId: string,
   settlement: WorkspaceActivitySettlement,
 ): WorkspaceActivity[] {
-  return activities.map((activity) =>
+  const settled = activities.map((activity) =>
     activity.requestId === requestId
       ? { ...activity, ...settlement }
       : activity);
+  const completed = settled.find((activity) => activity.requestId === requestId);
+  if (completed?.phase !== 'completed') return settled;
+  return settled.filter((activity) =>
+    activity.requestId === requestId
+    || activity.phase !== 'failed'
+    || activity.ticker !== completed.ticker
+    || activity.selectionVersion !== completed.selectionVersion
+    || activity.sourceId !== completed.sourceId
+    || pipelineKey(activity.pipelineStep) !== pipelineKey(completed.pipelineStep));
 }

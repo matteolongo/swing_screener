@@ -17,6 +17,10 @@ import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
 import SymbolRailRow from '@/components/domain/workspace/SymbolRailRow';
+import {
+  formatWorkflowNextStep,
+  getWorkflowPresentation,
+} from '@/components/domain/recommendation/workflowPresentation';
 
 const TOP_N_MAX = 200;
 
@@ -281,46 +285,65 @@ export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPan
     [setAnalysisTab, setSelectedTicker]
   );
 
-  if (compact) {
-    return (
+  const compactRail = compact ? (
       <div
         className="h-full space-y-1 overflow-y-auto p-2"
         data-testid="symbol-rail-list"
       >
-        {displayCandidates.map((candidate) => (
-          <SymbolRailRow
-            key={candidate.ticker}
-            ticker={candidate.ticker}
-            status={candidate.decisionSummary?.action
-              ?? candidate.recommendation?.workflowStatus
-              ?? t('workspacePage.symbolRail.candidate')}
-            context={candidate.close == null ? null : String(candidate.close)}
-            selected={selectedTicker?.toUpperCase() === candidate.ticker.toUpperCase()}
-            onSelect={(ticker) => handleSelectCandidate(ticker, 'overview')}
-          />
-        ))}
+        {displayCandidates.map((candidate) => {
+          const presentation = getWorkflowPresentation(candidate.recommendation);
+          return (
+            <SymbolRailRow
+              key={candidate.ticker}
+              ticker={candidate.ticker}
+              status={t(presentation.labelKey)}
+              context={candidate.recommendation?.nextStep
+                ? formatWorkflowNextStep(candidate.recommendation.nextStep)
+                : null}
+              selected={selectedTicker?.toUpperCase() === candidate.ticker.toUpperCase()}
+              onSelect={(ticker) => handleSelectCandidate(ticker, 'overview')}
+            />
+          );
+        })}
         {displayCandidates.length === 0 ? (
           <p className="px-2 py-4 text-center text-sm text-muted">
             {t('workspacePage.symbolRail.noSymbols')}
           </p>
         ) : null}
       </div>
-    );
-  }
+  ) : null;
 
   if (!riskConfig) {
     const configFailed = configDefaultsQuery.isError && !activeStrategy?.risk;
     return (
-      <Card variant="bordered" className="p-4 md:p-5">
-        <div className={`text-sm ${configFailed ? 'text-danger' : 'text-muted'}`}>
-          {configFailed ? t('common.errors.generic') : t('common.table.loading')}
+      <>
+        {compactRail}
+        <div
+          className="h-full min-h-0"
+          hidden={compact}
+          aria-hidden={compact || undefined}
+          {...(compact ? { inert: '' } : {})}
+        >
+          <Card variant="bordered" className="p-4 md:p-5">
+            <div className={`text-sm ${configFailed ? 'text-danger' : 'text-muted'}`}>
+              {configFailed ? t('common.errors.generic') : t('common.table.loading')}
+            </div>
+          </Card>
         </div>
-      </Card>
+      </>
     );
   }
 
   return (
-    <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-y-auto">
+    <>
+      {compactRail}
+      <div
+        className="h-full min-h-0"
+        hidden={compact}
+        aria-hidden={compact || undefined}
+        {...(compact ? { inert: '' } : {})}
+      >
+        <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-y-auto">
       <ScreenerForm
         taxonomyFilter={taxonomyFilter}
         setTaxonomyFilter={setTaxonomyFilter}
@@ -466,6 +489,8 @@ export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPan
           </div>
         </div>
       ) : null}
-    </Card>
+        </Card>
+      </div>
+    </>
   );
 }

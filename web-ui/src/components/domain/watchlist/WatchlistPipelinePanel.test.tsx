@@ -44,10 +44,16 @@ describe('WatchlistPipelinePanel', () => {
 
   it('renders compact symbol rows without the wide table', () => {
     useWorkspaceStore.setState({ selectedTicker: 'ASML' });
-    renderWithProviders(<WatchlistPipelinePanel compact onTickerSelect={() => {}} />);
+    const { rerender } = renderWithProviders(
+      <WatchlistPipelinePanel compact onTickerSelect={() => {}} />,
+    );
 
     expect(screen.getByTestId('symbol-rail-list')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ASML/i })).toHaveAttribute('aria-current', 'true');
     expect(screen.queryByRole('columnheader')).not.toBeInTheDocument();
+    const mountedTable = screen.getByRole('table', { hidden: true });
+
+    rerender(<WatchlistPipelinePanel compact={false} onTickerSelect={() => {}} />);
+    expect(screen.getByRole('table')).toBe(mountedTable);
   });
 });

@@ -38,10 +38,14 @@
 The Today workspace keeps only session and layout state in
 `workspaceStore`: normalized selected ticker, selection version, source,
 active analysis tab, expanded/split mode, full-screen mode, and activity-drawer
-visibility plus a bounded session history of the 20 newest request activities.
+visibility plus a bounded history of 20 request activities per ticker/version
+session. The drawer filters history to the live selection so an earlier symbol
+cannot be retried against the current workspace.
 Each activity has a request ID and an active/completed/partial/failed/discarded
-lifecycle. Selecting a different ticker increments the selection version; late
-completions remain visible as discarded history but must not update the current
+lifecycle. Query fetching transitions and explicit mutations both allocate
+request IDs, and a successful same-source retry supersedes its older failure.
+Selecting a different ticker increments the selection version; late completions
+are retained as discarded history but cannot update or appear in the current
 symbol presentation.
 
 React Query remains the sole owner of fundamentals, OHLCV, intelligence,

@@ -87,8 +87,8 @@ def _write_cache(path: Path, items: list[SourceEvidence]) -> None:
             suffix=".tmp",
             delete=False,
         ) as temporary:
-            json.dump(payload, temporary)
             temporary_path = Path(temporary.name)
+            json.dump(payload, temporary)
         temporary_path.replace(path)
     except OSError:
         logger.warning("Failed to write evidence cache %s", path, exc_info=True)
@@ -193,7 +193,7 @@ def collect_evidence(
         [
             item
             for item in prior_cache or []
-            if item.source_id is None or item.source_id in failed_sources
+            if item.source_id in failed_sources
         ]
         if refresh_sources and successful_sources
         else []
