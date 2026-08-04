@@ -81,7 +81,7 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
             index=["ABN.AS", "AAPL"],
         )
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: _mock_provider())
+    monkeypatch.setattr(screener_service, "get_market_data_provider", lambda **kwargs: _mock_provider())
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,
@@ -157,7 +157,7 @@ def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(
             index=["AAPL"],
         )
 
-    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: _mock_provider())
+    monkeypatch.setattr(screener_service, "get_market_data_provider", lambda **kwargs: _mock_provider())
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,

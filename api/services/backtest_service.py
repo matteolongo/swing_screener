@@ -16,7 +16,7 @@ from typing import Optional
 from swing_screener.backtest import BacktestConfig, run_event_study
 from swing_screener.backtest.event_study import EventStudyResult
 from swing_screener.backtest.metrics import BacktestMetrics
-from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
 from swing_screener.errors import ServiceError, UpstreamError, ValidationError
 from swing_screener.strategy.config import (
     build_entry_config,
@@ -49,7 +49,7 @@ class BacktestService:
         provider: Optional[MarketDataProvider] = None,
         strategy_repo=None,
     ) -> None:
-        self._provider = provider or get_default_provider()
+        self._provider = provider or get_market_data_provider()
         if strategy_repo is None:
             from api.dependencies import get_strategy_repo
 

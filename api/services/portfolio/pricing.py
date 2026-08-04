@@ -10,7 +10,7 @@ import pandas as pd
 from api.models.portfolio import EarningsProximityResponse
 from api.utils.files import get_today_str
 from api.utils.converters import to_iso as _to_iso
-from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
 from swing_screener.utils.date_helpers import get_default_history_start
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ class PositionPricingService:
     """Market-data, live-price, FX, and earnings proximity."""
 
     def __init__(self, provider: Optional[MarketDataProvider] = None) -> None:
-        self._provider = provider or get_default_provider()
+        self._provider = provider or get_market_data_provider()
 
     def fetch_recent_ohlcv(self, ticker: str, *, lookback_days: int = 400) -> pd.DataFrame:
         """Fetch recent daily OHLCV for one ticker (enough bars for 200-SMA / 52w stats)."""

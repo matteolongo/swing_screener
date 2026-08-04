@@ -141,7 +141,7 @@ def test_volume_analysis_reports_provider_failure(monkeypatch):
     prov = MagicMock(spec=MarketDataProvider)
     prov.fetch_ohlcv.side_effect = RuntimeError("api_key=secret")
     prov.get_provider_name.return_value = "mock"
-    monkeypatch.setattr("api.routers.market_data.get_default_provider", lambda: prov)
+    monkeypatch.setattr("api.routers.market_data.get_market_data_provider", lambda: prov)
 
     res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
 

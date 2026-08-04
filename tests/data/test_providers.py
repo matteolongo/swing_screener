@@ -13,7 +13,6 @@ from swing_screener.data.providers import (
     YfinanceProvider,
     AlpacaDataProvider,
     get_market_data_provider,
-    get_default_provider,
 )
 from swing_screener.config import BrokerConfig
 
@@ -551,9 +550,9 @@ class TestBrokerConfig:
 class TestProviderFactory:
     """Test provider factory."""
     
-    def test_get_default_provider(self):
+    def test_get_market_data_provider(self):
         """Test getting default provider."""
-        provider = get_default_provider()
+        provider = get_market_data_provider()
         assert isinstance(provider, YfinanceProvider)
         assert provider.get_provider_name() == "yfinance"
     

@@ -38,7 +38,7 @@ def _mock_provider(ohlcv):
 
 def test_volume_analysis_happy_path(monkeypatch):
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider",
+        "api.routers.market_data.get_market_data_provider",
         lambda *a, **k: _mock_provider(_ohlcv()),
     )
     res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
@@ -56,7 +56,7 @@ def test_volume_analysis_happy_path(monkeypatch):
 def test_volume_analysis_query_params(monkeypatch):
     prov = _mock_provider(_ohlcv())
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider", lambda *a, **k: prov
+        "api.routers.market_data.get_market_data_provider", lambda *a, **k: prov
     )
     res = TestClient(app).get(
         "/api/market-data/AAPL/volume-analysis?interval=1d&lookback=60&min_rr=3"
@@ -74,7 +74,7 @@ def test_volume_analysis_reports_provider_failure(monkeypatch):
     prov.fetch_ohlcv.side_effect = RuntimeError("api_key=secret")
     prov.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider", lambda *a, **k: prov
+        "api.routers.market_data.get_market_data_provider", lambda *a, **k: prov
     )
     res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
 
@@ -89,7 +89,7 @@ def test_volume_analysis_reports_provider_failure(monkeypatch):
 
 def test_volume_analysis_empty_provider_result_is_valid_absence(monkeypatch):
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider",
+        "api.routers.market_data.get_market_data_provider",
         lambda *a, **k: _mock_provider(pd.DataFrame()),
     )
 

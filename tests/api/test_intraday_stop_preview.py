@@ -61,7 +61,7 @@ def _mock_provider(monkeypatch, ohlcv: pd.DataFrame, live_price: float = 110.0):
     mock.fetch_ohlcv.return_value = ohlcv
     mock.fetch_latest_price.return_value = live_price
     mock.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda *args, **kwargs: mock)
+    monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda *args, **kwargs: mock)
     return mock
 
 

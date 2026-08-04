@@ -45,7 +45,7 @@ from swing_screener.data.universe import (
     get_universe_benchmark,
 )
 from swing_screener.data.symbol_pool import deserialize_pool, filter_pool_by_taxonomy
-from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
 from swing_screener.data.currency import detect_currency
 from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.data import sector_rotation
@@ -341,7 +341,7 @@ class ScreenerService:
     ) -> None:
         self._strategy_repo = strategy_repo
         self._portfolio_service = portfolio_service
-        self._provider = provider or get_default_provider()
+        self._provider = provider or get_market_data_provider()
         self._orders_service = orders_service
         self._approval_signer = approval_signer
         if eval_cache is not None:

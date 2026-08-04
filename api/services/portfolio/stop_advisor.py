@@ -8,7 +8,7 @@ from typing import Optional
 import pandas as pd
 
 from swing_screener.errors import NotFoundError, ValidationError, ServiceError, UpstreamError
-from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
 from swing_screener.portfolio.state import (
     ManageConfig as ManageStateConfig,
     evaluate_positions,
@@ -60,7 +60,7 @@ class PositionStopAdvisor:
         config_repo: Optional[ConfigRepository] = None,
     ) -> None:
         self._positions_repo = positions_repo
-        self._provider = provider or get_default_provider()
+        self._provider = provider or get_market_data_provider()
         self._config_repo = config_repo or ConfigRepository()
 
     def _resolve_manage_cfg(self, payload: Optional[dict] = None) -> ManageStateConfig:

@@ -139,7 +139,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
 
     # Mock the provider factory to return our mock provider
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -167,7 +167,7 @@ def test_screener_empty_ohlcv_returns_404(monkeypatch):
 
     # Mock the provider factory to return our mock provider
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
 
     client = TestClient(app)
@@ -213,7 +213,7 @@ def test_screener_recommendation_payload_shape(monkeypatch):
 
     # Mock the provider factory to return our mock provider
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -281,7 +281,7 @@ def test_screener_response_includes_market_data_source_summary(monkeypatch):
         )
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -326,7 +326,7 @@ def test_screener_candidate_includes_days_to_earnings(monkeypatch):
         )
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
     monkeypatch.setattr(
@@ -374,7 +374,7 @@ def test_screener_candidate_includes_sector_rotation_context(monkeypatch):
         )
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
     monkeypatch.setattr(
@@ -434,7 +434,7 @@ def test_screener_filters_candidates_too_close_to_earnings(monkeypatch):
         )
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
     monkeypatch.setattr(
@@ -480,7 +480,7 @@ def test_screener_attaches_benchmark_comparison(monkeypatch):
         return pd.DataFrame(data, index=idx)
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -560,7 +560,7 @@ def test_screener_response_is_prioritized_by_decision_action_and_conviction(
         return enriched
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -608,7 +608,7 @@ def test_screener_currency_comes_from_metadata(monkeypatch):
         return pd.DataFrame(data, index=idx)
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -654,7 +654,7 @@ def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
         return pd.DataFrame(data, index=idx)
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -735,7 +735,7 @@ def test_screener_exchange_filter_reduces_working_list(monkeypatch, tmp_path):
 
     mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -821,7 +821,7 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
             return SimpleNamespace(action="NO_ACTION")
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -896,7 +896,7 @@ def test_screener_anchors_entry_stop_to_structural_pattern_stop(monkeypatch):
             return SimpleNamespace(action="NO_ACTION")
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -972,7 +972,7 @@ def test_screener_fallback_stop_uses_strategy_atr_multiplier(monkeypatch):
             return SimpleNamespace(orders=[])
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1041,7 +1041,7 @@ def test_screener_keeps_missing_sma_fields_null(monkeypatch):
             return SimpleNamespace(orders=[])
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1112,7 +1112,7 @@ def test_screener_blocks_sizing_for_unknown_currency(monkeypatch):
             return SimpleNamespace(orders=[])
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1191,7 +1191,7 @@ def test_screener_normalizes_null_currency_to_unknown(monkeypatch):
             return SimpleNamespace(orders=[])
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1270,7 +1270,7 @@ def test_screener_coerces_nonfinite_float_fields(monkeypatch):
             return SimpleNamespace(orders=[])
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1341,7 +1341,7 @@ def test_screener_does_not_publish_invalid_explicit_stop(monkeypatch):
             return SimpleNamespace(orders=[])
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1408,7 +1408,7 @@ def test_screener_loads_each_fundamentals_snapshot_once(monkeypatch):
         return None
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1462,7 +1462,7 @@ def test_screener_fetches_rolling_window_not_fixed_start(monkeypatch):
         return pd.DataFrame()
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1512,7 +1512,7 @@ def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
         return pd.DataFrame(data, index=idx)
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1596,7 +1596,7 @@ def test_screener_pending_entry_order_blocks_add_on(monkeypatch):
             }
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1694,7 +1694,7 @@ def test_screener_uses_universe_currency_for_european_close(monkeypatch):
         return pd.DataFrame(data, index=idx)
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1914,7 +1914,7 @@ def test_screener_require_weekly_uptrend_overrides_strategy(monkeypatch):
         return pd.DataFrame(data, index=idx)
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -1976,7 +1976,7 @@ def test_screener_candidate_includes_52w_high_fields(monkeypatch):
         )
 
     monkeypatch.setattr(
-        screener_service, "get_default_provider", lambda **kwargs: mock_provider
+        screener_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(

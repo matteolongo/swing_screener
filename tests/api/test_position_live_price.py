@@ -62,7 +62,7 @@ class TestListPositionsLiveQuote:
         mock_provider.fetch_latest_price.return_value = 396.44  # real-time quote
         mock_provider.fetch_ohlcv.return_value = _stale_ohlcv("LRCX", 433.33)  # stale daily bar
         mock_provider.get_provider_name.return_value = "mock"
-        monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
 
         response = client.get("/api/portfolio/positions?status=open")
 
@@ -80,7 +80,7 @@ class TestListPositionsLiveQuote:
         mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote")
         mock_provider.fetch_ohlcv.return_value = _stale_ohlcv("LRCX", 433.33)
         mock_provider.get_provider_name.return_value = "mock"
-        monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
 
         response = client.get("/api/portfolio/positions?status=open")
 
@@ -99,7 +99,7 @@ class TestPositionMetricsLiveQuote:
         mock_provider.fetch_latest_price.return_value = 396.44
         mock_provider.fetch_ohlcv.return_value = _stale_ohlcv("LRCX", 433.33)
         mock_provider.get_provider_name.return_value = "mock"
-        monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
 
         response = client.get("/api/portfolio/positions/POS-LIVE001/metrics")
 
@@ -116,7 +116,7 @@ class TestPositionMetricsLiveQuote:
         mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote")
         mock_provider.fetch_ohlcv.return_value = _stale_ohlcv("LRCX", 433.33)
         mock_provider.get_provider_name.return_value = "mock"
-        monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
 
         response = client.get("/api/portfolio/positions/POS-LIVE001/metrics")
 
