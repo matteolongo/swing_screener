@@ -214,9 +214,9 @@ def rebuild_pool(repo) -> dict:
 
 
 def _default_info_fn():
-    from swing_screener.data.providers.factory import get_default_provider
+    from swing_screener.data.providers.factory import get_market_data_provider
 
-    provider = get_default_provider()
+    provider = get_market_data_provider()
 
     def info(symbol: str):
         return provider.get_ticker_info(symbol) or None

@@ -69,7 +69,7 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
     )
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
-        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+        portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
 
     client = TestClient(app)
@@ -124,7 +124,7 @@ def test_position_metrics_subtracts_recorded_fees(
     )
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
-        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+        portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
 
     client = TestClient(app)
@@ -183,7 +183,7 @@ def test_position_metrics_subtracts_recorded_fees_usd(
     mock_provider.fetch_ohlcv = mock_fetch_ohlcv
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
-        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+        portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
 
     client = TestClient(app)
@@ -247,7 +247,7 @@ def test_positions_endpoint_returns_precomputed_metrics(
     )
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
-        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+        portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
 
     client = TestClient(app)
@@ -353,7 +353,7 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
     mock_provider.fetch_ohlcv.side_effect = mock_fetch_ohlcv
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
-        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+        portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
 
     client = TestClient(app)
@@ -414,7 +414,7 @@ def test_portfolio_summary_endpoint_no_open_positions(
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"INTC": [48.0, 48.0]})
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
-        portfolio_service, "get_default_provider", lambda **kwargs: mock_provider
+        portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider
     )
 
     client = TestClient(app)

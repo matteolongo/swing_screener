@@ -11,7 +11,7 @@ from tests.api.test_volume_analysis_endpoint import _mock_provider, _ohlcv
 def test_candles_expose_their_own_provider_and_times(monkeypatch):
     provider = _mock_provider(_ohlcv(n=3))
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider", lambda *a, **k: provider
+        "api.routers.market_data.get_market_data_provider", lambda *a, **k: provider
     )
 
     response = TestClient(app).get("/api/market-data/aapl/candles?interval=1d")
@@ -29,7 +29,7 @@ def test_candles_expose_their_own_provider_and_times(monkeypatch):
 def test_empty_candles_keep_truthful_provenance_with_no_content_time(monkeypatch):
     provider = _mock_provider(None)
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider", lambda *a, **k: provider
+        "api.routers.market_data.get_market_data_provider", lambda *a, **k: provider
     )
 
     response = TestClient(app).get("/api/market-data/AAPL/candles")
@@ -46,7 +46,7 @@ def test_candle_provider_failure_is_not_an_empty_success(monkeypatch):
     provider = _mock_provider(None)
     provider.fetch_ohlcv.side_effect = RuntimeError("secret upstream failure")
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider", lambda *a, **k: provider
+        "api.routers.market_data.get_market_data_provider", lambda *a, **k: provider
     )
 
     response = TestClient(app).get("/api/market-data/AAPL/candles")

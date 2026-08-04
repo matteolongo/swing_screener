@@ -13,7 +13,7 @@ from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.watchlist_repo import WatchlistRepository
 from api.utils.converters import to_iso as _to_iso
 from api.utils.files import get_today_str
-from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
 from swing_screener.indicators.candles import detect_patterns, CandleConfig
 from swing_screener.selection.entries import build_signal_board
 from swing_screener.strategy.config import build_entry_config
@@ -80,7 +80,7 @@ class WatchlistService:
     ) -> None:
         self._repo = repo
         self._strategy_repo = strategy_repo
-        self._provider = provider or get_default_provider()
+        self._provider = provider or get_market_data_provider()
 
     def list_items(self) -> list[WatchlistItemView]:
         items = self._repo.list_items()

@@ -128,7 +128,7 @@ class TestFxAdjustedREndpoint:
 
         mock_provider.fetch_ohlcv.side_effect = mock_fetch
         mock_provider.get_provider_name.return_value = "mock"
-        monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
 
         response = client.get("/api/portfolio/positions/POS-USD001/metrics")
 
@@ -146,7 +146,7 @@ class TestFxAdjustedREndpoint:
         mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
         mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"ASML.AS": [750.0, 750.0]})
         mock_provider.get_provider_name.return_value = "mock"
-        monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
 
         response = client.get("/api/portfolio/positions/POS-EUR001/metrics")
 
@@ -163,7 +163,7 @@ class TestFxAdjustedREndpoint:
         mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
         mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"AAPL": [120.0, 120.0]})
         mock_provider.get_provider_name.return_value = "mock"
-        monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
 
         response = client.get("/api/portfolio/positions/POS-USD002/metrics")
 
@@ -189,7 +189,7 @@ class TestFxAdjustedREndpoint:
 
         mock_provider.fetch_ohlcv.side_effect = mock_fetch
         mock_provider.get_provider_name.return_value = "mock"
-        monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
 
         response = client.get("/api/portfolio/positions?status=open")
 

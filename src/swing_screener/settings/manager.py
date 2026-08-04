@@ -55,34 +55,36 @@ class SettingsManager:
     def current_data_dir(self) -> Path:
         return data_dir()
 
-    def load_defaults_document(self) -> dict[str, Any]:
-        payload = self.defaults_store.load()
+    @staticmethod
+    def _as_document(payload: Any) -> dict[str, Any]:
         return payload if isinstance(payload, dict) else {}
 
+    def _load_document(self, store: CachedYamlFile) -> dict[str, Any]:
+        return self._as_document(store.load())
+
+    def load_defaults_document(self) -> dict[str, Any]:
+        return self._load_document(self.defaults_store)
+
     def load_user_document(self) -> dict[str, Any]:
-        payload = self.user_store.load()
-        return payload if isinstance(payload, dict) else {}
+        return self._load_document(self.user_store)
 
     def save_user_document(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.user_store.save(payload)
 
     def load_strategies_document(self) -> dict[str, Any]:
-        payload = self.strategies_store.load()
-        return payload if isinstance(payload, dict) else {}
+        return self._load_document(self.strategies_store)
 
     def save_strategies_document(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.strategies_store.save(payload)
 
     def load_intelligence_document(self) -> dict[str, Any]:
-        payload = self.intelligence_store.load()
-        return payload if isinstance(payload, dict) else {}
+        return self._load_document(self.intelligence_store)
 
     def save_intelligence_document(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.intelligence_store.save(payload)
 
     def load_mcp_document(self) -> dict[str, Any]:
-        payload = self.mcp_store.load()
-        return payload if isinstance(payload, dict) else {}
+        return self._load_document(self.mcp_store)
 
     def save_mcp_document(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.mcp_store.save(payload)

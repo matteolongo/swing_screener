@@ -85,17 +85,3 @@ def get_market_data_provider(
 
     else:
         raise ValueError(f"Unknown provider: {config.provider}")
-
-
-# Convenience function to get default provider
-def get_default_provider(**kwargs) -> MarketDataProvider:
-    """
-    Get default market data provider (from environment or yfinance).
-    
-    Args:
-        **kwargs: Additional provider-specific arguments
-        
-    Returns:
-        MarketDataProvider instance
-    """
-    return get_market_data_provider(**kwargs)

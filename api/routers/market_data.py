@@ -17,7 +17,7 @@ from api.models.screener import CandlePatternOut, PriceHistoryPoint
 from api.utils.files import get_today_str
 from swing_screener.analysis.volume_zones import VolumeZoneConfig, analyze_volume_zones
 from swing_screener.data.price_history import price_history_map
-from swing_screener.data.providers import get_default_provider
+from swing_screener.data.providers import get_market_data_provider
 from swing_screener.indicators.candles import CandleConfig, detect_patterns
 from swing_screener.utils.date_helpers import get_default_history_start
 
@@ -48,7 +48,7 @@ def get_ticker_candles(
     recent screener result (e.g. open positions, watchlist items).
     """
     symbol = ticker.strip().upper()
-    provider = get_default_provider()
+    provider = get_market_data_provider()
     provider_name = provider.get_provider_name()
     _start = start_date or get_default_history_start()
     _end = end_date or get_today_str()
@@ -118,7 +118,7 @@ def get_ticker_volume_analysis(
 ) -> VolumeAnalysisResponse:
     """Advisory volume-zone analysis for a single symbol (read-only)."""
     symbol = ticker.strip().upper()
-    provider = get_default_provider()
+    provider = get_market_data_provider()
     provider_name = provider.get_provider_name()
 
     end_date = get_today_str()

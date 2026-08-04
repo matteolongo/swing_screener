@@ -983,12 +983,12 @@ import json
 from swing_screener.data.symbol_pool import (
     deserialize_pool, enrich_pool_taxonomy, serialize_pool, load_symbol_pool_thresholds,
 )
-from swing_screener.data.providers.factory import get_default_provider
+from swing_screener.data.providers.factory import get_market_data_provider
 
 with open("data/symbol_pool.json", encoding="utf-8") as f:
     pool = deserialize_pool(json.load(f))
 
-provider = get_default_provider()
+provider = get_market_data_provider()
 
 def info_fn(sym):
     return provider.get_ticker_info(sym) or None
