@@ -27,6 +27,7 @@ import type { FundamentalSnapshot } from '@/features/fundamentals/types';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
@@ -134,6 +135,21 @@ export default function SymbolAnalysisContent({
   const handleAnalyzeWithAi = (force = false) => {
     const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
     const attemptId = globalThis.crypto.randomUUID();
+    const requestId = globalThis.crypto.randomUUID();
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker,
+      selectionVersion,
+      sourceId: 'intelligence',
+      phase: 'active',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: force ? 'regenerate-analysis' : 'generate-analysis',
+      announced: false,
+    });
     setAttemptedRunId(null);
     setLastAttemptForce(force);
     intelligenceMutation.mutate(
@@ -147,9 +163,18 @@ export default function SymbolAnalysisContent({
             setIntelligenceResult(result);
           }
         },
-        onSettled: async () => {
+        onSettled: async (_result, error) => {
           const refreshedRuns = await tickerRuns.refetch();
-          if (requestedSession !== currentSessionRef.current) return;
+          const sessionChanged = requestedSession !== currentSessionRef.current;
+          useWorkspaceStore.getState().settleActivity(requestId, {
+            phase: sessionChanged ? 'discarded' : error ? 'failed' : 'completed',
+            finishedAt: new Date().toISOString(),
+            message: sessionChanged
+              ? t('workspacePage.data.activitySelectionChanged')
+              : error?.message ?? null,
+            retryable: !sessionChanged && Boolean(error),
+          });
+          if (sessionChanged) return;
           const attemptedRun = findRunByAttemptId(
             refreshedRuns.data ?? [],
             ticker,
@@ -163,6 +188,21 @@ export default function SymbolAnalysisContent({
 
   const handleRefreshEvidence = () => {
     const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+    const requestId = globalThis.crypto.randomUUID();
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker,
+      selectionVersion,
+      sourceId: 'evidence',
+      phase: 'active',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: 'refresh-evidence',
+      announced: false,
+    });
     setRefreshedEvidence(null);
     evidenceRefreshMutation.mutate(ticker, {
       onSuccess: (result) => {
@@ -173,6 +213,24 @@ export default function SymbolAnalysisContent({
           setRefreshedEvidence(result);
           intelligenceWorkflow?.onEvidenceRefresh?.(result);
         }
+      },
+      onSettled: (result, error) => {
+        const sessionChanged = requestedSession !== currentSessionRef.current;
+        const responseFailed = result?.status === 'failed';
+        useWorkspaceStore.getState().settleActivity(requestId, {
+          phase: sessionChanged
+            ? 'discarded'
+            : error || responseFailed ? 'failed'
+              : result?.status === 'partial' ? 'partial' : 'completed',
+          finishedAt: new Date().toISOString(),
+          provider: result?.sources.map(({ provider }) => provider).join(', ') || null,
+          message: sessionChanged
+            ? t('workspacePage.data.activitySelectionChanged')
+            : error?.message
+              ?? result?.sources.find(({ status }) => status === 'failed')?.message
+              ?? null,
+          retryable: !sessionChanged && Boolean(error || responseFailed),
+        });
       },
     });
   };

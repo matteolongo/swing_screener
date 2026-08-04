@@ -13,6 +13,8 @@ import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useOpenPositions, useOrders } from '@/features/portfolio/hooks';
 import { useTickerCandles } from '@/features/screener/hooks';
 import { queryKeys } from '@/lib/queryKeys';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { t } from '@/i18n/t';
 import { aggregateWorkspaceHealth, isIntelligenceOutdated } from './health';
 import type {
   WorkspaceSourceId,
@@ -291,30 +293,73 @@ export function useSymbolWorkspaceData({
   ];
 
   async function refreshSource(sourceId: WorkspaceSourceId): Promise<void> {
-    if (sourceId === 'fundamentals') {
-      await refreshFundamentals.mutateAsync(currentTicker);
-    } else if (sourceId === 'prices') {
-      await pricesQuery.refetch();
-    } else if (sourceId === 'positionOrders') {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.positions() }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.orders() }),
-      ]);
-    } else if (sourceId === 'evidence') {
+    if (sourceId === 'evidence') {
       await refreshEvidence?.();
-    } else if (sourceId === 'intelligence') {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.intelligence.latest(currentTicker),
+      return;
+    }
+
+    const requestId = globalThis.crypto.randomUUID();
+    const startedAt = new Date().toISOString();
+    const provider = sourceStates.find(({ id }) => id === sourceId)?.provider ?? null;
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker: currentTicker,
+      selectionVersion,
+      sourceId,
+      phase: 'active',
+      startedAt,
+      finishedAt: null,
+      provider,
+      message: null,
+      retryable: false,
+      pipelineStep: `refresh-${sourceId}`,
+      announced: false,
+    });
+
+    try {
+      if (sourceId === 'fundamentals') {
+        await refreshFundamentals.mutateAsync(currentTicker);
+      } else if (sourceId === 'prices') {
+        await pricesQuery.refetch();
+      } else if (sourceId === 'positionOrders') {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.positions() }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.orders() }),
+        ]);
+      } else if (sourceId === 'intelligence') {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.intelligence.latest(currentTicker),
+        });
+      }
+      const current = useWorkspaceStore.getState();
+      const discarded = current.selectedTicker !== currentTicker
+        || current.selectionVersion !== selectionVersion;
+      current.settleActivity(requestId, {
+        phase: discarded ? 'discarded' : 'completed',
+        finishedAt: new Date().toISOString(),
+        message: discarded ? t('workspacePage.data.activitySelectionChanged') : null,
       });
+    } catch (error) {
+      const current = useWorkspaceStore.getState();
+      const discarded = current.selectedTicker !== currentTicker
+        || current.selectionVersion !== selectionVersion;
+      current.settleActivity(requestId, {
+        phase: discarded ? 'discarded' : 'failed',
+        finishedAt: new Date().toISOString(),
+        message: discarded
+          ? t('workspacePage.data.activitySelectionChanged')
+          : error instanceof Error ? error.message : t('workspacePage.data.activityRefreshFailed'),
+        retryable: !discarded,
+      });
+      throw error;
     }
   }
 
   async function refreshAllNonIntelligence(): Promise<void> {
     await Promise.all([
-      refreshFundamentals.mutateAsync(currentTicker),
-      pricesQuery.refetch(),
-      queryClient.invalidateQueries({ queryKey: queryKeys.positions() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.orders() }),
+      refreshSource('fundamentals'),
+      refreshSource('prices'),
+      refreshSource('positionOrders'),
     ]);
   }
 

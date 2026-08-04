@@ -12,6 +12,7 @@ describe('useWorkspaceStore', () => {
       workspaceMode: 'split',
       selectionVersion: 0,
       activityDrawerOpen: false,
+      activities: [],
       fullscreen: false,
     });
   });
@@ -91,6 +92,80 @@ describe('useWorkspaceStore', () => {
 
     expect(useWorkspaceStore.getState().activityDrawerOpen).toBe(true);
     expect(useWorkspaceStore.getState().fullscreen).toBe(true);
+  });
+
+  it('tracks concurrent requests independently and preserves discarded history', () => {
+    const state = useWorkspaceStore.getState();
+    state.beginActivity({
+      requestId: 'prices-1',
+      ticker: 'aapl',
+      selectionVersion: 1,
+      sourceId: 'prices',
+      phase: 'active',
+      startedAt: '2026-07-29T09:00:00Z',
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: null,
+      announced: false,
+    });
+    state.beginActivity({
+      requestId: 'prices-2',
+      ticker: 'AAPL',
+      selectionVersion: 1,
+      sourceId: 'prices',
+      phase: 'active',
+      startedAt: '2026-07-29T09:01:00Z',
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: null,
+      announced: false,
+    });
+    state.settleActivity('prices-1', {
+      phase: 'discarded',
+      finishedAt: '2026-07-29T09:02:00Z',
+      message: 'Selection changed',
+    });
+
+    expect(useWorkspaceStore.getState().activities).toMatchObject([
+      { requestId: 'prices-2', phase: 'active' },
+      { requestId: 'prices-1', phase: 'discarded', ticker: 'AAPL' },
+    ]);
+  });
+
+  it('dismisses one request and marks one failure announced', () => {
+    const state = useWorkspaceStore.getState();
+    for (const requestId of ['failure-1', 'failure-2']) {
+      state.beginActivity({
+        requestId,
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        sourceId: 'fundamentals',
+        phase: 'active',
+        startedAt: '2026-07-29T09:00:00Z',
+        finishedAt: null,
+        provider: null,
+        message: null,
+        retryable: false,
+        pipelineStep: null,
+        announced: false,
+      });
+      state.settleActivity(requestId, {
+        phase: 'failed',
+        finishedAt: '2026-07-29T09:01:00Z',
+        message: 'Failed',
+      });
+    }
+
+    state.markActivityAnnounced('failure-2');
+    state.dismissActivity('failure-1');
+
+    expect(useWorkspaceStore.getState().activities).toEqual([
+      expect.objectContaining({ requestId: 'failure-2', announced: true }),
+    ]);
   });
 
   it('increments the run-screener trigger', () => {

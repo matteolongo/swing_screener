@@ -22,10 +22,15 @@ export default function AnalysisCanvasPanel() {
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const selectionVersion = useWorkspaceStore((state) => state.selectionVersion);
   const fullscreen = useWorkspaceStore((state) => state.fullscreen);
+  const activities = useWorkspaceStore((state) => state.activities);
+  const activityDrawerOpen = useWorkspaceStore((state) => state.activityDrawerOpen);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const clearSelectedTicker = useWorkspaceStore((state) => state.clearSelectedTicker);
   const collapseWorkspace = useWorkspaceStore((state) => state.collapseWorkspace);
   const setFullscreen = useWorkspaceStore((state) => state.setFullscreen);
+  const setActivityDrawerOpen = useWorkspaceStore((state) => state.setActivityDrawerOpen);
+  const dismissActivity = useWorkspaceStore((state) => state.dismissActivity);
+  const markActivityAnnounced = useWorkspaceStore((state) => state.markActivityAnnounced);
   const lastScreenerResult = useScreenerStore((state) => state.lastResult);
   const selectedCandidate = lastScreenerResult?.candidates.find(
     (candidate) => candidate.ticker.toUpperCase() === selectedTicker?.toUpperCase()
@@ -91,13 +96,20 @@ export default function AnalysisCanvasPanel() {
           />
           <DataStatusBar
             sources={workspaceData.sourceStates}
-            onSourceSelect={setSelectedSourceId}
+            onSourceSelect={(sourceId) => {
+              setSelectedSourceId(sourceId);
+              setActivityDrawerOpen(true);
+            }}
           />
-          <WorkspaceActivityDrawer
-            activities={workspaceData.sourceStates}
-            selectedSourceId={selectedSourceId}
-            onRetry={(sourceId) => void workspaceData.refreshSource(sourceId)}
-          />
+          {activityDrawerOpen ? (
+            <WorkspaceActivityDrawer
+              activities={activities}
+              selectedSource={workspaceData.sourceStates.find(({ id }) => id === selectedSourceId)}
+              onRetry={(sourceId) => void workspaceData.refreshSource(sourceId)}
+              onDismiss={dismissActivity}
+              onMarkAnnounced={markActivityAnnounced}
+            />
+          ) : null}
           <SymbolAnalysisContent
             ticker={selectedTicker}
             selectionVersion={selectionVersion}

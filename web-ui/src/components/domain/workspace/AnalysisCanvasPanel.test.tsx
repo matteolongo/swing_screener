@@ -198,6 +198,9 @@ describe('AnalysisCanvasPanel', () => {
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
       analysisTab: 'fundamentals',
+      selectionVersion: 1,
+      activities: [],
+      activityDrawerOpen: false,
     });
     useScreenerStore.setState({ lastResult: null });
   });
@@ -220,6 +223,26 @@ describe('AnalysisCanvasPanel', () => {
       isError: false,
       error: null,
     } as never);
+    useWorkspaceStore.getState().beginActivity({
+      requestId: 'fundamentals-keyboard-failure',
+      ticker: 'AAPL',
+      selectionVersion: 1,
+      sourceId: 'fundamentals',
+      phase: 'active',
+      startedAt: '2026-07-29T09:00:00Z',
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: 'refresh-fundamentals',
+      announced: false,
+    });
+    useWorkspaceStore.getState().settleActivity('fundamentals-keyboard-failure', {
+      phase: 'failed',
+      finishedAt: '2026-07-29T09:01:00Z',
+      message: failure.message,
+      retryable: true,
+    });
     const { user } = renderWithProviders(<AnalysisCanvasPanel />);
     const traversedNames: string[] = [];
 
@@ -367,6 +390,127 @@ describe('AnalysisCanvasPanel', () => {
     expect(screen.getByRole('tabpanel')).toBeVisible();
   });
 
+  it('tracks a retried prices request from active through completed', async () => {
+    let finishRefresh!: () => void;
+    const refetch = vi.fn(() => new Promise<void>((resolve) => {
+      finishRefresh = resolve;
+    }));
+    vi.mocked(screenerHooks.useTickerCandles).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      refetch,
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    useWorkspaceStore.setState({
+      activityDrawerOpen: true,
+      activities: [{
+        requestId: 'failed-prices',
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        sourceId: 'prices',
+        phase: 'failed',
+        startedAt: '2026-07-29T09:00:00Z',
+        finishedAt: '2026-07-29T09:01:00Z',
+        provider: 'polygon',
+        message: 'Price history unavailable',
+        retryable: true,
+        pipelineStep: 'fetch-candles',
+        announced: true,
+      }],
+    });
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', { name: t('workspacePage.data.retry') }));
+
+    expect(useWorkspaceStore.getState().activities[0]).toMatchObject({
+      sourceId: 'prices',
+      phase: 'active',
+    });
+    await act(async () => finishRefresh());
+    await waitFor(() => expect(useWorkspaceStore.getState().activities[0].phase).toBe('completed'));
+  });
+
+  it('records a late intelligence result from an older selection as discarded', async () => {
+    let callbacks: {
+      onSuccess?: (result: SymbolIntelligence) => void;
+      onSettled?: () => Promise<void>;
+    } = {};
+    const mutate = vi.fn((_input, options) => {
+      callbacks = options as typeof callbacks;
+    });
+    useWorkspaceStore.setState({ analysisTab: 'intelligence' });
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate,
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.intelligence.generate'),
+    }));
+    expect(useWorkspaceStore.getState().activities[0]?.phase).toBe('active');
+
+    act(() => useWorkspaceStore.getState().setSelectedTicker('MSFT'));
+    await act(async () => {
+      callbacks.onSuccess?.({
+        symbol: 'AAPL',
+        generatedAt: '2026-07-29T09:02:00Z',
+        action: 'WATCH',
+        conviction: 'low',
+        catalystUrgency: 'low',
+        summaryLine: 'Late result',
+        narrative: 'Late result',
+        upcomingEvents: [],
+        positionSignal: null,
+        sources: [],
+        evidenceLedger: null,
+        classifiedCatalysts: [],
+      });
+      await callbacks.onSettled?.();
+    });
+
+    expect(useWorkspaceStore.getState().activities.find(
+      ({ sourceId }) => sourceId === 'intelligence',
+    )?.phase).toBe('discarded');
+    expect(screen.queryByText('Late result')).not.toBeInTheDocument();
+  });
+
   it('ignores intelligence completion after the workspace unmounts', async () => {
     let callbacks: {
       onSuccess?: (result: SymbolIntelligence) => void;
@@ -398,13 +542,13 @@ describe('AnalysisCanvasPanel', () => {
       isError: false,
       error: null,
     } as never);
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { user, unmount } = renderWithProviders(<AnalysisCanvasPanel />);
 
     await user.click(screen.getByRole('button', {
       name: t('workspacePage.intelligence.generate'),
     }));
     unmount();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await act(async () => {
       callbacks.onSuccess?.({
         symbol: 'AAPL',
