@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import tempfile
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -68,11 +69,32 @@ def _read_cache(path: Path) -> list[SourceEvidence] | None:
 
 
 def _write_cache(path: Path, items: list[SourceEvidence]) -> None:
+    temporary_path: Path | None = None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps([item.model_dump() for item in items]))
+        payload = [
+            {
+                **item.model_dump(),
+                **({"source_id": item.source_id} if item.source_id else {}),
+            }
+            for item in items
+        ]
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            json.dump(payload, temporary)
+            temporary_path = Path(temporary.name)
+        temporary_path.replace(path)
     except OSError:
         logger.warning("Failed to write evidence cache %s", path, exc_info=True)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink(missing_ok=True)
 
 
 def read_latest_cached_evidence_summary(
@@ -109,9 +131,9 @@ def read_latest_cached_evidence_summary(
         cache_age_days = (current_date - cached_date).days
         freshness_status = (
             "fresh"
-            if cache_age_days <= 0
+            if cache_age_days == 0
             else "cached"
-            if cache_age_days <= cfg.cache_stale_after_days
+            if 0 < cache_age_days <= cfg.cache_stale_after_days
             else "stale"
         )
         return EvidenceCacheSummary(
@@ -133,7 +155,7 @@ def collect_evidence(
     refresh_sources: bool = False,
     attempt_callback: Callable[[str, str, int], None] | None = None,
 ) -> list[SourceEvidence]:
-    asof_date = asof_date or date.today()
+    asof_date = asof_date or datetime.now(timezone.utc).date()
     cfg = cfg or load_evidence_config()
     cache_root = cache_root or _CACHE_ROOT
     ticker = ticker.strip().upper()
@@ -143,7 +165,10 @@ def collect_evidence(
     if cached is not None:
         return cached
 
+    prior_cache = _read_cache(cache_file) if refresh_sources else None
     raw: list[SourceEvidence] = []
+    successful_sources: set[str] = set()
+    failed_sources: set[str] = set()
     collectors = registry.get_registered()
     for source_id in attempted_source_ids(cfg, refresh_sources=refresh_sources):
         collector = collectors.get(source_id)
@@ -151,17 +176,34 @@ def collect_evidence(
             continue
         try:
             collected = collector.collect(ticker, asof_date=asof_date, cfg=cfg)
-            raw.extend(collected)
+            raw.extend(
+                item.model_copy(update={"source_id": source_id}) for item in collected
+            )
+            successful_sources.add(source_id)
             if attempt_callback is not None:
                 attempt_callback(source_id, "fresh", len(collected))
         except Exception as exc:  # never fail the analysis
             logger.warning("Evidence collector %s failed for %s: %s", source_id, ticker, exc)
             record_fallback(domain="intelligence", from_provider=source_id, reason=str(exc), tickers=[ticker])
+            failed_sources.add(source_id)
             if attempt_callback is not None:
                 attempt_callback(source_id, "failed", 0)
 
-    curated = curate(
-        raw, window_days=cfg.recency_window_days, max_items=cfg.max_items_per_symbol, asof_date=asof_date
+    retained = (
+        [
+            item
+            for item in prior_cache or []
+            if item.source_id is None or item.source_id in failed_sources
+        ]
+        if refresh_sources and successful_sources
+        else []
     )
-    _write_cache(cache_file, curated)
+    curated = curate(
+        [*raw, *retained],
+        window_days=cfg.recency_window_days,
+        max_items=cfg.max_items_per_symbol,
+        asof_date=asof_date,
+    )
+    if not refresh_sources or successful_sources:
+        _write_cache(cache_file, curated)
     return curated

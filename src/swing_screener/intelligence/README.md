@@ -149,9 +149,12 @@ cached results written before diagnostics were introduced remain valid.
 path used by the workspace input review. It bypasses the analyzer entirely,
 forces the configured evidence collectors (including refresh-only collectors),
 updates their normal curated evidence cache, and returns only a sanitized
-per-provider manifest with freshness, count, and failure status. It never writes
-analysis/history/metrics, calls an LLM, or mutates portfolio/order state. Raw
-collector exceptions remain server-side.
+per-provider manifest with freshness, count, and failure status. Cache replacement
+is atomic: successful providers replace their prior entries, prior entries from
+failed providers remain available, and an all-provider failure leaves the last
+validated cache unchanged. It never writes analysis/history/metrics, calls an
+LLM, or mutates portfolio/order state. Raw collector exceptions remain
+server-side.
 
 `GET /api/intelligence/{ticker}/evidence/latest` scans the persisted evidence
 cache newest-first and returns only sanitized cache metadata (date, item count,
