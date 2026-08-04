@@ -4,6 +4,8 @@ import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 
 import ScreenerInboxPanel, { currencyFilterToRequest, ScreenerRunningPanel } from './ScreenerInboxPanel';
+import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 describe('currencyFilterToRequest', () => {
   it('does not force currencies when the filter is all', () => {
@@ -63,5 +65,28 @@ describe('ScreenerInboxPanel', () => {
 
     expect(await screen.findByRole('button', { name: 'Advanced filters' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: t('screener.controls.actionFilter') })).not.toBeInTheDocument();
+  });
+
+  it('renders result rows without the form when compact', async () => {
+    useWorkspaceStore.setState({ selectedTicker: 'NVDA' });
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-07-29',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [{
+          ticker: 'NVDA',
+          close: 120,
+          recommendation: { workflowStatus: 'ready' },
+          decisionSummary: { action: 'BUY_NOW' },
+        }],
+      } as never,
+    });
+
+    renderWithProviders(<ScreenerInboxPanel compact />);
+
+    expect(await screen.findByTestId('symbol-rail-list')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /NVDA/i })).toHaveAttribute('aria-current', 'true');
+    expect(screen.queryByRole('button', { name: 'Advanced filters' })).not.toBeInTheDocument();
   });
 });

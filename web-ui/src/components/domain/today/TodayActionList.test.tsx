@@ -4,6 +4,7 @@ import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import TodayActionList from './TodayActionList';
 import { useScreenerStore, type TodayRunSnapshot } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 // Minimal daily-review payload: one open position that is NO_ACTION (hold).
 vi.mock('@/features/dailyReview/api', () => ({
@@ -52,6 +53,17 @@ describe('TodayActionList holdings', () => {
     expect(screen.getByText(new RegExp(t('todayPage.actionList.openPositions')))).toBeInTheDocument();
     expect(screen.queryByText(t('todayPage.actionList.holding'))).not.toBeInTheDocument();
     expect(screen.getAllByText('LRCX')).toHaveLength(1);
+  });
+
+  it('renders only the symbol rail variant when compact', () => {
+    useWorkspaceStore.setState({ selectedTicker: 'LRCX' });
+    renderWithProviders(<TodayActionList compact onTickerSelect={() => {}} />);
+
+    expect(screen.getByTestId('symbol-rail-list')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /LRCX/i })).toHaveAttribute('aria-current', 'true');
+    expect(screen.queryByRole('button', {
+      name: t('dailyReview.header.refreshTitle'),
+    })).not.toBeInTheDocument();
   });
 
   it('renders opportunities from the pinned run, not candidate rows returned by portfolio refresh', () => {

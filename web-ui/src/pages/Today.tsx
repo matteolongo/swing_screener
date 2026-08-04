@@ -91,15 +91,18 @@ export default function Today() {
   const workspaceMode = useWorkspaceStore((state) => state.workspaceMode);
   const fullscreen = useWorkspaceStore((state) => state.fullscreen);
   const originControlRef = useRef<HTMLElement | null>(null);
+  const originTickerRef = useRef<string | null>(null);
   const previousSelectionRef = useRef(selectedTicker);
   const previousModeRef = useRef(workspaceMode);
 
   const [leftTab, setLeftTab] = useState<LeftTab>('today');
+  const compact = Boolean(selectedTicker && workspaceMode === 'expanded');
 
   const handleTickerSelect = useCallback((ticker: string) => {
     if (document.activeElement instanceof HTMLElement) {
       originControlRef.current = document.activeElement;
     }
+    originTickerRef.current = ticker.trim().toUpperCase();
     setSelectedTicker(ticker, 'screener');
   }, [setSelectedTicker]);
 
@@ -107,8 +110,18 @@ export default function Today() {
     const listWasRevealed =
       (previousSelectionRef.current && !selectedTicker) ||
       (previousModeRef.current === 'expanded' && workspaceMode === 'split');
-    if (listWasRevealed && originControlRef.current?.isConnected) {
-      originControlRef.current.focus();
+    if (listWasRevealed) {
+      if (originControlRef.current?.isConnected) {
+        originControlRef.current.focus();
+      } else if (originTickerRef.current) {
+        const table = document.querySelector('[data-testid="today-symbol-table"]');
+        const replacement = [...(table?.querySelectorAll<HTMLElement>('button') ?? [])].find(
+          (control) => control.dataset.ticker === originTickerRef.current
+            || control.textContent?.includes(originTickerRef.current ?? ''),
+        );
+        replacement?.focus();
+        originControlRef.current = replacement ?? null;
+      }
     }
     previousSelectionRef.current = selectedTicker;
     previousModeRef.current = workspaceMode;
@@ -167,19 +180,21 @@ export default function Today() {
           <div className="flex-1 overflow-hidden">
             {leftTab === 'today' && (
               <>
-                <div className="px-3 pt-3">
-                  <WeeklyReviewNudge />
-                  <PendingOrdersBadge />
-                </div>
-                <TodayActionList onTickerSelect={handleTickerSelect} />
+                {!compact ? (
+                  <div className="px-3 pt-3">
+                    <WeeklyReviewNudge />
+                    <PendingOrdersBadge />
+                  </div>
+                ) : null}
+                <TodayActionList compact={compact} onTickerSelect={handleTickerSelect} />
               </>
             )}
             {leftTab === 'screener' && (
-              <ScreenerInboxPanel />
+              <ScreenerInboxPanel compact={compact} />
             )}
             {leftTab === 'watchlist' && (
               <div className="h-full overflow-auto px-3 pt-3">
-                <WatchlistPipelinePanel onTickerSelect={handleTickerSelect} />
+                <WatchlistPipelinePanel compact={compact} onTickerSelect={handleTickerSelect} />
               </div>
             )}
           </div>

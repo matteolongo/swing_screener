@@ -13,6 +13,8 @@ import {
 } from '@/features/portfolio/hooks';
 import { useTodayActions } from './useTodayActions';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import SymbolRailRow from '@/components/domain/workspace/SymbolRailRow';
 import {
   CloseItem,
   UpdateStopItem,
@@ -25,9 +27,11 @@ import {
 
 interface TodayActionListProps {
   onTickerSelect: (ticker: string) => void;
+  compact?: boolean;
 }
 
-export default function TodayActionList({ onTickerSelect }: TodayActionListProps) {
+export default function TodayActionList({ onTickerSelect, compact = false }: TodayActionListProps) {
+  const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const {
     todayRun,
     setTodayRunDisplayFilters,
@@ -129,6 +133,43 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
   }
 
   const isEmpty = openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0;
+
+  if (compact) {
+    const openPositionTickers = new Set(openPositions.map(({ ticker }) => ticker.toUpperCase()));
+    return (
+      <div
+        className="h-full space-y-1 overflow-y-auto p-2"
+        data-testid="symbol-rail-list"
+      >
+        {openPositions.map((position) => (
+          <SymbolRailRow
+            key={position.positionId}
+            ticker={position.ticker}
+            status={t('todayPage.actionList.openPositions')}
+            context={position.rNow == null ? null : `${position.rNow >= 0 ? '+' : ''}${position.rNow.toFixed(2)}R`}
+            selected={selectedTicker?.toUpperCase() === position.ticker.toUpperCase()}
+            onSelect={onTickerSelect}
+          />
+        ))}
+        {flatItems
+          .filter(({ ticker }) => !openPositionTickers.has(ticker.toUpperCase()))
+          .map((item) => (
+            <SymbolRailRow
+              key={item.id}
+              ticker={item.ticker}
+              status={t('workspacePage.symbolRail.today')}
+              selected={selectedTicker?.toUpperCase() === item.ticker.toUpperCase()}
+              onSelect={onTickerSelect}
+            />
+          ))}
+        {isEmpty ? (
+          <p className="px-2 py-4 text-center text-sm text-muted">
+            {t('todayPage.actionList.empty')}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">

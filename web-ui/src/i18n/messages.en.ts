@@ -888,6 +888,12 @@ export const messagesEn = {
         failed: 'Failed',
       },
     },
+    symbolRail: {
+      today: 'Today',
+      candidate: 'Candidate',
+      watched: 'Watched',
+      noSymbols: 'No symbols are available.',
+    },
     fundamentals: {
       refresh: 'Refresh fundamentals',
       run: 'Run fundamentals analysis',

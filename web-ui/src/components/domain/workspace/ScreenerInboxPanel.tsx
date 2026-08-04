@@ -16,6 +16,7 @@ import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
+import SymbolRailRow from '@/components/domain/workspace/SymbolRailRow';
 
 const TOP_N_MAX = 200;
 
@@ -110,7 +111,11 @@ export function ScreenerRunningPanel() {
   );
 }
 
-export default function ScreenerInboxPanel() {
+interface ScreenerInboxPanelProps {
+  compact?: boolean;
+}
+
+export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPanelProps) {
   const {
     lastResult,
     todayRun,
@@ -275,6 +280,33 @@ export default function ScreenerInboxPanel() {
     },
     [setAnalysisTab, setSelectedTicker]
   );
+
+  if (compact) {
+    return (
+      <div
+        className="h-full space-y-1 overflow-y-auto p-2"
+        data-testid="symbol-rail-list"
+      >
+        {displayCandidates.map((candidate) => (
+          <SymbolRailRow
+            key={candidate.ticker}
+            ticker={candidate.ticker}
+            status={candidate.decisionSummary?.action
+              ?? candidate.recommendation?.workflowStatus
+              ?? t('workspacePage.symbolRail.candidate')}
+            context={candidate.close == null ? null : String(candidate.close)}
+            selected={selectedTicker?.toUpperCase() === candidate.ticker.toUpperCase()}
+            onSelect={(ticker) => handleSelectCandidate(ticker, 'overview')}
+          />
+        ))}
+        {displayCandidates.length === 0 ? (
+          <p className="px-2 py-4 text-center text-sm text-muted">
+            {t('workspacePage.symbolRail.noSymbols')}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   if (!riskConfig) {
     const configFailed = configDefaultsQuery.isError && !activeStrategy?.risk;
