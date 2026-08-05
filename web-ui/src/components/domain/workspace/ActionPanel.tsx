@@ -8,7 +8,7 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
-import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
+import { canReviewPendingPullbackOrder, formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import SourceHealthSummary from './SourceHealthSummary';
 
@@ -75,7 +75,8 @@ export default function ActionPanel({ ticker, candidate: candidateOverride, sour
 
   const sameSymbol = resolveSameSymbolContext(candidate ?? null);
   const defaultNotes = buildDefaultNotes(candidate ?? null, sameSymbol, normalizedTicker);
-  const isReadyCandidate = candidate?.recommendation?.workflowStatus === 'ready';
+  const isReadyCandidate = candidate?.recommendation?.workflowStatus === 'ready'
+    || (candidate != null && canReviewPendingPullbackOrder(candidate));
   const canReviewOrder = Boolean(
     isReadyCandidate &&
       (!openPosition || isPositionEntryContext(candidate?.sameSymbol)),

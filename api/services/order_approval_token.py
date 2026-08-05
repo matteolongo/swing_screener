@@ -38,6 +38,7 @@ class ApprovalTokenClaims(BaseModel):
     generated_entry: float
     generated_stop: float
     generated_target: float
+    pullback_wait_authorized: bool = False
 
     @field_validator(
         "account_to_quote_rate",

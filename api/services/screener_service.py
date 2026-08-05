@@ -183,16 +183,26 @@ def _approval_claims_for_candidate(
     candidate: object, strategy_id: str, strategy_revision_value: str
 ) -> ApprovalTokenClaims | None:
     recommendation = getattr(candidate, "recommendation", None)
-    if (
-        recommendation is None
-        or getattr(recommendation, "verdict", None) != "RECOMMENDED"
-    ):
+    if recommendation is None:
         return None
     gates = getattr(recommendation, "decision_gates", None)
+    trigger_status = getattr(getattr(gates, "trigger", None), "status", None)
+    waiting_pullback = (
+        getattr(recommendation, "workflow_status", None) == "waiting_trigger"
+        and getattr(getattr(recommendation, "next_step", None), "code", None)
+        == "wait_pullback"
+        and getattr(candidate, "suggested_order_type", None) == "BUY_LIMIT"
+        and trigger_status == "WAIT"
+    )
+    if (
+        getattr(recommendation, "verdict", None) != "RECOMMENDED"
+        and not waiting_pullback
+    ):
+        return None
     if gates is None or any(
         getattr(getattr(gates, name, None), "status", None) != "PASS"
-        for name in ("setup", "trigger", "plan")
-    ):
+        for name in ("setup", "plan")
+    ) or trigger_status != "PASS" and not waiting_pullback:
         return None
     data_asof = getattr(candidate, "data_asof", None)
     days_to_earnings = getattr(candidate, "days_to_earnings", None)
@@ -239,7 +249,7 @@ def _approval_claims_for_candidate(
             getattr(candidate, "suggested_order_type", None) or "BUY_LIMIT"
         ).upper(),
         setup_status="PASS",
-        trigger_status="PASS",
+        trigger_status=trigger_status,
         plan_status="PASS",
         data_status="current",
         data_asof=data_asof,
@@ -253,6 +263,7 @@ def _approval_claims_for_candidate(
         generated_entry=float(values[0]),
         generated_stop=float(values[1]),
         generated_target=float(values[2]),
+        pullback_wait_authorized=waiting_pullback,
     )
 
 

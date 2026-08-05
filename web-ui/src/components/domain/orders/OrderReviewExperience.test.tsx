@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import OrderReviewExperience from './OrderReviewExperience';
@@ -179,6 +179,72 @@ describe('OrderReviewExperience — execution readiness', () => {
     expect(await screen.findByRole('button', {
       name: t('order.candidateModal.createAction'),
     })).toBeEnabled();
+  });
+
+  it('submits a signed waiting pullback BUY_LIMIT order with current data', async () => {
+    const onSubmitOrder = vi.fn().mockResolvedValue({});
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext({
+          recommendation: waitingRecommendation,
+          dataStatus: 'current',
+          dataAsOf: '2026-07-21',
+          approvalToken: 'approved-pullback-token',
+          suggestedOrderType: 'BUY_LIMIT',
+        })}
+        risk={risk}
+        defaultNotes=""
+        enforceRecommendation
+        onSubmitOrder={onSubmitOrder}
+      />,
+    );
+
+    const submit = await screen.findByRole('button', {
+      name: t('order.candidateModal.createAction'),
+    });
+    expect(submit).toBeEnabled();
+    fireEvent.submit(submit.closest('form') as HTMLFormElement);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await waitFor(() => expect(onSubmitOrder).toHaveBeenCalledOnce());
+    expect(onSubmitOrder).toHaveBeenCalledWith(expect.objectContaining({
+      triggerStatus: 'WAIT',
+    }));
+  });
+
+  it('blocks a signed pending pullback changed to BUY_STOP in local mode', async () => {
+    vi.stubEnv('VITE_PERSISTENCE_MODE', 'local');
+    vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'true');
+    const onSubmitOrder = vi.fn().mockResolvedValue({});
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext({
+          recommendation: waitingRecommendation,
+          dataStatus: 'current',
+          dataAsOf: '2026-07-21',
+          approvalToken: 'approved-pullback-token',
+          suggestedOrderType: 'BUY_LIMIT',
+        })}
+        risk={risk}
+        defaultNotes=""
+        enforceRecommendation
+        onSubmitOrder={onSubmitOrder}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(t('order.candidateModal.orderType')), {
+      target: { value: 'BUY_STOP' },
+    });
+    fireEvent.change(screen.getByLabelText(t('order.candidateModal.triggerPrice')), {
+      target: { value: '21' },
+    });
+    fireEvent.click(screen.getByRole('checkbox'));
+
+    const submit = screen.getByRole('button', { name: t('order.candidateModal.createAction') });
+    fireEvent.submit(submit.closest('form') as HTMLFormElement);
+
+    expect(await screen.findByText(t('order.candidateModal.approvalOrderTypeMismatch'))).toBeInTheDocument();
+    expect(onSubmitOrder).not.toHaveBeenCalled();
   });
 
   it('presents a qualified conditional setup as waiting while keeping creation locked', async () => {

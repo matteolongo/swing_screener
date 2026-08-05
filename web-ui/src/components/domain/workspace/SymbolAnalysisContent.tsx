@@ -9,6 +9,7 @@ import {
   useRunTrace,
   useTickerRuns,
 } from '@/features/intelligence/hooks';
+import { canReviewPendingPullbackOrder } from '@/components/domain/recommendation/workflowPresentation';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type {
   EvidenceRefreshResponse,
@@ -290,9 +291,10 @@ export default function SymbolAnalysisContent({
   const heldMode = Boolean(position);
   const canAddOn = Boolean(
     (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
-      && candidate.recommendation?.workflowStatus === 'ready',
+      && (candidate.recommendation?.workflowStatus === 'ready' || canReviewPendingPullbackOrder(candidate)),
   );
-  const candidateCanReviewOrder = candidate?.recommendation?.workflowStatus === 'ready';
+  const candidateCanReviewOrder = candidate?.recommendation?.workflowStatus === 'ready'
+    || (candidate != null && canReviewPendingPullbackOrder(candidate));
   const canReviewOrder = heldMode ? canAddOn : candidateCanReviewOrder;
 
   useEffect(() => {

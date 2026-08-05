@@ -24,6 +24,10 @@
   transformed `workflowStatus` / `nextStep`; they do not re-derive precedence
   from decision gates or `decisionSummary.action`. Missing workflow fields fail
   safely to `needs_review` / `refresh_data` at the API boundary.
+- A `waiting_trigger` / `wait_pullback` candidate may expose manual order review
+  only with its pending `BUY_LIMIT` approval token. It remains distinct from
+  `ready`, which means the observed entry trigger passed; the token is required
+  and submission remains manual.
 - React Query keys live in `src/lib/queryKeys.ts`. Always use these for cache invalidation — do not construct key arrays inline.
 - All user-facing strings go through `src/i18n/`. No hardcoded copy in components or tests.
 
