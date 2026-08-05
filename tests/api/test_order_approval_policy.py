@@ -105,8 +105,8 @@ def test_valid_first_position_is_approved_with_concentration_warning():
 def test_waiting_pullback_buy_limit_is_approved():
     approval = _evaluate(context=_context(trigger_status="WAIT"))
 
-    assert approval.approved is True
-    assert approval.decision.status == "PASS"
+    assert approval.approved is False
+    assert approval.decision.status == "BLOCK"
 
 
 def test_waiting_breakout_buy_stop_is_blocked():

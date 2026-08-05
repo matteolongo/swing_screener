@@ -64,9 +64,7 @@ def evaluate_order_approval(
     proposed = next(line for line in snapshot.lines if line.source == "proposed")
     decision_pass = (
         context.setup_status == "PASS"
-        and (context.trigger_status == "PASS" or (
-            context.order_type == "BUY_LIMIT" and context.trigger_status == "WAIT"
-        ))
+        and context.trigger_status == "PASS"
         and context.plan_status == "PASS"
         and context.data_status == "current"
         and bool(context.data_asof)
