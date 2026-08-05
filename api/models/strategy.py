@@ -93,6 +93,14 @@ class StrategyManage(BaseModel):
     time_stop_days: int = Field(default=15, gt=0)
     time_stop_min_r: float = Field(default=0.5, ge=0)
     benchmark: str = "SPY"
+    exit_signal_days: int = Field(
+        default=2,
+        ge=0,
+        description=(
+            "Consecutive closes below the trailing SMA required for an advisory exit; "
+            "0 disables it"
+        ),
+    )
 
 
 class StrategyIntelligenceLLM(BaseModel):

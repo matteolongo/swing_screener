@@ -373,3 +373,100 @@ strategies:
   is_default: false
   created_at: '2026-02-25T21:33:22'
   updated_at: '2026-02-25T21:33:22'
+- name: Short Term 5D
+  description: Daily momentum strategy targeting exits within five trading bars.
+  module: momentum
+  universe:
+    trend:
+      sma_fast: 20
+      sma_mid: 50
+      sma_long: 200
+    vol:
+      atr_window: 14
+    mom:
+      lookback_6m: 126
+      lookback_12m: 252
+      benchmark: SPY
+    filt:
+      min_price: 5.0
+      max_price: 500.0
+      max_atr_pct: 15.0
+      require_trend_ok: true
+      require_rs_positive: false
+      require_weekly_uptrend: false
+      currencies:
+      - USD
+      - EUR
+  ranking:
+    w_mom_6m: 0.2
+    w_mom_12m: 0.1
+    w_rs_6m: 0.2
+    top_n: 100
+  signals:
+    breakout_lookback: 20
+    pullback_ma: 10
+    min_history: 252
+  risk:
+    account_size: 1000.0
+    risk_pct: 0.01
+    max_position_pct: 0.6
+    min_shares: 1
+    k_atr: 1.0
+    min_rr: 2.0
+    rr_target: 2.0
+    commission_pct: 0.001
+    max_fee_risk_pct: 0.2
+    account_size_mode: equity
+    regime_enabled: false
+    regime_trend_sma: 200
+    regime_trend_multiplier: 0.5
+    regime_vol_atr_window: 14
+    regime_vol_atr_pct_threshold: 6.0
+    regime_vol_multiplier: 0.5
+  manage:
+    breakeven_at_r: 0.75
+    trail_after_r: 1.0
+    trail_sma: 5
+    sma_buffer_pct: 0.005
+    max_holding_days: 5
+    time_stop_days: 2
+    time_stop_min_r: 0.0
+    benchmark: SPY
+    exit_signal_days: 1
+    trim_r_threshold: 1.0
+    reentry_lookback_days: 10
+  market_intelligence:
+    enabled: false
+    llm:
+      enabled: false
+      provider: openai
+      model: gpt-4.1-mini
+      education_template_version: v1
+      education_style_level: beginner
+      education_max_tokens: 450
+      education_forbidden_claim_categories:
+      - prediction
+      - guarantee
+      - financial_advice
+      education_recommendation_system_prompt: ''
+      education_recommendation_user_prompt_template: ''
+      education_thesis_system_prompt: ''
+      education_thesis_user_prompt_template: ''
+      education_learn_system_prompt: ''
+      education_learn_user_prompt_template: ''
+    catalyst:
+      lookback_hours: 72
+      require_price_confirmation: true
+    theme:
+      enabled: true
+      min_cluster_size: 3
+      min_peer_confirmation: 2
+    opportunity:
+      technical_weight: 0.55
+      catalyst_weight: 0.45
+      max_daily_opportunities: 8
+      min_opportunity_score: 0.55
+  id: short-term-5d
+  is_default: false
+  created_at: '2026-07-28T00:00:00'
+  updated_at: '2026-07-28T00:00:00'

@@ -65,6 +65,9 @@ Shared user-facing configuration that affects UI and system behavior without car
 Authoritative strategy storage:
 - `active_strategy_id`
 - persisted strategy definitions
+- strategy-level management values such as `max_holding_days` and `time_stop_days` are
+  measured in trading bars; `exit_signal_days` counts consecutive daily closes below
+  the trailing SMA and `0` disables that advisory exit signal
 
 ### `intelligence.yaml`
 
