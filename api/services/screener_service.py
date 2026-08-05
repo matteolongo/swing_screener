@@ -263,6 +263,7 @@ def _approval_claims_for_candidate(
         generated_entry=float(values[0]),
         generated_stop=float(values[1]),
         generated_target=float(values[2]),
+        pullback_wait_authorized=waiting_pullback,
     )
 
 

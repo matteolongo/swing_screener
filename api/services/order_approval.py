@@ -63,7 +63,9 @@ def evaluate_order_approval(
 ) -> PortfolioOrderApproval:
     proposed = next(line for line in snapshot.lines if line.source == "proposed")
     trigger_pass = context.trigger_status == "PASS" or (
-        context.order_type == "BUY_LIMIT" and context.trigger_status == "WAIT"
+        context.order_type == "BUY_LIMIT"
+        and context.trigger_status == "WAIT"
+        and context.pullback_wait_authorized
     )
     decision_pass = (
         context.setup_status == "PASS"

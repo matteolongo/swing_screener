@@ -117,7 +117,7 @@ def test_signed_context_drives_and_audits_entry_approval():
 
 def test_signed_waiting_pullback_buy_limit_is_approved():
     order = _service().create_order(
-        _request(approval_token=_token(trigger_status="WAIT"))
+        _request(approval_token=_token(trigger_status="WAIT", pullback_wait_authorized=True))
     )
 
     assert order["portfolio_approval"]["approved"] is True
