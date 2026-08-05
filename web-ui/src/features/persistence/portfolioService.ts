@@ -259,6 +259,9 @@ export function createOrderLocal(request: CreateOrderRequest): void {
     const orderId = nextOrderId(ticker, existingIds);
     const normalizedOrderType = request.orderType.trim().toUpperCase();
     const orderKind = request.orderKind ?? inferOrderKind({ orderKind: null, orderType: normalizedOrderType });
+    const approvedPendingPullback = request.triggerStatus === 'WAIT'
+      && normalizedOrderType === 'BUY_LIMIT'
+      && Boolean(request.approvalToken);
     const openPosition = store.positions.find(
       (position) => position.status === 'open' && normalizeTicker(position.ticker) === ticker,
     );
@@ -266,7 +269,7 @@ export function createOrderLocal(request: CreateOrderRequest): void {
     if (orderKind === 'entry') {
       if (
         request.setupStatus !== 'PASS'
-        || request.triggerStatus !== 'PASS'
+        || (request.triggerStatus !== 'PASS' && !approvedPendingPullback)
         || request.dataStatus !== 'current'
         || !request.dataAsOf
         || !['structural', 'manual'].includes(request.targetSource ?? '')

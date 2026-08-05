@@ -28,7 +28,7 @@ import type { RiskConfig } from '@/types/config';
 import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
-import { getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
+import { canReviewPendingPullbackOrder, getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 
 export type OrderReviewRiskConfig = Pick<
   RiskConfig,
@@ -115,9 +115,11 @@ export default function OrderReviewExperience({
   const suggestedShares = Math.max(1, Math.min(rawSuggestedShares, maxSharesByPositionCap));
   const decisionGates = context.recommendation?.decisionGates;
   const workflow = getWorkflowPresentation(context.recommendation);
+  const pendingPullbackOrder = canReviewPendingPullbackOrder(context);
+  const recommendationOrderReady = context.recommendation?.workflowStatus === 'ready' || pendingPullbackOrder;
   const decisionReady = Boolean(
     !context.recommendation || (
-      context.recommendation.workflowStatus === 'ready'
+      recommendationOrderReady
       && context.dataStatus === 'current'
       && context.dataAsOf
     ),
@@ -203,7 +205,7 @@ export default function OrderReviewExperience({
 
   const warnings = useMemo(() => {
     const nextWarnings: string[] = [];
-    if (enforceRecommendation && workflow.status !== 'ready') {
+    if (enforceRecommendation && !recommendationOrderReady) {
       nextWarnings.push(t('order.candidateModal.executionNotReady', {
         status: t(workflow.labelKey),
       }));
@@ -229,7 +231,7 @@ export default function OrderReviewExperience({
       }
     }
     return nextWarnings;
-  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, workflow.labelKey, workflow.status,
+  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, recommendationOrderReady, workflow.labelKey,
       context.avgDailyVolumeEur, quantity, limitPrice]);
   const invalidationRules = context.recommendation?.thesis?.invalidationRules ?? [];
   const hardInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'hard');
@@ -251,7 +253,7 @@ export default function OrderReviewExperience({
     setSubmissionError(null);
     setSubmitSucceeded(false);
 
-    if (enforceRecommendation && workflow.status !== 'ready') {
+    if (enforceRecommendation && !recommendationOrderReady) {
       setSubmissionError(t('order.candidateModal.notRecommended'));
       return;
     }
@@ -263,6 +265,11 @@ export default function OrderReviewExperience({
 
     if (apiApprovalMissing) {
       setSubmissionError(t('order.candidateModal.approvalTokenRequired'));
+      return;
+    }
+
+    if (pendingPullbackOrder && values.orderType !== 'BUY_LIMIT') {
+      setSubmissionError(t('order.candidateModal.approvalOrderTypeMismatch'));
       return;
     }
 
@@ -302,8 +309,7 @@ export default function OrderReviewExperience({
         thesis: tradeThesis.trim() || undefined,
         setupStatus: decisionGates?.setup.status === 'PASS' || decisionGates?.setup.status === 'BLOCK'
           ? decisionGates.setup.status : 'UNKNOWN',
-        triggerStatus: decisionGates?.trigger.status === 'PASS' || decisionGates?.trigger.status === 'BLOCK'
-          ? decisionGates.trigger.status : 'UNKNOWN',
+        triggerStatus: decisionGates?.trigger.status ?? 'UNKNOWN',
         dataStatus: context.dataStatus ?? 'unknown',
         dataAsOf: context.dataAsOf,
         targetSource: context.recommendation?.risk.targetSource === 'structural'

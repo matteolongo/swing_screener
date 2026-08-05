@@ -71,6 +71,30 @@ def test_nonpassing_decision_gate_receives_no_claims():
     )
 
 
+def test_waiting_pullback_buy_limit_produces_wait_claims():
+    candidate = _candidate()
+    candidate.recommendation.workflow_status = "waiting_trigger"
+    candidate.recommendation.next_step = SimpleNamespace(code="wait_pullback")
+    candidate.recommendation.decision_gates.trigger.status = "WAIT"
+
+    claims = _approval_claims_for_candidate(candidate, "momentum-v1", "revision-1")
+
+    assert claims is not None
+    assert claims.trigger_status == "WAIT"
+    assert getattr(claims, "pullback_wait_authorized", False) is True
+
+
+def test_waiting_breakout_buy_stop_receives_no_claims():
+    candidate = _candidate(suggested_order_type="BUY_STOP")
+    candidate.recommendation.workflow_status = "waiting_trigger"
+    candidate.recommendation.next_step = SimpleNamespace(code="wait_breakout_close")
+    candidate.recommendation.decision_gates.trigger.status = "WAIT"
+
+    assert (
+        _approval_claims_for_candidate(candidate, "momentum-v1", "revision-1") is None
+    )
+
+
 def test_same_currency_candidate_uses_identity_without_provider_fx():
     candidate = _candidate()
     candidate.recommendation.risk.currency = "EUR"

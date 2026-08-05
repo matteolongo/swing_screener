@@ -10,6 +10,7 @@ import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import {
+  canReviewPendingPullbackOrder,
   formatWorkflowNextStep,
   getWorkflowPresentation,
 } from '@/components/domain/recommendation/workflowPresentation';
@@ -108,11 +109,12 @@ export default function AnalysisDecisionStrip({
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
   const heldMode = Boolean(position);
-  const canPrepareOrder = candidate?.recommendation?.workflowStatus === 'ready';
+  const canPrepareOrder = candidate?.recommendation?.workflowStatus === 'ready'
+    || (candidate != null && canReviewPendingPullbackOrder(candidate));
   const showAnalysisAction = summary && (
     !candidate?.recommendation ||
     (
-      candidate.recommendation.workflowStatus === 'ready' &&
+      canPrepareOrder &&
       (summary.action === 'BUY_NOW' || summary.action === 'BUY_ON_PULLBACK')
     )
   );

@@ -44,6 +44,11 @@ concentration is a risk-share warning and does not block an otherwise valid
 trade. Configure a separate 32-byte `ORDER_APPROVAL_SIGNING_KEY` in production;
 rotation invalidates outstanding tokens.
 
+A `waiting_trigger` pullback may receive a pending `BUY_LIMIT` token for manual
+order review; the observed entry trigger has not passed. `ready` still means
+the observed entry trigger passed. The token is required and submission remains
+manual.
+
 FastAPI service that exposes the Swing Screener backend as a REST API.
 
 ## Run
@@ -173,6 +178,10 @@ not be used to authorize order review. The API model normalizes contradictory
 status/code pairs, missing waiting-trigger parameters, malformed or unknown
 currency codes, and non-finite or non-positive trigger prices to
 `needs_review` / `refresh_data`.
+
+A `waiting_trigger` / `wait_pullback` candidate may expose manual order review
+only with its pending `BUY_LIMIT` approval token. This does not make the
+candidate `ready`: `ready` remains reserved for an observed trigger pass.
 
 Same-symbol add-on evaluation replaces the fresh setup stop with the current
 live position stop, recalculates reward:risk and fee-to-risk, and rechecks

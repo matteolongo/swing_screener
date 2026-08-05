@@ -49,6 +49,17 @@ describe('ManagePositionPanel', () => {
     expect(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).toBeInTheDocument();
   });
 
+  it('shows Add-to-position for an approved waiting pullback', () => {
+    const candidate = {
+      sameSymbol: { mode: 'ADD_ON' },
+      suggestedOrderType: 'BUY_LIMIT',
+      approvalToken: 'approved-pullback-token',
+      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_pullback' } },
+    } as any;
+    renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
+    expect(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).toBeInTheDocument();
+  });
+
   it('does not promote a BUY_ON_PULLBACK opinion without ready workflow status', () => {
     const candidate = {
       sameSymbol: { mode: 'ADD_ON' },

@@ -189,10 +189,18 @@ def _approval_claims_for_candidate(
     ):
         return None
     gates = getattr(recommendation, "decision_gates", None)
+    trigger_status = getattr(getattr(gates, "trigger", None), "status", None)
+    waiting_pullback = (
+        getattr(recommendation, "workflow_status", None) == "waiting_trigger"
+        and getattr(getattr(recommendation, "next_step", None), "code", None)
+        == "wait_pullback"
+        and getattr(candidate, "suggested_order_type", None) == "BUY_LIMIT"
+        and trigger_status == "WAIT"
+    )
     if gates is None or any(
         getattr(getattr(gates, name, None), "status", None) != "PASS"
-        for name in ("setup", "trigger", "plan")
-    ):
+        for name in ("setup", "plan")
+    ) or trigger_status != "PASS" and not waiting_pullback:
         return None
     data_asof = getattr(candidate, "data_asof", None)
     days_to_earnings = getattr(candidate, "days_to_earnings", None)
@@ -239,7 +247,8 @@ def _approval_claims_for_candidate(
             getattr(candidate, "suggested_order_type", None) or "BUY_LIMIT"
         ).upper(),
         setup_status="PASS",
-        trigger_status="PASS",
+        trigger_status=trigger_status,
+        pullback_wait_authorized=waiting_pullback,
         plan_status="PASS",
         data_status="current",
         data_asof=data_asof,

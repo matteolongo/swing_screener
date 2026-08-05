@@ -63,6 +63,19 @@ export function getWorkflowPresentation(
   return PRESENTATIONS[normalizeWorkflowStatus(recommendation?.workflowStatus)];
 }
 
+export function canReviewPendingPullbackOrder(context: {
+  approvalToken?: string;
+  suggestedOrderType?: string | null;
+  recommendation?: Pick<Recommendation, 'workflowStatus' | 'nextStep'> | null;
+}): boolean {
+  return Boolean(
+    context.approvalToken
+    && context.suggestedOrderType === 'BUY_LIMIT'
+    && context.recommendation?.workflowStatus === 'waiting_trigger'
+    && context.recommendation.nextStep.code === 'wait_pullback',
+  );
+}
+
 export function formatWorkflowNextStep(nextStep?: WorkflowNextStep): string {
   const safeStep = normalizeWorkflowNextStep(nextStep);
   if (safeStep.code === 'wait_pullback' || safeStep.code === 'wait_breakout_close') {

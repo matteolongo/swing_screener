@@ -35,6 +35,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Waiting pullbacks with a pending `BUY_LIMIT` approval token can now enter
+  manual order review without being labeled `ready`; `ready` remains reserved
+  for an observed entry-trigger pass.
 - The symbol workspace now distinguishes normal absence of today's analysis or
   saved evidence from provider failures, preserves cached-evidence freshness
   from the server, and explains when a newly fetched fundamentals snapshot
