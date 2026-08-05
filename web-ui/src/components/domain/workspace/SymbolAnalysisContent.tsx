@@ -282,7 +282,13 @@ export default function SymbolAnalysisContent({
               grossMargin={fundamentalsQuery.data?.grossMargin ?? null}
               valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
             />
-            {heldMode && position && <ManagePositionPanel position={position} candidate={candidate} />}
+            {heldMode && position && (
+              <ManagePositionPanel
+                position={position}
+                candidate={candidate}
+                onPrepareOrder={canReviewOrder ? () => onTabChange('order') : undefined}
+              />
+            )}
             {!candidate && (
               <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
                 <p className="text-sm text-muted">

@@ -391,7 +391,7 @@ function isCoherentWorkflow(status: WorkflowStatus, nextStep: WorkflowNextStep):
 }
 
 function isValidWorkflowCurrency(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && value !== 'UNKNOWN';
+  return typeof value === 'string' && /^[A-Z]{3}$/.test(value) && value !== 'UNKNOWN';
 }
 
 function transformThesis(apiThesis: any): TradeThesis {

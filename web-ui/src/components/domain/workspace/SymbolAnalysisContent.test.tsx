@@ -92,6 +92,23 @@ function CandidateOrderHarness({ workflowStatus }: { workflowStatus: 'ready' | '
   );
 }
 
+function HeldAddOnHarness() {
+  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
+  return (
+    <SymbolAnalysisContent
+      ticker="LRCX"
+      candidate={{
+        sameSymbol: { mode: 'ADD_ON' },
+        recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      } as any}
+      position={position}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      orderPanel={<div>add-on order panel</div>}
+    />
+  );
+}
+
 describe('SymbolAnalysisContent candidate order transition', () => {
   it('does not open the order panel from a BUY_NOW opinion without ready workflow status', () => {
     renderWithProviders(<CandidateOrderHarness workflowStatus="no_setup" />);
@@ -105,6 +122,13 @@ describe('SymbolAnalysisContent candidate order transition', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /prepare order/i }));
     expect(screen.getByText('order panel')).toBeInTheDocument();
+  });
+
+  it('opens the local order tab from a held add-on', async () => {
+    renderWithProviders(<HeldAddOnHarness />);
+
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') }));
+    expect(screen.getByText('add-on order panel')).toBeInTheDocument();
   });
 });
 
