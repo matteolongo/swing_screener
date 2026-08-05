@@ -25,7 +25,6 @@ class ApprovalTokenClaims(BaseModel):
     order_type: str
     setup_status: str
     trigger_status: str
-    pullback_wait_authorized: bool = False
     plan_status: str
     data_status: str
     data_asof: str

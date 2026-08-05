@@ -81,7 +81,6 @@ def test_waiting_pullback_buy_limit_produces_wait_claims():
 
     assert claims is not None
     assert claims.trigger_status == "WAIT"
-    assert getattr(claims, "pullback_wait_authorized", False) is True
 
 
 def test_waiting_breakout_buy_stop_receives_no_claims():

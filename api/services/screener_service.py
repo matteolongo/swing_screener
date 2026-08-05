@@ -248,7 +248,6 @@ def _approval_claims_for_candidate(
         ).upper(),
         setup_status="PASS",
         trigger_status=trigger_status,
-        pullback_wait_authorized=waiting_pullback,
         plan_status="PASS",
         data_status="current",
         data_asof=data_asof,

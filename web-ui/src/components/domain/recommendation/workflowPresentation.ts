@@ -7,6 +7,7 @@ import type {
   WorkflowStatus,
 } from '@/types/recommendation';
 import { normalizeWorkflowNextStep, normalizeWorkflowStatus } from '@/types/recommendation';
+import { normalizeSuggestedOrderType } from '@/features/orders/executionDefaults';
 import { formatCurrency } from '@/utils/formatters';
 
 export type WorkflowTone = 'success' | 'warning' | 'danger' | 'neutral';
@@ -68,9 +69,10 @@ export function canReviewPendingPullbackOrder(context: {
   suggestedOrderType?: string | null;
   recommendation?: Pick<Recommendation, 'workflowStatus' | 'nextStep'> | null;
 }): boolean {
+  const suggestedOrderType = normalizeSuggestedOrderType(context.suggestedOrderType);
   return Boolean(
     context.approvalToken
-    && context.suggestedOrderType === 'BUY_LIMIT'
+    && suggestedOrderType === 'BUY_LIMIT'
     && context.recommendation?.workflowStatus === 'waiting_trigger'
     && context.recommendation.nextStep.code === 'wait_pullback',
   );
