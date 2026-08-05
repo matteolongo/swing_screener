@@ -73,6 +73,7 @@ def test_nonpassing_decision_gate_receives_no_claims():
 
 def test_waiting_pullback_buy_limit_produces_wait_claims():
     candidate = _candidate()
+    candidate.recommendation.verdict = "NOT_RECOMMENDED"
     candidate.recommendation.workflow_status = "waiting_trigger"
     candidate.recommendation.next_step = SimpleNamespace(code="wait_pullback")
     candidate.recommendation.decision_gates.trigger.status = "WAIT"

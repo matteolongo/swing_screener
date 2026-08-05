@@ -62,9 +62,12 @@ def evaluate_order_approval(
     policy: EffectiveOrderPolicy,
 ) -> PortfolioOrderApproval:
     proposed = next(line for line in snapshot.lines if line.source == "proposed")
+    trigger_pass = context.trigger_status == "PASS" or (
+        context.order_type == "BUY_LIMIT" and context.trigger_status == "WAIT"
+    )
     decision_pass = (
         context.setup_status == "PASS"
-        and context.trigger_status == "PASS"
+        and trigger_pass
         and context.plan_status == "PASS"
         and context.data_status == "current"
         and bool(context.data_asof)

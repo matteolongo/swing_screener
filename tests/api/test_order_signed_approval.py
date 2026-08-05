@@ -115,6 +115,15 @@ def test_signed_context_drives_and_audits_entry_approval():
     assert order["quote_currency"] == "EUR"
 
 
+def test_signed_waiting_pullback_buy_limit_is_approved():
+    order = _service().create_order(
+        _request(approval_token=_token(trigger_status="WAIT"))
+    )
+
+    assert order["portfolio_approval"]["approved"] is True
+    assert order["decision_context"]["trigger_status"] == "WAIT"
+
+
 @pytest.mark.parametrize("token", [None, "tampered.token"])
 def test_missing_or_tampered_token_blocks_entry(token):
     with pytest.raises(UnprocessableError, match="approval token"):

@@ -183,10 +183,7 @@ def _approval_claims_for_candidate(
     candidate: object, strategy_id: str, strategy_revision_value: str
 ) -> ApprovalTokenClaims | None:
     recommendation = getattr(candidate, "recommendation", None)
-    if (
-        recommendation is None
-        or getattr(recommendation, "verdict", None) != "RECOMMENDED"
-    ):
+    if recommendation is None:
         return None
     gates = getattr(recommendation, "decision_gates", None)
     trigger_status = getattr(getattr(gates, "trigger", None), "status", None)
@@ -197,6 +194,11 @@ def _approval_claims_for_candidate(
         and getattr(candidate, "suggested_order_type", None) == "BUY_LIMIT"
         and trigger_status == "WAIT"
     )
+    if (
+        getattr(recommendation, "verdict", None) != "RECOMMENDED"
+        and not waiting_pullback
+    ):
+        return None
     if gates is None or any(
         getattr(getattr(gates, name, None), "status", None) != "PASS"
         for name in ("setup", "plan")
