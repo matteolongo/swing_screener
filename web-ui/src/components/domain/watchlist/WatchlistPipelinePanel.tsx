@@ -6,9 +6,12 @@ import type { WatchItem } from '@/features/watchlist/types';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
+import SymbolRailRow from '@/components/domain/workspace/SymbolRailRow';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 interface WatchlistPipelinePanelProps {
   onTickerSelect?: (ticker: string) => void;
+  compact?: boolean;
 }
 
 function DistanceCell({ item }: { item: WatchItem }) {
@@ -80,8 +83,12 @@ function Sparkline({ item }: { item: WatchItem }) {
   );
 }
 
-export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipelinePanelProps) {
+export default function WatchlistPipelinePanel({
+  onTickerSelect,
+  compact = false,
+}: WatchlistPipelinePanelProps) {
   const watchlistQuery = useWatchlist();
+  const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const items = watchlistQuery.data ?? [];
 
   if (watchlistQuery.isLoading) {
@@ -104,8 +111,38 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
     );
   }
 
+  const compactRail = compact ? (
+      <div className="space-y-1" data-testid="symbol-rail-list">
+        {items.map((item) => (
+          <SymbolRailRow
+            key={item.ticker}
+            ticker={item.ticker}
+            status={(item.signal ?? t('workspacePage.symbolRail.watched')).toUpperCase()}
+            context={item.distanceToTriggerPct == null
+              ? null
+              : item.distanceToTriggerPct <= 0
+                ? t('watchlist.pipeline.distanceToBuyZone', {
+                    value: formatPercent(item.distanceToTriggerPct),
+                  })
+                : t('watchlist.pipeline.aboveBuyZone', {
+                    value: formatPercent(item.distanceToTriggerPct),
+                  })}
+            selected={selectedTicker?.toUpperCase() === item.ticker.toUpperCase()}
+            onSelect={(ticker) => onTickerSelect?.(ticker)}
+          />
+        ))}
+      </div>
+  ) : null;
+
   return (
-    <div className="space-y-4">
+    <>
+      {compactRail}
+      <div
+        className="space-y-4"
+        hidden={compact}
+        aria-hidden={compact || undefined}
+        {...(compact ? { inert: '' } : {})}
+      >
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">{t('watchlist.pipeline.title')}</h2>
@@ -170,6 +207,7 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 """Portfolio router - Positions CRUD and local order management."""
+
 from __future__ import annotations
 
 import logging
@@ -8,6 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 
 from api.models.portfolio import (
     Position,
+    OrdersSnapshotResponse,
     PositionUpdate,
     PositionsWithMetricsResponse,
     PositionMetrics,
@@ -24,7 +26,14 @@ from api.models.portfolio import (
     EarningsProximityResponse,
     RegimeBreakdownResponse,
 )
-from api.dependencies import get_config_repo, get_orders_service, get_portfolio_service, get_positions_repo, get_regime_analytics_service
+from api.dependencies import (
+    get_config_repo,
+    get_orders_service,
+    get_portfolio_service,
+    get_positions_repo,
+    get_regime_analytics_service,
+)
+from api.services.snapshot_freshness import snapshot_freshness
 from api.dependencies import get_strategy_repo
 from api.repositories.positions_repo import PositionsRepository
 from api.services.portfolio.degiro_sync import DeGiroSyncResult, sync_degiro_holdings
@@ -57,6 +66,7 @@ def _subject(request: Request) -> str:
 
 # ===== Positions =====
 
+
 @router.get("/positions", response_model=PositionsWithMetricsResponse)
 async def get_positions(
     status: Optional[str] = None,
@@ -75,10 +85,19 @@ async def get_positions(
         time_stop_min_r = float(strategy_manage.get("time_stop_min_r", time_stop_min_r))
     except (TypeError, ValueError):
         pass
-    return service.list_positions(
+    response = service.list_positions(
         status=status,
         time_stop_days=time_stop_days,
         time_stop_min_r=time_stop_min_r,
+    )
+    stale_after_days = config_repo.get().portfolio_snapshot_stale_after_days
+    return response.model_copy(
+        update={
+            "snapshot_freshness": snapshot_freshness(
+                response.asof, stale_after_days=stale_after_days
+            ),
+            "stale_after_days": stale_after_days,
+        }
     )
 
 
@@ -95,12 +114,16 @@ async def create_position(
     )
 
 
-@router.get("/positions/open/intelligence", response_model=list[OpenPositionIntelligenceSummary])
+@router.get(
+    "/positions/open/intelligence", response_model=list[OpenPositionIntelligenceSummary]
+)
 async def get_open_positions_intelligence(
     service: PortfolioService = Depends(get_portfolio_service),
 ) -> list[OpenPositionIntelligenceSummary]:
     """Return cached intelligence + stop suggestion for all open positions."""
-    result = service.list_positions(status="open", time_stop_days=None, time_stop_min_r=None)
+    result = service.list_positions(
+        status="open", time_stop_days=None, time_stop_min_r=None
+    )
     summaries: list[OpenPositionIntelligenceSummary] = []
     for pos in result.positions:
         try:
@@ -109,7 +132,9 @@ async def get_open_positions_intelligence(
             stop_suggested = stop.stop_suggested
             stop_reason = stop.reason
         except Exception as exc:
-            logger.warning("suggest_position_stop failed for %s: %s", pos.position_id, exc)
+            logger.warning(
+                "suggest_position_stop failed for %s: %s", pos.position_id, exc
+            )
             stop_action = "NO_ACTION"
             stop_suggested = pos.stop_price
             stop_reason = ""
@@ -258,20 +283,30 @@ async def get_portfolio_summary(
     """Get aggregated portfolio metrics for all open positions."""
     config_account_size = float(config_repo.get().risk.account_size)
     account_size_mode = getattr(config_repo.get().risk, "account_size_mode", "equity")
-    default_config_account_size = float(ConfigRepository.get_defaults().risk.account_size)
+    default_config_account_size = float(
+        ConfigRepository.get_defaults().risk.account_size
+    )
     account_size = config_account_size
 
     if abs(config_account_size - default_config_account_size) <= 1e-9:
         try:
             active_strategy = strategy_repo.get_active_strategy()
-            strategy_account_size = float(active_strategy.get("risk", {}).get("account_size", 0.0))
+            strategy_account_size = float(
+                active_strategy.get("risk", {}).get("account_size", 0.0)
+            )
             if strategy_account_size > 0:
                 account_size = strategy_account_size
-                account_size_mode = str(active_strategy.get("risk", {}).get("account_size_mode", account_size_mode))
+                account_size_mode = str(
+                    active_strategy.get("risk", {}).get(
+                        "account_size_mode", account_size_mode
+                    )
+                )
         except (TypeError, ValueError):
             pass
 
-    return service.get_portfolio_summary(account_size=account_size, account_size_mode=account_size_mode)
+    return service.get_portfolio_summary(
+        account_size=account_size, account_size_mode=account_size_mode
+    )
 
 
 @router.get("/earnings-proximity/{ticker}", response_model=EarningsProximityResponse)
@@ -294,6 +329,7 @@ async def get_regime_breakdown(
 
 # ===== Orders =====
 
+
 @router.post("/orders", status_code=201)
 async def create_order(
     request: CreateOrderRequest,
@@ -307,13 +343,22 @@ async def create_order(
     )
 
 
-@router.get("/orders/local")
+@router.get("/orders/local", response_model=OrdersSnapshotResponse)
 async def list_local_orders(
     status: Optional[str] = None,
     service: OrdersService = Depends(get_orders_service),
+    config_repo: ConfigRepository = Depends(get_config_repo),
 ):
     """List locally stored pending/filled orders from orders.json."""
-    return service.list_local_orders(status=status)
+    response = service.list_local_orders(status=status)
+    stale_after_days = config_repo.get().portfolio_snapshot_stale_after_days
+    return {
+        **response,
+        "snapshot_freshness": snapshot_freshness(
+            response["asof"], stale_after_days=stale_after_days
+        ),
+        "stale_after_days": stale_after_days,
+    }
 
 
 @router.patch("/orders/{order_id}/submit")
@@ -334,7 +379,9 @@ async def cancel_order(
     return service.cancel_order(order_id)
 
 
-@router.post("/orders/{order_id}/fill", status_code=201, response_model=FillOrderResponse)
+@router.post(
+    "/orders/{order_id}/fill", status_code=201, response_model=FillOrderResponse
+)
 async def fill_order(
     order_id: str,
     request: FillOrderRequest,
@@ -351,10 +398,8 @@ async def fill_order(
     )
 
 
-
-
-
 # ===== DeGiro sync =====
+
 
 @router.post("/sync-degiro", response_model=DeGiroSyncResult)
 async def sync_degiro(

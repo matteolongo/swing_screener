@@ -12,18 +12,19 @@ import {
   usePositionStopPreviewQuery,
   useUpdateStopMutation,
 } from '@/features/portfolio/hooks';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { formatCurrency } from '@/utils/formatters';
+import { canReviewPendingPullbackOrder } from '@/components/domain/recommendation/workflowPresentation';
 
 interface ManagePositionPanelProps {
   position: PositionWithMetrics;
   candidate?: SymbolAnalysisCandidate | null;
-  onPrepareOrder?: () => void;
 }
 
 type ModalKind = 'stop' | 'scaleOut' | 'exit' | null;
 
-export default function ManagePositionPanel({ position, candidate, onPrepareOrder }: ManagePositionPanelProps) {
+export default function ManagePositionPanel({ position, candidate }: ManagePositionPanelProps) {
   const [modal, setModal] = useState<ModalKind>(null);
   const [checkLive, setCheckLive] = useState(false);
 
@@ -33,9 +34,10 @@ export default function ManagePositionPanel({ position, candidate, onPrepareOrde
   const positionId = position.positionId ?? '';
   const stopPreview = usePositionStopPreviewQuery(positionId, null, checkLive);
 
+  const setActiveTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const canAdd = Boolean(
     (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
-      && candidate.recommendation?.workflowStatus === 'ready',
+      && (candidate.recommendation?.workflowStatus === 'ready' || canReviewPendingPullbackOrder(candidate)),
   );
 
   const displayedR = checkLive && stopPreview.data ? stopPreview.data.rNow : position.rNow;
@@ -62,25 +64,19 @@ export default function ManagePositionPanel({ position, candidate, onPrepareOrde
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="primary" onClick={() => setModal('stop')}>
-          {t('workspacePage.panels.analysis.managePosition.updateStop')}
-        </Button>
-        <Button size="sm" variant="secondary" onClick={() => setModal('scaleOut')}>
-          {t('workspacePage.panels.analysis.managePosition.scaleOut')}
-        </Button>
-        <Button size="sm" variant="secondary" onClick={() => setModal('exit')}>
-          {t('workspacePage.panels.analysis.managePosition.exit')}
-        </Button>
+      <section className="rounded-md border border-border bg-foreground/5 p-3 space-y-2">
+        <div>
+          <h4 className="text-sm font-medium text-foreground">
+            {t('workspacePage.panels.analysis.managePosition.previewTitle')}
+          </h4>
+          <p className="text-xs text-muted">
+            {t('workspacePage.panels.analysis.managePosition.previewDescription')}
+          </p>
+        </div>
         <Button size="sm" variant="secondary" onClick={() => setCheckLive(true)}>
           {t('workspacePage.panels.analysis.managePosition.checkLive')}
         </Button>
-        {canAdd && (
-          <Button size="sm" variant="secondary" onClick={onPrepareOrder}>
-            {t('workspacePage.panels.analysis.managePosition.add')}
-          </Button>
-        )}
-      </div>
+      </section>
 
       {checkLive && stopPreview.data && (
         <div className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-muted space-y-1">
@@ -101,6 +97,33 @@ export default function ManagePositionPanel({ position, candidate, onPrepareOrde
           </div>
         </div>
       )}
+
+      <section className="border-t border-border pt-3 space-y-2">
+        <div>
+          <h4 className="text-sm font-medium text-foreground">
+            {t('workspacePage.panels.analysis.managePosition.changesTitle')}
+          </h4>
+          <p className="text-xs text-muted">
+            {t('workspacePage.panels.analysis.managePosition.changesDescription')}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="primary" onClick={() => setModal('stop')}>
+            {t('workspacePage.panels.analysis.managePosition.updateStop')}
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setModal('scaleOut')}>
+            {t('workspacePage.panels.analysis.managePosition.scaleOut')}
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setModal('exit')}>
+            {t('workspacePage.panels.analysis.managePosition.exit')}
+          </Button>
+          {canAdd && (
+            <Button size="sm" variant="secondary" onClick={() => setActiveTab('order')}>
+              {t('workspacePage.panels.analysis.managePosition.add')}
+            </Button>
+          )}
+        </div>
+      </section>
 
       {modal === 'stop' && (
         <UpdateStopModalForm

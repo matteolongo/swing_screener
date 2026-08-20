@@ -169,12 +169,12 @@ import json
 from swing_screener.data.symbol_pool import (
     deserialize_pool, enrich_pool_taxonomy, serialize_pool, load_symbol_pool_thresholds,
 )
-from swing_screener.data.providers.factory import get_default_provider
+from swing_screener.data.providers.factory import get_market_data_provider
 
 with open("data/symbol_pool.json", encoding="utf-8") as f:
     payload = json.load(f)
 pool = deserialize_pool(payload)
-provider = get_default_provider()
+provider = get_market_data_provider()
 cap, liq, _ = load_symbol_pool_thresholds()
 failed = enrich_pool_taxonomy(
     pool, info_fn=lambda s: provider.get_ticker_info(s) or None,

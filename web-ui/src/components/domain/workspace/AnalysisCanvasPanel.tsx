@@ -1,21 +1,37 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
+import DataStatusBar from '@/components/domain/workspace/DataStatusBar';
+import SymbolWorkspaceHeader from '@/components/domain/workspace/SymbolWorkspaceHeader';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
-import { syncCandidateWithFundamentals } from '@/features/screener/decisionSummary';
-import { useFundamentalSnapshotQuery, useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
+import WorkspaceActivityDrawer from '@/components/domain/workspace/WorkspaceActivityDrawer';
 import { useOpenPositions } from '@/features/portfolio/hooks';
+import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorkspaceData';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
+import type { WorkspaceSourceId } from '@/features/workspaceData/types';
+import type { EvidenceRefreshResponse } from '@/features/intelligence/types';
 
 export default function AnalysisCanvasPanel() {
+  const [selectedSourceId, setSelectedSourceId] = useState<WorkspaceSourceId | null>(null);
+  const [evidenceRefresh, setEvidenceRefresh] = useState<EvidenceRefreshResponse | null>(null);
+  const evidenceRefreshActionRef = useRef<(() => void) | null>(null);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
+  const selectionVersion = useWorkspaceStore((state) => state.selectionVersion);
+  const fullscreen = useWorkspaceStore((state) => state.fullscreen);
+  const activities = useWorkspaceStore((state) => state.activities);
+  const activityDrawerOpen = useWorkspaceStore((state) => state.activityDrawerOpen);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
+  const clearSelectedTicker = useWorkspaceStore((state) => state.clearSelectedTicker);
+  const collapseWorkspace = useWorkspaceStore((state) => state.collapseWorkspace);
+  const setFullscreen = useWorkspaceStore((state) => state.setFullscreen);
+  const setActivityDrawerOpen = useWorkspaceStore((state) => state.setActivityDrawerOpen);
+  const dismissActivity = useWorkspaceStore((state) => state.dismissActivity);
+  const markActivityAnnounced = useWorkspaceStore((state) => state.markActivityAnnounced);
   const lastScreenerResult = useScreenerStore((state) => state.lastResult);
-  const patchCandidate = useScreenerStore((state) => state.patchCandidate);
   const selectedCandidate = lastScreenerResult?.candidates.find(
     (candidate) => candidate.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   );
@@ -23,29 +39,28 @@ export default function AnalysisCanvasPanel() {
   const openPosition = openPositionsQuery.data?.find(
     (p) => p.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   ) ?? null;
-
-  const fundamentalsQuery = useFundamentalSnapshotQuery(
-    activeTab === 'fundamentals' ? selectedTicker ?? undefined : undefined
-  );
-  const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
-  const latestFundamentalsSnapshot = refreshFundamentalsMutation.data ?? fundamentalsQuery.data;
+  const visibleActivities = selectedTicker
+    ? activities.filter(
+        (activity) => activity.ticker === selectedTicker.toUpperCase()
+          && activity.selectionVersion === selectionVersion,
+      )
+    : [];
 
   useEffect(() => {
-    if (!selectedTicker || !selectedCandidate || !latestFundamentalsSnapshot) {
-      return;
-    }
+    setEvidenceRefresh(null);
+  }, [selectedTicker, selectionVersion]);
 
-    if (latestFundamentalsSnapshot.symbol.trim().toUpperCase() !== selectedTicker.trim().toUpperCase()) {
-      return;
-    }
-
-    if (syncCandidateWithFundamentals(selectedCandidate, latestFundamentalsSnapshot) === selectedCandidate) {
-      return;
-    }
-
-    patchCandidate(selectedTicker, (candidate) => syncCandidateWithFundamentals(candidate, latestFundamentalsSnapshot));
-  }, [latestFundamentalsSnapshot, patchCandidate, selectedCandidate, selectedTicker]);
-
+  const workspaceData = useSymbolWorkspaceData({
+    ticker: selectedTicker ?? '',
+    selectionVersion,
+    candidate: selectedCandidate ?? null,
+    position: openPosition,
+    screenerRun: selectedCandidate && lastScreenerResult
+      ? { asOf: lastScreenerResult.asofDate, freshness: lastScreenerResult.dataFreshness }
+      : null,
+    evidenceRefresh,
+    refreshEvidence: () => evidenceRefreshActionRef.current?.(),
+  });
   return (
     <Card
       id="workspace-analysis-canvas"
@@ -59,18 +74,83 @@ export default function AnalysisCanvasPanel() {
             {t('workspacePage.panels.analysis.empty')}
           </p>
           <p className="text-xs text-muted max-w-xs">
-            Run the screener and select a symbol to see its analysis, trade plan, and intelligence.
+            {t('workspacePage.emptyDescription')}
           </p>
         </div>
       ) : (
         <>
+          <SymbolWorkspaceHeader
+            ticker={selectedTicker}
+            companyName={workspaceData.fundamentals.data?.companyName ?? selectedCandidate?.name}
+            mode={openPosition ? 'position' : selectedCandidate ? 'candidate' : 'research'}
+            runAsOf={selectedCandidate ? lastScreenerResult?.asofDate ?? null : null}
+            runFreshness={selectedCandidate ? lastScreenerResult?.dataFreshness ?? null : null}
+            health={workspaceData.health}
+            isRefreshing={
+              workspaceData.fundamentalsRefreshing
+              || workspaceData.sourceStates.some(
+                ({ id, phase }) =>
+                  (id === 'fundamentals' || id === 'prices' || id === 'positionOrders')
+                  && phase === 'loading',
+              )
+            }
+            onRefreshAll={() => {
+              void workspaceData.refreshAllNonIntelligence().catch(() => undefined);
+            }}
+            fullscreen={fullscreen}
+            onClose={clearSelectedTicker}
+            onCollapse={collapseWorkspace}
+            onFullscreenChange={setFullscreen}
+          />
+          <DataStatusBar
+            sources={workspaceData.sourceStates}
+            onSourceSelect={(sourceId) => {
+              setSelectedSourceId(sourceId);
+              setActivityDrawerOpen(true);
+            }}
+          />
+          {activityDrawerOpen ? (
+            <WorkspaceActivityDrawer
+              activities={visibleActivities}
+              selectedSource={workspaceData.sourceStates.find(({ id }) => id === selectedSourceId)}
+              onRetry={(sourceId) => {
+                void workspaceData.refreshSource(sourceId).catch(() => undefined);
+              }}
+              onDismiss={dismissActivity}
+              onMarkAnnounced={markActivityAnnounced}
+            />
+          ) : null}
           <SymbolAnalysisContent
             ticker={selectedTicker}
+            selectionVersion={selectionVersion}
             candidate={selectedCandidate}
             position={openPosition}
             activeTab={activeTab}
             onTabChange={setAnalysisTab}
-            orderPanel={<ActionPanel ticker={selectedTicker} />}
+            orderPanel={
+              <ActionPanel
+                ticker={selectedTicker}
+                source={workspaceData.sourceStates.find(({ id }) => id === 'positionOrders')}
+              />
+            }
+            intelligenceOutdated={workspaceData.intelligenceOutdated}
+            intelligenceWorkflow={{
+              sources: workspaceData.sourceStates,
+              onEvidenceRefresh: setEvidenceRefresh,
+              evidenceRefreshActionRef,
+            }}
+            fundamentals={{
+              data: workspaceData.fundamentals.data,
+              isLoading: workspaceData.fundamentals.isLoading,
+              isFetching: workspaceData.fundamentals.isFetching,
+              isError: workspaceData.fundamentals.isError,
+              error: workspaceData.fundamentals.error,
+              isRefreshing: workspaceData.fundamentalsRefreshing,
+              refreshError: workspaceData.fundamentalsRefreshError,
+              onRefresh: () => {
+                void workspaceData.refreshSource('fundamentals').catch(() => undefined);
+              },
+            }}
           />
         </>
       )}

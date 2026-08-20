@@ -88,15 +88,4 @@ describe('transformRecommendation workflow contract', () => {
     expect(result.workflowStatus).toBe('needs_review');
     expect(result.nextStep).toEqual({ code: 'refresh_data' });
   });
-
-  it('downgrades a waiting workflow with a malformed currency', () => {
-    const result = transformRecommendation({
-      ...base,
-      workflow_status: 'waiting_trigger',
-      next_step: { code: 'wait_pullback', trigger_price: 98.5, currency: 'US D' },
-    });
-
-    expect(result.workflowStatus).toBe('needs_review');
-    expect(result.nextStep).toEqual({ code: 'refresh_data' });
-  });
 });

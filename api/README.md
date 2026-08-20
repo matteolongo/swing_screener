@@ -44,6 +44,11 @@ concentration is a risk-share warning and does not block an otherwise valid
 trade. Configure a separate 32-byte `ORDER_APPROVAL_SIGNING_KEY` in production;
 rotation invalidates outstanding tokens.
 
+A `waiting_trigger` pullback may receive a pending `BUY_LIMIT` token for manual
+order review; the observed entry trigger has not passed. `ready` still means
+the observed entry trigger passed. The token is required and submission remains
+manual.
+
 FastAPI service that exposes the Swing Screener backend as a REST API.
 
 ## Run
@@ -174,6 +179,10 @@ status/code pairs, missing waiting-trigger parameters, malformed or unknown
 currency codes, and non-finite or non-positive trigger prices to
 `needs_review` / `refresh_data`.
 
+A `waiting_trigger` / `wait_pullback` candidate may expose manual order review
+only with its pending `BUY_LIMIT` approval token. This does not make the
+candidate `ready`: `ready` remains reserved for an observed trigger pass.
+
 Same-symbol add-on evaluation replaces the fresh setup stop with the current
 live position stop, recalculates reward:risk and fee-to-risk, and rechecks
 `risk.min_rr` plus `risk.max_fee_risk_pct`. A live-stop plan outside either
@@ -209,7 +218,8 @@ Universes (`/api/universes`):
 - `POST /api/universes/{universe_id}/benchmark`
 
 Portfolio (`/api/portfolio`):
-- `GET /api/portfolio/positions`
+- `GET /api/portfolio/positions` — includes additive server-derived
+  `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
 - `GET /api/portfolio/positions/{position_id}`
 - `GET /api/portfolio/positions/{position_id}/metrics`
 - `PUT /api/portfolio/positions/{position_id}/stop`
@@ -223,7 +233,8 @@ Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/earnings-proximity/{ticker}`
 - `GET /api/portfolio/analytics/regime-breakdown`
 - `POST /api/portfolio/orders`
-- `GET /api/portfolio/orders/local`
+- `GET /api/portfolio/orders/local` — includes the same freshness metadata for
+  the persisted order ledger.
 - `POST /api/portfolio/orders/{order_id}/fill`
 - `DELETE /api/portfolio/orders/{order_id}`
 
@@ -232,8 +243,10 @@ Daily Review (`/api/daily-review`):
 - `POST /api/daily-review/compute` — supports the same `include_candidates` switch for local-persistence mode.
 
 Intelligence (`/api/intelligence`):
-- `POST /api/intelligence/{ticker}?force=false` — enriches with full data (fundamentals + Finnhub + earnings + SEC evidence, server-side blocking) then runs the two-call LLM analysis. Same-day cache is returned unless `force=true`. Responses carry nullable `pre_open_outlook` (US pre-market) and `thesis_delta` (when prior analyses exist), plus a `news` list (`{headline, url, date, sentiment}`, additive; defaults to `[]` for pre-existing cached results). Responses also expose additive `classified_catalysts` (typed, already-happened cited catalysts) and nullable `evidence_ledger` (advisory bull/bear evidence balance; never changes `action` or `conviction`). Returns 503 when `llm.analyzer_enabled: false` or `OPENAI_API_KEY` is unset.
-- `GET /api/intelligence/{ticker}/latest`
+- `GET /api/intelligence/{ticker}/evidence/latest` — read-only metadata for the newest valid persisted evidence cache. Returns `{ticker, cached_at, item_count, providers, freshness_status}` where the server derives `fresh`, `cached`, or `stale` from `config.evidence.cache_stale_after_days`. A normal cache absence returns 404 with `{detail, code: "evidence_not_cached"}`. It never calls collectors, an LLM, or mutates analysis, positions, orders, or trading state.
+- `POST /api/intelligence/{ticker}/evidence/refresh` — read-only refresh of configured intelligence evidence collectors. It does not call the LLM, generate/cache `SymbolIntelligence`, or mutate positions, orders, or trading state. Returns `{ticker, refreshed_at, status, sources}` where overall `status` is `fresh`, `partial`, or `failed`; each source includes `source`, provider id, `status` (`fresh` or `failed`), `item_count`, `as_of`, and a nullable sanitized `message`. Invalid tickers return 422. Provider exceptions and secrets are never returned.
+- `POST /api/intelligence/{ticker}?force=false&attempt_id=...` — enriches with full data (fundamentals + Finnhub + earnings + SEC evidence, server-side blocking) then runs the two-call LLM analysis. Same-day cache is returned unless `force=true`. The optional client-generated `attempt_id` is persisted additively in the trace and ticker run index together with the requested force mode, allowing an exact failed-or-successful attempt to be selected without clock correlation. Responses carry nullable `pre_open_outlook` (US pre-market) and `thesis_delta` (when prior analyses exist), plus a `news` list (`{headline, url, date, sentiment}`, additive; defaults to `[]` for pre-existing cached results). Responses also expose additive `classified_catalysts` (typed, already-happened cited catalysts), nullable `evidence_ledger` (advisory bull/bear evidence balance; never changes `action` or `conviction`), and `inputs_used.enrichment_diagnostics`. Each diagnostic has `source`, `status` (`used`, `missing`, or `failed`), nullable `as_of`, nullable `item_count`, and a nullable sanitized `message`; raw provider exceptions, payloads, and credential-bearing URLs are never returned. Older cached results may omit the diagnostics field. Returns 503 when `llm.analyzer_enabled: false` or `OPENAI_API_KEY` is unset.
+- `GET /api/intelligence/{ticker}/latest` — returns today's analysis cache. A normal no-analysis-today response remains a 404 with its legacy string `detail` and adds `code: "analysis_not_generated_today"`; clients must not infer this state from the message text.
 - `GET /api/intelligence/{ticker}/history` — per-symbol analysis history, newest-first, capped at `analysis_history.max_entries`. Returns `{entries: HistoryEntry[]}`; empty list (not 404) when none. History predictions may include an optional advisory `outcome` (`confirmed`, `contradicted`, `unresolved`) derived from later `thesis_delta.what_played_out` text.
 - `GET /api/intelligence/{ticker}/chat` — returns the persisted follow-up chat for today's cached analysis. Returns 409 when no cached analysis exists.
 - `POST /api/intelligence/{ticker}/chat` — asks an advisory follow-up question about today's cached analysis. Request body: `{message, refresh_sources, analysis_generated_at?, candidate?, position?}`. When `refresh_sources=true`, the endpoint refreshes only app-configured intelligence evidence collectors and returns `evidence_used` on the assistant message.
@@ -260,8 +273,8 @@ Watchlist (`/api/watchlist`):
 - `DELETE /api/watchlist/{ticker}`
 
 Market Data (`/api/market-data`):
-- `GET /api/market-data/{ticker}/candles` — returns `price_history` (OHLCV, up to 252 bars) and `patterns` for any ticker. Used as a fallback when the ticker is not present in the last screener result (e.g. open positions, watchlist items).
-- `GET /api/market-data/{ticker}/volume-analysis` — read-only advisory volume-zone analysis for one symbol. Query params: `interval` (default `1d`), `lookback` (default `120`), and `min_rr` (default `2.0`). Uses the configured market-data provider's OHLCV bars only, returns an approximate bar-based profile warning, and does not affect screener ranking, sizing, positions, or orders.
+- `GET /api/market-data/{ticker}/candles` — returns `price_history` (OHLCV, up to 252 bars) and `patterns` for any ticker. The additive provenance fields are `provider`, requested `interval`, `data_as_of` (latest candle date, nullable when no bars are available), and `fetched_at` (timezone-aware API fetch timestamp). Query param `interval` defaults to `1d`. A genuine empty provider result remains `200` with empty arrays; a provider exception returns structured `502 market_data_provider_failed` and never masquerades as empty success. Used as a fallback when the ticker is not present in the last screener result (e.g. open positions, watchlist items).
+- `GET /api/market-data/{ticker}/volume-analysis` — read-only advisory volume-zone analysis for one symbol. Query params: `interval` (default `1d`), `lookback` (default `120`), and `min_rr` (default `2.0`); the response echoes all three parameters with the normalized `symbol` so clients can validate query identity. Uses the configured market-data provider's OHLCV bars only. A valid empty provider result remains `200` with an empty/no-trade analysis; a provider exception returns sanitized structured `502 market_data_provider_failed` so clients can expose a retry. The endpoint returns an approximate bar-based profile warning and does not affect screener ranking, sizing, positions, or orders.
 
 Calendar:
 - `GET /api/calendar/events`

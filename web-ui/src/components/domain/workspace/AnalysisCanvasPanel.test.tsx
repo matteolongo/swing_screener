@@ -6,13 +6,14 @@ import * as fundamentalsHooks from '@/features/fundamentals/hooks';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
 import * as catalystHooks from '@/features/intelligence/catalysts/hooks';
 import * as intelligenceHooks from '@/features/intelligence/hooks';
-import type { SymbolIntelligence } from '@/features/intelligence/types';
+import type { EvidenceRefreshResponse, SymbolIntelligence } from '@/features/intelligence/types';
 import * as screenerHooks from '@/features/screener/hooks';
 import * as watchlistHooks from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { renderWithProviders } from '@/test/utils';
+import { formatDateTime } from '@/utils/formatters';
 
 vi.mock('@/features/fundamentals/hooks', () => ({
   useFundamentalSnapshotQuery: vi.fn(),
@@ -20,9 +21,28 @@ vi.mock('@/features/fundamentals/hooks', () => ({
 }));
 
 vi.mock('@/features/intelligence/hooks', () => ({
-  useRunTrace: () => ({ data: undefined, isLoading: false, isError: false }),
+  useRunTrace: vi.fn(),
+  useTickerRuns: vi.fn(),
+  findRunByAttemptId: vi.fn(() => null),
+  resolveRunId: vi.fn((runs, attemptedRunId, cachedRunId, hasFailedAttempt) => {
+    if (hasFailedAttempt) return attemptedRunId;
+    return attemptedRunId
+      ?? runs?.find((run: { clientAttemptId?: string | null }) => run.clientAttemptId)?.runId
+      ?? cachedRunId
+      ?? runs?.[0]?.runId
+      ?? null;
+  }),
   useIntelligenceAnalysisMutation: vi.fn(),
+  useEvidenceRefreshMutation: vi.fn(),
   useIntelligenceLatestQuery: vi.fn(),
+  useLatestEvidenceSummaryQuery: vi.fn(() => ({
+    data: undefined,
+    dataUpdatedAt: 0,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+  })),
   useIntelligenceHistoryQuery: vi.fn(() => ({ data: [], isLoading: false })),
   useIntelligenceChatQuery: vi.fn(() => ({ data: { ticker: 'AAPL', chatDate: '2026-07-03', analysisGeneratedAt: '2026-07-03T08:00:00Z', messages: [], refreshedAt: null }, isLoading: false, isError: false })),
   useSendIntelligenceChatMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false, isError: false, error: null })),
@@ -36,6 +56,15 @@ vi.mock('@/features/intelligence/catalysts/hooks', () => ({
 
 vi.mock('@/features/screener/hooks', () => ({
   useRunScreenerMutation: vi.fn(),
+  useTickerCandles: vi.fn(() => ({
+    data: undefined,
+    dataUpdatedAt: 0,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  })),
 }));
 
 vi.mock('@/features/watchlist/hooks', () => ({
@@ -140,10 +169,25 @@ describe('AnalysisCanvasPanel', () => {
       error: null,
       reset: vi.fn(),
     } as never);
+    vi.mocked(intelligenceHooks.useEvidenceRefreshMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
     vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: false,
+    } as never);
+    vi.mocked(intelligenceHooks.useRunTrace).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(intelligenceHooks.useTickerRuns).mockReturnValue({
+      data: [],
+      refetch: vi.fn().mockResolvedValue({ data: [] }),
     } as never);
     vi.mocked(catalystHooks.useSymbolCatalystQuery).mockReturnValue({
       data: undefined,
@@ -154,12 +198,620 @@ describe('AnalysisCanvasPanel', () => {
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
       analysisTab: 'fundamentals',
+      selectionVersion: 1,
+      activities: [],
+      activityDrawerOpen: false,
     });
     useScreenerStore.setState({ lastResult: null });
   });
 
+  it('keeps header, failure drawer, and analysis tabs in the keyboard traversal', async () => {
+    const failure = new Error('Fundamentals keyboard failure');
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: failure,
+      isError: true,
+      isFetching: false,
+      isLoading: false,
+      isFetchedAfterMount: true,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    useWorkspaceStore.getState().beginActivity({
+      requestId: 'fundamentals-keyboard-failure',
+      ticker: 'AAPL',
+      selectionVersion: 1,
+      sourceId: 'fundamentals',
+      phase: 'active',
+      startedAt: '2026-07-29T09:00:00Z',
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: 'refresh-fundamentals',
+      announced: false,
+    });
+    useWorkspaceStore.getState().settleActivity('fundamentals-keyboard-failure', {
+      phase: 'failed',
+      finishedAt: '2026-07-29T09:01:00Z',
+      message: failure.message,
+      retryable: true,
+    });
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+    const traversedNames: string[] = [];
+
+    for (let index = 0; index < 20; index += 1) {
+      await user.tab();
+      traversedNames.push(document.activeElement?.getAttribute('aria-label')
+        ?? document.activeElement?.textContent?.trim()
+        ?? '');
+    }
+
+    expect(traversedNames).toEqual(expect.arrayContaining([
+      t('workspacePage.controls.backToList'),
+      t('workspacePage.controls.refreshAll'),
+      t('workspacePage.controls.collapse'),
+      t('workspacePage.controls.fullscreen'),
+      t('workspacePage.controls.close'),
+      t('workspacePage.data.sources.screener'),
+      t('workspacePage.data.sources.prices'),
+      t('workspacePage.data.sources.fundamentals'),
+      t('workspacePage.data.sources.evidence'),
+      t('workspacePage.data.sources.intelligence'),
+      t('workspacePage.data.sources.positionOrders'),
+      t('workspacePage.data.retryActivity', {
+        source: t('workspacePage.data.sources.fundamentals'),
+        ticker: 'AAPL',
+      }),
+      t('workspacePage.data.dismissActivity', {
+        source: t('workspacePage.data.sources.fundamentals'),
+        ticker: 'AAPL',
+      }),
+      t('workspacePage.panels.analysis.tabs.fundamentals'),
+      t('workspacePage.fundamentals.run'),
+    ]));
+  });
+
+  it('keeps refresh-all enabled while only intelligence is loading', async () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: buildSnapshot(),
+      dataUpdatedAt: Date.parse('2026-03-19T10:00:00Z'),
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      isFetchedAfterMount: true,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isFetching: true,
+      isError: false,
+      error: null,
+      dataUpdatedAt: 0,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    await waitFor(() => expect(screen.getByRole('button', {
+      name: t('workspacePage.controls.refreshAll'),
+    })).toBeEnabled());
+  });
+
+  it('shows activity only for the active ticker and selection version', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    const baseActivity = {
+      sourceId: 'prices' as const,
+      phase: 'failed' as const,
+      startedAt: '2026-07-29T09:00:00Z',
+      finishedAt: '2026-07-29T09:01:00Z',
+      provider: null,
+      message: 'Unavailable',
+      retryable: true,
+      pipelineStep: 'fetch-prices',
+      announced: true,
+    };
+    useWorkspaceStore.setState({
+      activityDrawerOpen: true,
+      activities: [
+        { ...baseActivity, requestId: 'old-msft', ticker: 'MSFT', selectionVersion: 0 },
+        { ...baseActivity, requestId: 'current-aapl', ticker: 'AAPL', selectionVersion: 1 },
+      ],
+    });
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('current-aapl');
+    expect(screen.getByRole('status')).not.toHaveTextContent('old-msft');
+  });
+
+  it('keeps refresh-all disabled until its fundamentals mutation completes', async () => {
+    let finishRefresh!: (snapshot: FundamentalSnapshot) => void;
+    const mutateAsync = vi.fn(
+      () => new Promise<FundamentalSnapshot>((resolve) => {
+        finishRefresh = resolve;
+      }),
+    );
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: buildSnapshot(),
+      dataUpdatedAt: Date.parse('2026-03-19T10:00:00Z'),
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      isFetchedAfterMount: true,
+    } as never);
+    const mutationResult = {
+      mutate: vi.fn(),
+      mutateAsync,
+      isPending: false,
+      isError: false,
+      error: null,
+    };
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation)
+      .mockImplementation(() => mutationResult as never);
+    const { user, rerender } = renderWithProviders(<AnalysisCanvasPanel />);
+    const refreshAll = await screen.findByRole('button', {
+      name: t('workspacePage.controls.refreshAll'),
+    });
+    await waitFor(() => expect(refreshAll).toBeEnabled());
+
+    await user.click(refreshAll);
+    mutationResult.isPending = true;
+    rerender(<AnalysisCanvasPanel />);
+
+    expect(refreshAll).toBeDisabled();
+    await user.click(refreshAll);
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+
+    await act(async () => finishRefresh(buildSnapshot()));
+    mutationResult.isPending = false;
+    rerender(<AnalysisCanvasPanel />);
+    await waitFor(() => expect(refreshAll).toBeEnabled());
+  });
+
+  it('keeps a source refresh scoped while the user switches tabs', async () => {
+    let finishRefresh!: (snapshot: FundamentalSnapshot) => void;
+    const mutateAsync = vi.fn(
+      () => new Promise<FundamentalSnapshot>((resolve) => {
+        finishRefresh = resolve;
+      }),
+    );
+    useWorkspaceStore.setState({ analysisTab: 'fundamentals' });
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: buildSnapshot(),
+      dataUpdatedAt: Date.parse('2026-03-19T10:00:00Z'),
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      isFetchedAfterMount: true,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', { name: t('workspacePage.fundamentals.refresh') }));
+    await user.click(screen.getByRole('tab', {
+      name: t('workspacePage.panels.analysis.tabs.intelligence'),
+    }));
+
+    expect(screen.getByRole('tab', {
+      name: t('workspacePage.panels.analysis.tabs.intelligence'),
+    })).toHaveAttribute('aria-selected', 'true');
+    expect(mutateAsync).toHaveBeenCalledWith('AAPL');
+
+    await act(async () => finishRefresh(buildSnapshot()));
+    expect(screen.getByRole('tabpanel')).toBeVisible();
+  });
+
+  it('tracks a retried prices request from active through completed', async () => {
+    let finishRefresh!: () => void;
+    const candles = { isFetching: false };
+    const refetch = vi.fn(() => new Promise<void>((resolve) => {
+      candles.isFetching = true;
+      finishRefresh = () => {
+        candles.isFetching = false;
+        resolve();
+      };
+    }));
+    vi.mocked(screenerHooks.useTickerCandles).mockImplementation(() => ({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: candles.isFetching,
+      isLoading: false,
+      refetch,
+    } as never));
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    useWorkspaceStore.setState({
+      activityDrawerOpen: true,
+      activities: [{
+        requestId: 'failed-prices',
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        sourceId: 'prices',
+        phase: 'failed',
+        startedAt: '2026-07-29T09:00:00Z',
+        finishedAt: '2026-07-29T09:01:00Z',
+        provider: 'polygon',
+        message: 'Price history unavailable',
+        retryable: true,
+        pipelineStep: 'fetch-candles',
+        announced: true,
+      }],
+    });
+    const { user, rerender } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.data.retryActivity', {
+        source: t('workspacePage.data.sources.prices'),
+        ticker: 'AAPL',
+      }),
+    }));
+    rerender(<AnalysisCanvasPanel />);
+
+    expect(useWorkspaceStore.getState().activities[0]).toMatchObject({
+      sourceId: 'prices',
+      phase: 'active',
+    });
+    await act(async () => finishRefresh());
+    rerender(<AnalysisCanvasPanel />);
+    await waitFor(() => expect(useWorkspaceStore.getState().activities[0].phase).toBe('completed'));
+  });
+
+  it('handles a rejected source retry at the UI command boundary', async () => {
+    const refetch = vi.fn().mockRejectedValue(new Error('prices unavailable'));
+    vi.mocked(screenerHooks.useTickerCandles).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: new Error('prices unavailable'),
+      isError: true,
+      isFetching: false,
+      isLoading: false,
+      refetch,
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    useWorkspaceStore.setState({
+      activityDrawerOpen: true,
+      activities: [{
+        requestId: 'failed-prices',
+        ticker: 'AAPL',
+        selectionVersion: 1,
+        sourceId: 'prices',
+        phase: 'failed',
+        startedAt: '2026-07-29T09:00:00Z',
+        finishedAt: '2026-07-29T09:01:00Z',
+        provider: 'polygon',
+        message: 'Price history unavailable',
+        retryable: true,
+        pipelineStep: 'fetch-prices',
+        announced: true,
+      }],
+    });
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.data.retryActivity', {
+        source: t('workspacePage.data.sources.prices'),
+        ticker: 'AAPL',
+      }),
+    }));
+    await waitFor(() => expect(refetch).toHaveBeenCalledWith({ throwOnError: true }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Price history unavailable');
+  });
+
+  it('records a late intelligence result from an older selection as discarded', async () => {
+    let callbacks: {
+      onSuccess?: (result: SymbolIntelligence) => void;
+      onSettled?: () => Promise<void>;
+    } = {};
+    const mutate = vi.fn((_input, options) => {
+      callbacks = options as typeof callbacks;
+    });
+    useWorkspaceStore.setState({ analysisTab: 'intelligence' });
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate,
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.intelligence.generate'),
+    }));
+    expect(useWorkspaceStore.getState().activities[0]?.phase).toBe('active');
+
+    act(() => useWorkspaceStore.getState().setSelectedTicker('MSFT'));
+    await act(async () => {
+      callbacks.onSuccess?.({
+        symbol: 'AAPL',
+        generatedAt: '2026-07-29T09:02:00Z',
+        action: 'WATCH',
+        conviction: 'low',
+        catalystUrgency: 'low',
+        summaryLine: 'Late result',
+        narrative: 'Late result',
+        upcomingEvents: [],
+        positionSignal: null,
+        sources: [],
+        evidenceLedger: null,
+        classifiedCatalysts: [],
+      });
+      await callbacks.onSettled?.();
+    });
+
+    expect(useWorkspaceStore.getState().activities.find(
+      ({ sourceId }) => sourceId === 'intelligence',
+    )?.phase).toBe('discarded');
+    expect(screen.queryByText('Late result')).not.toBeInTheDocument();
+  });
+
+  it('discards an intelligence response with the wrong symbol identity', async () => {
+    let callbacks: {
+      onSuccess?: (result: SymbolIntelligence) => void;
+      onSettled?: (result: SymbolIntelligence, error: null) => Promise<void>;
+    } = {};
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate: vi.fn((_input, options) => {
+        callbacks = options as typeof callbacks;
+      }),
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    useWorkspaceStore.setState({ analysisTab: 'intelligence' });
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.intelligence.generate'),
+    }));
+    const wrongSymbol: SymbolIntelligence = {
+      symbol: 'MSFT',
+      generatedAt: '2026-07-29T09:02:00Z',
+      action: 'WATCH',
+      conviction: 'low',
+      catalystUrgency: 'low',
+      summaryLine: 'Wrong symbol result',
+      narrative: 'Wrong symbol result',
+      upcomingEvents: [],
+      positionSignal: null,
+      sources: [],
+      evidenceLedger: null,
+      classifiedCatalysts: [],
+    };
+    await act(async () => {
+      callbacks.onSuccess?.(wrongSymbol);
+      await callbacks.onSettled?.(wrongSymbol, null);
+    });
+
+    expect(useWorkspaceStore.getState().activities.find(
+      ({ sourceId }) => sourceId === 'intelligence',
+    )?.phase).toBe('discarded');
+    expect(screen.queryByText('Wrong symbol result')).not.toBeInTheDocument();
+  });
+
+  it('ignores intelligence completion after the workspace unmounts', async () => {
+    let callbacks: {
+      onSuccess?: (result: SymbolIntelligence) => void;
+      onSettled?: () => Promise<void>;
+    } = {};
+    const mutate = vi.fn((_input, options) => {
+      callbacks = options as typeof callbacks;
+    });
+    useWorkspaceStore.setState({ analysisTab: 'intelligence' });
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate,
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    const { user, unmount } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.intelligence.generate'),
+    }));
+    unmount();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await act(async () => {
+      callbacks.onSuccess?.({
+        symbol: 'AAPL',
+        generatedAt: '2026-07-28T00:00:00Z',
+        action: 'WATCH',
+        conviction: 'low',
+        catalystUrgency: 'low',
+        summaryLine: 'Late result',
+        narrative: 'Late result',
+        upcomingEvents: [],
+        positionSignal: null,
+        sources: [],
+        evidenceLedger: null,
+        classifiedCatalysts: [],
+      });
+      await callbacks.onSettled?.();
+    });
+
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(useWorkspaceStore.getState().activities.find(
+      ({ sourceId }) => sourceId === 'intelligence',
+    )?.phase).toBe('discarded');
+    consoleError.mockRestore();
+  });
+
+  it('keeps a partial evidence refresh retryable', async () => {
+    let callbacks: {
+      onSuccess?: (result: EvidenceRefreshResponse) => void;
+      onSettled?: (result: EvidenceRefreshResponse, error: null) => void;
+    } = {};
+    vi.mocked(intelligenceHooks.useEvidenceRefreshMutation).mockReturnValue({
+      mutate: vi.fn((_ticker, options) => {
+        callbacks = options as typeof callbacks;
+      }),
+      isPending: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+    useWorkspaceStore.setState({ analysisTab: 'intelligence' });
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    await user.click(screen.getByRole('button', {
+      name: t('workspacePage.intelligence.refreshEvidence'),
+    }));
+    const response: EvidenceRefreshResponse = {
+      ticker: 'AAPL',
+      refreshedAt: '2026-07-29T09:02:00Z',
+      status: 'partial',
+      sources: [{
+        source: 'evidence',
+        provider: 'finnhub',
+        status: 'failed',
+        itemCount: 0,
+        asOf: '2026-07-29',
+        message: 'Provider unavailable',
+      }],
+    };
+    act(() => {
+      callbacks.onSuccess?.(response);
+      callbacks.onSettled?.(response, null);
+    });
+
+    expect(useWorkspaceStore.getState().activities.find(
+      ({ sourceId }) => sourceId === 'evidence',
+    )).toMatchObject({
+      phase: 'partial',
+      retryable: true,
+      message: 'Provider unavailable',
+    });
+  });
+
   it('runs fundamentals analysis for the selected symbol from the canvas', async () => {
-    const mutate = vi.fn();
+    const mutateAsync = vi.fn().mockResolvedValue(buildSnapshot());
 
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
@@ -167,7 +819,7 @@ describe('AnalysisCanvasPanel', () => {
       data: undefined,
     } as never);
     vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
-      mutate,
+      mutateAsync,
       data: undefined,
       isPending: false,
       isError: false,
@@ -176,13 +828,13 @@ describe('AnalysisCanvasPanel', () => {
 
     const { user } = renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(t('workspacePage.panels.analysis.fundamentals.noSnapshot'))).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.fundamentals.noSnapshot'))).toBeInTheDocument();
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Run fundamentals analysis' }));
     });
 
-    expect(mutate).toHaveBeenCalledWith('AAPL');
+    expect(mutateAsync).toHaveBeenCalledWith('AAPL');
   });
 
   it('renders NarrativeAnalysisCard in the Intelligence tab when latest intelligence has a narrative', async () => {
@@ -232,12 +884,12 @@ describe('AnalysisCanvasPanel', () => {
       await user.click(screen.getByRole('tab', { name: 'Intelligence' }));
     });
 
-    expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
+    expect(screen.getAllByText('AAPL is showing strong momentum with a confirmed breakout.')).not.toHaveLength(0);
     // DecisionSummaryCard heading should NOT appear
     expect(screen.queryByText(/AAPL Decision Summary/)).not.toBeInTheDocument();
   });
 
-  it('renders the decision summary card in overview for the selected screener candidate', () => {
+  it('renders one decision-first overview for the selected screener candidate', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -301,12 +953,11 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
-    expect(screen.getAllByText(t('recommendation.workflow.nextStep.refresh_data')).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Buy Now/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toHaveLength(1);
+    expect(screen.getByRole('table', { name: t('workspacePage.overview.tradePlan') })).toBeVisible();
   });
 
-  it('renders the price chart before the catalyst card in overview', () => {
+  it('renders the catalyst summary before the technical chart in overview', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -380,7 +1031,7 @@ describe('AnalysisCanvasPanel', () => {
     const chart = screen.getByText('Chart AAPL');
     const catalyst = screen.getByText('Unique catalyst thesis marker for ordering');
     expect(
-      chart.compareDocumentPosition(catalyst) & Node.DOCUMENT_POSITION_FOLLOWING
+      catalyst.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 
@@ -399,8 +1050,39 @@ describe('AnalysisCanvasPanel', () => {
       evidenceLedger: null,
       classifiedCatalysts: [],
     };
-    const mutate = vi.fn((_variables: unknown, options?: { onSuccess?: (result: SymbolIntelligence) => void }) => {
+    const mutate = vi.fn(async (
+      _variables: unknown,
+      options?: {
+        onSuccess?: (result: SymbolIntelligence) => void;
+        onSettled?: () => Promise<void>;
+      },
+    ) => {
       options?.onSuccess?.(mockIntelligence);
+      await options?.onSettled?.();
+    });
+    const refetchRuns = vi.fn().mockResolvedValue({
+      data: [{
+        runId: 'run-current-attempt',
+        ticker: 'AAPL',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        status: 'ok',
+        durationMs: 1,
+        stepCount: 1,
+      }],
+    });
+    vi.mocked(intelligenceHooks.useTickerRuns).mockReturnValue({
+      data: [],
+      refetch: refetchRuns,
+    } as never);
+    vi.mocked(intelligenceHooks.findRunByAttemptId).mockReturnValue({
+      runId: 'run-current-attempt',
+      ticker: 'AAPL',
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      status: 'ok',
+      durationMs: 1,
+      stepCount: 1,
     });
     vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
       mutate,
@@ -481,14 +1163,20 @@ describe('AnalysisCanvasPanel', () => {
     });
 
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: 'Analyze with AI' }));
+      await user.click(screen.getByRole('button', { name: t('workspacePage.intelligence.generate') }));
     });
 
     expect(mutate).toHaveBeenCalledWith(
       expect.objectContaining({ ticker: 'AAPL' }),
       expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(intelligenceHooks.useRunTrace).toHaveBeenCalledWith(
+        'run-current-attempt',
+        true,
+      );
+    });
+    expect(screen.getAllByText('AAPL is showing strong momentum with a confirmed breakout.')).not.toHaveLength(0);
   });
 
   it('labels the fundamentals summary strip by metric horizon', () => {
@@ -507,16 +1195,12 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText('About metric labels')).toBeInTheDocument();
-    expect(screen.getByText('Live price')).toBeInTheDocument();
-    expect(screen.getByText('Reported')).toBeInTheDocument();
-    expect(screen.getByText('Latest FY / quarter')).toBeInTheDocument();
     expect(
       screen.getAllByText(/yfinance · 2026-03-19/i).length
     ).toBeGreaterThan(0);
   });
 
-  it('live reloads the selected candidate when refreshed fundamentals arrive', async () => {
+  it('preserves the historical screener candidate when refreshed fundamentals arrive', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -568,15 +1252,12 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    await waitFor(() => {
-      const candidate = useScreenerStore.getState().lastResult?.candidates[0];
-      expect(candidate?.fundamentalsCoverageStatus).toBe('supported');
-      expect(candidate?.decisionSummary?.valuationContext.method).toBe('earnings_multiple');
-      expect(candidate?.decisionSummary?.valuationContext.summary).toContain('Trailing PE is 24.6x');
-    });
+    const candidate = useScreenerStore.getState().lastResult?.candidates[0];
+    expect(candidate?.fundamentalsCoverageStatus).toBeUndefined();
+    expect(candidate?.decisionSummary).toBeUndefined();
   });
 
-  it('shows DecisionSummaryCard in overview while intelligence is loading', () => {
+  it('keeps the canonical decision visible in overview while intelligence is loading', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -645,7 +1326,7 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toBeVisible();
   });
 
   it('does not render BeginnerDecisionHeader in overview when decisionSummary is present', () => {
@@ -785,7 +1466,7 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(t('workspacePage.panels.analysis.decisionWhy.title'))).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.overview.decisionRationale'))).toBeInTheDocument();
     // NarrativeAnalysisCard renders "{symbol} — AI analysis" in a <span>
     const aiTitle = screen.queryByText((_content, el) =>
       el?.tagName === 'SPAN' &&
@@ -835,6 +1516,7 @@ describe('AnalysisCanvasPanel', () => {
   });
 
   it('renders a watch toggle for the selected symbol', () => {
+    useWorkspaceStore.setState({ analysisTab: 'overview' });
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
       isError: false,
@@ -872,7 +1554,7 @@ describe('AnalysisCanvasPanel', () => {
     expect(screen.queryByRole('heading', { name: 'AAPL', level: 3 })).not.toBeInTheDocument();
   });
 
-  it('fundamentals tab: metric labels glossary is collapsed by default', () => {
+  it('fundamentals tab: provider activity is hidden by default', () => {
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
       isError: false,
@@ -889,11 +1571,13 @@ describe('AnalysisCanvasPanel', () => {
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(
-      screen.getByText('multiple or ratio that moves with the stock price')
-    ).not.toBeVisible();
+      screen.queryByText(
+        t('workspacePage.fundamentals.providerActivity', { provider: 'yfinance' }),
+      ),
+    ).not.toBeInTheDocument();
   });
 
-  it('fundamentals tab: metric labels glossary details has no open attribute', () => {
+  it('fundamentals tab: reveals provider activity on request', async () => {
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
       isError: false,
@@ -907,11 +1591,16 @@ describe('AnalysisCanvasPanel', () => {
       error: null,
     } as never);
 
-    renderWithProviders(<AnalysisCanvasPanel />);
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
 
-    const details = screen.getByText('About metric labels').closest('details');
-    expect(details).not.toBeNull();
-    expect(details).not.toHaveAttribute('open');
+    await user.click(
+      screen.getByRole('button', { name: t('workspacePage.data.showActivity') }),
+    );
+    expect(
+      screen.getByText(
+        t('workspacePage.fundamentals.providerActivity', { provider: 'yfinance' }),
+      ),
+    ).toBeVisible();
   });
 
   it('fundamentals tab: shows a refresh button in the compact row', () => {
@@ -930,7 +1619,9 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', {
+      name: t('workspacePage.fundamentals.refresh'),
+    })).toBeInTheDocument();
   });
 
   it('fundamentals tab: shows updated timestamp when snapshot exists', () => {
@@ -949,7 +1640,7 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(/Updated/i)).toBeInTheDocument();
+    expect(screen.getByText(formatDateTime(buildSnapshot().updatedAt))).toBeInTheDocument();
   });
 });
 

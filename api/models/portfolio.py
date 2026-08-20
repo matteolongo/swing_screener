@@ -495,6 +495,13 @@ class PositionsResponse(BaseModel):
     asof: str
 
 
+class OrdersSnapshotResponse(BaseModel):
+    orders: list[dict[str, object]]
+    asof: str
+    snapshot_freshness: Literal["fresh", "stale"] = "fresh"
+    stale_after_days: int = 1
+
+
 class PositionWithMetrics(Position):
     """Position with precomputed financial metrics."""
 
@@ -536,6 +543,8 @@ class PositionWithMetrics(Position):
 class PositionsWithMetricsResponse(BaseModel):
     positions: list[PositionWithMetrics]
     asof: str
+    snapshot_freshness: Literal["fresh", "stale"] = "fresh"
+    stale_after_days: int = 1
 
 
 class PositionMetrics(BaseModel):

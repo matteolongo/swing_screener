@@ -38,7 +38,7 @@ def _mock_provider(ohlcv):
 
 def test_volume_analysis_happy_path(monkeypatch):
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider",
+        "api.routers.market_data.get_market_data_provider",
         lambda *a, **k: _mock_provider(_ohlcv()),
     )
     res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
@@ -56,24 +56,45 @@ def test_volume_analysis_happy_path(monkeypatch):
 def test_volume_analysis_query_params(monkeypatch):
     prov = _mock_provider(_ohlcv())
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider", lambda *a, **k: prov
+        "api.routers.market_data.get_market_data_provider", lambda *a, **k: prov
     )
     res = TestClient(app).get(
         "/api/market-data/AAPL/volume-analysis?interval=1d&lookback=60&min_rr=3"
     )
     assert res.status_code == 200
+    assert res.json()["symbol"] == "AAPL"
+    assert res.json()["interval"] == "1d"
     assert res.json()["lookback"] == 60
+    assert res.json()["min_rr"] == 3.0
     assert prov.fetch_ohlcv.called
 
 
-def test_volume_analysis_soft_fail_on_fetch_error(monkeypatch):
+def test_volume_analysis_reports_provider_failure(monkeypatch):
     prov = MagicMock(spec=MarketDataProvider)
-    prov.fetch_ohlcv.side_effect = RuntimeError("boom")
+    prov.fetch_ohlcv.side_effect = RuntimeError("api_key=secret")
     prov.get_provider_name.return_value = "mock"
     monkeypatch.setattr(
-        "api.routers.market_data.get_default_provider", lambda *a, **k: prov
+        "api.routers.market_data.get_market_data_provider", lambda *a, **k: prov
     )
     res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
+
+    assert res.status_code == 502
+    assert res.json()["detail"] == {
+        "code": "market_data_provider_failed",
+        "message": "Market data provider failed.",
+        "provider": "mock",
+    }
+    assert "secret" not in res.text
+
+
+def test_volume_analysis_empty_provider_result_is_valid_absence(monkeypatch):
+    monkeypatch.setattr(
+        "api.routers.market_data.get_market_data_provider",
+        lambda *a, **k: _mock_provider(pd.DataFrame()),
+    )
+
+    res = TestClient(app).get("/api/market-data/AAPL/volume-analysis")
+
     assert res.status_code == 200
     data = res.json()
     assert data["action"] == "No Trade"

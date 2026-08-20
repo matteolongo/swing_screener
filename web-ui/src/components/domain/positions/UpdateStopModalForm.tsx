@@ -208,7 +208,7 @@ export default function UpdateStopModalForm({
         </Field>
 
         {error ? (
-          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+          <div role="alert" className="bg-danger/10 border border-danger/40 rounded p-3">
             <p className="text-sm text-danger">{error}</p>
           </div>
         ) : null}

@@ -84,14 +84,42 @@ describe('transformIntelligence inputs_used', () => {
     const api = makeBase();
     api.inputs_used = { trade_plan: { entry: 100, rr: 2.5 } };
     const result = transformIntelligence(api);
-    expect(result.inputsUsed).toEqual({ trade_plan: { entry: 100, rr: 2.5 } });
+    expect(result.inputsUsed).toEqual({
+      trade_plan: { entry: 100, rr: 2.5 },
+      enrichmentDiagnostics: [],
+    });
   });
 
   it('defaults inputsUsed to empty object when inputs_used absent', () => {
     const api = makeBase();
     delete (api as unknown as Record<string, unknown>).inputs_used;
     const result = transformIntelligence(api);
-    expect(result.inputsUsed).toEqual({});
+    expect(result.inputsUsed).toEqual({ enrichmentDiagnostics: [] });
+  });
+
+  it('maps enrichment diagnostics to camelCase', () => {
+    const api = makeBase();
+    api.inputs_used = {
+      enrichment_diagnostics: [
+        {
+          source: 'evidence',
+          status: 'used',
+          as_of: '2026-07-28T12:00:00Z',
+          item_count: 2,
+          message: null,
+        },
+      ],
+    };
+
+    expect(transformIntelligence(api).inputsUsed?.enrichmentDiagnostics).toEqual([
+      {
+        source: 'evidence',
+        status: 'used',
+        asOf: '2026-07-28T12:00:00Z',
+        itemCount: 2,
+        message: null,
+      },
+    ]);
   });
 });
 

@@ -1,38 +1,36 @@
-import { useState, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, useEffect, useId, useRef, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
-import AgentTracePanel from '@/components/domain/workspace/AgentTracePanel';
-import CatalystContextCard from '@/components/domain/workspace/CatalystContextCard';
-import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
+import {
+  findRunByAttemptId,
+  resolveRunId,
+  useEvidenceRefreshMutation,
+  useIntelligenceAnalysisMutation,
+  useIntelligenceLatestQuery,
+  useRunTrace,
+  useTickerRuns,
+} from '@/features/intelligence/hooks';
+import { canReviewPendingPullbackOrder } from '@/components/domain/recommendation/workflowPresentation';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
-import type { SymbolIntelligence } from '@/features/intelligence/types';
-import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCandleChart';
-import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
-import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
-import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
-import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
-import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
-import IntelligenceChatPanel from '@/components/domain/workspace/IntelligenceChatPanel';
-import IntelligenceDecisionBrief from '@/components/domain/workspace/IntelligenceDecisionBrief';
-import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
-import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
-import PositionReviewPanel from '@/components/domain/workspace/PositionReviewPanel';
-import StrategicReviewPanel from '@/components/domain/workspace/StrategicReviewPanel';
+import type {
+  EvidenceRefreshResponse,
+  SymbolIntelligence,
+} from '@/features/intelligence/types';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
-import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
+import SymbolFundamentalsTab from '@/components/domain/workspace/SymbolFundamentalsTab';
+import SymbolIntelligenceTab from '@/components/domain/workspace/SymbolIntelligenceTab';
+import SymbolOverviewTab from '@/components/domain/workspace/SymbolOverviewTab';
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { ScreenerResponse } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
-import {
-  useFundamentalSnapshotQuery,
-  useRefreshFundamentalSnapshotMutation,
-} from '@/features/fundamentals/hooks';
+import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
-import { formatDateTime } from '@/utils/formatters';
 
 interface SymbolAnalysisContentProps {
   ticker: string;
@@ -41,14 +39,23 @@ interface SymbolAnalysisContentProps {
   activeTab: WorkspaceAnalysisTab;
   onTabChange: (tab: WorkspaceAnalysisTab) => void;
   orderPanel?: ReactNode;
-}
-
-function provenanceLegendItems() {
-  return [
-    { label: 'Live price', detail: 'multiple or ratio that moves with the stock price' },
-    { label: 'Reported', detail: 'point-in-time value from the latest data snapshot' },
-    { label: 'Latest FY / quarter', detail: 'value from a specific reported statement period' },
-  ];
+  intelligenceOutdated?: boolean;
+  selectionVersion?: number;
+  intelligenceWorkflow?: {
+    sources: WorkspaceSourceState[];
+    onEvidenceRefresh?: (result: EvidenceRefreshResponse) => void;
+    evidenceRefreshActionRef?: MutableRefObject<(() => void) | null>;
+  };
+  fundamentals?: {
+    data?: FundamentalSnapshot;
+    isLoading: boolean;
+    isFetching: boolean;
+    isError: boolean;
+    error: Error | null;
+    isRefreshing: boolean;
+    refreshError: Error | null;
+    onRefresh: () => void;
+  };
 }
 
 export default function SymbolAnalysisContent({
@@ -58,14 +65,23 @@ export default function SymbolAnalysisContent({
   activeTab,
   onTabChange,
   orderPanel = null,
+  intelligenceOutdated = false,
+  selectionVersion = 0,
+  intelligenceWorkflow,
+  fundamentals = {
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    isRefreshing: false,
+    refreshError: null,
+    onRefresh: () => undefined,
+  },
 }: SymbolAnalysisContentProps) {
   const watchlistQuery = useWatchlist();
   const watchSymbolMutation = useWatchSymbolMutation();
   const unwatchSymbolMutation = useUnwatchSymbolMutation();
-  const fundamentalsQuery = useFundamentalSnapshotQuery(
-    activeTab === 'fundamentals' || activeTab === 'overview' ? ticker : undefined
-  );
-  const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
   const computeAnalysisMutation = useRunScreenerMutation((result) => {
     const newCandidate = result.candidates[0];
     if (!newCandidate) return;
@@ -86,69 +102,177 @@ export default function SymbolAnalysisContent({
   });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
+  const evidenceRefreshMutation = useEvidenceRefreshMutation();
   const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
-  const currentTickerRef = useRef(ticker.toUpperCase());
+  const [attemptedRunId, setAttemptedRunId] = useState<string | null>(null);
+  const [lastAttemptForce, setLastAttemptForce] = useState(false);
+  const [refreshedEvidence, setRefreshedEvidence] =
+    useState<EvidenceRefreshResponse | null>(null);
+  const currentSessionRef = useRef(`${ticker.trim().toUpperCase()}:${selectionVersion}`);
+  const mountedRef = useRef(true);
   const tabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
+  const tickerRuns = useTickerRuns(ticker, activeTab === 'intelligence');
+  const traceRunId = resolveRunId(
+    tickerRuns.data,
+    attemptedRunId,
+    displayedIntelligence?.runId,
+    intelligenceMutation.isError,
+  );
+  const persistedAttemptForce = tickerRuns.data?.find(
+    (run) => run.runId === traceRunId,
+  )?.attemptForce;
+  const runTrace = useRunTrace(
+    traceRunId,
+    activeTab === 'intelligence' && Boolean(traceRunId),
+  );
   const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
-  const hasNarrative = Boolean(!isIntelligenceLoading && displayedIntelligence?.narrative?.trim());
 
   useEffect(() => {
-    currentTickerRef.current = ticker.toUpperCase();
-  }, [ticker]);
+    currentSessionRef.current = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+  }, [ticker, selectionVersion]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const requestMatchesLiveSession = (
+    requestedSession: string,
+    responseTicker?: string | null,
+  ) => {
+    const normalized = ticker.trim().toUpperCase();
+    const workspace = useWorkspaceStore.getState();
+    const workspaceMatches = selectionVersion === 0
+      || (
+        workspace.selectedTicker === normalized
+        && workspace.selectionVersion === selectionVersion
+      );
+    return mountedRef.current
+      && requestedSession === currentSessionRef.current
+      && workspaceMatches
+      && (responseTicker == null || responseTicker.trim().toUpperCase() === normalized);
+  };
 
   const handleAnalyzeWithAi = (force = false) => {
+    const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+    const attemptId = globalThis.crypto.randomUUID();
+    const requestId = globalThis.crypto.randomUUID();
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker,
+      selectionVersion,
+      sourceId: 'intelligence',
+      phase: 'active',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: force ? 'regenerate-analysis' : 'generate-analysis',
+      announced: false,
+    });
+    setAttemptedRunId(null);
+    setLastAttemptForce(force);
     intelligenceMutation.mutate(
-      { ticker, candidate, position, force },
+      { ticker, candidate, position, force, attemptId },
       {
         onSuccess: (result) => {
-          if (result.symbol.toUpperCase() === currentTickerRef.current) {
+          if (requestMatchesLiveSession(requestedSession, result.symbol)) {
             setIntelligenceResult(result);
           }
+        },
+        onSettled: async (result, error) => {
+          const refreshedRuns = await tickerRuns.refetch();
+          const sessionChanged = !requestMatchesLiveSession(
+            requestedSession,
+            result?.symbol,
+          );
+          useWorkspaceStore.getState().settleActivity(requestId, {
+            phase: sessionChanged ? 'discarded' : error ? 'failed' : 'completed',
+            finishedAt: new Date().toISOString(),
+            message: sessionChanged
+              ? t('workspacePage.data.activitySelectionChanged')
+              : error?.message ?? null,
+            retryable: !sessionChanged && Boolean(error),
+          });
+          if (sessionChanged || !mountedRef.current) return;
+          const attemptedRun = findRunByAttemptId(
+            refreshedRuns.data ?? [],
+            ticker,
+            attemptId,
+          );
+          setAttemptedRunId(attemptedRun?.runId ?? null);
         },
       }
     );
   };
 
-  const renderAnalyzePrompt = (description: string, showButton: boolean) => (
-    <div className="rounded-lg border border-border bg-surface p-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
-          </p>
-          <p className="mt-1 text-sm text-muted">{description}</p>
-        </div>
-        {showButton && (
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={intelligenceMutation.isPending}
-            onClick={() => handleAnalyzeWithAi(false)}
-          >
-            {intelligenceMutation.isPending
-              ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-              : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
-          </Button>
-        )}
-      </div>
-      {intelligenceMutation.isError && (
-        <p className="mt-2 text-sm text-danger">
-          {intelligenceMutation.error instanceof Error
-            ? intelligenceMutation.error.message
-            : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-        </p>
-      )}
-    </div>
-  );
+  const handleRefreshEvidence = () => {
+    const requestedSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+    const requestId = globalThis.crypto.randomUUID();
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker,
+      selectionVersion,
+      sourceId: 'evidence',
+      phase: 'active',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: 'refresh-evidence',
+      announced: false,
+    });
+    setRefreshedEvidence(null);
+    evidenceRefreshMutation.mutate(ticker, {
+      onSuccess: (result) => {
+        if (requestMatchesLiveSession(requestedSession, result.ticker)) {
+          setRefreshedEvidence(result);
+          intelligenceWorkflow?.onEvidenceRefresh?.(result);
+        }
+      },
+      onSettled: (result, error) => {
+        const sessionChanged = !requestMatchesLiveSession(
+          requestedSession,
+          result?.ticker,
+        );
+        const responseFailed = result?.status === 'failed';
+        const responsePartial = result?.status === 'partial';
+        useWorkspaceStore.getState().settleActivity(requestId, {
+          phase: sessionChanged
+            ? 'discarded'
+            : error || responseFailed ? 'failed'
+              : result?.status === 'partial' ? 'partial' : 'completed',
+          finishedAt: new Date().toISOString(),
+          provider: result?.sources.map(({ provider }) => provider).join(', ') || null,
+          message: sessionChanged
+            ? t('workspacePage.data.activitySelectionChanged')
+            : error?.message
+              ?? result?.sources.find(({ status }) => status === 'failed')?.message
+              ?? null,
+          retryable: !sessionChanged && Boolean(error || responseFailed || responsePartial),
+        });
+      },
+    });
+  };
+  if (intelligenceWorkflow?.evidenceRefreshActionRef) {
+    intelligenceWorkflow.evidenceRefreshActionRef.current = handleRefreshEvidence;
+  }
 
   useEffect(() => {
     setIntelligenceResult(null);
+    setAttemptedRunId(null);
+    setLastAttemptForce(false);
+    setRefreshedEvidence(null);
     intelligenceMutation.reset();
-  }, [ticker]);
+    evidenceRefreshMutation.reset();
+  }, [ticker, selectionVersion]);
 
   // Open positions are suppressed from the screener as manage-only, so a held
   // symbol has no candidate and the analysis (and AI payload) is thin. Compute
@@ -167,9 +291,10 @@ export default function SymbolAnalysisContent({
   const heldMode = Boolean(position);
   const canAddOn = Boolean(
     (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
-      && candidate.recommendation?.workflowStatus === 'ready',
+      && (candidate.recommendation?.workflowStatus === 'ready' || canReviewPendingPullbackOrder(candidate)),
   );
-  const candidateCanReviewOrder = !candidate || candidate.recommendation?.workflowStatus === 'ready';
+  const candidateCanReviewOrder = candidate?.recommendation?.workflowStatus === 'ready'
+    || (candidate != null && canReviewPendingPullbackOrder(candidate));
   const canReviewOrder = heldMode ? canAddOn : candidateCanReviewOrder;
 
   useEffect(() => {
@@ -259,36 +384,8 @@ export default function SymbolAnalysisContent({
         aria-labelledby={`${tabsId}-tab-${activeTab}`}
         className="flex-1 min-h-0 overflow-y-auto space-y-3"
       >
-        <AnalysisDecisionStrip
-          ticker={ticker}
-          candidate={candidate}
-          position={position}
-          onPrepareOrder={canReviewOrder ? () => onTabChange('order') : undefined}
-          isWatched={isWatched}
-          isPendingWatch={isWatchPending}
-          onWatch={handleWatch}
-          onUnwatch={handleUnwatch}
-        />
-
         {activeTab === 'overview' && (
           <>
-            <DecisionWhyPanel
-              summary={candidate?.decisionSummary}
-              recommendation={candidate?.recommendation}
-            />
-            <FundamentalsStrip
-              trailingPe={fundamentalsQuery.data?.trailingPe ?? null}
-              revenueGrowthYoy={fundamentalsQuery.data?.revenueGrowthYoy ?? null}
-              grossMargin={fundamentalsQuery.data?.grossMargin ?? null}
-              valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
-            />
-            {heldMode && position && (
-              <ManagePositionPanel
-                position={position}
-                candidate={candidate}
-                onPrepareOrder={canReviewOrder ? () => onTabChange('order') : undefined}
-              />
-            )}
             {!candidate && (
               <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
                 <p className="text-sm text-muted">
@@ -316,33 +413,36 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
-            {candidate?.decisionSummary ? (
-              <DecisionSummaryCard
-                summary={candidate.decisionSummary}
-                recommendation={candidate.recommendation}
-                currency={candidate.currency}
-                onRefreshFundamentals={() => refreshFundamentalsMutation.mutate(ticker)}
-                isRefreshingFundamentals={refreshFundamentalsMutation.isPending}
-              />
-            ) : null}
-            <div className="rounded-lg border border-border bg-surface p-3">
-              <CachedSymbolCandleChart
-                ticker={ticker}
-                width={820}
-                height={220}
-              />
-              {candidate?.patternStop != null && (
-                <p className="mt-2 text-xs text-primary">
-                  {t('chart.patternStopLabel')}: {candidate.patternStop.toFixed(2)}
-                  {candidate.currency ? ` ${candidate.currency}` : ''}
-                  {candidate.patternStopReason ? ` · ${candidate.patternStopReason}` : ''}
-                </p>
-              )}
-            </div>
-            {catalystQuery.data && (
-              <CatalystContextCard opportunity={catalystQuery.data} />
-            )}
-            {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
+            <SymbolOverviewTab
+              model={{
+                ticker,
+                candidate,
+                position,
+                fundamentals: {
+                  data: fundamentals.data,
+                  isLoading: fundamentals.isLoading,
+                  isError: fundamentals.isError,
+                  error: fundamentals.error,
+                },
+                catalyst: {
+                  data: catalystQuery.data,
+                  isLoading: catalystQuery.isLoading,
+                  isError: catalystQuery.isError,
+                  error: catalystQuery.error,
+                },
+                intelligenceOutdated,
+                sources: (intelligenceWorkflow?.sources ?? []).filter(
+                  ({ id }) => id === 'fundamentals' || id === 'evidence' || id === 'intelligence',
+                ),
+                onOpenFundamentals: () => onTabChange('fundamentals'),
+                onOpenIntelligence: () => onTabChange('intelligence'),
+                onPrepareOrder: canReviewOrder ? () => onTabChange('order') : undefined,
+                isWatched,
+                isPendingWatch: isWatchPending,
+                onWatch: handleWatch,
+                onUnwatch: handleUnwatch,
+              }}
+            />
           </>
         )}
 
@@ -350,163 +450,57 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
 
-        {activeTab === 'volumeZones' && <VolumeZonesTab ticker={ticker} />}
+        {activeTab === 'volumeZones' && (
+          <VolumeZonesTab
+            ticker={ticker}
+            sources={(intelligenceWorkflow?.sources ?? []).filter(
+              ({ id }) => id === 'prices' || id === 'screener',
+            )}
+          />
+        )}
 
         {activeTab === 'intelligence' && (
-          <>
-            {isIntelligenceLoading ? (
-              <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
-                {t('workspacePage.panels.analysis.intelligence.analyzingAction')}
-              </div>
-            ) : (
-              <>
-                <IntelligenceDecisionBrief candidate={candidate} intelligence={displayedIntelligence} />
-
-                {hasNarrative && displayedIntelligence ? (
-                  <>
-                    <div className="grid gap-3 xl:grid-cols-2">
-                      <PositionReviewPanel ticker={ticker} position={position} />
-                      <StrategicReviewPanel ticker={ticker} />
-                    </div>
-
-                    <details className="rounded-lg border border-border bg-surface p-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Full intelligence report</summary>
-                      <div className="mt-3">
-                        <NarrativeAnalysisCard
-                          intelligence={displayedIntelligence}
-                          candidate={candidate}
-                          isPosition={Boolean(position)}
-                        />
-                      </div>
-                    </details>
-
-                    <details className="rounded-lg border border-border bg-surface p-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Ask about this decision</summary>
-                      <div className="mt-3">
-                        <IntelligenceChatPanel
-                          ticker={ticker}
-                          intelligence={displayedIntelligence}
-                          candidate={candidate}
-                          position={position}
-                        />
-                      </div>
-                    </details>
-
-                    <details className="rounded-lg border border-border bg-surface p-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-foreground">Technical details</summary>
-                      <div className="mt-3">
-                        <AgentTracePanel runId={displayedIntelligence.runId ?? null} />
-                      </div>
-                    </details>
-                  </>
-                ) : (
-                  <>
-                    {renderAnalyzePrompt(
-                      'Generate a company and setup review first, then use the optional checks below when you need more context.',
-                      Boolean(candidate || position),
-                    )}
-                    <div className="grid gap-3 xl:grid-cols-2">
-                      <PositionReviewPanel ticker={ticker} position={position} />
-                      <StrategicReviewPanel ticker={ticker} />
-                    </div>
-                  </>
-                )}
-
-                {hasNarrative && (
-                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={intelligenceMutation.isPending}
-                      onClick={() => handleAnalyzeWithAi(true)}
-                    >
-                      {intelligenceMutation.isPending
-                        ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                        : 'Refresh decision and intelligence'}
-                    </Button>
-                    {displayedIntelligence && !intelligenceMutation.isPending && (
-                      <span className="text-xs text-muted">
-                        Last analyzed: {new Date(displayedIntelligence.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    )}
-                    {intelligenceMutation.isError && (
-                      <span className="text-xs text-danger">
-                        {intelligenceMutation.error instanceof Error
-                          ? intelligenceMutation.error.message
-                          : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </>
+          <SymbolIntelligenceTab
+            model={{
+              ticker,
+              selectionVersion,
+              candidate,
+              position,
+              analysis: displayedIntelligence,
+              intelligenceOutdated,
+              sources: intelligenceWorkflow?.sources ?? [],
+              trace:
+                runTrace.data?.ticker.trim().toUpperCase() === ticker.trim().toUpperCase()
+                  ? runTrace.data
+                  : null,
+              isLoadingAnalysis: isIntelligenceLoading,
+              isCachedAnalysis:
+                !intelligenceResult && intelligenceLatest.isFetchedAfterMount === false,
+              isGenerating: intelligenceMutation.isPending,
+              isRefreshingEvidence: evidenceRefreshMutation.isPending,
+              generationError: intelligenceMutation.error,
+              failedGenerationForce: persistedAttemptForce ?? lastAttemptForce,
+              refreshError: evidenceRefreshMutation.error,
+              refreshedEvidence,
+              onRefreshEvidence: handleRefreshEvidence,
+              onGenerate: handleAnalyzeWithAi,
+            }}
+          />
         )}
 
         {activeTab === 'fundamentals' && (
-          <>
-            <div className="flex items-center justify-between gap-3 py-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => refreshFundamentalsMutation.mutate(ticker)}
-                disabled={refreshFundamentalsMutation.isPending}
-              >
-                {refreshFundamentalsMutation.isPending
-                  ? fundamentalsQuery.data
-                    ? t('workspacePage.panels.analysis.fundamentals.refreshingAction')
-                    : t('workspacePage.panels.analysis.fundamentals.runningAction')
-                  : fundamentalsQuery.data
-                    ? t('workspacePage.panels.analysis.fundamentals.refreshAction')
-                    : t('workspacePage.panels.analysis.fundamentals.runAction')}
-              </Button>
-              {fundamentalsQuery.data && (
-                <span className="text-xs text-muted">
-                  Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
-                </span>
-              )}
-            </div>
-
-            {fundamentalsQuery.data ? (
-              <details className="rounded-lg border border-border bg-surface p-3">
-                <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-muted">
-                  About metric labels
-                </summary>
-                <div className="mt-3 grid gap-2 md:grid-cols-3">
-                  {provenanceLegendItems().map((item) => (
-                    <div key={item.label} className="rounded-md border border-border bg-surface px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{item.label}</p>
-                      <p className="mt-1 text-sm text-muted">{item.detail}</p>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ) : null}
-
-            {refreshFundamentalsMutation.isError ? (
-              <div className="text-sm text-danger">
-                {refreshFundamentalsMutation.error instanceof Error
-                  ? refreshFundamentalsMutation.error.message
-                  : t('workspacePage.panels.analysis.fundamentals.refreshError')}
-              </div>
-            ) : null}
-
-            {fundamentalsQuery.isLoading ? (
-              <div className="text-sm text-muted">{t('workspacePage.panels.analysis.fundamentals.loading')}</div>
-            ) : fundamentalsQuery.isError ? (
-              <div className="text-sm text-danger">
-                {fundamentalsQuery.error instanceof Error
-                  ? fundamentalsQuery.error.message
-                  : t('workspacePage.panels.analysis.fundamentals.loadError')}
-              </div>
-            ) : fundamentalsQuery.data ? (
-              <FundamentalsSnapshotCard snapshot={fundamentalsQuery.data} />
-            ) : (
-              <div className="text-sm text-muted">{t('workspacePage.panels.analysis.fundamentals.noSnapshot')}</div>
-            )}
-          </>
+          <SymbolFundamentalsTab
+            model={{
+              ticker,
+              snapshot: fundamentals.data,
+              isLoading: fundamentals.isLoading,
+              isRefreshing: fundamentals.isRefreshing || fundamentals.isFetching,
+              error: fundamentals.refreshError ?? fundamentals.error,
+              intelligenceOutdated,
+              screenerFundamentalsInputAsOf: candidate?.fundamentalsAsOf ?? null,
+              onRefresh: fundamentals.onRefresh,
+            }}
+          />
         )}
 
       </div>

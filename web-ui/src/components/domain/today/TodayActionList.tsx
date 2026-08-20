@@ -13,6 +13,9 @@ import {
 } from '@/features/portfolio/hooks';
 import { useTodayActions } from './useTodayActions';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import SymbolRailRow from '@/components/domain/workspace/SymbolRailRow';
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 import {
   CloseItem,
   UpdateStopItem,
@@ -25,9 +28,11 @@ import {
 
 interface TodayActionListProps {
   onTickerSelect: (ticker: string) => void;
+  compact?: boolean;
 }
 
-export default function TodayActionList({ onTickerSelect }: TodayActionListProps) {
+export default function TodayActionList({ onTickerSelect, compact = false }: TodayActionListProps) {
+  const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const {
     todayRun,
     setTodayRunDisplayFilters,
@@ -111,6 +116,56 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
   const exitSignalCount = review?.positionsExitSignal.length ?? 0;
   const watchlistNearTriggerCount = watchlistNearTrigger.length;
   const opportunitiesCount = sourceOpportunities.newCandidates.length + sourceOpportunities.addOnCandidates.length;
+  const compactRows = useMemo(() => {
+    const rows: Array<{ ticker: string; status: string; context: string | null }> = [];
+    const seen = new Set<string>();
+    const add = (ticker: string, status: string, context: string | null = null) => {
+      const normalized = ticker.toUpperCase();
+      if (seen.has(normalized)) return;
+      seen.add(normalized);
+      rows.push({ ticker, status, context });
+    };
+
+    review?.positionsClose.forEach((item) =>
+      add(item.ticker, t('todayPage.actionList.close'), item.reason));
+    review?.positionsUpdateStop.forEach((item) =>
+      add(item.ticker, t('todayPage.actionList.updateStop'), item.reason));
+    review?.positionsExitSignal.forEach((item) =>
+      add(item.ticker, t('todayPage.actionList.exitSignal'), item.reason));
+    review?.pendingOrdersReview?.forEach((item) =>
+      add(
+        item.ticker,
+        t('todayPage.actionList.pendingOrdersSection'),
+        t(`todayPage.actionList.pendingOrdersCategory.${item.category}`),
+      ));
+    sourceOpportunities.addOnCandidates.forEach((item) =>
+      add(
+        item.ticker,
+        t('todayPage.actionList.addOn'),
+        item.recommendation?.nextStep
+          ? formatWorkflowNextStep(item.recommendation.nextStep)
+          : null,
+      ));
+    sourceOpportunities.newCandidates.forEach((item) =>
+      add(
+        item.ticker,
+        t('todayPage.actionList.opportunities'),
+        item.recommendation?.nextStep
+          ? formatWorkflowNextStep(item.recommendation.nextStep)
+          : null,
+      ));
+    watchlistNearTrigger.forEach((item) =>
+      add(item.ticker, t('todayPage.actionList.watchlistNearTrigger')));
+    openPositions.forEach((position) =>
+      add(
+        position.ticker,
+        t('todayPage.actionList.openPositions'),
+        position.rNow == null
+          ? null
+          : `${position.rNow >= 0 ? '+' : ''}${position.rNow.toFixed(2)}R`,
+      ));
+    return rows;
+  }, [openPositions, review, sourceOpportunities, watchlistNearTrigger]);
 
   if (isLoading) {
     return (
@@ -130,8 +185,38 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
 
   const isEmpty = openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0;
 
+  const compactRail = compact ? (
+      <div
+        className="h-full space-y-1 overflow-y-auto p-2"
+        data-testid="symbol-rail-list"
+      >
+        {compactRows.map((row) => (
+          <SymbolRailRow
+            key={row.ticker}
+            ticker={row.ticker}
+            status={row.status}
+            context={row.context}
+            selected={selectedTicker?.toUpperCase() === row.ticker.toUpperCase()}
+            onSelect={onTickerSelect}
+          />
+        ))}
+        {isEmpty ? (
+          <p className="px-2 py-4 text-center text-sm text-muted">
+            {t('todayPage.actionList.empty')}
+          </p>
+        ) : null}
+      </div>
+  ) : null;
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <>
+      {compactRail}
+      <div
+        className="flex flex-col h-full overflow-hidden"
+        hidden={compact}
+        aria-hidden={compact || undefined}
+        {...(compact ? { inert: '' } : {})}
+      >
       {/* Panel header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
@@ -412,6 +497,7 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
           onSubmit={(req) => handleClosePosition(closeTarget, req)}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

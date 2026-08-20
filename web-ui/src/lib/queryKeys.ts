@@ -27,8 +27,21 @@ export const queryKeys = {
     ['positions', positionId, 'stop-preview'] as const,
   watchlist: () => ['watchlist'] as const,
   watchlistPipeline: () => ['watchlist-pipeline'] as const,
-  fundamentalsSnapshot: (symbol?: string, refresh?: boolean) =>
-    ['fundamentals-snapshot', symbol ?? null, refresh ?? false] as const,
+  fundamentalsSnapshot: (symbol?: string) =>
+    ['fundamentals-snapshot', symbol ?? null] as const,
+  intelligence: {
+    latest: (ticker: string) => ['intelligence', 'latest', ticker] as const,
+    history: (ticker: string) => ['intelligence', 'history', ticker] as const,
+    chat: (ticker: string, generatedAt?: string | null) =>
+      generatedAt === undefined
+        ? (['intelligence', 'chat', ticker] as const)
+        : (['intelligence', 'chat', ticker, generatedAt] as const),
+    runTrace: (runId: string | null | undefined) =>
+      ['intelligence', 'runTrace', runId ?? null] as const,
+    runs: (ticker: string) => ['intelligence', 'runs', ticker] as const,
+    evidence: (ticker: string) => ['intelligence', 'evidence', ticker] as const,
+    evidenceLatest: (ticker: string) => ['intelligence', 'evidence-latest', ticker] as const,
+  },
   calendarEvents: (daysAhead?: number) =>
     ['calendar-events', daysAhead ?? 30] as const,
   openPositionsIntelligence: () => ['openPositionsIntelligence'] as const,

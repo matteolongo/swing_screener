@@ -7,8 +7,15 @@ import type {
   AnalysisHistoryResponseAPI,
   HistoryEntry,
   IntelligenceChatResponseAPI,
+  EvidenceRefreshResponseAPI,
+  EvidenceCacheSummaryAPI,
 } from '@/features/intelligence/types';
-import { transformHistoryEntry, transformIntelligenceChat } from '@/features/intelligence/types';
+import {
+  transformEvidenceRefresh,
+  transformEvidenceCacheSummary,
+  transformHistoryEntry,
+  transformIntelligenceChat,
+} from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import type { PositionReviewAPI } from '@/features/intelligence/positionReviewTypes';
@@ -145,11 +152,14 @@ export function candidateToPayload(
 export async function postIntelligenceAnalysis(
   ticker: string,
   payload: IntelligenceRequestPayload,
-  force = false
+  force = false,
+  attemptId?: string,
 ): Promise<SymbolIntelligenceAPI> {
-  const endpoint = force
-    ? `${API_ENDPOINTS.intelligenceAnalyze(ticker)}?force=true`
-    : API_ENDPOINTS.intelligenceAnalyze(ticker);
+  const query = new URLSearchParams();
+  if (force) query.set('force', 'true');
+  if (attemptId) query.set('attempt_id', attemptId);
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+  const endpoint = `${API_ENDPOINTS.intelligenceAnalyze(ticker)}${suffix}`;
   return fetchJson<SymbolIntelligenceAPI>(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -162,6 +172,24 @@ export async function getIntelligenceLatest(ticker: string): Promise<SymbolIntel
   return fetchJson<SymbolIntelligenceAPI>(API_ENDPOINTS.intelligenceLatest(ticker), {
     errorMessage: `No cached analysis for ${ticker}`,
   });
+}
+
+export async function getLatestEvidenceSummary(ticker: string) {
+  const response = await fetchJson<EvidenceCacheSummaryAPI>(API_ENDPOINTS.intelligenceEvidenceLatest(ticker), {
+    errorMessage: `Failed to load saved evidence for ${ticker}`,
+  });
+  return transformEvidenceCacheSummary(response);
+}
+
+export async function refreshIntelligenceEvidence(ticker: string) {
+  const response = await fetchJson<EvidenceRefreshResponseAPI>(
+    API_ENDPOINTS.intelligenceEvidenceRefresh(ticker),
+    {
+      method: 'POST',
+      errorMessage: `Failed to refresh intelligence evidence for ${ticker}`,
+    },
+  );
+  return transformEvidenceRefresh(response);
 }
 
 export async function getIntelligenceHistory(ticker: string): Promise<HistoryEntry[]> {

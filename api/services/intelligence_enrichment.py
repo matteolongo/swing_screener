@@ -7,9 +7,14 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, timezone
-from typing import Callable, Protocol
+from typing import Callable, Literal, Protocol
 
-from swing_screener.intelligence.models import SymbolIntelligenceRequest, SourceEvidence
+from swing_screener.intelligence.models import (
+    EnrichmentDiagnostic,
+    EnrichmentSource,
+    SymbolIntelligenceRequest,
+    SourceEvidence,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +38,52 @@ class _FundamentalsLike(Protocol):
     def get_snapshot(self, symbol: str): ...
 
 
+_FAILED_MESSAGES: dict[EnrichmentSource, str] = {
+    "fundamentals": "Fundamentals provider failed.",
+    "earnings": "Earnings provider failed.",
+    "dividend": "Dividend provider failed.",
+    "evidence": "Evidence provider failed.",
+    "technicals": "Technical enrichment failed.",
+    "polygon_prices": "Polygon price provider failed.",
+}
+
+def _optional_string(value: object) -> str | None:
+    """Keep provider/test-double metadata from escaping the public string contract."""
+    return value if isinstance(value, str) else None
+
+
+def _with_diagnostic(
+    request: SymbolIntelligenceRequest,
+    source: EnrichmentSource,
+    status: Literal["used", "missing", "failed"],
+    *,
+    as_of: str | None = None,
+    item_count: int | None = None,
+) -> SymbolIntelligenceRequest:
+    diagnostic = EnrichmentDiagnostic(
+        source=source,
+        status=status,
+        as_of=as_of,
+        item_count=item_count,
+        message=_FAILED_MESSAGES[source] if status == "failed" else None,
+    )
+    return request.model_copy(
+        update={
+            "enrichment_diagnostics": [
+                *request.enrichment_diagnostics,
+                diagnostic,
+            ]
+        }
+    )
+
+
+def record_enrichment_failure(
+    request: SymbolIntelligenceRequest, source: EnrichmentSource
+) -> SymbolIntelligenceRequest:
+    """Attach a stable, user-safe failure after an outer provider call fails."""
+    return _with_diagnostic(request, source, "failed")
+
+
 def enrich_intelligence_request(
     ticker: str,
     request: SymbolIntelligenceRequest,
@@ -40,9 +91,10 @@ def enrich_intelligence_request(
     fundamentals: _FundamentalsLike | None = None,
     earnings: Callable[[str], tuple[int | None, str | None]] | None = None,
     dividend: Callable[[str], tuple[int | None, str | None, float | None]] | None = None,
-    evidence: Callable[[str], list[SourceEvidence]] | None = None,
+    evidence: Callable[[str], list[SourceEvidence] | None] | None = None,
 ) -> SymbolIntelligenceRequest:
     updates: dict = {}
+    diagnostics = list(request.enrichment_diagnostics)
 
     if fundamentals is not None:
         try:
@@ -50,6 +102,25 @@ def enrich_intelligence_request(
         except Exception as exc:  # degrade, never fail the analysis
             logger.warning("Fundamentals fetch failed for %s: %s", ticker, exc)
             snap = None
+            diagnostics.append(
+                EnrichmentDiagnostic(
+                    source="fundamentals",
+                    status="failed",
+                    message=_FAILED_MESSAGES["fundamentals"],
+                )
+            )
+        else:
+            diagnostics.append(
+                EnrichmentDiagnostic(
+                    source="fundamentals",
+                    status="used" if snap is not None else "missing",
+                    as_of=(
+                        _optional_string(getattr(snap, "asof_date", None))
+                        if snap is not None
+                        else None
+                    ),
+                )
+            )
         if snap is not None:
             updates["fundamentals_source"] = getattr(snap, "provider", None)
             updates["fundamentals_asof"] = getattr(snap, "asof_date", None)
@@ -67,6 +138,21 @@ def enrich_intelligence_request(
         except Exception as exc:
             logger.warning("Earnings fetch failed for %s: %s", ticker, exc)
             days, date = None, None
+            diagnostics.append(
+                EnrichmentDiagnostic(
+                    source="earnings",
+                    status="failed",
+                    message=_FAILED_MESSAGES["earnings"],
+                )
+            )
+        else:
+            diagnostics.append(
+                EnrichmentDiagnostic(
+                    source="earnings",
+                    status="used" if days is not None or date is not None else "missing",
+                    as_of=_optional_string(date),
+                )
+            )
         if days is not None:
             updates["days_to_earnings"] = days
         if date is not None and request.next_earnings_date is None:
@@ -78,6 +164,25 @@ def enrich_intelligence_request(
         except Exception as exc:
             logger.warning("Dividend fetch failed for %s: %s", ticker, exc)
             div_days, div_date, div_amount = None, None, None
+            diagnostics.append(
+                EnrichmentDiagnostic(
+                    source="dividend",
+                    status="failed",
+                    message=_FAILED_MESSAGES["dividend"],
+                )
+            )
+        else:
+            diagnostics.append(
+                EnrichmentDiagnostic(
+                    source="dividend",
+                    status=(
+                        "used"
+                        if any(value is not None for value in (div_days, div_date, div_amount))
+                        else "missing"
+                    ),
+                    as_of=_optional_string(div_date),
+                )
+            )
         if div_days is not None:
             updates["days_to_dividend"] = div_days
         if div_date is not None and request.next_dividend_date is None:
@@ -87,15 +192,42 @@ def enrich_intelligence_request(
 
     if evidence is not None and not request.catalyst_evidence:
         try:
-            items = evidence(ticker)
+            raw_items = evidence(ticker)
+            if raw_items is None:
+                items: list[SourceEvidence] = []
+            elif isinstance(raw_items, list):
+                items = [
+                    SourceEvidence.model_validate(item)
+                    for item in raw_items
+                ]
+            else:
+                raise TypeError("Evidence provider returned an invalid payload.")
             updates["evidence_asof"] = datetime.now(timezone.utc).isoformat()
             updates["evidence_status"] = "current"
         except Exception as exc:  # degrade, never fail the analysis
             logger.warning("Evidence collection failed for %s: %s", ticker, exc)
             items = []
+            diagnostics.append(
+                EnrichmentDiagnostic(
+                    source="evidence",
+                    status="failed",
+                    message=_FAILED_MESSAGES["evidence"],
+                )
+            )
+        else:
+            diagnostics.append(
+                EnrichmentDiagnostic(
+                    source="evidence",
+                    status="used" if items else "missing",
+                    as_of=updates["evidence_asof"],
+                    item_count=len(items),
+                )
+            )
         if items:
             updates["catalyst_evidence"] = items
 
+    if diagnostics != request.enrichment_diagnostics:
+        updates["enrichment_diagnostics"] = diagnostics
     if not updates:
         return request
     return request.model_copy(update=updates)
@@ -117,7 +249,7 @@ def enrich_with_technicals(
         return force or getattr(request, field, None) is None
 
     if ohlcv is None or getattr(ohlcv, "empty", True):
-        return request
+        return _with_diagnostic(request, "technicals", "missing", item_count=0)
 
     try:
         import pandas as pd
@@ -140,7 +272,7 @@ def enrich_with_technicals(
         mom12 = compute_returns(close, mcfg.lookback_12m)
     except Exception as exc:  # degrade, never fail the analysis
         logger.warning("Technical enrichment failed for %s: %s", ticker, exc)
-        return request
+        return _with_diagnostic(request, "technicals", "failed")
 
     def _row(df):
         if df is None or df.empty:
@@ -210,8 +342,14 @@ def enrich_with_technicals(
         except Exception:
             logger.warning("Pattern detection failed for %s", ticker, exc_info=True)
 
-    if not updates:
-        return request
+    updates["enrichment_diagnostics"] = [
+        *request.enrichment_diagnostics,
+        EnrichmentDiagnostic(
+            source="technicals",
+            status="used",
+            item_count=int(len(ohlcv)),
+        ),
+    ]
     return request.model_copy(update=updates)
 
 
@@ -249,10 +387,10 @@ def enrich_with_polygon_prices(
         ohlcv = fetch(ticker)
     except Exception as exc:  # degrade, never fail the analysis
         logger.warning("Polygon price fetch failed for %s: %s", ticker, exc)
-        return request
+        return _with_diagnostic(request, "polygon_prices", "failed")
 
     if ohlcv is None or getattr(ohlcv, "empty", True):
-        return request
+        return _with_diagnostic(request, "polygon_prices", "missing", item_count=0)
 
     updates: dict = {"price_source": "polygon"}
     try:
@@ -280,5 +418,14 @@ def enrich_with_polygon_prices(
     except Exception:
         logger.warning("Polygon close extraction failed for %s", ticker, exc_info=True)
 
+    updates["enrichment_diagnostics"] = [
+        *request.enrichment_diagnostics,
+        EnrichmentDiagnostic(
+            source="polygon_prices",
+            status="used",
+            as_of=updates.get("price_asof"),
+            item_count=int(len(ohlcv)),
+        ),
+    ]
     request = request.model_copy(update=updates)
     return enrich_with_technicals(ticker, request, ohlcv, force=True)

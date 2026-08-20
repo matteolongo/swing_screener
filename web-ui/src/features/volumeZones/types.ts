@@ -80,6 +80,7 @@ export interface VolumeAnalysisAPI {
   provider: string;
   interval: string;
   lookback: number;
+  min_rr: number;
   data_quality: DataQualityAPI;
   profile_type: string;
   market_bias: string;
@@ -98,6 +99,7 @@ export interface VolumeAnalysis {
   provider: string;
   interval: string;
   lookback: number;
+  minRr: number;
   dataQuality: DataQuality;
   profileType: string;
   marketBias: MarketBias;
@@ -111,12 +113,40 @@ export interface VolumeAnalysis {
   warnings: string[];
 }
 
+export class VolumeAnalysisIdentityError extends Error {
+  constructor() {
+    super('Volume analysis identity mismatch');
+    this.name = 'VolumeAnalysisIdentityError';
+  }
+}
+
+export function assertVolumeAnalysisIdentity(
+  analysis: VolumeAnalysis,
+  requestedTicker: string,
+  requestedLookback: number,
+  requestedMinRr: number,
+  requestedInterval: string = '1d',
+): void {
+  const ticker = requestedTicker.trim().toUpperCase();
+  const minRrTolerance = Math.max(1e-9, Math.abs(requestedMinRr) * 1e-9);
+  if (
+    analysis.symbol.trim().toUpperCase() !== ticker ||
+    analysis.interval !== requestedInterval ||
+    analysis.lookback !== requestedLookback ||
+    !Number.isFinite(analysis.minRr) ||
+    Math.abs(analysis.minRr - requestedMinRr) > minRrTolerance
+  ) {
+    throw new VolumeAnalysisIdentityError();
+  }
+}
+
 export function transformVolumeAnalysis(api: VolumeAnalysisAPI): VolumeAnalysis {
   return {
     symbol: api.symbol,
     provider: api.provider,
     interval: api.interval,
     lookback: api.lookback,
+    minRr: api.min_rr,
     dataQuality: {
       ok: api.data_quality.ok,
       bars: api.data_quality.bars,

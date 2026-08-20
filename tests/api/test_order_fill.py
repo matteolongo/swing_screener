@@ -141,6 +141,8 @@ def test_list_local_orders_returns_pending(client_with_pending_order):
     data = resp.json()
     assert len(data["orders"]) == 1
     assert data["orders"][0]["order_id"] == "ORD-SBMO-001"
+    assert data["snapshot_freshness"] in {"fresh", "stale"}
+    assert data["stale_after_days"] == 1
 
 
 def test_cancel_pending_order_marks_cancelled(client_with_pending_order):

@@ -69,7 +69,7 @@ def client_with_positions(tmp_path, monkeypatch):
     mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
     mock_provider.fetch_ohlcv.return_value = pd.DataFrame()
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
     monkeypatch.setitem(portfolio_service._eurusd_cache, "eurusd", (1.20, time.time()))
 
     return TestClient(app)

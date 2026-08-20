@@ -13,6 +13,11 @@ Low-level shared defaults for the system:
 - intelligence defaults
 - backend provider catalogs and operational fallback values
 
+`app_config.portfolio_snapshot_stale_after_days` (default `1`) is the
+server-owned calendar-age policy for persisted position and order ledgers.
+Portfolio endpoints return the derived freshness; clients must not substitute
+their cache/refetch timers for this domain status.
+
 Candlestick pattern + structural-stop settings live under `low_level`:
 
 - `low_level.candles` — thresholds for the deterministic candlestick engine
@@ -94,6 +99,7 @@ Key LLM settings (under `config.llm`):
 | `enabled_sources` | `[sec_edgar_catalysts, polygon_news, degiro_news, tavily_news]` | Collectors to fan-out to. `polygon_news` needs `POLYGON_IO_API_KEY`; `degiro_news` needs `DEGIRO_USERNAME`/`DEGIRO_PASSWORD`; `tavily_news` needs `TAVILY_API_KEY` and is refresh-only. Missing credentials no-op safely |
 | `recency_window_days` | `30` | Discard items older than this many days |
 | `max_items_per_symbol` | `8` | Max curated items returned per ticker |
+| `cache_stale_after_days` | `1` | Server-owned age threshold for cached evidence shown in the workspace; same-day data is `fresh`, data within this window is `cached`, and older data is `stale` |
 | `sec_forms` | `[8-K, 6-K, SC 13D, SC 13G, 424B, DEF 14A]` | SEC form prefixes kept (prefix match: `424B` catches `424B5`, `SC 13D` catches `SC 13D/A`) |
 | `http.user_agent` | `swing-screener-intelligence-bot/1.0 (email)` | User-Agent sent by all collectors; must declare a contact email per SEC EDGAR policy |
 | `http.connect_timeout_seconds` | `5.0` | TCP connect timeout |

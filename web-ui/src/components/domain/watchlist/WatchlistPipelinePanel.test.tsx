@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import WatchlistPipelinePanel from '@/components/domain/watchlist/WatchlistPipelinePanel';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 vi.mock('@/features/watchlist/hooks', () => ({
   useWatchlist: () => ({
@@ -39,5 +40,20 @@ describe('WatchlistPipelinePanel', () => {
     expect(screen.getByText('-1.3% to buy zone')).toBeInTheDocument();
     expect(screen.getByText('Trigger €680.00')).toBeInTheDocument();
     expect(screen.getByText('BREAKOUT')).toBeInTheDocument();
+  });
+
+  it('renders compact symbol rows without the wide table', () => {
+    useWorkspaceStore.setState({ selectedTicker: 'ASML' });
+    const { rerender } = renderWithProviders(
+      <WatchlistPipelinePanel compact onTickerSelect={() => {}} />,
+    );
+
+    expect(screen.getByTestId('symbol-rail-list')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ASML/i })).toHaveAttribute('aria-current', 'true');
+    expect(screen.queryByRole('columnheader')).not.toBeInTheDocument();
+    const mountedTable = screen.getByRole('table', { hidden: true });
+
+    rerender(<WatchlistPipelinePanel compact={false} onTickerSelect={() => {}} />);
+    expect(screen.getByRole('table')).toBe(mountedTable);
   });
 });

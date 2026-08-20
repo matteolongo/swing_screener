@@ -98,12 +98,15 @@ for a recommendation's execution workflow. It applies these gates in order:
 | --- | --- | --- | --- |
 | 1 | Setup is explicitly blocked | `no_setup` | Interesting context may exist, but there is no executable setup |
 | 2 | Setup is not confirmed, the plan is incomplete/blocked, the trigger is invalid, or required gate data is missing | `needs_review` | A concrete problem must be resolved before the candidate can advance |
-| 3 | Setup and plan pass, trigger is waiting | `waiting_trigger` | The setup is valid but its entry condition has not occurred |
-| 4 | Setup, plan, and trigger all pass | `ready` | The candidate may enter manual order review |
+| 3 | Setup and plan pass, trigger is waiting | `waiting_trigger` | The setup is valid but its entry condition has not occurred; a pullback with a pending `BUY_LIMIT` approval token may enter manual order review |
+| 4 | Setup, plan, and trigger all pass | `ready` | The observed entry trigger passed and the candidate may enter manual order review |
 
 An explicit setup block takes precedence over downstream plan data. Unknown or
 contradictory gate combinations resolve safely to `needs_review`, never
 `ready`.
+
+The pending `BUY_LIMIT` token is required for the `waiting_trigger` pullback
+exception; order submission remains manual.
 
 ## See Also
 

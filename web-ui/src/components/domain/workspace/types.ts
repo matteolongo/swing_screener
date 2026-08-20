@@ -45,6 +45,7 @@ export interface SymbolAnalysisCandidate {
   rReward?: number;
   recommendation?: Recommendation;
   suggestedOrderType?: string;
+  approvalToken?: string;
   suggestedOrderPrice?: number;
   executionNote?: string;
   sameSymbol?: SameSymbolCandidateContext;

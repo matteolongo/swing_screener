@@ -200,6 +200,29 @@ export interface DegiroStatus {
 
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
+export type SnapshotFreshness = 'fresh' | 'stale' | 'unknown';
+export type SnapshotCollection<T> = T[] & {
+  snapshotAsOf: string | null;
+  snapshotFreshness: SnapshotFreshness;
+  snapshotStaleAfterDays: number | null;
+};
+
+function attachSnapshotMetadata<T>(
+  items: T[],
+  metadata: {
+    asof?: string;
+    snapshot_freshness?: 'fresh' | 'stale';
+    stale_after_days?: number;
+  },
+): SnapshotCollection<T> {
+  const snapshotFreshness: SnapshotFreshness =
+    metadata.snapshot_freshness ?? 'unknown';
+  return Object.assign(items, {
+    snapshotAsOf: metadata.asof ?? null,
+    snapshotFreshness,
+    snapshotStaleAfterDays: metadata.stale_after_days ?? null,
+  });
+}
 
 function createIdempotencyKey(): string {
   if (!globalThis.crypto?.randomUUID) {
@@ -212,15 +235,20 @@ function resolveIdempotencyKey(idempotencyKey?: string): string {
   return idempotencyKey ?? createIdempotencyKey();
 }
 
-export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
+export async function fetchOrders(status: OrderFilterStatus): Promise<SnapshotCollection<Order>> {
   if (isLocalPersistenceMode()) {
-    return listOrdersLocal(status);
+    return attachSnapshotMetadata(listOrdersLocal(status), {});
   }
-  const params = status ? `?status=${status}` : '';
-  const data = await fetchJson<{ orders?: OrderApiResponse[] }>(`${API_ENDPOINTS.localOrders}${params}`, {
+  const params = status !== 'all' ? `?status=${status}` : '';
+  const data = await fetchJson<{
+    orders?: OrderApiResponse[];
+    asof?: string;
+    snapshot_freshness?: 'fresh' | 'stale';
+    stale_after_days?: number;
+  }>(`${API_ENDPOINTS.localOrders}${params}`, {
     errorMessage: 'Failed to fetch orders',
   });
-  return (data.orders ?? []).map(transformOrder);
+  return attachSnapshotMetadata((data.orders ?? []).map(transformOrder), data);
 }
 
 export async function createOrder(
@@ -348,16 +376,21 @@ export async function fillOrderFromDegiro(
   return transformFillFromDegiroResponse(payload);
 }
 
-export async function fetchPositions(status: PositionFilterStatus): Promise<PositionWithMetrics[]> {
+export async function fetchPositions(status: PositionFilterStatus): Promise<SnapshotCollection<PositionWithMetrics>> {
   if (isLocalPersistenceMode()) {
-    return listPositionsLocal(status);
+    return attachSnapshotMetadata(listPositionsLocal(status), {});
   }
   const params = status !== 'all' ? `?status=${status}` : '';
-  const data = await fetchJson<{ positions: PositionWithMetricsApiResponse[] }>(
+  const data = await fetchJson<{
+    positions: PositionWithMetricsApiResponse[];
+    asof?: string;
+    snapshot_freshness?: 'fresh' | 'stale';
+    stale_after_days?: number;
+  }>(
     API_ENDPOINTS.positions + params,
     { errorMessage: 'Failed to fetch positions' },
   );
-  return data.positions.map(transformPositionWithMetrics);
+  return attachSnapshotMetadata(data.positions.map(transformPositionWithMetrics), data);
 }
 
 export async function fetchPositionMetrics(positionId: string): Promise<PositionMetrics> {

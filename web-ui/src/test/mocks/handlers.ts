@@ -40,6 +40,7 @@ export const mockVolumeAnalysis = {
   provider: 'mock',
   interval: '1d',
   lookback: 120,
+  min_rr: 2,
   data_quality: { ok: true, bars: 160, warnings: [] },
   profile_type: 'approximate_bar_based',
   market_bias: 'bullish',
@@ -740,7 +741,17 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/api/intelligence/:ticker/latest`, ({ params }) => {
-    return HttpResponse.json({ detail: `No cached analysis for ${params.ticker}` }, { status: 404 })
+    return HttpResponse.json({
+      detail: `No cached analysis for ${params.ticker}`,
+      code: 'analysis_not_generated_today',
+    }, { status: 404 })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/:ticker/evidence/latest`, ({ params }) => {
+    return HttpResponse.json({
+      detail: `No cached evidence for ${params.ticker}`,
+      code: 'evidence_not_cached',
+    }, { status: 404 })
   }),
 
   http.get(`${API_BASE_URL}/api/intelligence/:ticker/history`, () => {
@@ -1067,6 +1078,10 @@ export const handlers = [
   http.get(`${API_BASE_URL}/api/market-data/:ticker/candles`, ({ params }) => {
     return HttpResponse.json({
       ticker: String(params.ticker ?? 'AAPL').toUpperCase(),
+      provider: 'mock',
+      interval: '1d',
+      data_as_of: null,
+      fetched_at: '2026-07-28T10:30:00+00:00',
       price_history: [],
       patterns: [],
     })

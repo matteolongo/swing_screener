@@ -37,7 +37,7 @@ def _claims(**updates) -> ApprovalTokenClaims:
 def test_token_round_trip_contains_versioned_audit_context():
     signer = OrderApprovalTokenSigner(b"k" * 32, ttl_seconds=100)
 
-    token = signer.issue(_claims(), now=1_000)
+    token = signer.issue(_claims(pullback_wait_authorized=True), now=1_000)
     verified = signer.verify(token, now=1_050)
 
     assert verified.version == 1
@@ -46,6 +46,7 @@ def test_token_round_trip_contains_versioned_audit_context():
     assert verified.expires_at == 1_100
     assert len(verified.token_id) >= 32
     assert len(verified.plan_fingerprint) == 64
+    assert verified.pullback_wait_authorized is True
 
 
 @pytest.mark.parametrize("part", [0, 1])

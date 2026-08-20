@@ -67,6 +67,7 @@ config:
     - tavily_news          # Tavily search, refresh-only (needs TAVILY_API_KEY; no-op without)
     recency_window_days: 30   # Discard items older than this many days
     max_items_per_symbol: 8   # Max curated items per ticker after dedup + sort
+    cache_stale_after_days: 1 # Server-owned age threshold for cached workspace evidence
     sec_forms:
     - 8-K
     - 6-K

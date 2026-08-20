@@ -6,6 +6,7 @@ import { renderWithProviders } from '@/test/utils';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import type { DecisionSummary } from '@/features/screener/types';
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 
 const { mutateMock } = vi.hoisted(() => ({
   mutateMock: vi.fn(),
@@ -109,7 +110,7 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
               trigger: { status: 'PASS', explanation: 'Triggered.' },
               plan: { status: 'PASS', explanation: 'Reconciled.' },
               portfolio: { status: 'UNKNOWN', explanation: 'Checked on submit.' },
-              readyToOrder: false,
+              readyToOrder: true,
             },
             education: {
               commonBiasWarning: '',
@@ -132,6 +133,35 @@ describe('ActionPanel', () => {
     openPositionsMock.mockReset();
     openPositionsMock.mockReturnValue([]);
     setCandidate();
+  });
+
+  it.each([
+    { name: 'no-data', arrange: () => useScreenerStore.setState({ lastResult: null }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
+    { name: 'fresh', phase: 'fresh', arrange: () => setCandidate({ dataStatus: 'current' }), expected: t('workspacePage.data.phases.fresh') },
+    { name: 'cached', phase: 'cached', arrange: () => setCandidate({ dataStatus: 'current' }), expected: t('workspacePage.data.phases.cached') },
+    { name: 'stale', phase: 'stale', arrange: () => setCandidate({ dataStatus: 'stale' }), expected: t('workspacePage.data.phases.stale') },
+    { name: 'refreshing-with-data', phase: 'loading', arrange: () => setCandidate({ dataStatus: 'current' }), expected: t('workspacePage.data.phases.loading') },
+    { name: 'partial', arrange: () => setCandidate({ recommendation: { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } } }), expected: t('workspacePage.panels.analysis.orderUnavailable.title') },
+    { name: 'failed', arrange: () => setCandidate({ recommendation: undefined }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
+    { name: 'timeout', arrange: () => setCandidate({ recommendation: { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } } }), expected: t('workspacePage.panels.analysis.orderUnavailable.title') },
+    { name: 'malformed', arrange: () => setCandidate({ recommendation: null }), expected: t('workspacePage.panels.analysis.orderUnavailable.noCandidate') },
+  ])('renders its own $name workflow contract without an empty order panel', (testCase) => {
+    const { arrange, expected } = testCase;
+    arrange();
+    const source = 'phase' in testCase ? {
+      id: 'positionOrders' as const,
+      ticker: 'AAPL',
+      selectionVersion: 1,
+      phase: testCase.phase as 'fresh' | 'cached' | 'stale' | 'loading',
+      provider: 'local',
+      dataAsOf: '2026-03-02',
+      fetchedAt: '2026-03-02T20:00:00Z',
+      cacheOrigin: testCase.phase === 'cached' ? 'memory' as const : 'network' as const,
+      missingInputs: [],
+      error: null,
+    } : undefined;
+    renderWithProviders(<ActionPanel ticker="AAPL" source={source} />);
+    expect(screen.getByText(expected)).toBeVisible();
   });
 
   it('defaults to BUY_STOP when backend guidance suggests it', () => {
@@ -188,8 +218,8 @@ describe('ActionPanel', () => {
 
     renderWithProviders(<ActionPanel ticker="AAPL" candidate={discoveryCandidate} />);
 
-    expect(screen.getByText((content) => content.includes(t('order.review.decisionLocked')))).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: t('order.candidateModal.createAction') })).toBeDisabled();
+    expect(screen.getByText(t('workspacePage.panels.analysis.orderUnavailable.title'))).toBeVisible();
+    expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
   });
 
   it('does not allow a signed candidate order type to be overridden in API mode', async () => {
@@ -236,6 +266,36 @@ describe('ActionPanel', () => {
     expect((screen.getByLabelText('Quantity') as HTMLInputElement).value).toBe('12');
   });
 
+  it('explains why a non-ready candidate has no order form', () => {
+    setCandidate({
+      recommendation: {
+        workflowStatus: 'needs_review',
+        nextStep: { code: 'define_target' },
+      },
+    });
+
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
+    expect(screen.getByText(formatWorkflowNextStep({ code: 'define_target' }))).toBeVisible();
+  });
+
+  it('preserves order values after a failed submit', async () => {
+    const user = userEvent.setup();
+    mutateMock.mockRejectedValueOnce(new Error('Order service unavailable'));
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    const quantityInput = screen.getByLabelText(t('order.candidateModal.quantity'));
+    await user.clear(quantityInput);
+    await user.type(quantityInput, '25');
+    fireEvent.submit(
+      screen.getByRole('button', { name: t('order.candidateModal.createAction') }).closest('form')!,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Order service unavailable');
+    expect(quantityInput).toHaveValue(25);
+  });
+
   it('keeps the action block below the review carousel', () => {
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
@@ -265,7 +325,36 @@ describe('ActionPanel', () => {
     expect(screen.getByRole('button', { name: 'Create Order' })).toBeDisabled();
   });
 
-  it('submits as ADD_ON when a live open position exists even if screener metadata is stale', async () => {
+  it.each([
+    ['no same-symbol state', undefined],
+    ['a canonical new-entry state', {
+      mode: 'NEW_ENTRY',
+      pendingEntryExists: false,
+      addOnCount: 0,
+      maxAddOns: 1,
+      reason: 'Manage the existing position.',
+    }],
+  ])('does not show an order form for a held ready candidate with %s', (_label, sameSymbol) => {
+    openPositionsMock.mockReturnValue([
+      {
+        ticker: 'AAPL',
+        status: 'open',
+        entryDate: '2026-03-10',
+        entryPrice: 95,
+        stopPrice: 90,
+        shares: 10,
+        positionId: 'POS-AAPL-1',
+      },
+    ]);
+    setCandidate({ sameSymbol });
+
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.panels.analysis.orderUnavailable.title'))).toBeVisible();
+  });
+
+  it('submits a held candidate only from canonical ready ADD_ON state', async () => {
     openPositionsMock.mockReturnValue([
       {
         ticker: 'AAPL',
@@ -279,11 +368,16 @@ describe('ActionPanel', () => {
     ]);
     setCandidate({
       sameSymbol: {
-        mode: 'NEW_ENTRY',
+        mode: 'ADD_ON',
+        positionId: 'POS-AAPL-1',
+        currentPositionEntry: 95,
+        currentPositionStop: 90,
+        freshSetupStop: 97,
+        executionStop: 90,
         pendingEntryExists: false,
         addOnCount: 0,
         maxAddOns: 1,
-        reason: 'stale snapshot',
+        reason: 'Canonical add-on setup.',
       },
     });
     mutateMock.mockResolvedValue(undefined);

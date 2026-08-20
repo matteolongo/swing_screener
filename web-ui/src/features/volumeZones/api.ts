@@ -1,6 +1,11 @@
 import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
-import { transformVolumeAnalysis, type VolumeAnalysis, type VolumeAnalysisAPI } from './types';
+import {
+  assertVolumeAnalysisIdentity,
+  transformVolumeAnalysis,
+  type VolumeAnalysis,
+  type VolumeAnalysisAPI,
+} from './types';
 
 export async function fetchVolumeAnalysis(
   ticker: string,
@@ -11,5 +16,7 @@ export async function fetchVolumeAnalysis(
   const raw = await fetchJson<VolumeAnalysisAPI>(`${API_ENDPOINTS.volumeAnalysis(ticker)}?${query.toString()}`, {
     errorMessage: `Failed to fetch volume analysis for ${ticker}`,
   });
-  return transformVolumeAnalysis(raw);
+  const analysis = transformVolumeAnalysis(raw);
+  assertVolumeAnalysisIdentity(analysis, ticker, lookback, minRr);
+  return analysis;
 }

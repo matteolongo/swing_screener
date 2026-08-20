@@ -210,6 +210,116 @@ export interface ThesisDelta {
   whatPlayedOut: string[];
 }
 
+export type EnrichmentSource =
+  | 'fundamentals'
+  | 'earnings'
+  | 'dividend'
+  | 'evidence'
+  | 'technicals'
+  | 'polygon_prices';
+
+export interface EnrichmentDiagnosticAPI {
+  source: EnrichmentSource;
+  status: 'used' | 'missing' | 'failed';
+  as_of?: string | null;
+  item_count?: number | null;
+  message?: string | null;
+}
+
+export interface EnrichmentDiagnostic {
+  source: EnrichmentSource;
+  status: 'used' | 'missing' | 'failed';
+  asOf: string | null;
+  itemCount: number | null;
+  message: string | null;
+}
+
+export interface EvidenceRefreshSourceAPI {
+  source: 'evidence';
+  provider: string;
+  status: 'fresh' | 'failed';
+  item_count: number;
+  as_of: string;
+  message: string | null;
+}
+
+export interface EvidenceRefreshResponseAPI {
+  ticker: string;
+  refreshed_at: string;
+  status: 'fresh' | 'partial' | 'failed';
+  sources: EvidenceRefreshSourceAPI[];
+}
+
+export interface EvidenceRefreshSource {
+  source: 'evidence';
+  provider: string;
+  status: 'fresh' | 'failed';
+  itemCount: number;
+  asOf: string;
+  message: string | null;
+}
+
+export interface EvidenceRefreshResponse {
+  ticker: string;
+  refreshedAt: string;
+  status: 'fresh' | 'partial' | 'failed';
+  sources: EvidenceRefreshSource[];
+}
+
+export interface EvidenceCacheSummaryAPI {
+  ticker: string;
+  cached_at: string;
+  item_count: number;
+  providers: string[];
+  freshness_status: 'fresh' | 'cached' | 'stale';
+}
+
+export interface EvidenceCacheSummary {
+  ticker: string;
+  cachedAt: string;
+  itemCount: number;
+  providers: string[];
+  freshnessStatus: 'fresh' | 'cached' | 'stale';
+}
+
+export function transformEvidenceCacheSummary(api: EvidenceCacheSummaryAPI): EvidenceCacheSummary {
+  return {
+    ticker: api.ticker.trim().toUpperCase(),
+    cachedAt: api.cached_at,
+    itemCount: api.item_count,
+    providers: api.providers ?? [],
+    freshnessStatus: api.freshness_status,
+  };
+}
+
+export function transformEvidenceRefresh(
+  api: EvidenceRefreshResponseAPI,
+): EvidenceRefreshResponse {
+  return {
+    ticker: api.ticker.trim().toUpperCase(),
+    refreshedAt: api.refreshed_at,
+    status: api.status,
+    sources: (api.sources ?? []).map((source) => ({
+      source: source.source,
+      provider: source.provider,
+      status: source.status,
+      itemCount: source.item_count,
+      asOf: source.as_of,
+      message: source.message ?? null,
+    })),
+  };
+}
+
+export interface IntelligenceInputsUsed {
+  enrichmentDiagnostics?: EnrichmentDiagnostic[];
+  [key: string]: unknown;
+}
+
+export interface IntelligenceInputsUsedAPI {
+  enrichment_diagnostics?: EnrichmentDiagnosticAPI[];
+  [key: string]: unknown;
+}
+
 export interface SymbolIntelligenceAPI {
   symbol: string;
   generated_at: string;
@@ -224,7 +334,7 @@ export interface SymbolIntelligenceAPI {
   position_outlook?: PositionOutlookAPI | null;
   position_move_explanation?: PositionMoveExplanation | null;
   sources: string[];
-  inputs_used?: Record<string, Record<string, unknown>>;
+  inputs_used?: IntelligenceInputsUsedAPI;
   price_hook?: string | null;
   key_numbers?: KeyNumber[];
   risk_factors?: string[];
@@ -259,7 +369,7 @@ export interface SymbolIntelligence {
   positionOutlook?: PositionOutlook | null;
   positionMoveExplanation?: PositionMoveExplanation | null;
   sources: string[];
-  inputsUsed?: Record<string, Record<string, unknown>>;
+  inputsUsed?: IntelligenceInputsUsed;
   priceHook?: string | null;
   keyNumbers?: KeyNumber[];
   riskFactors?: string[];
@@ -348,6 +458,7 @@ function transformClassifiedCatalyst(api: ClassifiedCatalystAPI): ClassifiedCata
 }
 
 export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelligence {
+  const { enrichment_diagnostics: diagnostics = [], ...inputsUsed } = api.inputs_used ?? {};
   return {
     symbol: api.symbol,
     generatedAt: api.generated_at,
@@ -362,7 +473,16 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     positionOutlook: transformPositionOutlook(api.position_outlook),
     positionMoveExplanation: api.position_move_explanation ?? null,
     sources: api.sources ?? [],
-    inputsUsed: api.inputs_used ?? {},
+    inputsUsed: {
+      ...inputsUsed,
+      enrichmentDiagnostics: diagnostics.map((diagnostic) => ({
+        source: diagnostic.source,
+        status: diagnostic.status,
+        asOf: diagnostic.as_of ?? null,
+        itemCount: diagnostic.item_count ?? null,
+        message: diagnostic.message ?? null,
+      })),
+    },
     priceHook: api.price_hook ?? null,
     keyNumbers: api.key_numbers ?? [],
     riskFactors: api.risk_factors ?? [],

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { fetchJson } from './fetchJson';
+import { ApiHttpError, fetchJson } from './fetchJson';
 
 function mockFetch(impl: () => Response | Promise<Response>) {
   vi.stubGlobal('fetch', vi.fn(impl));
@@ -24,7 +24,41 @@ describe('fetchJson', () => {
 
   it('throws the response detail message on error', async () => {
     mockFetch(() => new Response(JSON.stringify({ detail: 'Symbol not found' }), { status: 404 }));
-    await expect(fetchJson('/api/thing')).rejects.toThrow('Symbol not found');
+    await expect(fetchJson('/api/thing')).rejects.toMatchObject({
+      name: 'ApiHttpError',
+      message: 'Symbol not found',
+      status: 404,
+    });
+  });
+
+  it('exposes the HTTP status through ApiHttpError', async () => {
+    mockFetch(() => new Response(JSON.stringify({ detail: 'No cached analysis for AAPL today' }), { status: 404 }));
+
+    await expect(fetchJson('/api/thing')).rejects.toBeInstanceOf(ApiHttpError);
+  });
+
+  it('preserves a stable top-level API error code', async () => {
+    mockFetch(() => new Response(JSON.stringify({
+      detail: 'No analysis has been generated today.',
+      code: 'analysis_not_generated_today',
+    }), { status: 404 }));
+
+    await expect(fetchJson('/api/thing')).rejects.toMatchObject({
+      status: 404,
+      code: 'analysis_not_generated_today',
+    });
+  });
+
+  it('throws the safe message from a structured provider error', async () => {
+    mockFetch(() => new Response(JSON.stringify({
+      detail: {
+        code: 'market_data_provider_failed',
+        message: 'Market data provider failed.',
+        provider: 'mock',
+      },
+    }), { status: 502 }));
+
+    await expect(fetchJson('/api/thing')).rejects.toThrow('Market data provider failed.');
   });
 
   it('falls back to the provided errorMessage when there is no detail', async () => {
@@ -37,6 +71,11 @@ describe('fetchJson', () => {
   it('falls back to a status message when body is not JSON and no errorMessage given', async () => {
     mockFetch(() => new Response('boom', { status: 503 }));
     await expect(fetchJson('/api/thing')).rejects.toThrow(/503/);
+  });
+
+  it('sets a null code for non-JSON failures', async () => {
+    mockFetch(() => new Response('boom', { status: 503 }));
+    await expect(fetchJson('/api/thing')).rejects.toMatchObject({ status: 503, code: null });
   });
 
   it('passes method/headers/body through to fetch', async () => {

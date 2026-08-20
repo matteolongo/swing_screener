@@ -67,6 +67,25 @@ def test_write_read_round_trip():
     assert [s.name for s in loaded.steps] == ["resolve_context"]
 
 
+def test_attempt_identity_and_mode_persist_in_trace_and_index():
+    rec = tracing.TraceRecorder(
+        "AAPL",
+        run_id="run-attempt",
+        client_attempt_id="attempt-123",
+        attempt_force=True,
+    )
+    rec.finish()
+    tracing.write_run_trace(rec.trace)
+
+    stored = tracing.read_run_trace("run-attempt")
+    indexed = tracing.list_runs_for_ticker("AAPL")
+    assert stored is not None
+    assert stored.client_attempt_id == "attempt-123"
+    assert stored.attempt_force is True
+    assert indexed[0].client_attempt_id == "attempt-123"
+    assert indexed[0].attempt_force is True
+
+
 def test_read_missing_returns_none():
     assert tracing.read_run_trace("does-not-exist") is None
 

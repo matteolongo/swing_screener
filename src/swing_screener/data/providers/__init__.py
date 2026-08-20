@@ -3,7 +3,7 @@
 from .base import MarketDataProvider
 from .yfinance_provider import YfinanceProvider
 from .polygon_provider import PolygonProvider
-from .factory import get_market_data_provider, get_default_provider
+from .factory import get_market_data_provider
 
 try:
     from .alpaca_provider import AlpacaDataProvider
@@ -25,5 +25,4 @@ __all__ = [
     "AlpacaDataProvider",
     "PolygonProvider",
     "get_market_data_provider",
-    "get_default_provider",
 ]

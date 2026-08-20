@@ -8,10 +8,14 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
+import { canReviewPendingPullbackOrder, formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
+import type { WorkspaceSourceState } from '@/features/workspaceData/types';
+import SourceHealthSummary from './SourceHealthSummary';
 
 interface ActionPanelProps {
   ticker: string;
   candidate?: ScreenerCandidate | null;
+  source?: WorkspaceSourceState;
 }
 
 type PositionEntryContext = SameSymbolCandidateContext & { mode: 'ADD_ON' | 'SCALE_BACK' };
@@ -22,36 +26,7 @@ function isPositionEntryContext(
   return context?.mode === 'ADD_ON' || context?.mode === 'SCALE_BACK';
 }
 
-function resolveSameSymbolContext(
-  candidate: SymbolAnalysisCandidate | null,
-  openPosition:
-    | {
-        positionId?: string;
-        entryPrice: number;
-        stopPrice: number;
-      }
-    | undefined,
-): SameSymbolCandidateContext | undefined {
-  const candidateContext = candidate?.sameSymbol;
-  if (isPositionEntryContext(candidateContext)) {
-    return candidateContext;
-  }
-
-  if (openPosition?.positionId) {
-    return {
-      mode: 'ADD_ON',
-      positionId: openPosition.positionId,
-      currentPositionEntry: openPosition.entryPrice,
-      currentPositionStop: openPosition.stopPrice,
-      freshSetupStop: candidate?.sameSymbol?.freshSetupStop ?? candidate?.stop,
-      executionStop: openPosition.stopPrice,
-      pendingEntryExists: candidate?.sameSymbol?.pendingEntryExists ?? false,
-      addOnCount: candidate?.sameSymbol?.addOnCount ?? 0,
-      maxAddOns: candidate?.sameSymbol?.maxAddOns,
-      reason: 'Workspace inferred add-on mode from the current open position.',
-    };
-  }
-
+function resolveSameSymbolContext(candidate: SymbolAnalysisCandidate | null): SameSymbolCandidateContext | undefined {
   return candidate?.sameSymbol;
 }
 
@@ -85,7 +60,7 @@ function buildDefaultNotes(
   });
 }
 
-export default function ActionPanel({ ticker, candidate: candidateOverride }: ActionPanelProps) {
+export default function ActionPanel({ ticker, candidate: candidateOverride, source }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const activeStrategyQuery = useActiveStrategyQuery();
   const configDefaultsQuery = useConfigDefaultsQuery();
@@ -98,8 +73,14 @@ export default function ActionPanel({ ticker, candidate: candidateOverride }: Ac
   const candidate = candidateOverride === undefined ? storeCandidate : candidateOverride;
   const createOrderMutation = useCreateOrderMutation();
 
-  const sameSymbol = resolveSameSymbolContext(candidate ?? null, openPosition);
+  const sameSymbol = resolveSameSymbolContext(candidate ?? null);
   const defaultNotes = buildDefaultNotes(candidate ?? null, sameSymbol, normalizedTicker);
+  const isReadyCandidate = candidate?.recommendation?.workflowStatus === 'ready'
+    || (candidate != null && canReviewPendingPullbackOrder(candidate));
+  const canReviewOrder = Boolean(
+    isReadyCandidate &&
+      (!openPosition || isPositionEntryContext(candidate?.sameSymbol)),
+  );
 
   if (!risk) {
     const configFailed = configDefaultsQuery.isError && !activeStrategyQuery.data?.risk;
@@ -139,7 +120,7 @@ export default function ActionPanel({ ticker, candidate: candidateOverride }: Ac
     approvalToken: candidate?.approvalToken,
   };
 
-  return (
+  const content = canReviewOrder ? (
     <OrderActionPanel
       context={context}
       risk={risk}
@@ -147,5 +128,23 @@ export default function ActionPanel({ ticker, candidate: candidateOverride }: Ac
       showManualOrderHint={!candidate}
       onSubmitOrder={(request) => createOrderMutation.mutateAsync(request)}
     />
+  ) : (
+    <div className="rounded-lg border border-border bg-surface p-4 space-y-2">
+      <h3 className="text-sm font-semibold text-foreground">
+        {t('workspacePage.panels.analysis.orderUnavailable.title')}
+      </h3>
+      <p className="text-sm text-muted">
+        {candidate?.recommendation
+          ? formatWorkflowNextStep(candidate.recommendation.nextStep)
+          : t('workspacePage.panels.analysis.orderUnavailable.noCandidate')}
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2">
+      <SourceHealthSummary sources={source ? [source] : []} />
+      {content}
+    </div>
   );
 }

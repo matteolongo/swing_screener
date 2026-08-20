@@ -60,6 +60,27 @@ describe('portfolio local persistence service', () => {
     expect(openPositions[0].ticker).toBe('AAPL');
   });
 
+  it('allows an approved waiting pullback BUY_LIMIT entry', () => {
+    createOrderWithApproval({
+      ticker: 'AAPL',
+      orderType: 'buy_limit',
+      quantity: 10,
+      limitPrice: 100,
+      stopPrice: 95,
+      targetPrice: 110,
+      orderKind: 'entry',
+      setupStatus: 'PASS',
+      triggerStatus: 'WAIT',
+      dataStatus: 'current',
+      dataAsOf: '2026-02-26',
+      targetSource: 'structural',
+      daysToEarnings: 20,
+      approvalToken: 'approved-pullback-token',
+    });
+
+    expect(listOrdersLocal('pending')).toHaveLength(1);
+  });
+
   it('replaces linked stop order on stop update and supports close', () => {
     createOrderLocal({
       ticker: 'MSFT',

@@ -102,6 +102,22 @@ def test_valid_first_position_is_approved_with_concentration_warning():
     assert approval.projected_risk == 52
 
 
+def test_waiting_pullback_buy_limit_is_approved():
+    approval = _evaluate(context=_context(trigger_status="WAIT", pullback_wait_authorized=True))
+
+    assert approval.approved is True
+    assert approval.decision.status == "PASS"
+
+
+def test_waiting_breakout_buy_stop_is_blocked():
+    approval = _evaluate(
+        context=_context(order_type="BUY_STOP", trigger_status="WAIT")
+    )
+
+    assert approval.approved is False
+    assert approval.decision.status == "BLOCK"
+
+
 @pytest.mark.parametrize(
     ("kwargs", "gate"),
     [

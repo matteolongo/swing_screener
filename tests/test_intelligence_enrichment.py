@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from api.services.intelligence_enrichment import enrich_intelligence_request
-from swing_screener.intelligence.models import SymbolIntelligenceRequest
+from swing_screener.intelligence.models import EnrichmentDiagnostic, SymbolIntelligenceRequest
 
 
 class _FakeFundamentals:
@@ -69,6 +69,89 @@ def test_enricher_is_resilient_to_provider_errors():
     assert out.days_to_earnings is None
 
 
+def test_enricher_records_sanitized_failures_without_failing_analysis():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+
+    class _Boom:
+        def get_snapshot(self, symbol):
+            raise RuntimeError("secret-token=do-not-return")
+
+    out = enrich_intelligence_request("AAPL", req, fundamentals=_Boom())
+
+    assert out.enrichment_diagnostics == [
+        EnrichmentDiagnostic(
+            source="fundamentals",
+            status="failed",
+            message="Fundamentals provider failed.",
+        )
+    ]
+
+
+def test_enricher_records_used_and_missing_attempts():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+
+    out = enrich_intelligence_request(
+        "AAPL",
+        req,
+        fundamentals=_FakeFundamentals(None),
+        evidence=lambda _ticker: [],
+    )
+
+    assert out.enrichment_diagnostics[0] == EnrichmentDiagnostic(
+        source="fundamentals", status="missing"
+    )
+    assert out.enrichment_diagnostics[1].source == "evidence"
+    assert out.enrichment_diagnostics[1].status == "missing"
+    assert out.enrichment_diagnostics[1].item_count == 0
+    assert out.enrichment_diagnostics[1].as_of is not None
+
+
+def test_enricher_treats_none_evidence_as_missing():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+
+    out = enrich_intelligence_request("AAPL", req, evidence=lambda _ticker: None)
+
+    assert out.catalyst_evidence == []
+    assert out.enrichment_diagnostics[-1].source == "evidence"
+    assert out.enrichment_diagnostics[-1].status == "missing"
+    assert out.enrichment_diagnostics[-1].item_count == 0
+
+
+def test_enricher_treats_malformed_evidence_as_sanitized_failure():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+
+    out = enrich_intelligence_request(
+        "AAPL",
+        req,
+        evidence=lambda _ticker: {"api_key": "secret"},
+    )
+
+    assert out.catalyst_evidence == []
+    assert out.enrichment_diagnostics[-1] == EnrichmentDiagnostic(
+        source="evidence",
+        status="failed",
+        message="Evidence provider failed.",
+    )
+
+
+def test_enricher_rejects_malformed_evidence_list_members_without_copying_payload():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+
+    out = enrich_intelligence_request(
+        "AAPL",
+        req,
+        evidence=lambda _ticker: [{"api_key": "credential-like-secret"}],
+    )
+
+    assert out.catalyst_evidence == []
+    assert out.enrichment_diagnostics[-1] == EnrichmentDiagnostic(
+        source="evidence",
+        status="failed",
+        message="Evidence provider failed.",
+    )
+    assert "credential-like-secret" not in str(out.model_dump(mode="json"))
+
+
 def _synthetic_ohlcv(ticker="AAA", n=300):
     import numpy as np
     import pandas as pd
@@ -103,6 +186,8 @@ def test_enrich_with_technicals_fills_indicators():
     assert out.near_52w_high is True
     # benchmark-relative fields are intentionally left unset on this single-symbol path
     assert out.rel_strength is None
+    assert out.enrichment_diagnostics[-1].source == "technicals"
+    assert out.enrichment_diagnostics[-1].status == "used"
 
 
 def test_enrich_with_technicals_degrades_on_empty_frame():
@@ -113,7 +198,9 @@ def test_enrich_with_technicals_degrades_on_empty_frame():
     req = SymbolIntelligenceRequest(close=200.0, signal="hold")
     out = enrich_with_technicals("AAA", req, pd.DataFrame())
     assert out.sma_20 is None
-    assert out is req
+    assert out.enrichment_diagnostics == [
+        EnrichmentDiagnostic(source="technicals", status="missing", item_count=0)
+    ]
 
 
 def test_enrich_with_technicals_does_not_overwrite_existing():
@@ -167,6 +254,13 @@ def test_enrich_with_polygon_prices_degrades_on_fetch_error():
     out = enrich_with_polygon_prices("AAA", req, fetch_ohlcv=boom)
     assert out.close == 999.0
     assert out.price_source is None
+    assert out.enrichment_diagnostics == [
+        EnrichmentDiagnostic(
+            source="polygon_prices",
+            status="failed",
+            message="Polygon price provider failed.",
+        )
+    ]
 
 
 def test_enrich_with_polygon_prices_noop_without_key(monkeypatch):
@@ -175,5 +269,9 @@ def test_enrich_with_polygon_prices_noop_without_key(monkeypatch):
     monkeypatch.delenv("POLYGON_IO_API_KEY", raising=False)
     req = SymbolIntelligenceRequest(close=999.0, signal="hold")
     out = enrich_with_polygon_prices("AAA", req)  # no injected fetch → uses env
-    assert out is req
     assert out.price_source is None
+    assert out.enrichment_diagnostics == [
+        EnrichmentDiagnostic(
+            source="polygon_prices", status="missing", item_count=0
+        )
+    ]

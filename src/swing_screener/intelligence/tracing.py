@@ -40,6 +40,8 @@ class RunTrace(BaseModel):
     status: Literal["ok", "error", "running"] = "running"
     steps: list[StepTrace] = Field(default_factory=list)
     error: str | None = None
+    client_attempt_id: str | None = None
+    attempt_force: bool | None = None
 
 
 class RunIndexEntry(BaseModel):
@@ -50,6 +52,8 @@ class RunIndexEntry(BaseModel):
     status: str
     duration_ms: float | None = None
     step_count: int = 0
+    client_attempt_id: str | None = None
+    attempt_force: bool | None = None
 
 
 class StepDraft:
@@ -87,7 +91,13 @@ def _preview_chars() -> int:
 
 class TraceRecorder:
     def __init__(
-        self, ticker: str, *, run_id: str | None = None, preview_chars: int | None = None
+        self,
+        ticker: str,
+        *,
+        run_id: str | None = None,
+        preview_chars: int | None = None,
+        client_attempt_id: str | None = None,
+        attempt_force: bool | None = None,
     ) -> None:
         self.run_id = run_id or uuid4().hex
         self.preview_chars = preview_chars if preview_chars is not None else _preview_chars()
@@ -95,6 +105,8 @@ class TraceRecorder:
             run_id=self.run_id,
             ticker=ticker.upper(),
             started_at=_now().isoformat(),
+            client_attempt_id=client_attempt_id,
+            attempt_force=attempt_force,
         )
 
     @contextmanager
@@ -147,11 +159,20 @@ class TraceRecorder:
             self.trace.status = "ok"
 
 
-def new_recorder(ticker: str) -> TraceRecorder | None:
+def new_recorder(
+    ticker: str,
+    *,
+    client_attempt_id: str | None = None,
+    attempt_force: bool | None = None,
+) -> TraceRecorder | None:
     try:
         if not tracing_enabled():
             return None
-        return TraceRecorder(ticker)
+        return TraceRecorder(
+            ticker,
+            client_attempt_id=client_attempt_id,
+            attempt_force=attempt_force,
+        )
     except Exception:  # noqa: BLE001 - never fail an analysis on trace setup
         logger.warning("Failed to create intelligence trace recorder for %r", ticker, exc_info=True)
         return None
@@ -176,14 +197,23 @@ def finalize_trace(recorder: TraceRecorder | None, *, error: BaseException | Non
 
 
 @contextmanager
-def recording_run(ticker: str) -> Iterator[TraceRecorder | None]:
+def recording_run(
+    ticker: str,
+    *,
+    client_attempt_id: str | None = None,
+    attempt_force: bool | None = None,
+) -> Iterator[TraceRecorder | None]:
     """Own a recorder's full lifecycle: create, capture any error, always finalize.
 
     Yields None when tracing is disabled. The recorder is finalized on exit for
     both success and failure paths, so callers never hand-coordinate
     ``new_recorder`` / ``mark_error`` / ``finalize_trace``.
     """
-    recorder = new_recorder(ticker)
+    recorder = new_recorder(
+        ticker,
+        client_attempt_id=client_attempt_id,
+        attempt_force=attempt_force,
+    )
     error: BaseException | None = None
     try:
         yield recorder
@@ -226,6 +256,8 @@ def _upsert_index(trace: RunTrace, root: Path | None = None) -> None:
         status=trace.status,
         duration_ms=duration,
         step_count=len(trace.steps),
+        client_attempt_id=trace.client_attempt_id,
+        attempt_force=trace.attempt_force,
     ).model_dump()
     cap = _max_runs_per_ticker()
     dropped_ids: list[str] = []

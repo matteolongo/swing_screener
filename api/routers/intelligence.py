@@ -4,9 +4,13 @@ from __future__ import annotations
 import logging
 import math
 import os
+import re
+from datetime import datetime, timezone
 from threading import Lock
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, model_validator
 
 from api.models.intelligence_chat import IntelligenceChatRequest, IntelligenceChatResponse
@@ -23,8 +27,12 @@ from api.services.intelligence_enrichment import (
     enrich_intelligence_request,
     enrich_with_polygon_prices,
     enrich_with_technicals,
+    record_enrichment_failure,
 )
-from swing_screener.intelligence.evidence.collect import collect_evidence
+from swing_screener.intelligence.evidence.collect import (
+    collect_evidence,
+    read_latest_cached_evidence_summary,
+)
 from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.history import HistoryEntry, read_history
@@ -209,6 +217,93 @@ class RunIndexResponse(BaseModel):
     entries: list[RunIndexEntry]
 
 
+class EvidenceRefreshSource(BaseModel):
+    source: Literal["evidence"] = "evidence"
+    provider: str
+    status: Literal["fresh", "failed"]
+    item_count: int
+    as_of: str
+    message: str | None = None
+
+
+class EvidenceRefreshResponse(BaseModel):
+    ticker: str
+    refreshed_at: str
+    status: Literal["fresh", "partial", "failed"]
+    sources: list[EvidenceRefreshSource]
+
+
+class EvidenceCacheSummaryResponse(BaseModel):
+    ticker: str
+    cached_at: str
+    item_count: int
+    providers: list[str]
+    freshness_status: Literal["fresh", "cached", "stale"]
+
+
+@router.get("/{ticker}/evidence/latest", response_model=EvidenceCacheSummaryResponse)
+def get_latest_evidence_summary(ticker: str) -> EvidenceCacheSummaryResponse | JSONResponse:
+    """Return the newest persisted evidence-cache metadata without collecting."""
+    upper = ticker.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9._-]{0,19}", upper):
+        raise HTTPException(status_code=422, detail="Invalid ticker.")
+    summary = read_latest_cached_evidence_summary(upper)
+    if summary is None:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"No cached evidence for {upper}", "code": "evidence_not_cached"},
+        )
+    return EvidenceCacheSummaryResponse(
+        ticker=summary.ticker,
+        cached_at=summary.cached_at,
+        item_count=summary.item_count,
+        providers=summary.providers,
+        freshness_status=summary.freshness_status,
+    )
+
+
+@router.post("/{ticker}/evidence/refresh", response_model=EvidenceRefreshResponse)
+def refresh_evidence(ticker: str) -> EvidenceRefreshResponse:
+    """Refresh configured evidence collectors without analysis or trading mutations."""
+    upper = ticker.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9._-]{0,19}", upper):
+        raise HTTPException(status_code=422, detail="Invalid ticker.")
+
+    refreshed_at = datetime.now(timezone.utc).isoformat()
+    sources: list[EvidenceRefreshSource] = []
+
+    def record_attempt(provider: str, status: str, item_count: int) -> None:
+        sources.append(
+            EvidenceRefreshSource(
+                provider=provider,
+                status=status,
+                item_count=item_count,
+                as_of=refreshed_at,
+                message="Evidence provider failed." if status == "failed" else None,
+            )
+        )
+
+    collect_evidence(
+        upper,
+        refresh_sources=True,
+        attempt_callback=record_attempt,
+    )
+    failures = sum(source.status == "failed" for source in sources)
+    overall = (
+        "failed"
+        if not sources or failures == len(sources)
+        else "partial"
+        if failures
+        else "fresh"
+    )
+    return EvidenceRefreshResponse(
+        ticker=upper,
+        refreshed_at=refreshed_at,
+        status=overall,
+        sources=sources,
+    )
+
+
 @router.post("/sweep", response_model=SweepResponse)
 def sweep(
     request: SweepRequest,
@@ -249,8 +344,9 @@ def sweep(
                         ohlcv = portfolio_service.fetch_recent_ohlcv(upper)
                         item_req = enrich_with_technicals(upper, item_req, ohlcv)
                         ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
-                    except Exception as exc:
-                        skipped_reason = _brief_error(exc)
+                    except Exception:
+                        item_req = record_enrichment_failure(item_req, "technicals")
+                        skipped_reason = "Technical enrichment failed."
                         logger.warning(
                             "Sweep technical enrichment skipped for %r", item.ticker, exc_info=True
                         )
@@ -364,11 +460,14 @@ def review_symbol(
 
 
 @router.get("/{ticker}/latest", response_model=SymbolIntelligence)
-def get_latest(ticker: str) -> SymbolIntelligence:
+def get_latest(ticker: str) -> SymbolIntelligence | JSONResponse:
     """Return today's cached intelligence result for a symbol, or 404."""
     result = read_from_cache(ticker.upper())
     if result is None:
-        raise HTTPException(status_code=404, detail=f"No cached analysis for {ticker} today")
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"No cached analysis for {ticker} today", "code": "analysis_not_generated_today"},
+        )
     return result
 
 
@@ -377,6 +476,7 @@ def analyze_symbol(
     ticker: str,
     request: SymbolIntelligenceRequest,
     force: bool = False,
+    attempt_id: str | None = None,
     positions_repo: PositionsRepository = Depends(get_positions_repo),
     fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
@@ -385,12 +485,18 @@ def analyze_symbol(
     _require_api_key()
     _require_analyzer_enabled()
     upper = ticker.upper()
+    if attempt_id is not None and not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", attempt_id):
+        raise HTTPException(status_code=422, detail="Invalid attempt id.")
     def _earnings(t: str) -> tuple[int | None, str | None]:
         ep = portfolio_service.get_earnings_proximity(t)
         return ep.days_until, ep.next_earnings_date
 
     try:
-        with recording_run(upper) as recorder:
+        with recording_run(
+            upper,
+            client_attempt_id=attempt_id,
+            attempt_force=force if attempt_id is not None else None,
+        ) as recorder:
             with step(recorder, "enrich_request") as draft:
                 request = enrich_intelligence_request(
                     upper,
@@ -486,8 +592,9 @@ def analyze_position(
                     ohlcv = portfolio_service.fetch_recent_ohlcv(pos.ticker)
                     request = enrich_with_technicals(pos.ticker, request, ohlcv)
                     ohlcv_rows = int(len(ohlcv)) if ohlcv is not None else 0
-                except Exception as exc:
-                    skipped_reason = _brief_error(exc)
+                except Exception:
+                    request = record_enrichment_failure(request, "technicals")
+                    skipped_reason = "Technical enrichment failed."
                     logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
                 _set_step_output(
                     draft, ohlcv_rows=ohlcv_rows, skipped_reason=skipped_reason

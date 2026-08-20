@@ -59,7 +59,7 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = ohlcv
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda *args, **kwargs: mock_provider)
+    monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda *args, **kwargs: mock_provider)
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-AAPL-1/stop-suggestion")
@@ -82,7 +82,7 @@ def test_position_stop_suggestion_compute_endpoint(monkeypatch):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = ohlcv
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda *args, **kwargs: mock_provider)
+    monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda *args, **kwargs: mock_provider)
 
     client = TestClient(app)
     res = client.post(

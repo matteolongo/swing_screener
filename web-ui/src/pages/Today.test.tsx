@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import Today from './Today';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useScreenerStore } from '@/stores/screenerStore';
 
 function makeCloseItem(ticker: string, positionId: string) {
   return {
@@ -43,6 +45,16 @@ const threeCloseItemReview = {
   },
 };
 
+beforeEach(() => {
+  useWorkspaceStore.setState({
+    selectedTicker: null,
+    selectedTickerSource: null,
+    workspaceMode: 'split',
+    fullscreen: false,
+    analysisTab: 'overview',
+  });
+});
+
 describe('Today page — keyboard navigation syncs with click', () => {
   it('pressing j after clicking the second item advances to the third, not from keyboard position 0', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error');
@@ -59,7 +71,6 @@ describe('Today page — keyboard navigation syncs with click', () => {
 
     // Wait for all three rows to appear
     const nvdaButton = await screen.findByRole('button', { name: /NVDA/i });
-    const msftButton = screen.getByRole('button', { name: /MSFT/i });
 
     // Click the second item (NVDA, flat-list index 1)
     fireEvent.click(nvdaButton);
@@ -68,7 +79,10 @@ describe('Today page — keyboard navigation syncs with click', () => {
     // Without the fix, j moves from focusedIndex -1 → 0 (AMAT), not NVDA → MSFT
     fireEvent.keyDown(window, { key: 'j' });
 
-    expect(msftButton).toHaveClass('ring-1');
+    expect(useWorkspaceStore.getState().selectedTicker).toBe('MSFT');
+    expect(
+      within(screen.getByTestId('symbol-rail')).getByRole('button', { name: /MSFT/i }),
+    ).toHaveAttribute('aria-current', 'true');
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(
       consoleErrorSpy.mock.calls.some(([message]) =>
@@ -88,6 +102,195 @@ describe('Today page — accessibility', () => {
       name: t('dailyReview.header.refreshTitle'),
     });
     expect(refreshButton).toHaveAttribute('aria-label', t('dailyReview.header.refreshTitle'));
+  });
+});
+
+describe('Today page — expanded workspace', () => {
+  it('collapses the list to a symbol rail and restores the active tab on close', async () => {
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      workspaceMode: 'expanded',
+      fullscreen: false,
+    });
+
+    const { user } = renderWithProviders(<Today />);
+    await user.click(screen.getByRole('tab', { name: t('todayPage.tabs.screener') }));
+
+    expect(screen.getByTestId('symbol-rail')).toBeVisible();
+    expect(screen.getByTestId('symbol-workspace')).toHaveAttribute('data-mode', 'expanded');
+
+    await user.click(screen.getByRole('button', { name: t('workspacePage.controls.close') }));
+    expect(screen.getByTestId('today-symbol-table')).toBeVisible();
+    expect(screen.getByRole('tab', { name: t('todayPage.tabs.screener') })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it.each([
+    ['close', 'workspacePage.controls.close'],
+    ['mobile back', 'workspacePage.controls.backToList'],
+  ] as const)('restores focus to the originating symbol after %s', async (_, controlKey) => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [], asof: '2026-05-16' })
+      ),
+      http.get('*/api/daily-review', () => HttpResponse.json(threeCloseItemReview)),
+    );
+    useWorkspaceStore.getState().clearSelectedTicker();
+    const { user } = renderWithProviders(<Today />);
+    const tickerButton = await screen.findByRole('button', { name: /NVDA/i });
+
+    await user.click(tickerButton);
+    await user.click(screen.getByRole('button', { name: t(controlKey) }));
+
+    expect(
+      within(screen.getByTestId('today-symbol-table')).getByRole('button', { name: /NVDA/i }),
+    ).toHaveFocus();
+  });
+
+  it('supports a keyboard journey through the rail, source status, header, and every analysis tab', async () => {
+    let fundamentalsRequests = 0;
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [], asof: '2026-05-16' })
+      ),
+      http.get('*/api/daily-review', () => HttpResponse.json(threeCloseItemReview)),
+      http.get('*/api/fundamentals/snapshot/NVDA', () => {
+        fundamentalsRequests += 1;
+        return fundamentalsRequests === 1
+          ? HttpResponse.json({ detail: 'Fundamentals keyboard failure' }, { status: 503 })
+          : HttpResponse.json({
+              symbol: 'NVDA',
+              asof_date: '2026-05-16',
+              provider: 'test',
+              updated_at: '2026-05-16T20:00:00Z',
+              instrument_type: 'equity',
+              supported: true,
+              coverage_status: 'supported',
+              freshness_status: 'current',
+              pillars: {},
+              historical_series: {},
+              metric_context: {},
+              data_quality_status: 'high',
+              data_quality_flags: [],
+              red_flags: [],
+              highlights: [],
+              metric_sources: {},
+            });
+      }),
+      http.get('*/api/intelligence/NVDA/runs', () =>
+        HttpResponse.json({ entries: [] })
+      ),
+    );
+    useWorkspaceStore.getState().clearSelectedTicker();
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-05-16',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [{
+          ticker: 'NVDA',
+          recommendation: {
+            workflowStatus: 'ready',
+            nextStep: { code: 'review_order' },
+            verdict: 'RECOMMENDED',
+            reasonsShort: [],
+            reasonsDetailed: [],
+            risk: {
+              entry: 100,
+              stop: 95,
+              target: 110,
+              desiredTarget: 110,
+              targetSource: 'structural',
+              rr: 2,
+              riskAmount: 50,
+              riskPct: 0.001,
+              positionSize: 1000,
+              shares: 10,
+            },
+            costs: {
+              commissionEstimate: 0,
+              fxEstimate: 0,
+              slippageEstimate: 0,
+              totalCost: 0,
+              feeToRiskPct: 0,
+            },
+            checklist: [],
+            decisionGates: {
+              setup: { status: 'PASS', explanation: 'Qualified.' },
+              trigger: { status: 'PASS', explanation: 'Triggered.' },
+              plan: { status: 'PASS', explanation: 'Reconciled.' },
+              portfolio: { status: 'UNKNOWN', explanation: 'Checked on submit.' },
+              readyToOrder: true,
+            },
+            education: {
+              commonBiasWarning: '',
+              whatToLearn: '',
+              whatWouldMakeValid: [],
+            },
+          },
+          close: 100,
+          entry: 100,
+          stop: 95,
+          shares: 10,
+        }],
+      } as never,
+    });
+    const { user } = renderWithProviders(<Today />);
+    const railSymbol = await screen.findByRole('button', { name: /NVDA/i });
+
+    railSymbol.focus();
+    await user.keyboard('{Enter}');
+    const expandedRail = screen.getByTestId('symbol-rail');
+    expect(expandedRail).toBeVisible();
+    expect(within(expandedRail).getByTestId('symbol-rail-list')).toBeInTheDocument();
+    expect(within(expandedRail).queryByRole('button', {
+      name: t('dailyReview.header.refreshTitle'),
+    })).not.toBeInTheDocument();
+
+    const neighboringSymbol = within(expandedRail).getByRole('button', { name: /VALE/i });
+    neighboringSymbol.focus();
+    await user.keyboard('{Enter}');
+    expect(useWorkspaceStore.getState().selectedTicker).toBe('VALE');
+
+    const nvdaRailControl = within(expandedRail).getByRole('button', { name: /NVDA/i });
+    nvdaRailControl.focus();
+    await user.keyboard('{Enter}');
+    expect(useWorkspaceStore.getState().selectedTicker).toBe('NVDA');
+
+    const fundamentalsSource = await screen.findByRole('button', {
+      name: t('workspacePage.data.sources.fundamentals'),
+    });
+    fundamentalsSource.focus();
+    await user.keyboard('{Enter}');
+    expect(fundamentalsSource).toHaveFocus();
+    expect(await screen.findByTestId('workspace-source-detail')).toHaveTextContent(
+      t('workspacePage.data.sources.fundamentals'),
+    );
+
+    for (const tabKey of ['overview', 'fundamentals', 'intelligence', 'backtest', 'volumeZones', 'order'] as const) {
+      const tab = screen.getByRole('tab', {
+        name: t(`workspacePage.panels.analysis.tabs.${tabKey}`),
+      });
+      tab.focus();
+      await user.keyboard('{Enter}');
+      expect(tab).toHaveAttribute('aria-selected', 'true');
+    }
+
+    for (const controlKey of ['backToList', 'collapse', 'fullscreen', 'close'] as const) {
+      expect(screen.getByRole('button', {
+        name: t(`workspacePage.controls.${controlKey}`),
+      })).toBeEnabled();
+    }
+    const fullscreenControl = screen.getByRole('button', {
+      name: t('workspacePage.controls.fullscreen'),
+    });
+    fullscreenControl.focus();
+    await user.keyboard('{Enter}');
+    expect(useWorkspaceStore.getState().fullscreen).toBe(true);
+
   });
 });
 
@@ -397,6 +600,7 @@ const reviewWithPendingOrders = {
 
 describe('Today page — pending orders review section', () => {
   beforeEach(() => {
+    useWorkspaceStore.getState().clearSelectedTicker();
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [], asof: '2026-05-16' })

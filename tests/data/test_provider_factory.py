@@ -4,7 +4,6 @@ import pytest
 from swing_screener.config import BrokerConfig
 from swing_screener.data.providers.base import MarketDataProvider
 from swing_screener.data.providers.factory import (
-    get_default_provider,
     get_market_data_provider,
 )
 from swing_screener.data.providers.yfinance_provider import YfinanceProvider
@@ -16,9 +15,9 @@ def test_yfinance_config_returns_yfinance_provider():
     assert isinstance(provider, MarketDataProvider)
 
 
-def test_get_default_provider_returns_yfinance_by_default(monkeypatch):
+def test_get_market_data_provider_returns_yfinance_by_default(monkeypatch):
     monkeypatch.delenv("SWING_SCREENER_PROVIDER", raising=False)
-    assert isinstance(get_default_provider(), YfinanceProvider)
+    assert isinstance(get_market_data_provider(), YfinanceProvider)
 
 
 def test_unknown_provider_raises_value_error():

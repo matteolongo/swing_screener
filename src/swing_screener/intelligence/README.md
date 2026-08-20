@@ -24,6 +24,8 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 
 ```
 POST /api/intelligence/{ticker}            — run analysis; cache result
+GET  /api/intelligence/{ticker}/evidence/latest — newest persisted evidence-cache metadata; no collection or LLM
+POST /api/intelligence/{ticker}/evidence/refresh — refresh evidence only; no LLM or trading mutation
 GET  /api/intelligence/{ticker}/latest     — return most-recent cached result
 GET  /api/intelligence/{ticker}/history    — return per-symbol analysis history (newest-first, capped)
 GET  /api/intelligence/runs/{run_id}       — return a single persisted agent-run trace
@@ -134,6 +136,30 @@ left unset is filled server-side (blocking) from the fundamentals snapshot
 sees the full picture regardless of what the caller sent. Provider errors degrade
 gracefully (the field stays unset; analysis never fails on a fetch error), and
 caller-provided values are never overwritten.
+
+Every attempted fundamentals, earnings, dividend, evidence, technical, and
+Polygon-price source appends an `EnrichmentDiagnostic` to the request. The graph
+copies these entries to `SymbolIntelligence.inputs_used.enrichment_diagnostics`
+with a `used`, `missing`, or `failed` status plus optional as-of time and item
+count. Failure messages are stable, user-safe summaries; detailed provider
+exceptions remain restricted to logs and run traces. The field is additive, so
+cached results written before diagnostics were introduced remain valid.
+
+`POST /api/intelligence/{ticker}/evidence/refresh` is the explicit evidence-only
+path used by the workspace input review. It bypasses the analyzer entirely,
+forces the configured evidence collectors (including refresh-only collectors),
+updates their normal curated evidence cache, and returns only a sanitized
+per-provider manifest with freshness, count, and failure status. Cache replacement
+is atomic: successful providers replace their prior entries, prior entries from
+failed providers remain available, and an all-provider failure leaves the last
+validated cache unchanged. It never writes analysis/history/metrics, calls an
+LLM, or mutates portfolio/order state. Raw collector exceptions remain
+server-side.
+
+`GET /api/intelligence/{ticker}/evidence/latest` scans the persisted evidence
+cache newest-first and returns only sanitized cache metadata (date, item count,
+and publishers). It is used to disclose prior-day evidence in the workspace;
+it never calls collectors or the analyzer.
 
 `POST /api/intelligence/position/{position_id}` enriches the same way: it runs
 `enrich_intelligence_request` (fundamentals + earnings) and then `enrich_with_technicals`,
@@ -287,7 +313,7 @@ history metadata; metrics add a capped token log for quick operational checks.
 
 ```mermaid
 flowchart LR
-  Result[SymbolIntelligence] --> Inputs[inputs_used: trade plan, technicals, fundamentals, source counts]
+  Result[SymbolIntelligence] --> Inputs[inputs_used: trade plan, technicals, provenance, enrichment diagnostics]
   Result --> Sources[sources: URLs cited by the model]
   Result --> Catalysts[classified_catalysts: typed cited catalysts]
   Result --> Ledger[evidence_ledger: deterministic bull/bear balance]
@@ -314,7 +340,10 @@ written to `data/intelligence/runs/{run_id}.json` with a per-ticker index at
 `data/intelligence/runs/index/{TICKER}.json` (newest-first, capped at
 `config.tracing.max_runs_per_ticker`). The index is updated under an exclusive file
 lock so concurrent same-ticker runs cannot clobber each other, and the run just
-written is never pruned from its own index. Each `SymbolIntelligence` result (and its
+written is never pruned from its own index. Single-symbol generation may include
+a client attempt ID; the trace and index persist that ID and the requested force
+mode so clients can resolve an exact concurrent or failed attempt. These fields
+are additive and absent from older run files. Each `SymbolIntelligence` result (and its
 cache entry) carries the `run_id` that produced it, so a cache hit still resolves
 its trace. Each step records status, timing, and an `outputs_summary`; steps that
 have them also record model, token usage, `source_counts`, `prompt_hash` + a
@@ -373,7 +402,20 @@ Controlled by `config.evidence` in `config/intelligence.yaml`:
 
 ### Cache
 
-Curated evidence is cached lazily at `data/intelligence/evidence/{date}/{ticker}.json` (regenerable; not committed). No schema migration required.
+Curated evidence is cached lazily at
+`data/intelligence/evidence/{date}/{ticker}.json` (regenerable; not committed).
+New cache entries include an internal collector `source_id` so a partial refresh
+can retain only entries from providers that failed. Legacy entries without that
+tag remain readable, but the next refresh with any successful collector replaces
+them because their provider ownership cannot be established safely. No manual
+schema migration is required.
+
+`GET /api/intelligence/{ticker}/evidence/latest` reads only the newest valid
+cache metadata; it never collects sources or invokes an LLM. Its
+`freshness_status` is server-owned: same-day evidence is `fresh`, evidence no
+older than `config.evidence.cache_stale_after_days` is `cached`, and older
+evidence is `stale`. A missing cache is the neutral `evidence_not_cached`
+condition, not a provider failure.
 
 ### Prompt injection
 

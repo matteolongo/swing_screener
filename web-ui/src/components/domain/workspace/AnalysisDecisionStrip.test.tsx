@@ -52,7 +52,7 @@ describe('AnalysisDecisionStrip — % to target cell', () => {
     const candidate = buildCandidate({ entry: 200, stop: 190 });
     render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} />);
     const toTargetLabel = screen.getByText('To Target');
-    const cell = toTargetLabel.closest('div[class*="min-w"]');
+    const cell = toTargetLabel.closest('tr');
     expect(cell?.textContent).toContain('—');
   });
 });
@@ -81,6 +81,25 @@ describe('AnalysisDecisionStrip — order preparation authority', () => {
     );
 
     expect(screen.queryByRole('button', { name: /prepare order/i })).not.toBeInTheDocument();
+  });
+
+  it('suppresses a conflicting BUY_NOW opinion when the canonical workflow says no setup', () => {
+    const { container } = render(
+      <AnalysisDecisionStrip
+        ticker="AAPL"
+        candidate={buildCandidate({
+          decisionSummary: buyNowSummary,
+          recommendation: { workflowStatus: 'no_setup', nextStep: { code: 'observe' } } as any,
+        })}
+        onPrepareOrder={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(t('recommendation.workflow.status.noSetup'))).toBeVisible();
+    expect(screen.getByText(t('recommendation.workflow.nextStep.observe'))).toBeVisible();
+    expect(screen.queryByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /prepare order/i })).not.toBeInTheDocument();
+    expect(container.firstElementChild).not.toHaveClass('sticky');
   });
 
   it('exposes Prepare order for a canonical ready candidate', () => {
@@ -161,7 +180,7 @@ describe('AnalysisDecisionStrip — Risk % cell', () => {
     render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} />);
 
     const riskLabel = screen.getAllByText('Risk %')[0];
-    const cell = riskLabel.closest('div[class*="min-w"]');
+    const cell = riskLabel.closest('tr');
     expect(cell?.textContent).toContain('—');
     expect(cell?.textContent).not.toContain('0.00%');
   });
@@ -230,13 +249,13 @@ describe('AnalysisDecisionStrip — planned pullback entry', () => {
     render(<AnalysisDecisionStrip ticker="BESI.AS" candidate={candidate} />);
 
     const entryLabel = screen.getByText('Planned entry');
-    const entryCell = entryLabel.closest('div[class*="min-w"]');
+    const entryCell = entryLabel.closest('tr');
     expect(entryCell?.textContent).toContain('€285.04');
     expect(entryCell?.textContent).toContain('Close €287.60');
     expect(entryCell?.textContent).not.toContain('Entry (close)');
 
     const oneRLabel = screen.getByText('1R');
-    const oneRCell = oneRLabel.closest('div[class*="min-w"]');
+    const oneRCell = oneRLabel.closest('tr');
     expect(oneRCell?.textContent).toContain('€7.67');
   });
 });
@@ -313,17 +332,18 @@ describe('AnalysisDecisionStrip — no signal pills row', () => {
     expect(screen.queryByText(/Setup:/)).not.toBeInTheDocument();
   });
 });
-describe('AnalysisDecisionStrip — metric grid layout', () => {
-  it('renders exactly 7 metric cells', () => {
-    const { container } = render(<AnalysisDecisionStrip ticker="BESI.AS" />);
-    const cells = container.querySelectorAll('[class*="min-w-"]');
-    expect(cells.length).toBe(7);
+describe('AnalysisDecisionStrip — trade-plan table', () => {
+  it('groups the execution metrics and invalidation in one named table', () => {
+    render(<AnalysisDecisionStrip ticker="BESI.AS" />);
+    expect(screen.getByRole('table', { name: t('workspacePage.overview.tradePlan') })).toBeVisible();
   });
 
-  it('metric cell container uses a grid class, not flex', () => {
-    const { container } = render(<AnalysisDecisionStrip ticker="BESI.AS" />);
-    const gridWrapper = container.querySelector('[class*="grid"][class*="grid-cols"]');
-    expect(gridWrapper).not.toBeNull();
+  it('renders the four core execution fields', () => {
+    render(<AnalysisDecisionStrip ticker="BESI.AS" />);
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose'))).toBeVisible();
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'))).toBeVisible();
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'))).toBeVisible();
+    expect(screen.getByText(t('workspacePage.overview.invalidation'))).toBeVisible();
   });
 });
 

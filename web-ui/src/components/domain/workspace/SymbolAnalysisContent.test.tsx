@@ -92,24 +92,16 @@ function CandidateOrderHarness({ workflowStatus }: { workflowStatus: 'ready' | '
   );
 }
 
-function HeldAddOnHarness() {
-  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
-  return (
-    <SymbolAnalysisContent
-      ticker="LRCX"
-      candidate={{
-        sameSymbol: { mode: 'ADD_ON' },
-        recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
-      } as any}
-      position={position}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      orderPanel={<div>add-on order panel</div>}
-    />
-  );
-}
-
 describe('SymbolAnalysisContent candidate order transition', () => {
+  it('keeps the canonical decision inside Overview instead of repeating it above every tab', async () => {
+    renderWithProviders(<CandidateOrderHarness workflowStatus="ready" />);
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toBeVisible();
+
+    await userEvent.click(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.backtest') }));
+
+    expect(screen.queryByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).not.toBeInTheDocument();
+  });
+
   it('does not open the order panel from a BUY_NOW opinion without ready workflow status', () => {
     renderWithProviders(<CandidateOrderHarness workflowStatus="no_setup" />);
 
@@ -124,11 +116,10 @@ describe('SymbolAnalysisContent candidate order transition', () => {
     expect(screen.getByText('order panel')).toBeInTheDocument();
   });
 
-  it('opens the local order tab from a held add-on', async () => {
-    renderWithProviders(<HeldAddOnHarness />);
+  it('does not expose an Order tab without a canonical candidate', () => {
+    renderWithProviders(<SymbolAnalysisHarness />);
 
-    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') }));
-    expect(screen.getByText('add-on order panel')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).not.toBeInTheDocument();
   });
 });
 
@@ -155,6 +146,7 @@ describe('SymbolAnalysisContent volume zones tab', () => {
           provider: 'mock',
           interval: '1d',
           lookback: 120,
+          min_rr: 2,
           data_quality: { ok: true, bars: 160, warnings: [] },
           profile_type: 'approximate_bar_based',
           market_bias: 'bullish',

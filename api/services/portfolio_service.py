@@ -33,7 +33,7 @@ from api.services.portfolio import (
     PortfolioWriteService,
     PositionStopAdvisor,
 )
-from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
 
 # Re-export module-level symbols accessed by tests
 from api.services.portfolio.pricing import _eurusd_cache, _earnings_cache  # noqa: F401
@@ -49,7 +49,7 @@ class PortfolioService:
         uow: PortfolioUnitOfWork | None = None,
     ) -> None:
         self._positions_repo = positions_repo
-        self._provider = provider or get_default_provider()
+        self._provider = provider or get_market_data_provider()
         self._config_repo = config_repo or ConfigRepository()
         self._uow = uow
 

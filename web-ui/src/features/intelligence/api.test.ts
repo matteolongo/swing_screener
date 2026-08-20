@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { candidateToPayload, postIntelligenceAnalysis, postStrategicReview, sendIntelligenceChatMessage } from './api';
+import {
+  candidateToPayload,
+  postIntelligenceAnalysis,
+  postStrategicReview,
+  getLatestEvidenceSummary,
+  refreshIntelligenceEvidence,
+  sendIntelligenceChatMessage,
+} from './api';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -273,6 +280,21 @@ describe('postIntelligenceAnalysis', () => {
     expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/AAPL?force=true');
     vi.unstubAllGlobals();
   });
+
+  it('sends the stable client attempt id for exact trace correlation', async () => {
+    const mockFetch = okFetch();
+    vi.stubGlobal('fetch', mockFetch);
+
+    await postIntelligenceAnalysis(
+      'AAPL',
+      { close: 150, signal: 'BUY' },
+      false,
+      'attempt-aapl-1',
+    );
+
+    expect(mockFetch.mock.calls[0][0]).toContain('attempt_id=attempt-aapl-1');
+    vi.unstubAllGlobals();
+  });
 });
 
 describe('sendIntelligenceChatMessage', () => {
@@ -326,6 +348,73 @@ describe('postStrategicReview', () => {
       risk_mode: 'defensive',
       horizon_days: 7,
     });
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('refreshIntelligenceEvidence', () => {
+  it('posts to the dedicated endpoint and transforms the source manifest', async () => {
+    const payload = {
+      ticker: 'AAPL',
+      refreshed_at: '2026-07-28T10:00:00Z',
+      status: 'partial',
+      sources: [{
+        source: 'evidence',
+        provider: 'tavily',
+        status: 'failed',
+        item_count: 0,
+        as_of: '2026-07-28T10:00:00Z',
+        message: 'Evidence provider failed.',
+      }],
+    };
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => payload,
+      text: async () => JSON.stringify(payload),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await refreshIntelligenceEvidence('AAPL');
+
+    expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/AAPL/evidence/refresh');
+    expect(mockFetch.mock.calls[0][1]?.method).toBe('POST');
+    expect(result.sources[0]).toEqual({
+      source: 'evidence',
+      provider: 'tavily',
+      status: 'failed',
+      itemCount: 0,
+      asOf: '2026-07-28T10:00:00Z',
+      message: 'Evidence provider failed.',
+    });
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('getLatestEvidenceSummary', () => {
+  it('reads and transforms the newest persisted evidence metadata without posting', async () => {
+    const payload = {
+      ticker: 'AAPL',
+      cached_at: '2026-07-27',
+      item_count: 8,
+      providers: ['REFINITIV_LATEST_NEWS'],
+      freshness_status: 'cached',
+    };
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => payload,
+      text: async () => JSON.stringify(payload),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await expect(getLatestEvidenceSummary('AAPL')).resolves.toEqual({
+      ticker: 'AAPL',
+      cachedAt: '2026-07-27',
+      itemCount: 8,
+      providers: ['REFINITIV_LATEST_NEWS'],
+      freshnessStatus: 'cached',
+    });
+    expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/AAPL/evidence/latest');
+    expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'GET' });
     vi.unstubAllGlobals();
   });
 });

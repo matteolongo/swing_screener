@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ScreenerCandidate } from '@/features/screener/types';
 import {
+  canReviewPendingPullbackOrder,
   formatWorkflowNextStep,
   getWorkflowPresentation,
   groupCandidatesByWorkflow,
@@ -18,6 +19,32 @@ const apiRecommendation: RecommendationAPI = {
 };
 
 describe('workflow presentation', () => {
+  it('allows only signed waiting pullback BUY_LIMIT orders into review', () => {
+    expect(canReviewPendingPullbackOrder({
+      approvalToken: 'signed-token',
+      suggestedOrderType: 'BUY_LIMIT',
+      recommendation: {
+        workflowStatus: 'waiting_trigger',
+        nextStep: { code: 'wait_pullback' },
+      },
+    })).toBe(true);
+
+    expect(canReviewPendingPullbackOrder({
+      suggestedOrderType: 'BUY_LIMIT',
+      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_pullback' } },
+    })).toBe(false);
+    expect(canReviewPendingPullbackOrder({
+      approvalToken: 'signed-token',
+      suggestedOrderType: 'BUY_STOP',
+      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_pullback' } },
+    })).toBe(false);
+    expect(canReviewPendingPullbackOrder({
+      approvalToken: 'signed-token',
+      suggestedOrderType: 'BUY_LIMIT',
+      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_breakout_close' } },
+    })).toBe(false);
+  });
+
   it('formats a concrete pullback instruction', () => {
     expect(formatWorkflowNextStep({
       code: 'wait_pullback',

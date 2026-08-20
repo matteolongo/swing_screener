@@ -7,8 +7,41 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The Today page now expands a selected symbol into a decision-first workspace
+  with a context-preserving symbol rail, full-screen and mobile layouts,
+  canonical fundamentals, explicit evidence and intelligence actions, and
+  per-source provenance, freshness, progress, degraded-input, and failure
+  reporting.
+
+### Changed
+
+- The symbol workspace header now exposes symbol context, screener close status,
+  aggregate source health, and a non-intelligence bulk refresh; candle-provider
+  failures are retryable errors rather than empty successful histories.
+
+- Portfolio position/order workspace freshness is now derived by the API from
+  persisted ledger dates and the YAML-backed staleness policy, rather than from
+  browser cache timing.
+
+- Expanded Today, Last Run, and Watchlist views now render a compact symbol rail
+  from their existing mounted data owner, preserving tab and filter state when
+  the full panel is restored.
+
+- Symbol analysis now follows an answer, evidence, trust, and detail hierarchy
+  across Overview, Fundamentals, News & Intelligence, actions, and Volume
+  Zones while preserving the existing Backtest workflow.
+
 ### Fixed
 
+- Waiting pullbacks with a pending `BUY_LIMIT` approval token can now enter
+  manual order review without being labeled `ready`; `ready` remains reserved
+  for an observed entry-trigger pass.
+- The symbol workspace now distinguishes normal absence of today's analysis or
+  saved evidence from provider failures, preserves cached-evidence freshness
+  from the server, and explains when a newly fetched fundamentals snapshot
+  contains an older reporting period.
 - Screener candidates now use one gate-derived workflow status and concrete next
   action across Last Run, Today, Universe discovery, symbol details, and order
   review. Discovery rows retain their exact recommendation, malformed workflow
@@ -16,6 +49,16 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   current live stop before remaining eligible for review.
 - Applied universe refreshes now persist review metadata when index membership is
   unchanged, preventing verified snapshots from expiring immediately afterward.
+- Volume Zones now preserves available candle or analysis content during partial
+  failures, rejects mismatched response and parameter identities, reports each
+  source's provenance without conflating candle and fetch times, and offers
+  source-specific retries.
+- Workspace refresh and intelligence activity now keeps a bounded request-ID
+  history, records late selection callbacks as discarded, and announces each
+  new failure once while retaining status history for review.
+- Evidence refreshes now use UTC cache dates and atomic writes, preserve usable
+  cached items through provider failures, and reject future-dated cache entries
+  as stale.
 
 ## [3.0.0] - Unreleased
 
