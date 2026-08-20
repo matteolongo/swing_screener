@@ -1,6 +1,5 @@
 import { ExternalLink } from 'lucide-react';
 import { CandidateViewModel } from '@/features/screener/viewModel';
-import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import { t } from '@/i18n/t';
 
 interface ScreenerCandidateIdentityCellProps {
@@ -10,7 +9,7 @@ interface ScreenerCandidateIdentityCellProps {
 }
 
 /**
- * Simplified identity cell: ticker, verdict badge, company/sector secondary line.
+ * Simplified identity cell: ticker, company/sector secondary line.
  * Currency is shown as text color (green=USD, blue=EUR).
  */
 export default function ScreenerCandidateIdentityCell({
@@ -22,7 +21,7 @@ export default function ScreenerCandidateIdentityCell({
 
   return (
     <div className="flex flex-col gap-0.5">
-      {/* Ticker + verdict + external link */}
+      {/* Ticker + external link */}
       <div className="flex items-center gap-1.5">
         {onSymbolClick ? (
           <button
@@ -57,10 +56,6 @@ export default function ScreenerCandidateIdentityCell({
         >
           <ExternalLink className="h-3 w-3" />
         </a>
-        <RecommendationBadge
-          verdict={candidate.verdict}
-          decisionGates={candidate.decisionGates}
-        />
         {streak != null && streak >= 2 ? (
           <span
             className="ml-1 whitespace-nowrap rounded bg-warning/10 px-1 py-0.5 text-[10px] font-bold text-warning"

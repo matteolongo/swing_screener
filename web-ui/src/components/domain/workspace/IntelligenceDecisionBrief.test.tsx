@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import IntelligenceDecisionBrief from './IntelligenceDecisionBrief';
+import { t } from '@/i18n/t';
 
 describe('IntelligenceDecisionBrief', () => {
   it('keeps a wait-for-breakout decision distinct from a pullback entry', () => {
@@ -11,6 +12,10 @@ describe('IntelligenceDecisionBrief', () => {
           ticker: 'BMO',
           currency: 'USD',
           fundamentalsFreshnessStatus: 'stale',
+          recommendation: {
+            workflowStatus: 'waiting_trigger',
+            nextStep: { code: 'wait_breakout_close', triggerPrice: 178.18, currency: 'USD' },
+          } as never,
           decisionSummary: {
             symbol: 'BMO',
             action: 'WAIT_FOR_BREAKOUT',
@@ -20,7 +25,7 @@ describe('IntelligenceDecisionBrief', () => {
             valuationLabel: 'expensive',
             catalystLabel: 'active',
             whyNow: 'Catalyst support is active.',
-            whatToDo: 'Wait for confirmation before entry.',
+            whatToDo: 'BUY NOW despite the unresolved trigger.',
             mainRisk: 'Valuation is stretched.',
             tradePlan: {
               entry: 178.18,
@@ -46,8 +51,9 @@ describe('IntelligenceDecisionBrief', () => {
       />,
     );
 
-    expect(screen.getByText(/Wait for a confirmed breakout/)).toBeInTheDocument();
+    expect(screen.getAllByText(t('recommendation.workflow.nextStep.wait_breakout_close', { price: '$178.18' })).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Wait for a pullback to/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/BUY NOW/)).not.toBeInTheDocument();
     expect(screen.getByText(/Fundamentals stale/)).toBeInTheDocument();
   });
 });

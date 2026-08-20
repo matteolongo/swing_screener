@@ -11,12 +11,14 @@ function buildCandidate(
     action,
     conviction,
     verdict,
+    workflowStatus = 'needs_review',
   }: {
     rank: number;
     confidence: number;
     action: NonNullable<ScreenerCandidate['decisionSummary']>['action'];
     conviction: NonNullable<ScreenerCandidate['decisionSummary']>['conviction'];
     verdict?: 'RECOMMENDED' | 'NOT_RECOMMENDED';
+    workflowStatus?: 'ready' | 'waiting_trigger' | 'needs_review' | 'no_setup';
   }
 ): ScreenerCandidate {
   return {
@@ -42,6 +44,8 @@ function buildCandidate(
           costs: { commissionEstimate: 1, fxEstimate: 0, slippageEstimate: 1, totalCost: 2 },
           checklist: [],
           education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+          workflowStatus,
+          nextStep: { code: workflowStatus === 'ready' ? 'review_order' : 'refresh_data' },
         }
       : undefined,
     decisionSummary: {
@@ -63,7 +67,7 @@ function buildCandidate(
 }
 
 describe('prioritizeCandidates', () => {
-  it('sorts by decision action then conviction and keeps raw rank as tie-breaker', () => {
+  it('preserves server ranking instead of reordering by compatibility action', () => {
     const candidates = [
       buildCandidate('WATCH', { rank: 1, confidence: 90, action: 'WATCH', conviction: 'high' }),
       buildCandidate('PULLBACK', { rank: 4, confidence: 70, action: 'BUY_ON_PULLBACK', conviction: 'medium' }),
@@ -74,13 +78,13 @@ describe('prioritizeCandidates', () => {
     const prioritized = prioritizeCandidates(candidates);
 
     expect(prioritized.map((candidate) => candidate.ticker)).toEqual([
-      'BUY-HIGH',
+      'WATCH',
       'BUY-MED',
       'PULLBACK',
-      'WATCH',
+      'BUY-HIGH',
     ]);
-    expect(prioritized.map((candidate) => candidate.priorityRank)).toEqual([1, 2, 3, 4]);
-    expect(prioritized.map((candidate) => candidate.rank)).toEqual([5, 3, 4, 1]);
+    expect(prioritized.map((candidate) => candidate.priorityRank)).toEqual([1, 3, 4, 5]);
+    expect(prioritized.map((candidate) => candidate.rank)).toEqual([1, 3, 4, 5]);
   });
 });
 
@@ -99,7 +103,7 @@ describe('filterOutAddOns', () => {
 });
 
 describe('filterCandidates', () => {
-  it('filters by action and recommendation verdict independently', () => {
+  it('filters by action and canonical ready workflow independently', () => {
     const candidates = prioritizeCandidates([
       buildCandidate('BUY-REC', {
         rank: 2,
@@ -107,6 +111,7 @@ describe('filterCandidates', () => {
         action: 'BUY_NOW',
         conviction: 'high',
         verdict: 'RECOMMENDED',
+        workflowStatus: 'ready',
       }),
       buildCandidate('BUY-NOTREC', {
         rank: 1,
@@ -114,6 +119,13 @@ describe('filterCandidates', () => {
         action: 'BUY_NOW',
         conviction: 'medium',
         verdict: 'NOT_RECOMMENDED',
+      }),
+      buildCandidate('BUY-REC-NOTREADY', {
+        rank: 4,
+        confidence: 77,
+        action: 'BUY_NOW',
+        conviction: 'medium',
+        verdict: 'RECOMMENDED',
       }),
       buildCandidate('WATCH-REC', {
         rank: 3,
@@ -125,8 +137,9 @@ describe('filterCandidates', () => {
     ]);
 
     expect(filterCandidates(candidates, { recommendedOnly: false, actionFilter: 'BUY_NOW' }).map((c) => c.ticker)).toEqual([
-      'BUY-REC',
       'BUY-NOTREC',
+      'BUY-REC',
+      'BUY-REC-NOTREADY',
     ]);
     expect(filterCandidates(candidates, { recommendedOnly: true, actionFilter: 'BUY_NOW' }).map((c) => c.ticker)).toEqual([
       'BUY-REC',

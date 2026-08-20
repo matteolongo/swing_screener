@@ -731,7 +731,9 @@ class ScreenerService:
             self._review_repo.apply_fetch_results(
                 ok, failed, ctx.asof_str, threshold, meta=meta
             )
-        except Exception as exc:  # noqa: BLE001 - health tracking must never break a screen
+        except (
+            Exception
+        ) as exc:  # noqa: BLE001 - health tracking must never break a screen
             logger.warning("Fetch-health tracking failed: %s", exc)
             ctx.warnings.append("Fetch-health tracking unavailable this run.")
 
@@ -1095,11 +1097,11 @@ class ScreenerService:
             evaluation_signal = (
                 "BUY_ON_PULLBACK"
                 if suggested_order_type == "BUY_LIMIT"
-                else "WAIT_FOR_BREAKOUT"
-                if suggested_order_type == "BUY_STOP"
-                else str(signal)
-                if not is_na_scalar(signal)
-                else None
+                else (
+                    "WAIT_FOR_BREAKOUT"
+                    if suggested_order_type == "BUY_STOP"
+                    else str(signal) if not is_na_scalar(signal) else None
+                )
             )
             structural_target = (
                 _structural_target_from_history(candidate_history, entry=plan_entry)
@@ -1119,9 +1121,9 @@ class ScreenerService:
                 risk_cfg=risk_cfg,
                 rr_target=rr_target,
                 target=structural_target,
-                target_source="structural"
-                if structural_target is not None
-                else "unknown",
+                target_source=(
+                    "structural" if structural_target is not None else "unknown"
+                ),
                 data_status=candidate_data_status,
                 costs=RiskEngineConfig(
                     commission_pct=commission_pct,
@@ -1309,6 +1311,8 @@ class ScreenerService:
                 risk_pct_target=float(risk_cfg.risk_pct),
                 max_position_pct=float(risk_cfg.max_position_pct),
                 min_shares=int(risk_cfg.min_shares),
+                min_rr=float(risk_cfg.min_rr),
+                max_fee_risk_pct=float(risk_cfg.max_fee_risk_pct),
                 closed_positions=portfolio_closed,
                 reentry_lookback_days=reentry_lookback,
             )

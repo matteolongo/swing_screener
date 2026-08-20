@@ -165,21 +165,24 @@ export default function SymbolAnalysisContent({
   }, [ticker, position, candidate, computeAnalysisMutation]);
 
   const heldMode = Boolean(position);
-  const canAddOn = ['BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT'].includes(
-    candidate?.decisionSummary?.action ?? '',
+  const canAddOn = Boolean(
+    (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
+      && candidate.recommendation?.workflowStatus === 'ready',
   );
+  const candidateCanReviewOrder = !candidate || candidate.recommendation?.workflowStatus === 'ready';
+  const canReviewOrder = heldMode ? canAddOn : candidateCanReviewOrder;
 
   useEffect(() => {
-    if (activeTab === 'order' && heldMode && !canAddOn) {
+    if (activeTab === 'order' && !canReviewOrder) {
       onTabChange('overview');
     }
-  }, [activeTab, heldMode, canAddOn, onTabChange]);
+  }, [activeTab, canReviewOrder, onTabChange]);
 
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
-    ...(!heldMode || canAddOn
+    ...(canReviewOrder
       ? [{ id: 'order' as const, label: t('workspacePage.panels.analysis.tabs.order') }]
       : []),
     { id: 'backtest', label: t('workspacePage.panels.analysis.tabs.backtest') },
@@ -260,7 +263,7 @@ export default function SymbolAnalysisContent({
           ticker={ticker}
           candidate={candidate}
           position={position}
-          onPrepareOrder={() => onTabChange('order')}
+          onPrepareOrder={canReviewOrder ? () => onTabChange('order') : undefined}
           isWatched={isWatched}
           isPendingWatch={isWatchPending}
           onWatch={handleWatch}
@@ -271,6 +274,7 @@ export default function SymbolAnalysisContent({
           <>
             <DecisionWhyPanel
               summary={candidate?.decisionSummary}
+              recommendation={candidate?.recommendation}
             />
             <FundamentalsStrip
               trailingPe={fundamentalsQuery.data?.trailingPe ?? null}
@@ -278,7 +282,13 @@ export default function SymbolAnalysisContent({
               grossMargin={fundamentalsQuery.data?.grossMargin ?? null}
               valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
             />
-            {heldMode && position && <ManagePositionPanel position={position} candidate={candidate} />}
+            {heldMode && position && (
+              <ManagePositionPanel
+                position={position}
+                candidate={candidate}
+                onPrepareOrder={canReviewOrder ? () => onTabChange('order') : undefined}
+              />
+            )}
             {!candidate && (
               <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
                 <p className="text-sm text-muted">
@@ -309,6 +319,7 @@ export default function SymbolAnalysisContent({
             {candidate?.decisionSummary ? (
               <DecisionSummaryCard
                 summary={candidate.decisionSummary}
+                recommendation={candidate.recommendation}
                 currency={candidate.currency}
                 onRefreshFundamentals={() => refreshFundamentalsMutation.mutate(ticker)}
                 isRefreshingFundamentals={refreshFundamentalsMutation.isPending}

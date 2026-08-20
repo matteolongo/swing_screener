@@ -63,5 +63,7 @@
 
 ## Current implementation plans
 
+- [`docs/superpowers/specs/2026-07-22-coherent-execution-workflow-design.md`](../superpowers/specs/2026-07-22-coherent-execution-workflow-design.md) — approved design for the coherent execution workflow
+- [`docs/superpowers/plans/2026-07-22-coherent-execution-workflow.md`](../superpowers/plans/2026-07-22-coherent-execution-workflow.md) — implementation plan for the coherent execution workflow
 - [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/spec.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/spec.md) — approved design for Volume-Zone Stock Analysis V1
 - [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/plan.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/plan.md) — task-by-task implementation plan for Volume-Zone Stock Analysis V1

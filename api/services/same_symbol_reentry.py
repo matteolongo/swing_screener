@@ -1,11 +1,20 @@
 """Portfolio-aware same-symbol re-entry evaluation."""
+
 from __future__ import annotations
 
 import math
 from datetime import date, timedelta
 from typing import Optional
 
-from api.models.recommendation import Recommendation, RecommendationRisk
+from api.models.recommendation import (
+    ChecklistGate,
+    DecisionGateModel,
+    ExecutionNextStepModel,
+    Recommendation,
+    RecommendationCosts,
+    RecommendationReason,
+    RecommendationRisk,
+)
 from api.models.screener import SameSymbolCandidateContext, ScreenerCandidate
 from swing_screener.risk.currency import normalize_currency_code
 
@@ -57,7 +66,9 @@ def _order_field(order: object, key: str, default=None):
     return getattr(order, key, default)
 
 
-def _count_add_ons_for_position(orders: list[object], position_id: Optional[str]) -> int:
+def _count_add_ons_for_position(
+    orders: list[object], position_id: Optional[str]
+) -> int:
     if not position_id:
         return 0
     filled_entries = [
@@ -89,7 +100,9 @@ def _position_market_value(position: object, fallback_price: Optional[float]) ->
         return float(current_price) * float(getattr(position, "shares", 0))
     if fallback_price is not None and math.isfinite(fallback_price):
         return float(fallback_price) * float(getattr(position, "shares", 0))
-    return float(getattr(position, "entry_price", 0.0)) * float(getattr(position, "shares", 0))
+    return float(getattr(position, "entry_price", 0.0)) * float(
+        getattr(position, "shares", 0)
+    )
 
 
 def _current_position_risk(position: object) -> float:
@@ -123,25 +136,129 @@ def _copy_recommendation_with_adjusted_risk(
         risk_amount_account = risk_amount / account_to_quote_rate
         risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
         position_size_account = position_size / account_to_quote_rate
-    adjusted_risk = RecommendationRisk(
-        entry=risk.entry,
-        stop=execution_stop,
-        target=target,
-        rr=_safe_round(rr),
-        risk_amount=_safe_round(risk_amount) or 0.0,
-        risk_amount_account=_safe_round(risk_amount_account),
-        risk_pct=_safe_round(risk_pct, 6) or 0.0,
-        position_size=_safe_round(position_size) or 0.0,
-        position_size_account=_safe_round(position_size_account),
-        shares=int(shares),
-        invalidation_level=execution_stop,
-        currency=risk.currency,
-        account_currency=risk.account_currency,
-        account_to_quote_rate=account_to_quote_rate,
+    adjusted_risk = risk.model_copy(
+        update={
+            "stop": execution_stop,
+            "rr": _safe_round(rr),
+            "risk_amount": _safe_round(risk_amount) or 0.0,
+            "risk_amount_account": _safe_round(risk_amount_account),
+            "risk_pct": _safe_round(risk_pct, 6) or 0.0,
+            "position_size": _safe_round(position_size) or 0.0,
+            "position_size_account": _safe_round(position_size_account),
+            "shares": int(shares),
+            "invalidation_level": execution_stop,
+            "account_to_quote_rate": account_to_quote_rate,
+        }
     )
-    payload = recommendation.model_dump()
-    payload["risk"] = adjusted_risk.model_dump()
-    return Recommendation.model_validate(payload)
+    share_ratio = shares / risk.shares if risk.shares > 0 else 0.0
+    commission = round(recommendation.costs.commission_estimate * share_ratio, 4)
+    fx = round(recommendation.costs.fx_estimate * share_ratio, 4)
+    slippage = round(recommendation.costs.slippage_estimate * share_ratio, 4)
+    total_cost = round(commission + fx + slippage, 4)
+    fee_to_risk_pct = round(total_cost / risk_amount, 4) if risk_amount > 0 else None
+    adjusted_costs = RecommendationCosts(
+        commission_estimate=commission,
+        fx_estimate=fx,
+        slippage_estimate=slippage,
+        total_cost=total_cost,
+        fee_to_risk_pct=fee_to_risk_pct,
+    )
+    return recommendation.model_copy(
+        update={"risk": adjusted_risk, "costs": adjusted_costs}
+    )
+
+
+def _block_recommendation_for_live_stop(
+    recommendation: Recommendation,
+    *,
+    execution_stop: float,
+    account_size: float,
+    min_rr: float,
+    max_fee_risk_pct: float,
+) -> Recommendation:
+    adjusted = _copy_recommendation_with_adjusted_risk(
+        recommendation,
+        execution_stop=execution_stop,
+        shares=recommendation.risk.shares,
+        account_size=account_size,
+    )
+    fee_ratio = adjusted.costs.fee_to_risk_pct
+    fee_ok = (
+        fee_ratio is not None
+        and math.isfinite(fee_ratio)
+        and fee_ratio <= max_fee_risk_pct
+    )
+    fee_gate = ChecklistGate(
+        gate_name="fee_to_risk",
+        passed=fee_ok,
+        explanation=(
+            f"Fees <= {int(max_fee_risk_pct * 100)}% of risk."
+            if fee_ok
+            else f"Fees too high vs risk (>{int(max_fee_risk_pct * 100)}%)."
+        ),
+        rule="R4",
+    )
+    checklist = [
+        fee_gate if gate.gate_name == "fee_to_risk" else gate
+        for gate in adjusted.checklist
+    ]
+    if not any(gate.gate_name == "fee_to_risk" for gate in adjusted.checklist):
+        checklist.append(fee_gate)
+    adjusted = adjusted.model_copy(update={"checklist": checklist})
+
+    target_is_independent = adjusted.risk.target_source in {"structural", "manual"}
+    rr = adjusted.risk.rr
+    rr_ok = target_is_independent and rr is not None and rr >= min_rr
+    if rr_ok and fee_ok:
+        return adjusted
+
+    if not rr_ok:
+        code = (
+            "RR_TOO_LOW"
+            if target_is_independent and rr is not None
+            else "TARGET_NOT_VALIDATED"
+        )
+        explanation = (
+            f"Live-stop RR {rr:.2f} is below the configured minimum {min_rr:.2f}."
+            if rr is not None and target_is_independent
+            else "The live-stop plan does not have an independently validated target."
+        )
+        next_step = ExecutionNextStepModel(code="define_target")
+    else:
+        code = "FEES_TOO_HIGH"
+        explanation = (
+            f"Live-stop fees are {fee_ratio:.1%} of risk, above the configured "
+            f"maximum {max_fee_risk_pct:.1%}."
+        )
+        next_step = ExecutionNextStepModel(code="inspect_gate_conflict")
+    plan_gate = DecisionGateModel(status="BLOCK", explanation=explanation)
+    decision_gates = adjusted.decision_gates.model_copy(
+        update={"plan": plan_gate, "ready_to_order": False}
+    )
+    reason = RecommendationReason(
+        code=code,
+        message=explanation,
+        severity="block",
+        rule="R3" if not rr_ok else "R4",
+        metrics=(
+            {"min_rr": min_rr, **({"rr": rr} if rr is not None else {})}
+            if not rr_ok
+            else {
+                "max_fee_risk_pct": max_fee_risk_pct,
+                **({"fee_to_risk_pct": fee_ratio} if fee_ratio is not None else {}),
+            }
+        ),
+    )
+    return adjusted.model_copy(
+        update={
+            "verdict": "NOT_RECOMMENDED",
+            "reasons_short": [*adjusted.reasons_short, explanation],
+            "reasons_detailed": [*adjusted.reasons_detailed, reason],
+            "decision_gates": decision_gates,
+            "workflow_status": "needs_review",
+            "next_step": next_step,
+        }
+    )
 
 
 class SameSymbolReentryEvaluator:
@@ -168,6 +285,8 @@ class SameSymbolReentryEvaluator:
         risk_pct_target: float,
         max_position_pct: float,
         min_shares: int,
+        min_rr: float,
+        max_fee_risk_pct: float = 0.20,
         closed_positions: list[object] | None = None,
         reentry_lookback_days: int = 30,
     ) -> tuple[Optional[ScreenerCandidate], SameSymbolCandidateContext]:
@@ -189,7 +308,8 @@ class SameSymbolReentryEvaluator:
                     (
                         pos
                         for pos in closed_positions
-                        if getattr(pos, "ticker", "").upper() == candidate.ticker.upper()
+                        if getattr(pos, "ticker", "").upper()
+                        == candidate.ticker.upper()
                         and _parse_date(getattr(pos, "exit_date", None)) is not None
                         and _parse_date(getattr(pos, "exit_date", None)) >= cutoff
                     ),
@@ -232,12 +352,18 @@ class SameSymbolReentryEvaluator:
         )
 
         recommendation = candidate.recommendation
-        entry_price = candidate.entry or (recommendation.risk.entry if recommendation else None)
+        entry_price = candidate.entry or (
+            recommendation.risk.entry if recommendation else None
+        )
         if recommendation is None or recommendation.verdict != "RECOMMENDED":
-            context.reason = "Fresh setup is not recommended, so no same-symbol add-on is allowed."
+            context.reason = (
+                "Fresh setup is not recommended, so no same-symbol add-on is allowed."
+            )
             return None, context
         if entry_price is None or entry_price <= 0:
-            context.reason = "Fresh setup entry is missing, so no add-on can be evaluated."
+            context.reason = (
+                "Fresh setup entry is missing, so no add-on can be evaluated."
+            )
             candidate.same_symbol = context
             return candidate, context
         if current_stop >= entry_price:
@@ -263,7 +389,37 @@ class SameSymbolReentryEvaluator:
 
         account_to_quote_rate = _adjusted_account_to_quote_rate(recommendation.risk)
         if account_to_quote_rate is None:
-            context.reason = "A valid FX rate is required before same-symbol add-on sizing."
+            context.reason = (
+                "A valid FX rate is required before same-symbol add-on sizing."
+            )
+            candidate.same_symbol = context
+            return candidate, context
+
+        live_stop_recommendation = _block_recommendation_for_live_stop(
+            recommendation,
+            execution_stop=current_stop,
+            account_size=account_size,
+            min_rr=min_rr,
+            max_fee_risk_pct=max_fee_risk_pct,
+        )
+        if live_stop_recommendation.workflow_status != "ready":
+            candidate.recommendation = live_stop_recommendation
+            candidate.stop = _safe_round(current_stop)
+            candidate.rr = live_stop_recommendation.risk.rr
+            latest_code = live_stop_recommendation.reasons_detailed[-1].code
+            if latest_code == "FEES_TOO_HIGH":
+                context.reason = (
+                    "Estimated fees are too high relative to live-stop risk."
+                )
+            elif live_stop_recommendation.risk.target_source in {
+                "structural",
+                "manual",
+            }:
+                context.reason = (
+                    "The live-stop reward:risk is below the configured minimum."
+                )
+            else:
+                context.reason = "The live-stop plan does not have an independently validated target."
             candidate.same_symbol = context
             return candidate, context
 
@@ -271,14 +427,30 @@ class SameSymbolReentryEvaluator:
         # Risk and max-position budgets are configured in account currency;
         # same-symbol sizing below compares them to quote-currency exposure.
         risk_budget_quote = account_size * risk_pct_target * account_to_quote_rate
-        max_position_value_quote = account_size * max_position_pct * account_to_quote_rate
-        remaining_risk_budget = risk_budget_quote - _current_position_risk(matching_position)
-        current_position_value = _position_market_value(matching_position, candidate.close)
+        max_position_value_quote = (
+            account_size * max_position_pct * account_to_quote_rate
+        )
+        remaining_risk_budget = risk_budget_quote - _current_position_risk(
+            matching_position
+        )
+        current_position_value = _position_market_value(
+            matching_position, candidate.close
+        )
         remaining_value_capacity = max_position_value_quote - current_position_value
-        shares_by_risk = math.floor(remaining_risk_budget / risk_per_share) if risk_per_share > 0 else 0
-        shares_by_value = math.floor(remaining_value_capacity / float(entry_price)) if entry_price > 0 else 0
+        shares_by_risk = (
+            math.floor(remaining_risk_budget / risk_per_share)
+            if risk_per_share > 0
+            else 0
+        )
+        shares_by_value = (
+            math.floor(remaining_value_capacity / float(entry_price))
+            if entry_price > 0
+            else 0
+        )
         candidate_share_cap = candidate.shares or recommendation.risk.shares
-        add_on_shares = max(0, min(int(candidate_share_cap), int(shares_by_risk), int(shares_by_value)))
+        add_on_shares = max(
+            0, min(int(candidate_share_cap), int(shares_by_risk), int(shares_by_value))
+        )
 
         if add_on_shares < max(1, min_shares):
             context.reason = "Remaining risk or position capacity does not support a valid add-on size."
@@ -301,7 +473,11 @@ class SameSymbolReentryEvaluator:
         candidate.position_size_usd = adjusted_recommendation.risk.position_size
         candidate.shares = adjusted_recommendation.risk.shares
         context.mode = "SCALE_BACK" if has_partial_closes else "ADD_ON"
-        reason_prefix = "Scale-back after partial trim" if has_partial_closes else "One portfolio-aware add-on is allowed"
+        reason_prefix = (
+            "Scale-back after partial trim"
+            if has_partial_closes
+            else "One portfolio-aware add-on is allowed"
+        )
         context.reason = f"{reason_prefix} using the current live stop."
         candidate.same_symbol = context
         note_prefix = (

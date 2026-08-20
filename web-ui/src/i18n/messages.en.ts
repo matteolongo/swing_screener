@@ -84,6 +84,24 @@ export const messagesEn = {
     closeAria: 'Close modal',
   },
   recommendation: {
+    workflow: {
+      status: {
+        ready: 'Ready for order review',
+        waitingTrigger: 'Waiting for trigger',
+        needsReview: 'Needs review',
+        noSetup: 'Interesting, no setup',
+      },
+      nextStep: {
+        review_order: 'Review the proposed order',
+        wait_pullback: 'Wait for a pullback to {{price}}',
+        wait_breakout_close: 'Wait for a close above {{price}}',
+        define_target: 'Define a valid target',
+        refresh_data: 'Refresh the candidate data',
+        fix_stop: 'Correct the stop level',
+        inspect_gate_conflict: 'Review the conflicting setup data',
+        observe: 'Observe — no setup today',
+      },
+    },
     readiness: {
       READY_FOR_REVIEW: 'Ready for order review',
       WAITING_FOR_TRIGGER: 'Waiting for trigger',
@@ -899,7 +917,7 @@ export const messagesEn = {
           pastTrades: 'Past trades on {{symbol}}',
           fullRationale: 'Structured rationale',
           aiAnalysisTitle: 'AI analysis',
-          secondOpinion: 'AI second opinion: {{aiAction}} — differs from the screener verdict ({{screenerAction}}). The screener verdict stands.',
+          secondOpinion: 'The AI report differs from the screener decision. Follow the canonical next step and review the supporting evidence before acting.',
           preOpen: {
             title: 'Pre-open outlook',
             gapUp: 'Gap up',
@@ -1389,6 +1407,24 @@ export const messagesEn = {
     },
   },
   screener: {
+    workflowGroups: {
+      ready: {
+        title: 'Ready for order review',
+        description: 'Setup, trigger, and plan pass. Manual confirmation is still required.',
+      },
+      waitingTrigger: {
+        title: 'Waiting for trigger',
+        description: 'The setup is valid, but the entry condition has not happened yet.',
+      },
+      needsReview: {
+        title: 'Needs review',
+        description: 'Resolve the stated problem before this candidate can advance.',
+      },
+      noSetup: {
+        title: 'Interesting, no setup',
+        description: 'Useful context may exist, but there is no executable setup today.',
+      },
+    },
     header: {
       title: 'Screener',
       description: 'Find swing trade candidates based on momentum and relative strength',
@@ -1572,6 +1608,7 @@ export const messagesEn = {
         lastBar: 'Last Bar',
         signalConfidence: 'Signal Confidence',
         signal: 'Signal',
+        nextAction: 'Next action',
         close: 'Close',
         relativeSixMonth: '6M vs {{benchmark}}',
         rr: 'R:R',
@@ -1597,6 +1634,14 @@ export const messagesEn = {
       executionReadinessTitle: 'Execution readiness: {{status}}',
       createOrderAction: 'Create Order',
       addOnAction: 'Add On',
+      reviewOrderAction: 'Review order',
+      openDetailsAction: 'Open details',
+      openVerificationAction: 'Open verification',
+      viewContextAction: 'View context',
+      setupType: {
+        pullback: 'Setup: Pullback',
+        breakout: 'Setup: Breakout',
+      },
       expandRow: 'Expand details',
       collapseRow: 'Collapse details',
       expandRowAria: 'Expand details for {{ticker}}',
@@ -2552,6 +2597,7 @@ export const messagesEn = {
         volume: 'Volume',
         marketCap: 'Market Cap',
         source: 'Source',
+        nextAction: 'Next action',
       },
     },
   },

@@ -1,3 +1,6 @@
+from dataclasses import asdict
+
+from api.models.recommendation import Recommendation
 from swing_screener.risk.recommendations.engine import build_recommendation
 
 
@@ -235,3 +238,41 @@ def test_recommendation_blocks_fee_drag():
 
     assert rec.verdict == "NOT_RECOMMENDED"
     assert any(r.code == "FEES_TOO_HIGH" for r in rec.reasons_detailed)
+
+
+def test_recommendation_exposes_canonical_ready_workflow():
+    rec = build_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=95.0,
+        target=110.0,
+        target_source="structural",
+        shares=10,
+        account_size=10000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+    )
+
+    assert rec.workflow_status == "ready"
+    assert rec.next_step.code == "review_order"
+    api_rec = Recommendation.model_validate(asdict(rec))
+    assert api_rec.workflow_status == "ready"
+    assert api_rec.next_step.code == "review_order"
+
+
+def test_no_signal_cannot_be_promoted_by_later_analysis():
+    rec = build_recommendation(
+        signal="none",
+        entry=100.0,
+        stop=95.0,
+        target=110.0,
+        target_source="structural",
+        shares=10,
+        account_size=10000.0,
+        risk_pct_target=0.01,
+        rr_target=2.0,
+    )
+
+    assert rec.decision_gates.setup.status == "BLOCK"
+    assert rec.workflow_status == "no_setup"
+    assert rec.next_step.code == "observe"

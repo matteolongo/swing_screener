@@ -1,0 +1,102 @@
+import { describe, expect, it } from 'vitest';
+import { transformRecommendation, type RecommendationAPI } from './recommendation';
+
+const base: RecommendationAPI = {
+  verdict: 'NOT_RECOMMENDED',
+  reasons_short: [],
+  reasons_detailed: [],
+  risk: {
+    entry: 98.5,
+    risk_amount: 10,
+    risk_pct: 0.01,
+    position_size: 985,
+    shares: 10,
+  },
+  costs: {
+    commission_estimate: 0,
+    fx_estimate: 0,
+    slippage_estimate: 0,
+    total_cost: 0,
+  },
+  checklist: [],
+  education: {
+    common_bias_warning: '',
+    what_to_learn: '',
+    what_would_make_valid: [],
+  },
+};
+
+describe('transformRecommendation workflow contract', () => {
+  it('maps canonical snake_case fields', () => {
+    const result = transformRecommendation({
+      ...base,
+      workflow_status: 'waiting_trigger',
+      next_step: { code: 'wait_pullback', trigger_price: 98.5, currency: 'USD' },
+    });
+
+    expect(result.workflowStatus).toBe('waiting_trigger');
+    expect(result.nextStep).toEqual({
+      code: 'wait_pullback',
+      triggerPrice: 98.5,
+      currency: 'USD',
+    });
+  });
+
+  it('fails safely when an older backend omits workflow fields', () => {
+    const result = transformRecommendation(base);
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
+
+  it('fails safely when the API returns an unknown workflow status or next-step code', () => {
+    const result = transformRecommendation(JSON.parse(JSON.stringify({
+      ...base,
+      workflow_status: 'pending_manual_override',
+      next_step: { code: 'open_broker' },
+    })));
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
+
+  it('downgrades a ready status when its required next step is missing', () => {
+    const result = transformRecommendation({ ...base, workflow_status: 'ready' });
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
+
+  it('downgrades a contradictory ready workflow so it cannot be order eligible', () => {
+    const result = transformRecommendation({
+      ...base,
+      workflow_status: 'ready',
+      next_step: { code: 'observe' },
+    });
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
+
+  it('downgrades a waiting workflow without its trigger details', () => {
+    const result = transformRecommendation({
+      ...base,
+      workflow_status: 'waiting_trigger',
+      next_step: { code: 'wait_pullback' },
+    });
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
+
+  it('downgrades a waiting workflow with a malformed currency', () => {
+    const result = transformRecommendation({
+      ...base,
+      workflow_status: 'waiting_trigger',
+      next_step: { code: 'wait_pullback', trigger_price: 98.5, currency: 'US D' },
+    });
+
+    expect(result.workflowStatus).toBe('needs_review');
+    expect(result.nextStep).toEqual({ code: 'refresh_data' });
+  });
+});

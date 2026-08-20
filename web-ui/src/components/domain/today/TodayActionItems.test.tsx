@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CandidateItem } from './TodayActionItems';
 import { renderWithProviders, screen } from '@/test/utils';
-import { messagesEn } from '@/i18n/messages.en';
+import { t } from '@/i18n/t';
 import type { DailyReviewCandidate } from '@/features/dailyReview/types';
 
 function makeCandidate(overrides: Partial<DailyReviewCandidate> = {}): DailyReviewCandidate {
@@ -22,27 +22,28 @@ function makeCandidate(overrides: Partial<DailyReviewCandidate> = {}): DailyRevi
 }
 
 describe('CandidateItem badges', () => {
-  it('shows the action as the primary badge and re-enter as a secondary flag', () => {
+  it('shows the canonical next step as the primary badge and re-enter as a secondary flag', () => {
     const item = makeCandidate({
+      recommendation: { workflowStatus: 'no_setup', nextStep: { code: 'observe' } } as DailyReviewCandidate['recommendation'],
       sameSymbol: { mode: 'RE_ENTRY' } as DailyReviewCandidate['sameSymbol'],
     });
     renderWithProviders(<CandidateItem item={item} onClick={() => {}} />);
 
     // Action is still shown (the thing you can act on)...
     expect(
-      screen.getByText(messagesEn.workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback),
+      screen.getByText(t('recommendation.workflow.nextStep.observe')),
     ).toBeInTheDocument();
     // ...and re-enter is an additional flag, not a replacement.
-    expect(screen.getByText(messagesEn.todayPage.actionList.reEnter)).toBeInTheDocument();
+    expect(screen.getByText(t('todayPage.actionList.reEnter'))).toBeInTheDocument();
   });
 
-  it('shows only the action badge (no flag) for a plain new entry', () => {
-    const item = makeCandidate();
+  it('does not promote BUY_ON_PULLBACK when the canonical workflow has no setup', () => {
+    const item = makeCandidate({
+      recommendation: { workflowStatus: 'no_setup', nextStep: { code: 'observe' } } as DailyReviewCandidate['recommendation'],
+    });
     renderWithProviders(<CandidateItem item={item} onClick={() => {}} />);
 
-    expect(
-      screen.getByText(messagesEn.workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(messagesEn.todayPage.actionList.reEnter)).not.toBeInTheDocument();
+    expect(screen.getByText(t('recommendation.workflow.nextStep.observe'))).toBeInTheDocument();
+    expect(screen.queryByText('Buy on Pullback')).not.toBeInTheDocument();
   });
 });

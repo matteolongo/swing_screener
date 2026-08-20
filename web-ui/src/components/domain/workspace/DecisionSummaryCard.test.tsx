@@ -52,7 +52,6 @@ describe('DecisionSummaryCard', () => {
     render(<DecisionSummaryCard summary={buildSummary()} currency="USD" onRefreshFundamentals={() => undefined} />);
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
-    expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
     expect(screen.getByText('Coverage Warnings')).toBeInTheDocument();
     expect(screen.getByText('Fundamentals stale: latest quarter 2024-12-31.')).toBeInTheDocument();
@@ -67,6 +66,23 @@ describe('DecisionSummaryCard', () => {
     expect(screen.getByText('$18.40')).toBeInTheDocument();
     expect(screen.getByText('$193.17')).toBeInTheDocument();
     expect(screen.getByText('-6.8%')).toBeInTheDocument();
+  });
+
+  it('shows canonical workflow guidance separately from an analytical action', () => {
+    render(
+      <DecisionSummaryCard
+        summary={buildSummary({ action: 'WAIT_FOR_BREAKOUT', whatToDo: 'Wait for a breakout.' })}
+        recommendation={{
+          workflowStatus: 'ready',
+          nextStep: { code: 'review_order' },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Ready for order review')).toBeInTheDocument();
+    expect(screen.getByText('Review the proposed order')).toBeInTheDocument();
+    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
+    expect(screen.queryByText(/Wait for Breakout/)).not.toBeInTheDocument();
   });
 
   it('renders unknown catalyst as a neutral data state', () => {

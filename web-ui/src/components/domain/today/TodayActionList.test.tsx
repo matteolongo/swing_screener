@@ -77,7 +77,11 @@ describe('TodayActionList holdings', () => {
             confidence: 90,
             rank: 1,
             rr: 2,
-            recommendation: { verdict: 'RECOMMENDED' },
+            recommendation: {
+              verdict: 'RECOMMENDED',
+              workflowStatus: 'ready',
+              nextStep: { code: 'review_order' },
+            },
           }],
           totalScreened: 1,
           dataFreshness: 'final_close',

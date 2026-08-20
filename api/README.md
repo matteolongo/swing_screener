@@ -161,6 +161,27 @@ Screener (`/api/screener`):
 - `GET /api/screener/run/{job_id}` (poll async screener status/result)
 - `GET /api/screener/recurrence`
 
+Each candidate recommendation exposes additive `workflow_status` and
+`next_step` fields. `workflow_status` is one of `ready`, `waiting_trigger`,
+`needs_review`, or `no_setup`. `next_step.code` is stable and always one of
+`review_order`, `wait_pullback`, `wait_breakout_close`, `define_target`,
+`refresh_data`, `fix_stop`, `inspect_gate_conflict`, or `observe`. For
+pullback/breakout waits, `next_step` also contains `trigger_price` plus
+`currency`. These fields are the canonical execution-workflow authority.
+`decision_summary.action` remains an analytical compatibility field and must
+not be used to authorize order review. The API model normalizes contradictory
+status/code pairs, missing waiting-trigger parameters, malformed or unknown
+currency codes, and non-finite or non-positive trigger prices to
+`needs_review` / `refresh_data`.
+
+Same-symbol add-on evaluation replaces the fresh setup stop with the current
+live position stop, recalculates reward:risk and fee-to-risk, and rechecks
+`risk.min_rr` plus `risk.max_fee_risk_pct`. A live-stop plan outside either
+threshold is retained as `MANAGE_ONLY` with a `needs_review` recommendation; it
+cannot inherit the fresh setup's ready state.
+Valid adjusted recommendations preserve the independently validated target and
+its `target_source` metadata.
+
 Symbol pool (`/api/pool`):
 - `GET /api/pool/symbols` — browse the unified pool with taxonomy query params (`region`, `market_cap_tier`, `sector`, `index_memberships`, `instrument_type_detail`, `provider`, `currency`, `exchange_mics`, `liquidity_tier`), paginated (`page`, `page_size`). Returns `{symbols, total, page, page_size}`.
 - `GET /api/pool/review-queue` — symbols flagged after repeated OHLCV fetch failures. Returns `{entries}`.

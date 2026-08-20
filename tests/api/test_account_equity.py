@@ -1,54 +1,39 @@
 """Tests for account equity auto-update feature."""
-import json
 
 import pytest
-from fastapi.testclient import TestClient
-
-import api.dependencies as deps
-from api.main import app
-
+from tests.support.factories.portfolio import position_payload
 
 POSITIONS = [
-    {
-        "position_id": "POS-001",
-        "ticker": "ASML.AS",
-        "status": "closed",
-        "entry_date": "2026-01-01",
-        "entry_price": 100.0,
-        "stop_price": 95.0,
-        "shares": 10,
-        "initial_risk": 50.0,
-        "exit_price": 120.0,
-        "exit_date": "2026-01-15",
-        "notes": "",
-        "tags": [],
-    },
-    {
-        "position_id": "POS-002",
-        "ticker": "AIR.PA",
-        "status": "closed",
-        "entry_date": "2026-01-05",
-        "entry_price": 200.0,
-        "stop_price": 190.0,
-        "shares": 5,
-        "initial_risk": 50.0,
-        "exit_price": 185.0,
-        "exit_date": "2026-01-20",
-        "notes": "",
-        "tags": [],
-    },
+    position_payload(
+        position_id="POS-001",
+        ticker="ASML.AS",
+        status="closed",
+        entry_price=100.0,
+        stop_price=95.0,
+        shares=10,
+        initial_risk=50.0,
+        exit_price=120.0,
+        exit_date="2026-01-15",
+    ),
+    position_payload(
+        position_id="POS-002",
+        ticker="AIR.PA",
+        status="closed",
+        entry_date="2026-01-05",
+        entry_price=200.0,
+        stop_price=190.0,
+        shares=5,
+        initial_risk=50.0,
+        exit_price=185.0,
+        exit_date="2026-01-20",
+    ),
 ]
 
 
 @pytest.fixture
-def client_with_closed_positions(tmp_path, monkeypatch):
-    positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
-    positions_file.write_text(json.dumps({"asof": "2026-01-20", "positions": POSITIONS}))
-    orders_file.write_text(json.dumps({"asof": "2026-01-20", "orders": []}))
-    monkeypatch.setattr(deps, "_positions_path", positions_file)
-    monkeypatch.setattr(deps, "_orders_path", orders_file)
-    return TestClient(app)
+def client_with_closed_positions(portfolio_state, api_client):
+    portfolio_state.write(positions=POSITIONS, asof="2026-01-20")
+    return api_client
 
 
 def test_portfolio_summary_includes_realized_pnl(client_with_closed_positions):
@@ -60,7 +45,9 @@ def test_portfolio_summary_includes_realized_pnl(client_with_closed_positions):
     assert abs(data["realized_pnl"] - 125.0) < 0.01
 
 
-def test_portfolio_summary_includes_effective_account_size(client_with_closed_positions):
+def test_portfolio_summary_includes_effective_account_size(
+    client_with_closed_positions,
+):
     response = client_with_closed_positions.get("/api/portfolio/summary")
 
     data = response.json()
@@ -70,33 +57,33 @@ def test_portfolio_summary_includes_effective_account_size(client_with_closed_po
 
 
 @pytest.fixture
-def client_with_partial_close(tmp_path, monkeypatch):
-    positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
-    positions_file.write_text(json.dumps({
-        "asof": "2026-01-20",
-        "positions": [{
-            "position_id": "POS-PART",
-            "ticker": "ASML.AS",
-            "status": "closed",
-            "entry_date": "2026-01-01",
-            "entry_price": 10.0,
-            "stop_price": 8.0,
-            "shares": 40,  # remaining after the partial
-            "initial_risk": 2.0,
-            "exit_price": 25.0,
-            "exit_date": "2026-01-20",
-            "partial_closes": [
-                {"date": "2026-01-10", "shares_closed": 60, "price": 20.0, "r_at_close": 5.0, "fee_eur": 0.0},
-            ],
-            "notes": "",
-            "tags": [],
-        }],
-    }))
-    orders_file.write_text(json.dumps({"asof": "2026-01-20", "orders": []}))
-    monkeypatch.setattr(deps, "_positions_path", positions_file)
-    monkeypatch.setattr(deps, "_orders_path", orders_file)
-    return TestClient(app)
+def client_with_partial_close(portfolio_state, api_client):
+    portfolio_state.write(
+        positions=[
+            position_payload(
+                position_id="POS-PART",
+                ticker="ASML.AS",
+                status="closed",
+                entry_price=10.0,
+                stop_price=8.0,
+                shares=40,
+                initial_risk=2.0,
+                exit_price=25.0,
+                exit_date="2026-01-20",
+                partial_closes=[
+                    {
+                        "date": "2026-01-10",
+                        "shares_closed": 60,
+                        "price": 20.0,
+                        "r_at_close": 5.0,
+                        "fee_eur": 0.0,
+                    }
+                ],
+            )
+        ],
+        asof="2026-01-20",
+    )
+    return api_client
 
 
 def test_realized_pnl_includes_partial_close_proceeds(client_with_partial_close):

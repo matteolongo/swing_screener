@@ -86,7 +86,24 @@ class RiskConfig:
 | `position_sizing.py` | `RiskConfig`, `compute_stop()`, `position_plan()`, `build_trade_plans()` |
 | `regime.py` | `compute_regime_risk_multiplier()` — market regime detection |
 | `engine.py` | `RiskEngineConfig`, `evaluate_recommendation()` — trade thesis generation |
+| `recommendations/workflow.py` | Canonical execution-workflow classifier: `derive_execution_workflow()` maps recommendation gates to a workflow status and structured next step |
 | `__init__.py` | Package exports |
+
+## Execution Workflow Classification
+
+`recommendations/workflow.py` is the authoritative, deterministic classifier
+for a recommendation's execution workflow. It applies these gates in order:
+
+| Precedence | Gate condition | `workflow_status` | User meaning |
+| --- | --- | --- | --- |
+| 1 | Setup is explicitly blocked | `no_setup` | Interesting context may exist, but there is no executable setup |
+| 2 | Setup is not confirmed, the plan is incomplete/blocked, the trigger is invalid, or required gate data is missing | `needs_review` | A concrete problem must be resolved before the candidate can advance |
+| 3 | Setup and plan pass, trigger is waiting | `waiting_trigger` | The setup is valid but its entry condition has not occurred |
+| 4 | Setup, plan, and trigger all pass | `ready` | The candidate may enter manual order review |
+
+An explicit setup block takes precedence over downstream plan data. Unknown or
+contradictory gate combinations resolve safely to `needs_review`, never
+`ready`.
 
 ## See Also
 

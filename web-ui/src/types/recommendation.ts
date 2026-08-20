@@ -1,6 +1,28 @@
 export type RecommendationVerdict = 'RECOMMENDED' | 'NOT_RECOMMENDED';
 export type RecommendationSeverity = 'info' | 'warn' | 'block';
 export type DecisionGateStatus = 'PASS' | 'WAIT' | 'BLOCK' | 'UNKNOWN';
+export type WorkflowStatus = 'ready' | 'waiting_trigger' | 'needs_review' | 'no_setup';
+export type NextStepCode =
+  | 'review_order'
+  | 'wait_pullback'
+  | 'wait_breakout_close'
+  | 'define_target'
+  | 'refresh_data'
+  | 'fix_stop'
+  | 'inspect_gate_conflict'
+  | 'observe';
+
+export interface WorkflowNextStep {
+  code: NextStepCode;
+  triggerPrice?: number;
+  currency?: string;
+}
+
+export interface WorkflowNextStepAPI {
+  code: unknown;
+  trigger_price?: unknown;
+  currency?: unknown;
+}
 
 export interface DecisionGate {
   status: DecisionGateStatus;
@@ -150,6 +172,8 @@ export interface Recommendation {
   checklist: ChecklistGate[];
   decisionGates?: DecisionGateState;
   education: RecommendationEducation;
+  workflowStatus: WorkflowStatus;
+  nextStep: WorkflowNextStep;
   thesis?: TradeThesis;
 }
 
@@ -212,10 +236,14 @@ export interface RecommendationAPI {
     ready_to_order: boolean;
   };
   education: RecommendationEducationAPI;
+  workflow_status?: unknown;
+  next_step?: unknown;
   thesis?: any;  // Thesis comes as dict from backend
 }
 
 export function transformRecommendation(api: RecommendationAPI): Recommendation {
+  const { workflowStatus, nextStep } = normalizeWorkflow(api.workflow_status, api.next_step);
+
   return {
     verdict: api.verdict,
     reasonsShort: api.reasons_short,
@@ -264,8 +292,106 @@ export function transformRecommendation(api: RecommendationAPI): Recommendation 
       whatToLearn: api.education.what_to_learn,
       whatWouldMakeValid: api.education.what_would_make_valid ?? [],
     },
+    workflowStatus,
+    nextStep,
     thesis: api.thesis ? transformThesis(api.thesis) : undefined,
   };
+}
+
+export function normalizeWorkflowStatus(value: unknown): WorkflowStatus {
+  return isWorkflowStatus(value) ? value : 'needs_review';
+}
+
+function normalizeWorkflow(
+  statusValue: unknown,
+  nextStepValue: unknown,
+): Pick<Recommendation, 'workflowStatus' | 'nextStep'> {
+  const nextStep = normalizeWorkflowNextStep(nextStepValue);
+  if (!isWorkflowStatus(statusValue) || !isCoherentWorkflow(statusValue, nextStep)) {
+    return { workflowStatus: 'needs_review', nextStep: { code: 'refresh_data' } };
+  }
+  return { workflowStatus: statusValue, nextStep };
+}
+
+function isWorkflowStatus(value: unknown): value is WorkflowStatus {
+  switch (value) {
+    case 'ready':
+    case 'waiting_trigger':
+    case 'needs_review':
+    case 'no_setup':
+      return true;
+    default:
+      return false;
+  }
+}
+
+function isNextStepCode(value: unknown): value is NextStepCode {
+  switch (value) {
+    case 'review_order':
+    case 'wait_pullback':
+    case 'wait_breakout_close':
+    case 'define_target':
+    case 'refresh_data':
+    case 'fix_stop':
+    case 'inspect_gate_conflict':
+    case 'observe':
+      return true;
+    default:
+      return false;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isWorkflowNextStep(value: unknown): value is Record<string, unknown> & { code: NextStepCode } {
+  return isRecord(value) && isNextStepCode(value.code);
+}
+
+export function normalizeWorkflowNextStep(value: unknown): WorkflowNextStep {
+  if (!isWorkflowNextStep(value)) {
+    return { code: 'refresh_data' };
+  }
+
+  const triggerPrice = value.trigger_price ?? value.triggerPrice;
+  const currency = typeof value.currency === 'string' ? value.currency.trim().toUpperCase() : undefined;
+
+  return {
+    code: value.code,
+    triggerPrice: typeof triggerPrice === 'number' && Number.isFinite(triggerPrice)
+      ? triggerPrice
+      : undefined,
+    currency: isValidWorkflowCurrency(currency) ? currency : undefined,
+  };
+}
+
+function isCoherentWorkflow(status: WorkflowStatus, nextStep: WorkflowNextStep): boolean {
+  switch (status) {
+    case 'ready':
+      return nextStep.code === 'review_order';
+    case 'waiting_trigger':
+      return (
+        (nextStep.code === 'wait_pullback' || nextStep.code === 'wait_breakout_close')
+        && typeof nextStep.triggerPrice === 'number'
+        && Number.isFinite(nextStep.triggerPrice)
+        && nextStep.triggerPrice > 0
+        && isValidWorkflowCurrency(nextStep.currency)
+      );
+    case 'no_setup':
+      return nextStep.code === 'observe';
+    case 'needs_review':
+      return (
+        nextStep.code === 'define_target'
+        || nextStep.code === 'refresh_data'
+        || nextStep.code === 'fix_stop'
+        || nextStep.code === 'inspect_gate_conflict'
+      );
+  }
+}
+
+function isValidWorkflowCurrency(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Z]{3}$/.test(value) && value !== 'UNKNOWN';
 }
 
 function transformThesis(apiThesis: any): TradeThesis {

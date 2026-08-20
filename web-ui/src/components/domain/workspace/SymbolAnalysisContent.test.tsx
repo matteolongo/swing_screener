@@ -25,6 +25,111 @@ describe('SymbolAnalysisContent held mode', () => {
     expect(screen.queryByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).not.toBeInTheDocument();
     expect(screen.getByText(t('workspacePage.panels.analysis.managePosition.title'))).toBeInTheDocument();
   });
+
+  it('shows the Order tab for a held symbol only with a canonical ready add-on', () => {
+    const candidate = {
+      sameSymbol: { mode: 'ADD_ON' },
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+    } as any;
+    renderWithProviders(
+      <SymbolAnalysisContent ticker="LRCX" candidate={candidate} position={position} activeTab="overview" onTabChange={() => {}} orderPanel={<div>order</div>} />,
+    );
+    expect(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).toBeInTheDocument();
+  });
+
+  it('shows the Order tab for a canonical ready scale-back entry', () => {
+    const candidate = {
+      sameSymbol: { mode: 'SCALE_BACK' },
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+    } as any;
+    renderWithProviders(
+      <SymbolAnalysisContent ticker="LRCX" candidate={candidate} position={position} activeTab="overview" onTabChange={() => {}} orderPanel={<div>order</div>} />,
+    );
+    expect(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).toBeInTheDocument();
+  });
+
+  it('hides the Order tab for a held candidate that is not canonically ready', () => {
+    const candidate = {
+      sameSymbol: { mode: 'ADD_ON' },
+      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_pullback' } },
+    } as any;
+    renderWithProviders(
+      <SymbolAnalysisContent ticker="LRCX" candidate={candidate} position={position} activeTab="overview" onTabChange={() => {}} orderPanel={<div>order</div>} />,
+    );
+    expect(screen.queryByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).not.toBeInTheDocument();
+  });
+});
+
+function buyNowCandidate(workflowStatus: 'ready' | 'no_setup') {
+  return {
+    ticker: 'AAPL', currency: 'USD', entry: 200, stop: 190,
+    recommendation: {
+      workflowStatus,
+      nextStep: workflowStatus === 'ready' ? { code: 'review_order' } : { code: 'observe' },
+    },
+    decisionSummary: {
+      symbol: 'AAPL', action: 'BUY_NOW', conviction: 'high', technicalLabel: 'strong',
+      fundamentalsLabel: 'strong', valuationLabel: 'fair', catalystLabel: 'active',
+      whyNow: '', whatToDo: '', mainRisk: '',
+      tradePlan: { entry: 200, stop: 190, target: 220, rr: 2 },
+      drivers: { positives: [], negatives: [], warnings: [] },
+      valuationContext: { method: 'not_available', summary: '' },
+    },
+  } as any;
+}
+
+function CandidateOrderHarness({ workflowStatus }: { workflowStatus: 'ready' | 'no_setup' }) {
+  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
+  return (
+    <SymbolAnalysisContent
+      ticker="AAPL"
+      candidate={buyNowCandidate(workflowStatus)}
+      position={null}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      orderPanel={<div>order panel</div>}
+    />
+  );
+}
+
+function HeldAddOnHarness() {
+  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
+  return (
+    <SymbolAnalysisContent
+      ticker="LRCX"
+      candidate={{
+        sameSymbol: { mode: 'ADD_ON' },
+        recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      } as any}
+      position={position}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      orderPanel={<div>add-on order panel</div>}
+    />
+  );
+}
+
+describe('SymbolAnalysisContent candidate order transition', () => {
+  it('does not open the order panel from a BUY_NOW opinion without ready workflow status', () => {
+    renderWithProviders(<CandidateOrderHarness workflowStatus="no_setup" />);
+
+    expect(screen.queryByRole('button', { name: /prepare order/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('order panel')).not.toBeInTheDocument();
+  });
+
+  it('opens the order panel from a canonical ready candidate', async () => {
+    renderWithProviders(<CandidateOrderHarness workflowStatus="ready" />);
+
+    await userEvent.click(screen.getByRole('button', { name: /prepare order/i }));
+    expect(screen.getByText('order panel')).toBeInTheDocument();
+  });
+
+  it('opens the local order tab from a held add-on', async () => {
+    renderWithProviders(<HeldAddOnHarness />);
+
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') }));
+    expect(screen.getByText('add-on order panel')).toBeInTheDocument();
+  });
 });
 
 function SymbolAnalysisHarness() {

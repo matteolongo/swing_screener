@@ -9,9 +9,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Conditional pullback and breakout candidates now show gate-derived execution
-  readiness instead of being mislabeled as failed setups in Last Run and order
-  review.
+- Screener candidates now use one gate-derived workflow status and concrete next
+  action across Last Run, Today, Universe discovery, symbol details, and order
+  review. Discovery rows retain their exact recommendation, malformed workflow
+  pairs fail closed, and same-symbol add-ons recheck minimum R:R against the
+  current live stop before remaining eligible for review.
 - Applied universe refreshes now persist review metadata when index membership is
   unchanged, preventing verified snapshots from expiring immediately afterward.
 

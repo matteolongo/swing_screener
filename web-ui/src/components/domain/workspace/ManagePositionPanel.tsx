@@ -12,20 +12,18 @@ import {
   usePositionStopPreviewQuery,
   useUpdateStopMutation,
 } from '@/features/portfolio/hooks';
-import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { formatCurrency } from '@/utils/formatters';
 
 interface ManagePositionPanelProps {
   position: PositionWithMetrics;
   candidate?: SymbolAnalysisCandidate | null;
+  onPrepareOrder?: () => void;
 }
-
-const ENTRY_ACTIONS = new Set(['BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT']);
 
 type ModalKind = 'stop' | 'scaleOut' | 'exit' | null;
 
-export default function ManagePositionPanel({ position, candidate }: ManagePositionPanelProps) {
+export default function ManagePositionPanel({ position, candidate, onPrepareOrder }: ManagePositionPanelProps) {
   const [modal, setModal] = useState<ModalKind>(null);
   const [checkLive, setCheckLive] = useState(false);
 
@@ -35,8 +33,10 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
   const positionId = position.positionId ?? '';
   const stopPreview = usePositionStopPreviewQuery(positionId, null, checkLive);
 
-  const setActiveTab = useWorkspaceStore((state) => state.setAnalysisTab);
-  const canAdd = ENTRY_ACTIONS.has(candidate?.decisionSummary?.action ?? '');
+  const canAdd = Boolean(
+    (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
+      && candidate.recommendation?.workflowStatus === 'ready',
+  );
 
   const displayedR = checkLive && stopPreview.data ? stopPreview.data.rNow : position.rNow;
   const rSign = displayedR >= 0 ? '+' : '';
@@ -76,7 +76,7 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
           {t('workspacePage.panels.analysis.managePosition.checkLive')}
         </Button>
         {canAdd && (
-          <Button size="sm" variant="secondary" onClick={() => setActiveTab('order')}>
+          <Button size="sm" variant="secondary" onClick={onPrepareOrder}>
             {t('workspacePage.panels.analysis.managePosition.add')}
           </Button>
         )}

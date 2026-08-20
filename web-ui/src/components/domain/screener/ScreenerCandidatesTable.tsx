@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
 import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
-import type { DecisionAction, ScreenerCandidate } from '@/features/screener/types';
+import type { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import { useScreenerRecurrence } from '@/features/screener/recurrenceHooks';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
@@ -12,33 +12,8 @@ import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
 import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
-import { deriveExecutionReadiness } from '@/components/domain/recommendation/readiness';
-
-function assertNever(value: never): never {
-  throw new Error(`Unhandled decision action: ${value}`);
-}
-
-function signalBadge(action?: DecisionAction): { label: string; className: string } | null {
-  if (!action) return null;
-  switch (action) {
-    case 'BUY_NOW':
-      return { label: t('screener.table.signalBadge.buyNow'), className: 'bg-success/10 text-success' };
-    case 'BUY_ON_PULLBACK':
-      return { label: t('screener.table.signalBadge.pullback'), className: 'bg-primary/10 text-primary' };
-    case 'WAIT_FOR_BREAKOUT':
-      return { label: t('screener.table.signalBadge.breakout'), className: 'bg-primary/10 text-primary' };
-    case 'WATCH':
-      return { label: t('screener.table.signalBadge.watch'), className: 'bg-warning/10 text-warning' };
-    case 'TACTICAL_ONLY':
-      return { label: t('screener.table.signalBadge.tactical'), className: 'bg-primary/10 text-primary' };
-    case 'AVOID':
-      return { label: t('screener.table.signalBadge.avoid'), className: 'bg-danger/10 text-danger' };
-    case 'MANAGE_ONLY':
-      return { label: t('screener.table.signalBadge.manage'), className: 'bg-foreground/5 text-muted' };
-    default:
-      return assertNever(action);
-  }
-}
+import { formatWorkflowNextStep, groupCandidatesByWorkflow } from '@/components/domain/recommendation/workflowPresentation';
+import ScreenerWorkflowGroup from './ScreenerWorkflowGroup';
 
 interface ScreenerCandidatesTableProps {
   candidates: ScreenerCandidate[];
@@ -50,7 +25,7 @@ interface ScreenerCandidatesTableProps {
 }
 
 /**
- * Simplified screener candidates table: Rank | Symbol | Signal | Close | R:R | Actions
+ * Screener candidates grouped by their next beginner-facing workflow action.
  */
 export default function ScreenerCandidatesTable({
   candidates,
@@ -70,6 +45,7 @@ export default function ScreenerCandidatesTable({
     (recurrenceQuery.data ?? []).map((r) => [r.ticker, r.streak])
   );
   const watchedTickers = new Set((watchlistQuery.data ?? []).map((item) => item.ticker.toUpperCase()));
+  const groups = groupCandidatesByWorkflow(candidates);
 
   const toggleRow = (ticker: string) => {
     setExpandedRows((prev) => {
@@ -81,26 +57,6 @@ export default function ScreenerCandidatesTable({
       }
       return next;
     });
-  };
-
-  const orderActionLabel = (candidate: ScreenerCandidate) =>
-    candidate.sameSymbol?.mode === 'ADD_ON' || candidate.sameSymbol?.mode === 'MANAGE_ONLY'
-      ? t('screener.table.addOnAction')
-      : t('screener.table.createOrderAction');
-
-  const orderActionTitle = (candidate: ScreenerCandidate) => {
-    const readiness = deriveExecutionReadiness(
-      candidate.recommendation?.decisionGates,
-      candidate.recommendation?.verdict ?? 'UNKNOWN',
-    );
-    if (readiness.state !== 'READY_FOR_REVIEW') {
-      return t('screener.table.executionReadinessTitle', {
-        status: t(readiness.labelKey),
-      });
-    }
-    return candidate.sameSymbol?.mode === 'ADD_ON' || candidate.sameSymbol?.mode === 'MANAGE_ONLY'
-      ? t('screener.table.addOnTitle')
-      : t('screener.table.createOrderTitle');
   };
 
   const handleWatch = (candidate: ScreenerCandidate) => {
@@ -116,18 +72,11 @@ export default function ScreenerCandidatesTable({
     unwatchSymbolMutation.mutate(ticker);
   };
 
-  if (candidates.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted">
-        {t('screener.table.empty')}
-      </div>
-    );
-  }
-
   return (
-    <TableShell
-      headers={
-        <tr>
+    <div className="space-y-3">
+      {groups.map(({ status, presentation, candidates: groupCandidates }) => (
+        <ScreenerWorkflowGroup key={status} presentation={presentation} count={groupCandidates.length} defaultOpen={status !== 'no_setup'}>
+          <TableShell headers={<tr>
           <th className="py-2 px-3 text-xs font-semibold text-muted text-left">
             {t('screener.table.headers.priority')}
           </th>
@@ -135,7 +84,7 @@ export default function ScreenerCandidatesTable({
             {t('screener.table.headers.symbol')}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-muted text-left">
-            {t('screener.table.headers.signal')}
+            {t('screener.table.headers.nextAction')}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-muted text-right">
             {t('screener.table.headers.close')}
@@ -149,14 +98,13 @@ export default function ScreenerCandidatesTable({
           <th className="py-2 px-3 text-xs font-semibold text-muted text-center">
             {t('screener.table.headers.actions')}
           </th>
-        </tr>
-      }
-    >
-      {candidates.map((candidate) => {
+          </tr>}>
+      {groupCandidates.map((candidate) => {
         const vm = toCandidateViewModel(candidate);
         const isExpanded = expandedRows.has(candidate.ticker);
         const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
-        const badge = signalBadge(candidate.decisionSummary?.action);
+        const workflowStatus = candidate.recommendation?.workflowStatus ?? 'needs_review';
+        const canReviewOrder = workflowStatus === 'ready';
         const isWatched = watchedTickers.has(candidate.ticker.toUpperCase());
         const isWatchPending =
           (watchSymbolMutation.isPending &&
@@ -197,16 +145,17 @@ export default function ScreenerCandidatesTable({
                 />
               </td>
 
-              {/* Signal */}
+              {/* Next action */}
               <td className="py-1.5 px-3">
-                <div className="flex items-center gap-1">
-                  {badge ? (
-                    <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${badge.className}`}>
-                      {badge.label}
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-foreground">{formatWorkflowNextStep(candidate.recommendation?.nextStep)}</span>
+                  {candidate.signal === 'pullback' || candidate.signal === 'breakout' ? (
+                    <span className="text-[10px] text-muted">
+                      {candidate.signal === 'pullback'
+                        ? t('screener.table.setupType.pullback')
+                        : t('screener.table.setupType.breakout')}
                     </span>
-                  ) : (
-                    <span className="text-xs text-muted">—</span>
-                  )}
+                  ) : null}
                   {vm.volumeRatio != null && vm.volumeRatio >= 1.5 && (
                     <span
                       className="inline-block w-2 h-2 rounded-full bg-success flex-shrink-0"
@@ -273,30 +222,25 @@ export default function ScreenerCandidatesTable({
                     )}
                   </button>
 
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onRecommendationDetails(candidate);
-                    }}
-                    title={t('screener.table.recommendationDetailsTitle')}
-                    aria-label={t('screener.table.recommendationDetailsAria', { ticker: candidate.ticker })}
-                  >
-                    <ListChecks className="w-3.5 h-3.5" />
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={(event) => {
+                  {canReviewOrder ? (
+                    <Button size="sm" variant="primary" onClick={(event) => {
                       event.stopPropagation();
                       onCreateOrder(candidate);
-                    }}
-                    title={orderActionTitle(candidate)}
-                  >
-                    {orderActionLabel(candidate)}
-                  </Button>
+                    }}>
+                      {t('screener.table.reviewOrderAction')}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="secondary" onClick={(event) => {
+                      event.stopPropagation();
+                      onRecommendationDetails(candidate);
+                    }}>
+                      {workflowStatus === 'waiting_trigger'
+                        ? t('screener.table.openDetailsAction')
+                        : workflowStatus === 'needs_review'
+                          ? t('screener.table.openVerificationAction')
+                          : t('screener.table.viewContextAction')}
+                    </Button>
+                  )}
 
                   <WatchToggleButton
                     ticker={candidate.ticker}
@@ -315,6 +259,9 @@ export default function ScreenerCandidatesTable({
           </React.Fragment>
         );
       })}
-    </TableShell>
+          </TableShell>
+        </ScreenerWorkflowGroup>
+      ))}
+    </div>
   );
 }

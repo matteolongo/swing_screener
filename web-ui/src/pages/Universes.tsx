@@ -21,16 +21,14 @@ import {
 import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
+import type { ScreenerCandidate } from '@/features/screener/types';
 import { useOpenPositions } from '@/features/portfolio/hooks';
-import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
-function UniverseSymbolModal({ ticker, onBack }: { ticker: string; onBack: () => void }) {
+function UniverseSymbolModal({ candidate, onBack }: { candidate: ScreenerCandidate; onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
-  const candidate = useScreenerStore((state) =>
-    state.lastResult?.candidates.find((c) => c.ticker.toUpperCase() === ticker.toUpperCase())
-  );
+  const ticker = candidate.ticker;
   const openPositionsQuery = useOpenPositions();
   const openPosition =
     openPositionsQuery.data?.find((p) => p.ticker.toUpperCase() === ticker.toUpperCase()) ?? null;
@@ -43,7 +41,7 @@ function UniverseSymbolModal({ ticker, onBack }: { ticker: string; onBack: () =>
         position={openPosition}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        orderPanel={<ActionPanel ticker={ticker} />}
+        orderPanel={<ActionPanel ticker={ticker} candidate={candidate} />}
       />
     </ModalShell>
   );
@@ -63,7 +61,7 @@ export default function Universes() {
   const [discoveryMinVolume, setDiscoveryMinVolume] = useState(1_000_000);
   const [discoveryMinMarketCap, setDiscoveryMinMarketCap] = useState(0);
   const [screenerTop, setScreenerTop] = useState(20);
-  const [detailTicker, setDetailTicker] = useState<string | null>(null);
+  const [detailCandidate, setDetailCandidate] = useState<ScreenerCandidate | null>(null);
 
   useEffect(() => {
     if (!selectedUniverseId && universes.length > 0) {
@@ -243,7 +241,7 @@ export default function Universes() {
           {activeDetailTab === 'screener' && (
             <UniverseScreenerTab
               discoveryScreenerMutation={discoveryScreenerMutation}
-              onSelectTicker={setDetailTicker}
+              onSelectCandidate={setDetailCandidate}
             />
           )}
 
@@ -251,8 +249,8 @@ export default function Universes() {
         </div>
       </div>
 
-      {detailTicker ? (
-        <UniverseSymbolModal ticker={detailTicker} onBack={() => setDetailTicker(null)} />
+      {detailCandidate ? (
+        <UniverseSymbolModal candidate={detailCandidate} onBack={() => setDetailCandidate(null)} />
       ) : null}
     </div>
   );

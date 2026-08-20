@@ -78,8 +78,7 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
           entry: 100.5,
           stop: 97,
           shares: 10,
-          // decisionSummary with BUY_NOW makes readiness = 'ready', so the gate is transparent.
-          // Tests only need `action` for gate logic; remaining fields use type cast.
+          // Analytical decision summaries remain available for display only.
           decisionSummary: { action: 'BUY_NOW' } as unknown as DecisionSummary,
           recommendation: {
             verdict: 'RECOMMENDED',
@@ -117,6 +116,8 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
               whatToLearn: '',
               whatWouldMakeValid: [],
             },
+            workflowStatus: 'ready',
+            nextStep: { code: 'review_order' },
           },
           ...overrides,
         },
@@ -161,6 +162,34 @@ describe('ActionPanel', () => {
     expect(screen.queryAllByText('Pullback setup')).toHaveLength(0);
     expect(screen.getAllByText(/buy-limit entry on a controlled retest/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Breakout already occurred/i)).toBeInTheDocument();
+  });
+
+  it('does not synthesize a breakout signal from an analytical BUY_NOW action', () => {
+    setCandidate({
+      signal: undefined,
+      decisionSummary: { action: 'BUY_NOW' } as unknown as DecisionSummary,
+    });
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.queryAllByText(t('order.setupGuidance.signals.breakout.label'))).toHaveLength(0);
+  });
+
+  it('uses an explicit discovery candidate instead of a conflicting store candidate', () => {
+    const storedCandidate = useScreenerStore.getState().lastResult!.candidates[0];
+    const discoveryCandidate = {
+      ...storedCandidate,
+      recommendation: {
+        ...storedCandidate.recommendation!,
+        verdict: 'NOT_RECOMMENDED' as const,
+        workflowStatus: 'no_setup' as const,
+        nextStep: { code: 'observe' as const },
+      },
+    };
+
+    renderWithProviders(<ActionPanel ticker="AAPL" candidate={discoveryCandidate} />);
+
+    expect(screen.getByText((content) => content.includes(t('order.review.decisionLocked')))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('order.candidateModal.createAction') })).toBeDisabled();
   });
 
   it('does not allow a signed candidate order type to be overridden in API mode', async () => {

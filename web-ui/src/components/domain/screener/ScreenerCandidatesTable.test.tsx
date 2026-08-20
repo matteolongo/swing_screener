@@ -9,8 +9,8 @@ import { server } from '@/test/mocks/server';
 import { t } from '@/i18n/t';
 import type { ScreenerCandidate } from '@/features/screener/types';
 
-function candidate(): ScreenerCandidate {
-  return {
+function candidate(overrides: Partial<ScreenerCandidate> = {}): ScreenerCandidate {
+  const base: ScreenerCandidate = {
     ticker: 'GE',
     currency: 'USD',
     close: 377.52,
@@ -63,6 +63,8 @@ function candidate(): ScreenerCandidate {
         whatToLearn: '',
         whatWouldMakeValid: [],
       },
+      workflowStatus: 'needs_review',
+      nextStep: { code: 'define_target' },
     },
     decisionSummary: {
       symbol: 'GE',
@@ -80,29 +82,86 @@ function candidate(): ScreenerCandidate {
       drivers: { positives: [], negatives: [], warnings: [], tradeState: [] },
     },
   };
+
+  return { ...base, ...overrides };
 }
 
 describe('ScreenerCandidatesTable', () => {
-  it('labels wait-for-breakout rows as breakout setup', () => {
+  const workflows = {
+    ready: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+    waiting: {
+      workflowStatus: 'waiting_trigger',
+      nextStep: { code: 'wait_pullback', triggerPrice: 46.2, currency: 'EUR' },
+    },
+    review: { workflowStatus: 'needs_review', nextStep: { code: 'define_target' } },
+    noSetup: { workflowStatus: 'no_setup', nextStep: { code: 'observe' } },
+  } as const;
+
+  it('groups candidates by workflow with next actions and a ready-only order action', () => {
     server.use(http.get('/api/screener/recurrence', () => HttpResponse.json([])));
 
     renderWithProviders(
       <ScreenerCandidatesTable
-        candidates={[candidate()]}
+        candidates={[
+          candidate({ ticker: 'READY', signal: 'breakout', recommendation: { ...candidate().recommendation!, ...workflows.ready } }),
+          candidate({ ticker: 'WAIT', signal: 'pullback', recommendation: { ...candidate().recommendation!, ...workflows.waiting } }),
+          candidate({ ticker: 'REVIEW', recommendation: { ...candidate().recommendation!, ...workflows.review } }),
+          candidate({
+            ticker: 'NOSETUP',
+            signal: 'none',
+            decisionSummary: { ...candidate().decisionSummary!, action: 'BUY_ON_PULLBACK' },
+            recommendation: { ...candidate().recommendation!, ...workflows.noSetup },
+          }),
+        ]}
         onCreateOrder={vi.fn()}
         onRecommendationDetails={vi.fn()}
       />
     );
 
-    expect(screen.getByText(t('screener.table.signalBadge.breakout'))).toBeInTheDocument();
-    expect(screen.getByText(t('recommendation.readiness.WAITING_FOR_TRIGGER'))).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: t('screener.table.createOrderAction') })).toHaveAttribute(
-      'title',
-      t('screener.table.executionReadinessTitle', {
-        status: t('recommendation.readiness.WAITING_FOR_TRIGGER'),
-      }),
+    expect(screen.getAllByRole('heading', { level: 3 }).map((node) => node.getAttribute('aria-label') ?? node.textContent)).toEqual([
+      t('screener.workflowGroups.ready.title'),
+      t('screener.workflowGroups.waitingTrigger.title'),
+      t('screener.workflowGroups.needsReview.title'),
+      t('screener.workflowGroups.noSetup.title'),
+    ]);
+    expect(screen.getByText(t('recommendation.workflow.nextStep.wait_pullback', { price: '€46.20' }))).toBeInTheDocument();
+    expect(screen.queryByText(t('screener.table.signalBadge.pullback'))).not.toBeInTheDocument();
+    expect(screen.queryByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback'))).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('screener.table.reviewOrderAction') })).toBeEnabled();
+    expect(screen.getAllByRole('button', { name: t('screener.table.reviewOrderAction') })).toHaveLength(1);
+
+    const readyHeading = screen.getByRole('heading', { name: t('screener.workflowGroups.ready.title') });
+    const readySummary = readyHeading.closest('summary');
+    expect(readyHeading.parentElement).toBe(readySummary);
+    expect(Array.from(readySummary?.children ?? [])).toEqual([readyHeading]);
+    expect(readyHeading).toContainElement(readySummary?.querySelector('[class*="h-2.5"]') ?? null);
+    expect(readyHeading).toContainElement(screen.getByText(t('screener.workflowGroups.ready.description')));
+    expect(Array.from(readyHeading.querySelectorAll('span')).some((node) => node.textContent === '1')).toBe(true);
+
+    const noSetupGroup = screen.getByRole('heading', { name: t('screener.workflowGroups.noSetup.title') }).closest('section');
+    expect(noSetupGroup).toContainElement(screen.getByText('NOSETUP'));
+    expect(noSetupGroup?.querySelector('details')).not.toHaveAttribute('open');
+  });
+
+  it('keeps all workflow groups visible when there are no candidates', () => {
+    server.use(http.get('/api/screener/recurrence', () => HttpResponse.json([])));
+
+    renderWithProviders(
+      <ScreenerCandidatesTable
+        candidates={[]}
+        onCreateOrder={vi.fn()}
+        onRecommendationDetails={vi.fn()}
+      />
     );
-    expect(screen.queryByText(/^Breakout$/)).not.toBeInTheDocument();
+
+    expect(screen.getAllByRole('heading', { level: 3 }).map((node) => node.getAttribute('aria-label') ?? node.textContent)).toEqual([
+      t('screener.workflowGroups.ready.title'),
+      t('screener.workflowGroups.waitingTrigger.title'),
+      t('screener.workflowGroups.needsReview.title'),
+      t('screener.workflowGroups.noSetup.title'),
+    ]);
+    const noSetupGroup = screen.getByRole('heading', { name: t('screener.workflowGroups.noSetup.title') }).closest('section');
+    expect(noSetupGroup?.querySelector('details')).not.toHaveAttribute('open');
   });
 
   it('activates selectable rows with the keyboard', async () => {

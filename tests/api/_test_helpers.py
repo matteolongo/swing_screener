@@ -1,7 +1,10 @@
 """Shared test helper factories for API tests."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
+
+from tests.support.factories.portfolio import order_payload, position_payload
 
 
 def make_position(
@@ -14,14 +17,17 @@ def make_position(
     shares: int = 10,
     status: str = "open",
 ) -> SimpleNamespace:
-    return SimpleNamespace(
+    payload = position_payload(
         ticker=ticker,
         position_id=position_id,
         entry_price=entry_price,
-        current_price=current_price if current_price is not None else entry_price,
         stop_price=stop_price,
         shares=shares,
         status=status,
+    )
+    return SimpleNamespace(
+        **payload,
+        current_price=current_price if current_price is not None else entry_price,
     )
 
 
@@ -33,10 +39,13 @@ def make_order(
     order_kind: str = "entry",
     position_id: str | None = None,
 ) -> SimpleNamespace:
-    return SimpleNamespace(
+    payload = order_payload(
         ticker=ticker,
         order_id=order_id,
         status=status,
         order_kind=order_kind,
         position_id=position_id,
+    )
+    return SimpleNamespace(
+        **payload,
     )

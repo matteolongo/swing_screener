@@ -29,10 +29,34 @@ describe('ManagePositionPanel', () => {
     expect(screen.queryByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).not.toBeInTheDocument();
   });
 
-  it('shows Add-to-position only on an actionable entry signal', () => {
-    const candidate = { decisionSummary: { action: 'BUY_ON_PULLBACK' } } as any;
+  it('shows Add-to-position only for a canonical ready add-on', () => {
+    const candidate = {
+      sameSymbol: { mode: 'ADD_ON' },
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      decisionSummary: { action: 'WATCH' },
+    } as any;
     renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
     expect(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).toBeInTheDocument();
+  });
+
+  it('shows Add-to-position for a canonical ready scale-back entry', () => {
+    const candidate = {
+      sameSymbol: { mode: 'SCALE_BACK' },
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      decisionSummary: { action: 'WATCH' },
+    } as any;
+    renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
+    expect(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).toBeInTheDocument();
+  });
+
+  it('does not promote a BUY_ON_PULLBACK opinion without ready workflow status', () => {
+    const candidate = {
+      sameSymbol: { mode: 'ADD_ON' },
+      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_pullback' } },
+      decisionSummary: { action: 'BUY_ON_PULLBACK' },
+    } as any;
+    renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
+    expect(screen.queryByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).not.toBeInTheDocument();
   });
 
   it('opens the update-stop modal on click', async () => {
