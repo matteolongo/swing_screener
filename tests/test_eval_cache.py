@@ -1,7 +1,18 @@
 import dataclasses
+import os
+import time
 
+import pandas as pd
+
+import swing_screener.reporting.report as report_mod
+from swing_screener.selection.eval_cache import (
+    EVALUATION_CACHE_SCHEMA_VERSION,
+    EvalCache,
+    EvaluationCacheIdentity,
+    build_evaluation_cache_identities,
+    strategy_signature,
+)
 from swing_screener.strategy.report_config import ReportConfig
-from swing_screener.selection.eval_cache import strategy_signature
 
 
 def test_signature_is_stable_and_hex():
@@ -23,13 +34,12 @@ def test_signature_ignores_ranking_and_topn():
 def test_signature_changes_with_signals():
     base = ReportConfig()
     changed = dataclasses.replace(
-        base, signals=dataclasses.replace(base.signals, breakout_lookback=base.signals.breakout_lookback + 10)
+        base,
+        signals=dataclasses.replace(
+            base.signals, breakout_lookback=base.signals.breakout_lookback + 10
+        ),
     )
     assert strategy_signature(base) != strategy_signature(changed)
-
-
-import pandas as pd
-from swing_screener.selection.eval_cache import EvalCache
 
 
 def _records(tickers):
@@ -39,72 +49,175 @@ def _records(tickers):
     )
 
 
+def _identity(**changes):
+    values = {
+        "schema_version": EVALUATION_CACHE_SCHEMA_VERSION,
+        "asof": "2026-06-16",
+        "last_bar": "2026-06-16T20:00:00+00:00",
+        "market_phase": "final_close",
+        "strategy_signature": "abc",
+        "input_fingerprint": "bars-v1",
+    }
+    values.update(changes)
+    return EvaluationCacheIdentity(**values)
+
+
 def test_split_all_miss_when_empty(tmp_path):
     cache = EvalCache(root=tmp_path)
-    hits, misses = cache.split(["AAPL", "MSFT"], asof="2026-06-16", sig="abc")
+    identities = {ticker: _identity() for ticker in ["AAPL", "MSFT"]}
+    hits, misses = cache.split(["AAPL", "MSFT"], identities=identities)
     assert hits.empty
     assert sorted(misses) == ["AAPL", "MSFT"]
 
 
 def test_write_then_split_hits(tmp_path):
     cache = EvalCache(root=tmp_path)
-    cache.write(_records(["AAPL", "MSFT"]), asof="2026-06-16", sig="abc")
-    hits, misses = cache.split(["AAPL", "MSFT", "NVDA"], asof="2026-06-16", sig="abc")
+    identities = {ticker: _identity() for ticker in ["AAPL", "MSFT", "NVDA"]}
+    cache.write(_records(["AAPL", "MSFT"]), identities=identities)
+    hits, misses = cache.split(["AAPL", "MSFT", "NVDA"], identities=identities)
     assert sorted(hits.index.tolist()) == ["AAPL", "MSFT"]
     assert misses == ["NVDA"]
     assert hits.loc["AAPL", "mom_6m"] == 1.0
+    assert not any(column.startswith("__eval_cache_") for column in hits.columns)
 
 
-def test_split_isolated_by_asof_and_sig(tmp_path):
+def test_split_misses_when_identity_provenance_changes(tmp_path):
     cache = EvalCache(root=tmp_path)
-    cache.write(_records(["AAPL"]), asof="2026-06-16", sig="abc")
-    _, misses_day = cache.split(["AAPL"], asof="2026-06-17", sig="abc")
-    _, misses_sig = cache.split(["AAPL"], asof="2026-06-16", sig="zzz")
-    assert misses_day == ["AAPL"]
-    assert misses_sig == ["AAPL"]
+    cache.write(_records(["AAPL"]), identities={"AAPL": _identity()})
+
+    changes = [
+        {"schema_version": EVALUATION_CACHE_SCHEMA_VERSION + 1},
+        {"asof": "2026-06-17"},
+        {"last_bar": "2026-06-16T19:30:00+00:00"},
+        {"market_phase": "intraday"},
+        {"strategy_signature": "zzz"},
+        {"input_fingerprint": "bars-v2"},
+    ]
+    for change in changes:
+        hits, misses = cache.split(["AAPL"], identities={"AAPL": _identity(**change)})
+        assert hits.empty
+        assert misses == ["AAPL"]
+
+
+def test_legacy_entry_without_identity_metadata_is_a_miss(tmp_path):
+    cache = EvalCache(root=tmp_path)
+    identity = _identity()
+    path = cache._path("AAPL", identity.asof, identity.strategy_signature)
+    path.parent.mkdir(parents=True)
+    _records(["AAPL"]).to_parquet(path)
+
+    hits, misses = cache.split(["AAPL"], identities={"AAPL": identity})
+
+    assert hits.empty
+    assert misses == ["AAPL"]
+
+
+def test_identity_fingerprint_changes_with_symbol_or_sector_inputs():
+    index = pd.to_datetime(["2026-06-15", "2026-06-16"], utc=True)
+    ohlcv = pd.DataFrame(
+        {
+            ("Close", "AAPL"): [100.0, 101.0],
+            ("Volume", "AAPL"): [1_000.0, 2_000.0],
+        },
+        index=index,
+    )
+    ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
+
+    base = build_evaluation_cache_identities(
+        ohlcv,
+        ["AAPL"],
+        asof="2026-06-16",
+        market_phase="final_close",
+        strategy_signature="abc",
+        sector_benchmark_returns={"AAPL": 0.03},
+    )["AAPL"]
+    changed_bar = ohlcv.copy()
+    changed_bar.loc[index[-1], ("Close", "AAPL")] = 102.0
+    bar_identity = build_evaluation_cache_identities(
+        changed_bar,
+        ["AAPL"],
+        asof="2026-06-16",
+        market_phase="final_close",
+        strategy_signature="abc",
+        sector_benchmark_returns={"AAPL": 0.03},
+    )["AAPL"]
+    sector_identity = build_evaluation_cache_identities(
+        ohlcv,
+        ["AAPL"],
+        asof="2026-06-16",
+        market_phase="final_close",
+        strategy_signature="abc",
+        sector_benchmark_returns={"AAPL": 0.04},
+    )["AAPL"]
+
+    assert base.last_bar == "2026-06-16T00:00:00+00:00"
+    assert base.input_fingerprint != bar_identity.input_fingerprint
+    assert base.input_fingerprint != sector_identity.input_fingerprint
+
+
+def test_identity_ignores_unconsumed_nan_sector_input():
+    index = pd.to_datetime(["2026-06-16"], utc=True)
+    ohlcv = pd.DataFrame({("Close", "AAPL"): [101.0]}, index=index)
+    ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
+    kwargs = {
+        "asof": "2026-06-16",
+        "market_phase": "final_close",
+        "strategy_signature": "abc",
+    }
+
+    missing = build_evaluation_cache_identities(ohlcv, ["AAPL"], **kwargs)["AAPL"]
+    unavailable = build_evaluation_cache_identities(
+        ohlcv,
+        ["AAPL"],
+        sector_benchmark_returns={"AAPL": float("nan")},
+        **kwargs,
+    )["AAPL"]
+
+    assert unavailable.input_fingerprint == missing.input_fingerprint
 
 
 def test_write_preserves_numeric_dtype(tmp_path):
     """records.loc[[ticker]] preserves column dtypes; iterrows+to_frame().T yields object dtype."""
     records = pd.DataFrame(
-        {"mom_6m": [1.5, 2.5], "is_eligible": [True, False], "currency": ["USD", "EUR"]},
+        {
+            "mom_6m": [1.5, 2.5],
+            "is_eligible": [True, False],
+            "currency": ["USD", "EUR"],
+        },
         index=pd.Index(["AAPL", "MSFT"], name="ticker"),
     )
     # The fix: slicing with loc[[ticker]] must preserve float64
     for ticker in records.index:
         frame = records.loc[[ticker]]
-        assert pd.api.types.is_float_dtype(frame["mom_6m"]), (
-            f"loc[[ticker]] yielded {frame['mom_6m'].dtype} for {ticker}; expected float64"
-        )
+        assert pd.api.types.is_float_dtype(
+            frame["mom_6m"]
+        ), f"loc[[ticker]] yielded {frame['mom_6m'].dtype} for {ticker}; expected float64"
     # End-to-end: write then split must also round-trip correctly
     cache = EvalCache(root=tmp_path)
-    cache.write(records, asof="2026-06-16", sig="abc")
-    hits, _ = cache.split(["AAPL", "MSFT"], asof="2026-06-16", sig="abc")
-    assert pd.api.types.is_float_dtype(hits["mom_6m"]), f"expected float64, got {hits['mom_6m'].dtype}"
+    identities = {ticker: _identity() for ticker in ["AAPL", "MSFT"]}
+    cache.write(records, identities=identities)
+    hits, _ = cache.split(["AAPL", "MSFT"], identities=identities)
+    assert pd.api.types.is_float_dtype(
+        hits["mom_6m"]
+    ), f"expected float64, got {hits['mom_6m'].dtype}"
     assert hits.loc["AAPL", "mom_6m"] == 1.5
     assert hits.index.name == "ticker"
 
 
-import os
-import time
-
-
 def test_prune_removes_old_files(tmp_path):
     cache = EvalCache(root=tmp_path)
-    cache.write(_records(["AAPL"]), asof="2026-06-16", sig="abc")
+    identities = {ticker: _identity() for ticker in ["AAPL", "MSFT"]}
+    cache.write(_records(["AAPL"]), identities=identities)
     path = cache._path("AAPL", "2026-06-16", "abc")
     old = time.time() - 25 * 3600
     os.utime(path, (old, old))
-    cache.write(_records(["MSFT"]), asof="2026-06-16", sig="abc")  # fresh
+    cache.write(_records(["MSFT"]), identities=identities)  # fresh
     cache.prune(max_age_sec=24 * 3600)
     assert not path.exists()
     assert cache._path("MSFT", "2026-06-16", "abc").exists()
 
 
-import swing_screener.reporting.report as report_mod
-
-
-def test_build_daily_report_computes_only_misses(tmp_path, monkeypatch):
+def test_build_daily_report_reuses_only_exact_input_identity(tmp_path, monkeypatch):
     cache = EvalCache(root=tmp_path)
     calls = []
 
@@ -125,8 +238,36 @@ def test_build_daily_report_computes_only_misses(tmp_path, monkeypatch):
     ohlcv = pd.DataFrame({("Close", "AAPL"): [1.0], ("Close", "MSFT"): [1.0]})
     ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
 
-    report_mod.build_daily_report(ohlcv, eval_cache=cache, asof_date="2026-06-16")
-    report_mod.build_daily_report(ohlcv, eval_cache=cache, asof_date="2026-06-16")
+    report_mod.build_daily_report(
+        ohlcv,
+        eval_cache=cache,
+        asof_date="2026-06-16",
+        market_phase="final_close",
+    )
+    report_mod.build_daily_report(
+        ohlcv,
+        eval_cache=cache,
+        asof_date="2026-06-16",
+        market_phase="final_close",
+    )
 
-    assert calls[0] == ("AAPL", "MSFT")   # cold run computes both
-    assert len(calls) == 1                  # warm run computes nothing
+    assert calls[0] == ("AAPL", "MSFT")
+    assert len(calls) == 1
+
+    report_mod.build_daily_report(
+        ohlcv,
+        eval_cache=cache,
+        asof_date="2026-06-16",
+        market_phase="intraday",
+    )
+    assert len(calls) == 2
+
+    changed = ohlcv.copy()
+    changed.loc[0, ("Close", "AAPL")] = 2.0
+    report_mod.build_daily_report(
+        changed,
+        eval_cache=cache,
+        asof_date="2026-06-16",
+        market_phase="intraday",
+    )
+    assert calls[-1] == ("AAPL",)

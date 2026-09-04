@@ -12,6 +12,10 @@ from swing_screener.strategy.report_config import ReportConfig
 report = build_strategy_report(ohlcv, cfg=ReportConfig())
 ```
 
+The optional `market_phase` argument is part of the momentum evaluation-cache
+identity. The screener service supplies its resolved freshness phase; callers
+that do not classify the session use the conservative `unknown` default.
+
 ```python
 from swing_screener.strategy.storage import get_active_strategy, load_strategies
 

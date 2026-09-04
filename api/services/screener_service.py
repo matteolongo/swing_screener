@@ -199,10 +199,15 @@ def _approval_claims_for_candidate(
         and not waiting_pullback
     ):
         return None
-    if gates is None or any(
-        getattr(getattr(gates, name, None), "status", None) != "PASS"
-        for name in ("setup", "plan")
-    ) or trigger_status != "PASS" and not waiting_pullback:
+    if (
+        gates is None
+        or any(
+            getattr(getattr(gates, name, None), "status", None) != "PASS"
+            for name in ("setup", "plan")
+        )
+        or trigger_status != "PASS"
+        and not waiting_pullback
+    ):
         return None
     data_asof = getattr(candidate, "data_asof", None)
     days_to_earnings = getattr(candidate, "days_to_earnings", None)
@@ -874,6 +879,7 @@ class ScreenerService:
             eval_cache=self._eval_cache,
             asof_date=ctx.asof_str,
             force_refresh=bool(getattr(ctx.request, "force_refresh", False)),
+            market_phase=ctx.data_freshness,
         )
         try:
             self._eval_cache.prune()

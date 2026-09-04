@@ -35,6 +35,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Evaluation-cache hits now require matching candle, market-phase, strategy,
+  sector-input, and schema provenance; legacy unversioned entries miss safely.
 - Trade-thesis enrichment now preserves independently sourced structural and
   manual targets instead of replacing them with the desired R-multiple target.
   The thesis only receives a validated RR from such a target; missing, invalid,
