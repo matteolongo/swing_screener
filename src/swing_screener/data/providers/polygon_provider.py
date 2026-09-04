@@ -1,4 +1,5 @@
 """Polygon.io market data provider (EOD OHLCV via REST API)."""
+
 from __future__ import annotations
 
 import os
@@ -9,7 +10,7 @@ from pathlib import Path
 import httpx
 import pandas as pd
 
-from .base import MarketDataProvider
+from .base import MarketDataCachePolicy, MarketDataProvider
 from swing_screener.data.source_health import (
     DataSourceHealth,
     ProbeResult,
@@ -45,8 +46,11 @@ class PolygonProvider(MarketDataProvider):
         else:
             try:
                 from swing_screener.settings import get_settings_manager
+
                 _doc = get_settings_manager().load_user_document()
-                self._cache_ttl_days = float(_doc.get("cache", {}).get("polygon_cache_ttl_days", 7))
+                self._cache_ttl_days = float(
+                    _doc.get("cache", {}).get("polygon_cache_ttl_days", 7)
+                )
             except Exception:
                 self._cache_ttl_days = 7.0
 
@@ -74,19 +78,27 @@ class PolygonProvider(MarketDataProvider):
         payload = resp.json()
         return payload.get("results") or []
 
-    def _bars_to_series(
-        self, bars: list[dict], ticker: str
-    ) -> pd.DataFrame:
+    def _bars_to_series(self, bars: list[dict], ticker: str) -> pd.DataFrame:
         if not bars:
             cols = pd.MultiIndex.from_tuples(
                 [
                     (f, ticker)
-                    for f in ("Open", "High", "Low", "Close", "Volume", "VWAP", "TradeCount")
+                    for f in (
+                        "Open",
+                        "High",
+                        "Low",
+                        "Close",
+                        "Volume",
+                        "VWAP",
+                        "TradeCount",
+                    )
                 ]
             )
             return pd.DataFrame(columns=cols)
 
-        ts = pd.to_datetime([b["t"] for b in bars], unit="ms", utc=True).tz_convert(None)
+        ts = pd.to_datetime([b["t"] for b in bars], unit="ms", utc=True).tz_convert(
+            None
+        )
         # `vw` (volume-weighted average price) and `n` (trade count) are returned
         # by Polygon in every daily bar; captured here for observability. They are
         # provider-specific (yfinance has no equivalent) and consumed by nothing yet.
@@ -137,6 +149,7 @@ class PolygonProvider(MarketDataProvider):
         interval: str = "1d",
         use_cache: bool = True,
         force_refresh: bool = False,
+        cache_policy: MarketDataCachePolicy | None = None,
     ) -> pd.DataFrame:
         frames: list[pd.DataFrame] = []
         for i, ticker in enumerate(tickers):
@@ -215,6 +228,7 @@ class PolygonProvider(MarketDataProvider):
         if not api_key:
             return ProbeResult(id=_SOURCE_ID, status="not_configured")
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp:
             provider = cls(api_key=api_key, cache_dir=tmp, rate_limit_sleep=0.0)
             return ohlcv_canary_probe(provider, canary, _SOURCE_ID)

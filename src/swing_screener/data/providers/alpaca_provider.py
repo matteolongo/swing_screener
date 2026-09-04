@@ -1,37 +1,42 @@
 """Alpaca market data provider using alpaca-py SDK."""
+
 from __future__ import annotations
 
 import os
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Optional
 import time
 import hashlib
 
 import pandas as pd
 
 from .base import MarketDataProvider
-from swing_screener.data.source_health import DataSourceHealth, SourceDescriptor, ProbeResult
+from .base import MarketDataCachePolicy
+from swing_screener.data.source_health import (
+    DataSourceHealth,
+    SourceDescriptor,
+    ProbeResult,
+)
 from swing_screener.data.providers._probe import ohlcv_canary_probe
 
 
 class AlpacaDataProvider(MarketDataProvider):
     """
     Alpaca market data provider.
-    
+
     Uses alpaca-py SDK for historical and live market data.
     Supports both paper and live trading accounts.
     Implements rate limiting (200 requests/minute) and retry logic.
     """
-    
+
     # Alpaca rate limit: 200 requests per minute
     RATE_LIMIT_REQUESTS = 200
     RATE_LIMIT_WINDOW = 60  # seconds
-    
+
     # Retry configuration
     MAX_RETRIES = 3
     RETRY_DELAY_BASE = 1.0  # seconds
-    
+
     def __init__(
         self,
         api_key: str,
@@ -42,7 +47,7 @@ class AlpacaDataProvider(MarketDataProvider):
     ):
         """
         Initialize Alpaca data provider.
-        
+
         Args:
             api_key: Alpaca API key
             secret_key: Alpaca secret key
@@ -50,7 +55,9 @@ class AlpacaDataProvider(MarketDataProvider):
             cache_dir: Directory for parquet cache files
             use_cache: Enable caching (default: True)
         """
-        from alpaca.data import StockHistoricalDataClient  # lazy: keeps module importable without alpaca-py
+        from alpaca.data import (
+            StockHistoricalDataClient,
+        )  # lazy: keeps module importable without alpaca-py
 
         self.api_key = api_key
         self.secret_key = secret_key
@@ -60,10 +67,10 @@ class AlpacaDataProvider(MarketDataProvider):
 
         # Initialize Alpaca client
         self.client = StockHistoricalDataClient(api_key, secret_key)
-        
+
         # Rate limiting state
         self._request_times: list[float] = []
-        
+
         # Create cache directory
         if self.use_cache:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -77,13 +84,15 @@ class AlpacaDataProvider(MarketDataProvider):
             delay_policy="provider_plan_dependent",
             warnings=["paper_or_basic_plan_may_be_limited"] if self.paper else [],
         )
-    
+
     def _wait_for_rate_limit(self):
         """Enforce rate limiting (200 requests/minute)."""
         now = time.time()
         # Remove requests older than the rate limit window
-        self._request_times = [t for t in self._request_times if now - t < self.RATE_LIMIT_WINDOW]
-        
+        self._request_times = [
+            t for t in self._request_times if now - t < self.RATE_LIMIT_WINDOW
+        ]
+
         # If we've hit the limit, wait
         if len(self._request_times) >= self.RATE_LIMIT_REQUESTS:
             oldest = self._request_times[0]
@@ -91,22 +100,24 @@ class AlpacaDataProvider(MarketDataProvider):
             if wait_time > 0:
                 time.sleep(wait_time)
                 now = time.time()
-        
+
         # Record this request
         self._request_times.append(now)
-    
+
     def _retry_with_backoff(self, func, *args, **kwargs):
         """Execute function with exponential backoff retry logic."""
         for attempt in range(self.MAX_RETRIES):
             try:
                 return func(*args, **kwargs)
-            except Exception as e:
+            except Exception:
                 if attempt == self.MAX_RETRIES - 1:
                     raise
-                delay = self.RETRY_DELAY_BASE * (2 ** attempt)
+                delay = self.RETRY_DELAY_BASE * (2**attempt)
                 time.sleep(delay)
-    
-    def _cache_path(self, tickers: list[str], start_date: str, end_date: str, interval: str) -> Path:
+
+    def _cache_path(
+        self, tickers: list[str], start_date: str, end_date: str, interval: str
+    ) -> Path:
         """Generate cache file path for given parameters."""
         key = f"{'-'.join(sorted(tickers))}__{start_date}__{end_date}__{interval}"
         if len(key) > 200:
@@ -114,10 +125,11 @@ class AlpacaDataProvider(MarketDataProvider):
             prefix = "-".join(tickers[:3])
             key = f"{prefix}__n={len(tickers)}__{start_date}__{end_date}__{interval}__{digest}"
         return self.cache_dir / f"{key}.parquet"
-    
+
     def _parse_timeframe(self, interval: str):
         """Convert interval string to Alpaca TimeFrame."""
         from alpaca.data.timeframe import TimeFrame  # lazy
+
         interval_map = {
             "1m": TimeFrame.Minute,
             "1min": TimeFrame.Minute,
@@ -140,9 +152,11 @@ class AlpacaDataProvider(MarketDataProvider):
         }
         tf = interval_map.get(interval.lower())
         if tf is None:
-            raise ValueError(f"Unsupported interval: {interval}. Supported: {list(interval_map.keys())}")
+            raise ValueError(
+                f"Unsupported interval: {interval}. Supported: {list(interval_map.keys())}"
+            )
         return tf
-    
+
     def fetch_ohlcv(
         self,
         tickers: list[str],
@@ -150,6 +164,7 @@ class AlpacaDataProvider(MarketDataProvider):
         end_date: str,
         interval: str = "1d",
         force_refresh: bool = False,
+        cache_policy: MarketDataCachePolicy | None = None,
     ) -> pd.DataFrame:
         """
         Fetch OHLCV data from Alpaca.
@@ -172,7 +187,7 @@ class AlpacaDataProvider(MarketDataProvider):
         """
         if not tickers:
             raise ValueError("tickers list is empty")
-        
+
         end_dt = pd.Timestamp(end_date).date()
         is_live_edge_request = end_dt >= date.today()
 
@@ -182,17 +197,18 @@ class AlpacaDataProvider(MarketDataProvider):
         cache_file = self._cache_path(tickers, start_date, end_date, interval)
         if self.use_cache and cache_file.exists() and not is_live_edge_request:
             return pd.read_parquet(cache_file)
-        
+
         # Parse timeframe
         timeframe = self._parse_timeframe(interval)
-        
+
         # Convert dates to datetime
         start = pd.Timestamp(start_date)
         end = pd.Timestamp(end_date)
-        
+
         # Fetch data from Alpaca
         def fetch():
             from alpaca.data.requests import StockBarsRequest  # lazy
+
             self._wait_for_rate_limit()
             request = StockBarsRequest(
                 symbol_or_symbols=tickers,
@@ -201,56 +217,62 @@ class AlpacaDataProvider(MarketDataProvider):
                 timeframe=timeframe,
             )
             return self.client.get_stock_bars(request)
-        
+
         try:
             bars = self._retry_with_backoff(fetch)
         except Exception as e:
             raise ConnectionError(f"Failed to fetch data from Alpaca: {e}") from e
-        
+
         # Convert to DataFrame
         df = bars.df
-        
+
         if df.empty:
-            raise ValueError(f"No data returned for tickers {tickers} from {start_date} to {end_date}")
-        
+            raise ValueError(
+                f"No data returned for tickers {tickers} from {start_date} to {end_date}"
+            )
+
         # Alpaca returns MultiIndex (symbol, timestamp) -> we need to reshape
         # to our format: DatetimeIndex with MultiIndex columns (field, ticker)
         df = self._convert_alpaca_format(df, tickers)
-        
+
         # Cache result
         if self.use_cache:
             df.to_parquet(cache_file)
-        
+
         return df
-    
-    def _convert_alpaca_format(self, df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
+
+    def _convert_alpaca_format(
+        self, df: pd.DataFrame, tickers: list[str]
+    ) -> pd.DataFrame:
         """
         Convert Alpaca DataFrame format to swing_screener format.
-        
+
         Alpaca format:
             MultiIndex: (symbol, timestamp)
             Columns: open, high, low, close, volume, trade_count, vwap
-            
+
         Target format:
             Index: DatetimeIndex (timestamp)
             Columns: MultiIndex (field, ticker) where field in [Open, High, Low, Close, Volume]
         """
         # Reset index to get symbol and timestamp as columns
         df = df.reset_index()
-        
+
         # Rename columns to match our convention (capitalize)
-        df = df.rename(columns={
-            "open": "Open",
-            "high": "High",
-            "low": "Low",
-            "close": "Close",
-            "volume": "Volume",
-        })
-        
+        df = df.rename(
+            columns={
+                "open": "Open",
+                "high": "High",
+                "low": "Low",
+                "close": "Close",
+                "volume": "Volume",
+            }
+        )
+
         # Select only OHLCV columns
         ohlcv_fields = ["Open", "High", "Low", "Close", "Volume"]
         df = df[["symbol", "timestamp"] + ohlcv_fields]
-        
+
         # Pivot to get MultiIndex columns (field, ticker)
         dfs = []
         for field in ohlcv_fields:
@@ -258,35 +280,35 @@ class AlpacaDataProvider(MarketDataProvider):
             # Add field level to column index
             pivot.columns = pd.MultiIndex.from_product([[field], pivot.columns])
             dfs.append(pivot)
-        
+
         # Concatenate all fields
         result = pd.concat(dfs, axis=1)
-        
+
         # Ensure all requested tickers are present (fill missing with NaN)
         all_cols = []
         for field in ohlcv_fields:
             for ticker in tickers:
                 all_cols.append((field, ticker))
         result = result.reindex(columns=pd.MultiIndex.from_tuples(all_cols))
-        
+
         # Sort by date
         result = result.sort_index()
-        
+
         # Remove any duplicate timestamps
         result = result.loc[~result.index.duplicated(keep="last")]
-        
+
         return result
-    
+
     def fetch_latest_price(self, ticker: str) -> float:
         """
         Get latest price for a ticker from Alpaca.
-        
+
         Args:
             ticker: Ticker symbol
-            
+
         Returns:
             Latest price as float
-            
+
         Raises:
             ValueError: If invalid ticker
             ConnectionError: If Alpaca API fails
@@ -294,34 +316,36 @@ class AlpacaDataProvider(MarketDataProvider):
         # Fetch last 1 day of data to get latest close
         end = datetime.now()
         start = end - timedelta(days=5)  # Go back a few days to ensure we get data
-        
+
         try:
             df = self.fetch_ohlcv(
                 tickers=[ticker],
                 start_date=start.strftime("%Y-%m-%d"),
                 end_date=end.strftime("%Y-%m-%d"),
-                interval="1d"
+                interval="1d",
             )
-            
+
             if df.empty:
                 raise ValueError(f"No data available for {ticker}")
-            
+
             # Get latest close price
             latest_close = df[("Close", ticker)].dropna().iloc[-1]
             return float(latest_close)
         except Exception as e:
-            raise ConnectionError(f"Failed to fetch latest price for {ticker}: {e}") from e
-    
+            raise ConnectionError(
+                f"Failed to fetch latest price for {ticker}: {e}"
+            ) from e
+
     def get_ticker_info(self, ticker: str) -> dict:
         """
         Get ticker metadata from Alpaca.
-        
+
         Args:
             ticker: Ticker symbol
-            
+
         Returns:
             Dictionary with metadata (name, sector, industry, market_cap)
-            
+
         Note:
             Alpaca's data API has limited metadata. For full info,
             consider falling back to yfinance or using Alpaca's trading API.
@@ -336,14 +360,14 @@ class AlpacaDataProvider(MarketDataProvider):
             "currency": "USD",  # Alpaca trades US equities
             "exchange": "Alpaca",
         }
-    
+
     def is_market_open(self) -> bool:
         """
         Check if market is open.
-        
+
         Returns:
             Market open status from Alpaca
-            
+
         Note:
             This requires the trading API client, not just data API.
             For simplicity, returns False. Can be enhanced with TradingClient.
@@ -351,7 +375,7 @@ class AlpacaDataProvider(MarketDataProvider):
         # Would need TradingClient to check clock.is_open
         # For now, return False (conservatively assume closed)
         return False
-    
+
     def get_provider_name(self) -> str:
         """
         Get provider name.
@@ -363,7 +387,9 @@ class AlpacaDataProvider(MarketDataProvider):
 
     @classmethod
     def _credentials_present(cls) -> bool:
-        return bool(os.environ.get("ALPACA_API_KEY") and os.environ.get("ALPACA_SECRET_KEY"))
+        return bool(
+            os.environ.get("ALPACA_API_KEY") and os.environ.get("ALPACA_SECRET_KEY")
+        )
 
     @classmethod
     def describe(cls) -> SourceDescriptor:
@@ -381,7 +407,11 @@ class AlpacaDataProvider(MarketDataProvider):
     @classmethod
     def probe(cls, canary: str) -> ProbeResult:
         if not cls._credentials_present():
-            return ProbeResult(id="alpaca", status="not_configured", detail="ALPACA_API_KEY/SECRET not set")
+            return ProbeResult(
+                id="alpaca",
+                status="not_configured",
+                detail="ALPACA_API_KEY/SECRET not set",
+            )
         try:
             provider = cls(
                 api_key=os.environ["ALPACA_API_KEY"],
@@ -389,5 +419,7 @@ class AlpacaDataProvider(MarketDataProvider):
                 paper=os.environ.get("ALPACA_PAPER", "true").lower() != "false",
             )
         except ModuleNotFoundError:
-            return ProbeResult(id="alpaca", status="not_configured", detail="alpaca-py not installed")
+            return ProbeResult(
+                id="alpaca", status="not_configured", detail="alpaca-py not installed"
+            )
         return ohlcv_canary_probe(provider, canary, "alpaca")
