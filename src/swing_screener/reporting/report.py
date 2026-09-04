@@ -18,6 +18,7 @@ def build_daily_report(
     eval_cache=None,
     asof_date: str | None = None,
     force_refresh: bool = False,
+    market_phase: str = "unknown",
 ) -> pd.DataFrame:
     from swing_screener.strategy.orchestrator import build_strategy_report
 
@@ -31,6 +32,7 @@ def build_daily_report(
         eval_cache=eval_cache,
         asof_date=asof_date,
         force_refresh=force_refresh,
+        market_phase=market_phase,
     )
 
 

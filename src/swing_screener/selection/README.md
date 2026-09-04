@@ -54,7 +54,21 @@ SelectionResult(universe, ranked, board)
 | `universe.py` | Feature table construction and universe filtering |
 | `ranking.py` | Weighted momentum score (`compute_hot_score`, `top_candidates`) |
 | `entries.py` | Entry signal detection (`breakout_signal`, `pullback_reclaim_signal`) |
+| `eval_cache.py` | Versioned per-symbol evaluation cache with input-provenance validation |
 | `__init__.py` | Package exports |
+
+## Evaluation cache identity
+
+Per-symbol evaluation rows are reused only when the cache schema version,
+as-of date, last candle timestamp, market phase, strategy signature, and input
+fingerprint all match. The fingerprint covers that symbol's OHLCV slice and its
+sector-benchmark return when one is consumed. Identity fields are stored as
+reserved Parquet metadata columns and removed before cached rows return to the
+ranking pipeline.
+
+Entries written before schema version 2 do not contain the required provenance
+metadata and therefore miss automatically. They can be deleted normally by the
+cache-pruning policy; no manual migration is required.
 
 ## Configuration
 
