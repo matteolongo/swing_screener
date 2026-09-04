@@ -64,6 +64,8 @@
 ## Current implementation plans
 
 - [`docs/superpowers/specs/2026-09-04-frontend-reporting-remediation-design.md`](../superpowers/specs/2026-09-04-frontend-reporting-remediation-design.md) — approved execution-safety, run-identity, cache, contract, and accessibility design for the frontend reporting review findings
+- [`docs/superpowers/plans/2026-09-04-frontend-reporting-remediation-roadmap.md`](../superpowers/plans/2026-09-04-frontend-reporting-remediation-roadmap.md) — five-PR merge-order roadmap for the frontend reporting remediation
+- [`docs/superpowers/plans/2026-09-04-fail-closed-order-eligibility.md`](../superpowers/plans/2026-09-04-fail-closed-order-eligibility.md) — task-level implementation plan for PR 1, covering skipped entries and incomplete trade plans
 - [`docs/superpowers/specs/2026-07-27-symbol-workspace-redesign-design.md`](../superpowers/specs/2026-07-27-symbol-workspace-redesign-design.md) — approved UX, data-flow, reliability, and testing design for the Today-page symbol workspace
 - [`docs/superpowers/plans/2026-07-27-symbol-workspace-redesign.md`](../superpowers/plans/2026-07-27-symbol-workspace-redesign.md) — task-by-task implementation plan for the Today-page symbol workspace redesign
 - [`docs/superpowers/specs/2026-07-22-coherent-execution-workflow-design.md`](../superpowers/specs/2026-07-22-coherent-execution-workflow-design.md) — approved design for the coherent execution workflow
