@@ -14,7 +14,7 @@
 
 - Keep `1R = entry_price - stop_price` as the only sizing model.
 - Do not add broker execution or intraday behavior.
-- Each task below is one independently reviewable PR.
+- Each task is one reviewable PR in the global numeric stack.
 
 ---
 
@@ -63,7 +63,7 @@ Commit with: `Preserve structural recommendation targets`
 
 ### Task 2 (PR 14): Harden sizing inputs and execution precision
 
-**Branch:** `codex/harden-position-sizing-inputs` from `main`
+**Branch:** `codex/harden-position-sizing-inputs` from `codex/correct-signal-history-boundaries`
 
 **Files:**
 

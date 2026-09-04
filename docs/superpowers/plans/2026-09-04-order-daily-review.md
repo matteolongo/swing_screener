@@ -14,13 +14,13 @@
 
 - Unknown order state cannot produce a new-entry action.
 - Client-supplied stateless state is authoritative for the entire calculation.
-- PR 7 is independent; PRs 8, 9, and 10 form a stack.
+- PRs 7–10 occupy consecutive positions in the global linear stack.
 
 ---
 
 ### Task 1 (PR 7): Fail closed for pending or unavailable orders
 
-**Branch:** `codex/fail-closed-pending-orders` from `main`
+**Branch:** `codex/fail-closed-pending-orders` from `codex/stabilize-report-plan-schema`
 
 **Files:**
 
@@ -59,7 +59,7 @@ on changed files. Update API behavior docs and commit with
 
 ### Task 2 (PR 8): Separate position evaluation errors
 
-**Branch:** `codex/separate-review-evaluation-errors` from `main`
+**Branch:** `codex/separate-review-evaluation-errors` from `codex/fail-closed-pending-orders`
 
 **Files:**
 

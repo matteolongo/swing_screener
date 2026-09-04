@@ -15,8 +15,8 @@
 - Preserve deterministic end-of-day manual execution and R-multiple sizing.
 - Every behavior change includes regression tests and nearest documentation.
 - Cross-layer API/model changes remain in the same PR.
-- Stacked PRs target the branch immediately below them until that branch merges.
-- No implementation PR may depend on an unlisted stack edge.
+- PR 1 targets `main`; every later PR targets the immediately preceding branch.
+- Preserve one root-cause commit per PR while rebasing the linear stack.
 
 ---
 
@@ -24,51 +24,50 @@
 
 | Plan | PRs | Required order |
 | --- | --- | --- |
-| [`risk-plan-correctness`](2026-09-04-risk-plan-correctness.md) | 1, 14 | Independent |
-| [`cache-freshness`](2026-09-04-cache-freshness.md) | 2, 3 | 2 → 3 |
-| [`currency-contract`](2026-09-04-currency-contract.md) | 4, 5, 15 | 4 → 5 → 15 |
-| [`reporting-contract`](2026-09-04-reporting-contract.md) | 6, 16 | Independent |
-| [`order-daily-review`](2026-09-04-order-daily-review.md) | 7, 8, 9, 10 | 8 → 9 → 10; PR 7 independent |
-| [`ranking-data-signals`](2026-09-04-ranking-data-signals.md) | 11, 12, 13 | PR 11 independent; 12 → 13 |
-| [`configuration-cleanup`](2026-09-04-configuration-cleanup.md) | 17, 18 | 17 → 18 |
+| [`risk-plan-correctness`](2026-09-04-risk-plan-correctness.md) | 1, 14 | Global order 1 → 14 |
+| [`cache-freshness`](2026-09-04-cache-freshness.md) | 2, 3 | Global order 2 → 3 |
+| [`currency-contract`](2026-09-04-currency-contract.md) | 4, 5, 15 | Global order 4 → 5 → 15 |
+| [`reporting-contract`](2026-09-04-reporting-contract.md) | 6, 16 | Global order 6 → 16 |
+| [`order-daily-review`](2026-09-04-order-daily-review.md) | 7, 8, 9, 10 | Global order 7 → 8 → 9 → 10 |
+| [`ranking-data-signals`](2026-09-04-ranking-data-signals.md) | 11, 12, 13 | Global order 11 → 12 → 13 |
+| [`configuration-cleanup`](2026-09-04-configuration-cleanup.md) | 17, 18 | Global order 17 → 18 |
 
-## Merge Coordinator Checklist
+## Linear Stack Coordinator Checklist
 
-- [ ] **Step 1: Merge immediate safety fixes**
+- [ ] **Step 1: Build and merge PRs 1–3**
 
-Merge PRs 1, 7, and 8 after focused and full backend verification. These close
-incorrect recommendation, duplicate-order, and hidden position-error paths.
+Implement structural-target safety, then evaluation-cache identity, then the
+final-close freshness boundary. Each PR targets the branch directly below it.
 
-- [ ] **Step 2: Merge cache stack**
+- [ ] **Step 2: Build and merge PRs 4–6**
 
-Merge PR 2 before PR 3. After rebasing PR 3 onto updated `main`, rerun provider,
-evaluation-cache, screener-service, and screening-window tests together.
+Add the currency registry, account-currency FX ownership, and stable report-plan
+schema in sequence. Run their combined integration tests at PR 6.
 
-- [ ] **Step 3: Merge currency stack**
+- [ ] **Step 3: Build and merge PRs 7–10**
 
-Merge PRs 4, 5, and 15 in order. Before PR 15 merges, confirm existing clients
-still receive deprecated aliases and new code consumes explicitly labelled
-quote/account fields.
+Implement pending-order safety, typed evaluation errors, authoritative stateless
+state, and explicit persistence. At PR 10, verify compute paths perform no writes.
 
-- [ ] **Step 4: Merge report contracts**
+- [ ] **Step 4: Build and merge PRs 11–13**
 
-Merge PRs 6 and 16 independently. Verify report CSV fixtures and action text do
-not depend on concentration-warning order.
+Preserve rank provenance, normalize OHLCV ingress, and correct signal boundaries.
+Run selection, provider, report, API, and affected Web UI tests together.
 
-- [ ] **Step 5: Merge daily-review stack**
+- [ ] **Step 5: Build and merge PRs 14–16**
 
-Rebase PR 9 after PR 8, then PR 10 after PR 9. Verify pure-compute tests with
-filesystem writes instrumented to fail if called.
+Harden sizing, migrate ambiguous money fields, and define concentration math.
+Confirm legacy aliases contain only genuine USD values before PR 15 advances.
 
-- [ ] **Step 6: Merge ranking and data contracts**
+- [ ] **Step 6: Build and merge PRs 17–18**
 
-Merge PR 11 independently. Merge PR 12 before PR 13, then run the report,
-selection, provider, and API screener suites together to catch ordering drift.
+Remove import-time config instances, then consolidate configuration ownership.
+Verify in-process overrides and run the release-version check.
 
-- [ ] **Step 7: Merge sizing and configuration cleanup**
+- [ ] **Step 7: Rebase after each merge**
 
-Merge PR 14 independently. Merge PR 17 before PR 18 and verify runtime settings
-overrides are visible within one process.
+When the bottom PR merges, retarget the next PR to `main`, rebase every remaining
+descendant in numeric order, and never squash two remediation points together.
 
 - [ ] **Step 8: Run final integration verification**
 

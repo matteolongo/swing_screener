@@ -15,8 +15,8 @@ carry its tests and documentation with the behavior it changes.
 ## Approved Delivery Decisions
 
 - Use one PR per root cause, not one PR per edited file.
-- Split cache freshness and currency ownership into two-PR stacks because each
-  crosses independently reviewable contracts.
+- Deliver the fixes as one linear stack so every PR contains one root cause and
+  reviewers can compare it against the immediately preceding branch.
 - Keep test corrections in the PR that changes the protected behavior.
 - Preserve the manual-execution boundary and the R-multiple risk model.
 - Make failures explicit and fail closed wherever a missing input could create
@@ -49,28 +49,28 @@ carry its tests and documentation with the behavior it changes.
 | # | Branch | Base | Deliverable |
 | ---: | --- | --- | --- |
 | 1 | `codex/preserve-structural-targets` | `main` | Preserve caller-supplied structural targets through thesis generation. |
-| 2 | `codex/version-eval-cache-provenance` | `main` | Add cache schema, candle identity, and freshness provenance. |
+| 2 | `codex/version-eval-cache-provenance` | `codex/preserve-structural-targets` | Add cache schema, candle identity, and freshness provenance. |
 | 3 | `codex/prevent-partial-final-promotion` | `codex/version-eval-cache-provenance` | Refresh across market close and reject intraday cache entries in final runs. |
-| 4 | `codex/centralize-currency-registry` | `main` | One supported-currency and market-calendar registry. |
+| 4 | `codex/centralize-currency-registry` | `codex/prevent-partial-final-promotion` | One supported-currency and market-calendar registry. |
 | 5 | `codex/authoritative-account-currency` | `codex/centralize-currency-registry` | Inject app account currency and provide explicit FX routing/blocking. |
-| 6 | `codex/stabilize-report-plan-schema` | `main` | Fixed plan schema, block reasons, safe actions, and CSV contract. |
-| 7 | `codex/fail-closed-pending-orders` | `main` | Pending entries block globally; unavailable order state blocks approval. |
-| 8 | `codex/separate-review-evaluation-errors` | `main` | Distinguish failed position evaluation from a true hold. |
+| 6 | `codex/stabilize-report-plan-schema` | `codex/authoritative-account-currency` | Fixed plan schema, block reasons, safe actions, and CSV contract. |
+| 7 | `codex/fail-closed-pending-orders` | `codex/stabilize-report-plan-schema` | Pending entries block globally; unavailable order state blocks approval. |
+| 8 | `codex/separate-review-evaluation-errors` | `codex/fail-closed-pending-orders` | Distinguish failed position evaluation from a true hold. |
 | 9 | `codex/use-stateless-review-orders` | `codex/separate-review-evaluation-errors` | Consume caller-supplied orders in stateless review. |
 | 10 | `codex/make-review-persistence-explicit` | `codex/use-stateless-review-orders` | Pure GET/compute paths and explicit atomic snapshot writes. |
-| 11 | `codex/preserve-rank-provenance` | `main` | Separate rank meanings and make ties deterministic. |
-| 12 | `codex/normalize-ohlcv-ingress` | `main` | Sort, deduplicate or reject, and validate OHLCV once. |
+| 11 | `codex/preserve-rank-provenance` | `codex/make-review-persistence-explicit` | Separate rank meanings and make ties deterministic. |
+| 12 | `codex/normalize-ohlcv-ingress` | `codex/preserve-rank-provenance` | Sort, deduplicate or reject, and validate OHLCV once. |
 | 13 | `codex/correct-signal-history-boundaries` | `codex/normalize-ohlcv-ingress` | Correct exact breakout/pullback history boundaries. |
-| 14 | `codex/harden-position-sizing-inputs` | `main` | Finite validation and execution-price-consistent risk arithmetic. |
-| 15 | `codex/deprecate-usd-money-aliases` | `codex/authoritative-account-currency` | Stop presenting quote amounts as USD. |
-| 16 | `codex/define-sector-concentration` | `main` | Explicit denominator, duplicates, unknowns, and threshold behavior. |
-| 17 | `codex/remove-import-time-configs` | `main` | Replace constructed defaults with one per-run execution config. |
+| 14 | `codex/harden-position-sizing-inputs` | `codex/correct-signal-history-boundaries` | Finite validation and execution-price-consistent risk arithmetic. |
+| 15 | `codex/deprecate-usd-money-aliases` | `codex/harden-position-sizing-inputs` | Stop presenting quote amounts as USD. |
+| 16 | `codex/define-sector-concentration` | `codex/deprecate-usd-money-aliases` | Explicit denominator, duplicates, unknowns, and threshold behavior. |
+| 17 | `codex/remove-import-time-configs` | `codex/define-sector-concentration` | Replace constructed defaults with one per-run execution config. |
 | 18 | `codex/remove-dead-report-config-paths` | `codex/remove-import-time-configs` | Remove dead config assembly and configure retained ranking policy. |
 
-Only PRs 2→3, 4→5→15, 8→9→10, 12→13, and 17→18 are stacked. All
-other PRs branch from `main` and may be reviewed independently. If an upstream
-PR merges first, rebase the next PR and change its base to `main` without
-combining their commits.
+All PRs form one linear stack in numeric order. PR 1 targets `main`; each later
+PR targets the branch immediately before it. After the bottom of the stack
+merges, rebase descendants in order and retarget only the new bottom PR to
+`main`, preserving one root-cause commit per PR.
 
 ## Cross-PR Contracts
 

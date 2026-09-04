@@ -14,13 +14,13 @@
 
 - Empty results are valid data, not exceptions or shape changes.
 - Blocked plans preserve a machine-readable reason.
-- Each task below is an independent PR from `main`.
+- Each task is one reviewable PR in the global numeric stack.
 
 ---
 
 ### Task 1 (PR 6): Stabilize the trade-plan schema
 
-**Branch:** `codex/stabilize-report-plan-schema` from `main`
+**Branch:** `codex/stabilize-report-plan-schema` from `codex/authoritative-account-currency`
 
 **Files:**
 
@@ -60,7 +60,7 @@ Document the schema and commit with `Stabilize trade-plan output schema`.
 
 ### Task 2 (PR 16): Define sector concentration semantics
 
-**Branch:** `codex/define-sector-concentration` from `main`
+**Branch:** `codex/define-sector-concentration` from `codex/deprecate-usd-money-aliases`
 
 **Files:**
 

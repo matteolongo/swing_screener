@@ -20,7 +20,7 @@
 
 ### Task 1 (PR 2): Version evaluation-cache provenance
 
-**Branch:** `codex/version-eval-cache-provenance` from `main`
+**Branch:** `codex/version-eval-cache-provenance` from `codex/preserve-structural-targets`
 
 **Files:**
 

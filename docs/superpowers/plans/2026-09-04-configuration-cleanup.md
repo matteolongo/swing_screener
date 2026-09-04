@@ -20,7 +20,7 @@
 
 ### Task 1 (PR 17): Remove import-time config instances
 
-**Branch:** `codex/remove-import-time-configs` from `main`
+**Branch:** `codex/remove-import-time-configs` from `codex/define-sector-concentration`
 
 **Files:**
 

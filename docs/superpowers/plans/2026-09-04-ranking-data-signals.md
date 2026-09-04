@@ -14,13 +14,13 @@
 
 - Sorting must have an explicit ticker tie-breaker.
 - Normalize data once at public boundaries, not differently inside indicators.
-- PR 11 is independent; PR 13 is stacked on PR 12.
+- PRs 11–13 occupy consecutive positions in the global linear stack.
 
 ---
 
 ### Task 1 (PR 11): Preserve rank provenance
 
-**Branch:** `codex/preserve-rank-provenance` from `main`
+**Branch:** `codex/preserve-rank-provenance` from `codex/make-review-persistence-explicit`
 
 **Files:**
 
@@ -63,7 +63,7 @@ Run focused Python tests and Ruff; run `cd web-ui; npm test -- --run` and
 
 ### Task 2 (PR 12): Normalize OHLCV at ingress
 
-**Branch:** `codex/normalize-ohlcv-ingress` from `main`
+**Branch:** `codex/normalize-ohlcv-ingress` from `codex/preserve-rank-provenance`
 
 **Files:**
 

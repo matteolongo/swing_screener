@@ -20,7 +20,7 @@
 
 ### Task 1 (PR 4): Centralize the supported-currency registry
 
-**Branch:** `codex/centralize-currency-registry` from `main`
+**Branch:** `codex/centralize-currency-registry` from `codex/prevent-partial-final-promotion`
 
 **Files:**
 
@@ -113,7 +113,7 @@ Commit with `Use configured account currency for screener FX`.
 
 ### Task 3 (PR 15): Deprecate ambiguous USD monetary aliases
 
-**Branch:** `codex/deprecate-usd-money-aliases` from `codex/authoritative-account-currency`
+**Branch:** `codex/deprecate-usd-money-aliases` from `codex/harden-position-sizing-inputs`
 
 **Files:**
 
