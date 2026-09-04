@@ -89,6 +89,15 @@ class RiskConfig:
 | `recommendations/workflow.py` | Canonical execution-workflow classifier: `derive_execution_workflow()` maps recommendation gates to a workflow status and structured next step |
 | `__init__.py` | Package exports |
 
+## Target provenance
+
+`evaluate_recommendation()` keeps a caller-supplied `structural` or `manual`
+target unchanged while enriching the recommendation with a trade thesis. The
+structural target determines the validated reward-to-risk ratio. The separate
+`desired_target` is the price implied by `rr_target`; it is advisory and never
+replaces an independently sourced target. Missing or invalid structural targets
+remain non-actionable.
+
 ## Execution Workflow Classification
 
 `recommendations/workflow.py` is the authoritative, deterministic classifier
