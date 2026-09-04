@@ -46,6 +46,7 @@ from swing_screener.data.universe import (
 )
 from swing_screener.data.symbol_pool import deserialize_pool, filter_pool_by_taxonomy
 from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
+from swing_screener.data.providers.base import MarketDataCachePolicy
 from swing_screener.data.currency import detect_currency
 from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.data import sector_rotation
@@ -94,6 +95,7 @@ from swing_screener.selection.screening_window import (
     resolve_default_asof_date,
     resolve_data_freshness,
     resolve_fetch_start_date,
+    latest_market_close_utc,
 )
 
 from api.services.screener_run_manager import get_screener_run_manager
@@ -152,13 +154,18 @@ def _fetch_ohlcv_chunked(
     end_date: str,
     chunk_size: int = 100,
     force_refresh: bool = False,
+    cache_policy: MarketDataCachePolicy | None = None,
 ) -> pd.DataFrame:
     """Fetch OHLCV in chunks using provider."""
     frames: list[pd.DataFrame] = []
     for i in range(0, len(tickers), chunk_size):
         chunk = tickers[i : i + chunk_size]
         df = provider.fetch_ohlcv(
-            chunk, start_date=start_date, end_date=end_date, force_refresh=force_refresh
+            chunk,
+            start_date=start_date,
+            end_date=end_date,
+            force_refresh=force_refresh,
+            cache_policy=cache_policy,
         )
         if df is None or df.empty:
             logger.warning("OHLCV chunk returned empty data (%s)", chunk)
@@ -169,7 +176,44 @@ def _fetch_ohlcv_chunked(
     out = frames[0]
     for df in frames[1:]:
         out = merge_ohlcv(out, df)
+    out.attrs["stale_cache_fallback"] = any(
+        bool(frame.attrs.get("stale_cache_fallback")) for frame in frames
+    )
     return out
+
+
+def _market_data_cache_policy(
+    asof_date: str,
+    now_utc: dt.datetime,
+    currencies: list[str],
+) -> MarketDataCachePolicy:
+    """Require a post-close cache only for a current-date final-close run."""
+
+    if asof_date != now_utc.date().isoformat():
+        return MarketDataCachePolicy()
+    if resolve_data_freshness(asof_date, now_utc, currencies) != "final_close":
+        return MarketDataCachePolicy()
+    return MarketDataCachePolicy(
+        fresh_after_utc=latest_market_close_utc(asof_date, currencies)
+    )
+
+
+def _apply_market_data_provenance(ctx: "_RunContext", *frames: pd.DataFrame) -> None:
+    """Downgrade a run when any returned frame used stale cache fallback."""
+
+    if not any(
+        bool(getattr(frame, "attrs", {}).get("stale_cache_fallback"))
+        for frame in frames
+        if frame is not None
+    ):
+        return
+    ctx.data_freshness = "stale"
+    health = dict(ctx.market_health or {})
+    warnings = list(health.get("warnings") or [])
+    if "stale_cache_fallback" not in warnings:
+        warnings.append("stale_cache_fallback")
+    health.update({"status": "degraded", "warnings": warnings})
+    ctx.market_health = health
 
 
 def _account_currency_from_strategy(strategy: dict) -> str:
@@ -332,6 +376,7 @@ class _RunContext:
     last_bar_map: dict = field(default_factory=dict)
     overall_last_bar: pd.Series | None = None
     data_freshness: str = ""
+    cache_policy: MarketDataCachePolicy = field(default_factory=MarketDataCachePolicy)
     ticker_info: dict = field(default_factory=dict)
     sector_rotation_by_name: dict = field(default_factory=dict)
     market_data_ticker_count: int = 0
@@ -617,6 +662,12 @@ class ScreenerService:
             ctx.asof_str, ctx.signals_cfg.min_history
         )
         ctx.end_date = ctx.asof_str
+        ctx.data_freshness = resolve_data_freshness(
+            ctx.asof_str, ctx.now_utc, ctx.active_currencies
+        )
+        ctx.cache_policy = _market_data_cache_policy(
+            ctx.asof_str, ctx.now_utc, ctx.active_currencies
+        )
         force_refresh = bool(getattr(ctx.request, "force_refresh", False))
         sector_context_tickers = ["SPY", *sector_rotation.SECTOR_ETFS.keys()]
         sector_ohlcv = pd.DataFrame()
@@ -626,6 +677,7 @@ class ScreenerService:
                 start_date=ctx.start_date,
                 end_date=ctx.end_date,
                 force_refresh=force_refresh,
+                cache_policy=ctx.cache_policy,
             )
         except Exception as exc:
             logger.warning("Sector ETF OHLCV fetch failed: %s", exc)
@@ -646,6 +698,7 @@ class ScreenerService:
                 ctx.end_date,
                 chunk_size=100,
                 force_refresh=force_refresh,
+                cache_policy=ctx.cache_policy,
             )
         else:
             ctx.ohlcv = self._provider.fetch_ohlcv(
@@ -653,7 +706,10 @@ class ScreenerService:
                 start_date=ctx.start_date,
                 end_date=ctx.end_date,
                 force_refresh=force_refresh,
+                cache_policy=ctx.cache_policy,
             )
+
+        primary_ohlcv = ctx.ohlcv
 
         if ctx.ohlcv is None or ctx.ohlcv.empty:
             logger.error(
@@ -663,6 +719,7 @@ class ScreenerService:
 
         ctx.ohlcv = merge_ohlcv(ctx.ohlcv, sector_ohlcv)
 
+        bench_df = pd.DataFrame()
         if (
             "Close" not in ctx.ohlcv.columns.get_level_values(0)
             or ctx.benchmark not in ctx.ohlcv["Close"].columns
@@ -675,6 +732,7 @@ class ScreenerService:
                 start_date=ctx.start_date,
                 end_date=ctx.end_date,
                 force_refresh=force_refresh,
+                cache_policy=ctx.cache_policy,
             )
             ctx.ohlcv = merge_ohlcv(ctx.ohlcv, bench_df)
             if (
@@ -685,9 +743,8 @@ class ScreenerService:
 
         ctx.last_bar_map = last_bar_map(ctx.ohlcv)
         ctx.overall_last_bar = _to_iso(ctx.ohlcv.index.max())
-        ctx.data_freshness = resolve_data_freshness(
-            ctx.asof_str, ctx.now_utc, ctx.active_currencies
-        )
+        ctx.market_health = self._provider.get_source_health().to_dict()
+        _apply_market_data_provenance(ctx, primary_ohlcv, sector_ohlcv, bench_df)
 
         # Detect tickers that failed to download and surface them as warnings
         if "Close" in ctx.ohlcv.columns.get_level_values(0):
@@ -940,7 +997,9 @@ class ScreenerService:
                 start_date=ctx.start_date or ctx.asof_str,
                 end_date=ctx.end_date or ctx.asof_str,
                 force_refresh=force_refresh,
+                cache_policy=ctx.cache_policy,
             )
+            _apply_market_data_provenance(ctx, fx)
             eurusd_rate = _last_close_for_ticker(fx, "EURUSD=X")
         except Exception as exc:
             logger.warning("Failed to fetch EURUSD rate for screener sizing: %s", exc)
@@ -1042,6 +1101,8 @@ class ScreenerService:
             if not last_bar_date:
                 candidate_data_status = "unknown"
             elif last_bar_date != ctx.asof_str:
+                candidate_data_status = "stale"
+            elif ctx.data_freshness == "stale":
                 candidate_data_status = "stale"
             elif ctx.data_freshness != "final_close":
                 candidate_data_status = "intraday"

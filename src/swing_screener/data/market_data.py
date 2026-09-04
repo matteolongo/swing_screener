@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
-import datetime as dt
+from typing import TYPE_CHECKING, Iterable, Optional
 import hashlib
 import json
 import time
@@ -12,6 +11,9 @@ import pandas as pd
 import yfinance as yf
 
 from swing_screener.utils import normalize_tickers
+
+if TYPE_CHECKING:
+    from swing_screener.data.providers.base import MarketDataCachePolicy
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,7 @@ def fetch_ohlcv(
     use_cache: bool = True,
     force_refresh: bool = False,
     allow_cache_fallback_on_error: bool = True,
+    cache_policy: MarketDataCachePolicy | None = None,
 ) -> pd.DataFrame:
     """
     Scarica OHLCV da Yahoo Finance (via yfinance), opzionalmente con cache su parquet.
@@ -55,20 +58,20 @@ def fetch_ohlcv(
 
     Output: DataFrame con colonne MultiIndex: (field, ticker)
       field ∈ {Open, High, Low, Close, Volume}
-      
+
     Note:
         This function is a wrapper around YfinanceProvider for backward compatibility.
         New code should use get_market_data_provider() and call fetch_ohlcv on the provider.
     """
     from swing_screener.data.providers.yfinance_provider import YfinanceProvider
-    
+
     # Create provider with the same configuration
     provider = YfinanceProvider(
         cache_dir=cfg.cache_dir,
         auto_adjust=cfg.auto_adjust,
         progress=cfg.progress,
     )
-    
+
     # Determine end date - keep None to preserve cache path behavior
     end_date = cfg.end
     if end_date is None:
@@ -82,8 +85,9 @@ def fetch_ohlcv(
             use_cache=use_cache,
             force_refresh=force_refresh,
             allow_cache_fallback_on_error=allow_cache_fallback_on_error,
+            cache_policy=cache_policy,
         )
-    
+
     # Call provider's fetch_ohlcv with explicit end date
     return provider.fetch_ohlcv(
         list(tickers),
@@ -92,6 +96,7 @@ def fetch_ohlcv(
         use_cache=use_cache,
         force_refresh=force_refresh,
         allow_cache_fallback_on_error=allow_cache_fallback_on_error,
+        cache_policy=cache_policy,
     )
 
 
@@ -129,7 +134,7 @@ def _standardize_columns(df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
 
 def _clean_ohlcv(df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
     """Clean OHLCV data to standard format.
-    
+
     - Keep only Open/High/Low/Close/Volume columns
     - Remove completely NaN rows
     - Sort index by date
@@ -171,8 +176,11 @@ def fetch_ticker_metadata(
     if cache_ttl_days is None:
         try:
             from swing_screener.settings import get_settings_manager
+
             _doc = get_settings_manager().load_user_document()
-            cache_ttl_days = float(_doc.get("cache", {}).get("ticker_meta_ttl_days", 30))
+            cache_ttl_days = float(
+                _doc.get("cache", {}).get("ticker_meta_ttl_days", 30)
+            )
         except Exception:
             cache_ttl_days = 30.0
 
@@ -219,7 +227,9 @@ def fetch_ticker_metadata(
                 info = tk.get_info()
                 name = info.get("shortName") or info.get("longName") or name
                 currency = currency or info.get("currency")
-                exchange = exchange or info.get("exchange") or info.get("fullExchangeName")
+                exchange = (
+                    exchange or info.get("exchange") or info.get("fullExchangeName")
+                )
             except Exception:
                 info = None
 

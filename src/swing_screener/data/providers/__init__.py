@@ -1,6 +1,6 @@
 """Market data provider abstractions for broker integration."""
 
-from .base import MarketDataProvider
+from .base import MarketDataCachePolicy, MarketDataProvider
 from .yfinance_provider import YfinanceProvider
 from .polygon_provider import PolygonProvider
 from .factory import get_market_data_provider
@@ -19,8 +19,10 @@ except ModuleNotFoundError as exc:
                 "Install it with `pip install alpaca-py`."
             ) from _ALPACA_IMPORT_ERROR
 
+
 __all__ = [
     "MarketDataProvider",
+    "MarketDataCachePolicy",
     "YfinanceProvider",
     "AlpacaDataProvider",
     "PolygonProvider",

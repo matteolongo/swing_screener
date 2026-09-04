@@ -1,4 +1,5 @@
 """Unit tests for swing_screener.selection.screening_window pure helpers."""
+
 import datetime as dt
 
 from swing_screener.selection.screening_window import (
@@ -9,10 +10,11 @@ from swing_screener.selection.screening_window import (
     all_markets_closed,
     resolve_data_freshness,
     resolve_fetch_start_date,
+    latest_market_close_utc,
 )
 
-
 # --- normalize_currency_codes ---
+
 
 def test_normalize_currency_codes_uppercases_and_strips():
     result = normalize_currency_codes(["usd", " eur "])
@@ -39,6 +41,7 @@ def test_normalize_currency_codes_empty_returns_empty():
 
 # --- previous_weekday ---
 
+
 def test_previous_weekday_monday_returns_friday():
     monday = dt.date(2026, 6, 22)  # Monday
     assert previous_weekday(monday) == dt.date(2026, 6, 19)  # Friday
@@ -60,6 +63,7 @@ def test_previous_weekday_saturday_returns_friday():
 
 
 # --- market_effective_date ---
+
 
 def test_market_effective_date_eur_before_close():
     # 2026-02-19 15:00 UTC = 16:00 Amsterdam (before 17:40 close)
@@ -87,6 +91,7 @@ def test_market_effective_date_weekend():
 
 # --- resolve_default_asof_date ---
 
+
 def test_resolve_default_asof_date_before_eur_close():
     now_utc = dt.datetime(2026, 2, 19, 15, 0, tzinfo=dt.timezone.utc)
     result = resolve_default_asof_date(now_utc, ["EUR"])
@@ -109,6 +114,7 @@ def test_resolve_default_asof_date_multi_currency_takes_min():
 
 # --- all_markets_closed ---
 
+
 def test_all_markets_closed_false_before_any_close():
     now_utc = dt.datetime(2026, 2, 19, 15, 0, tzinfo=dt.timezone.utc)
     assert all_markets_closed(now_utc, ["EUR"]) is False
@@ -120,6 +126,7 @@ def test_all_markets_closed_true_after_close():
 
 
 # --- resolve_data_freshness ---
+
 
 def test_resolve_data_freshness_past_date():
     now_utc = dt.datetime(2026, 2, 20, 12, 0, tzinfo=dt.timezone.utc)
@@ -141,7 +148,14 @@ def test_resolve_data_freshness_invalid_date():
     assert resolve_data_freshness("not-a-date", now_utc, ["EUR"]) == "final_close"
 
 
+def test_latest_market_close_utc_uses_last_active_currency_close():
+    assert latest_market_close_utc("2026-07-01", ["EUR", "USD"]) == dt.datetime(
+        2026, 7, 1, 20, 10, tzinfo=dt.timezone.utc
+    )
+
+
 # --- resolve_fetch_start_date ---
+
 
 def test_resolve_fetch_start_date_covers_min_history():
     start = resolve_fetch_start_date("2026-03-02", 260)

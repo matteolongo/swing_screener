@@ -1,4 +1,5 @@
 """Pure helpers for screening-window resolution: market timing, currency, and date math."""
+
 from __future__ import annotations
 
 import datetime as dt
@@ -93,7 +94,10 @@ def resolve_screening_currencies(
 
     if universe_id:
         from swing_screener.data.universe import get_universe_currencies
-        universe_currencies = normalize_currency_codes(get_universe_currencies(universe_id))
+
+        universe_currencies = normalize_currency_codes(
+            get_universe_currencies(universe_id)
+        )
         if universe_currencies:
             return universe_currencies
 
@@ -102,7 +106,9 @@ def resolve_screening_currencies(
 
 def resolve_default_asof_date(now_utc: dt.datetime, currencies: list[str]) -> dt.date:
     active = normalize_currency_codes(currencies) or ["USD", "EUR"]
-    effective_dates = [market_effective_date(currency, now_utc)[0] for currency in active]
+    effective_dates = [
+        market_effective_date(currency, now_utc)[0] for currency in active
+    ]
     return min(effective_dates)
 
 
@@ -111,7 +117,9 @@ def all_markets_closed(now_utc: dt.datetime, currencies: list[str]) -> bool:
     return all(market_effective_date(currency, now_utc)[1] for currency in active)
 
 
-def resolve_data_freshness(asof_date: str, now_utc: dt.datetime, currencies: list[str]) -> str:
+def resolve_data_freshness(
+    asof_date: str, now_utc: dt.datetime, currencies: list[str]
+) -> str:
     try:
         resolved = dt.date.fromisoformat(asof_date)
     except ValueError:
@@ -119,6 +127,28 @@ def resolve_data_freshness(asof_date: str, now_utc: dt.datetime, currencies: lis
 
     effective_date = resolve_default_asof_date(now_utc, currencies)
     return "final_close" if resolved <= effective_date else "intraday"
+
+
+def latest_market_close_utc(
+    asof_date: str, currencies: list[str]
+) -> dt.datetime | None:
+    """Return the latest configured close instant for an as-of trading date."""
+
+    try:
+        resolved = dt.date.fromisoformat(asof_date)
+    except ValueError:
+        return None
+    active = normalize_currency_codes(currencies) or ["USD", "EUR"]
+    closes = []
+    for currency in active:
+        tz_name, close_hour, close_minute = MARKET_CLOSE_BY_CURRENCY[currency]
+        close_local = dt.datetime.combine(
+            resolved,
+            dt.time(hour=close_hour, minute=close_minute),
+            tzinfo=ZoneInfo(tz_name),
+        )
+        closes.append(close_local.astimezone(dt.timezone.utc))
+    return max(closes)
 
 
 def resolve_fetch_start_date(asof_date: str, min_history: int) -> str:
@@ -130,5 +160,7 @@ def resolve_fetch_start_date(asof_date: str, min_history: int) -> str:
     except ValueError:
         return "2022-01-01"
     bars_needed = max(int(min_history), _FETCH_MIN_BARS)
-    calendar_days = math.ceil(bars_needed * _FETCH_TRADING_TO_CALENDAR) + _FETCH_WINDOW_BUFFER_DAYS
+    calendar_days = (
+        math.ceil(bars_needed * _FETCH_TRADING_TO_CALENDAR) + _FETCH_WINDOW_BUFFER_DAYS
+    )
     return (asof - dt.timedelta(days=calendar_days)).isoformat()

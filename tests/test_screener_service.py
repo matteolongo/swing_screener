@@ -1,6 +1,4 @@
 import pandas as pd
-import pytest
-from dataclasses import field as dc_field
 from unittest.mock import MagicMock
 
 from swing_screener.data.price_history import price_history_map
@@ -234,7 +232,9 @@ def test_run_daily_report_passes_eurusd_rate_for_usd_quotes(tmp_path, monkeypatc
     mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
     monkeypatch.setattr(screener_svc_mod, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
-        screener_svc_mod, "get_multiple_ticker_info", lambda tickers: {"AAPL": {"currency": "USD"}}
+        screener_svc_mod,
+        "get_multiple_ticker_info",
+        lambda tickers: {"AAPL": {"currency": "USD"}},
     )
     monkeypatch.setattr(
         screener_svc_mod.sector_rotation,
@@ -263,7 +263,9 @@ def test_run_daily_report_passes_eurusd_rate_for_usd_quotes(tmp_path, monkeypatc
     ctx.start_date = "2024-01-01"
     ctx.end_date = "2024-01-05"
     ctx.asof_str = "2024-01-05"
-    ctx.report_cfg = ReportConfig(risk=RiskConfig(account_size=1000.0, account_currency="EUR"))
+    ctx.report_cfg = ReportConfig(
+        risk=RiskConfig(account_size=1000.0, account_currency="EUR")
+    )
 
     svc._run_daily_report(ctx, requested_top=1)
 
@@ -362,12 +364,6 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
     )
 
     from swing_screener.strategy.report_config import ReportConfig
-    from swing_screener.selection.universe import (
-        UniverseConfig as SelectionUniverseConfig,
-    )
-    from swing_screener.selection.entries import EntrySignalConfig
-    from swing_screener.selection.ranking import RankingConfig
-    from swing_screener.risk.position_sizing import RiskConfig
     from api.services.screener_service import _RunContext
     from api.models.screener import ScreenerRequest
 
@@ -804,6 +800,7 @@ def test_fetch_ohlcv_chunked_forwards_force_refresh():
     from unittest.mock import MagicMock
     from api.services.screener_service import _fetch_ohlcv_chunked
     from swing_screener.data.providers import MarketDataProvider
+    from swing_screener.data.providers.base import MarketDataCachePolicy
 
     ohlcv = _make_ohlcv(["AAA", "BBB"])
 
@@ -811,6 +808,7 @@ def test_fetch_ohlcv_chunked_forwards_force_refresh():
     mock_provider.fetch_ohlcv.return_value = ohlcv
 
     tickers = ["AAA", "BBB"]
+    policy = MarketDataCachePolicy()
     _fetch_ohlcv_chunked(
         mock_provider,
         tickers,
@@ -818,6 +816,7 @@ def test_fetch_ohlcv_chunked_forwards_force_refresh():
         end_date="2024-01-05",
         chunk_size=100,
         force_refresh=True,
+        cache_policy=policy,
     )
 
     assert mock_provider.fetch_ohlcv.call_count == 1
@@ -825,6 +824,70 @@ def test_fetch_ohlcv_chunked_forwards_force_refresh():
     assert (
         kwargs.get("force_refresh") is True
     ), f"expected force_refresh=True forwarded to provider; got {kwargs}"
+    assert kwargs["cache_policy"] is policy
+
+
+def test_fetch_ohlcv_chunked_preserves_stale_fallback_provenance():
+    from api.services.screener_service import _fetch_ohlcv_chunked
+    from swing_screener.data.providers import MarketDataProvider
+
+    stale = _make_ohlcv(["AAA"])
+    stale.attrs["stale_cache_fallback"] = True
+    fresh = _make_ohlcv(["BBB"])
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.side_effect = [stale, fresh]
+
+    result = _fetch_ohlcv_chunked(
+        mock_provider,
+        ["AAA", "BBB"],
+        start_date="2024-01-01",
+        end_date="2024-01-05",
+        chunk_size=1,
+    )
+
+    assert result.attrs["stale_cache_fallback"] is True
+
+
+def test_market_data_cache_policy_only_requires_current_final_close():
+    import datetime as dt
+
+    from api.services.screener_service import _market_data_cache_policy
+
+    after_close = dt.datetime(2026, 7, 1, 21, 0, tzinfo=dt.timezone.utc)
+    policy = _market_data_cache_policy("2026-07-01", after_close, ["EUR", "USD"])
+    assert policy.fresh_after_utc == dt.datetime(
+        2026, 7, 1, 20, 10, tzinfo=dt.timezone.utc
+    )
+
+    before_close = dt.datetime(2026, 7, 1, 19, 0, tzinfo=dt.timezone.utc)
+    assert (
+        _market_data_cache_policy("2026-07-01", before_close, ["USD"]).fresh_after_utc
+        is None
+    )
+    assert (
+        _market_data_cache_policy("2026-06-30", after_close, ["USD"]).fresh_after_utc
+        is None
+    )
+
+
+def test_stale_cache_fallback_downgrades_run_freshness():
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import (
+        _RunContext,
+        _apply_market_data_provenance,
+    )
+
+    ctx = _RunContext(request=ScreenerRequest(), strategy={})
+    ctx.data_freshness = "final_close"
+    fresh = _make_ohlcv(["AAA"])
+    stale = _make_ohlcv(["SPY"])
+    stale.attrs["stale_cache_fallback"] = True
+
+    _apply_market_data_provenance(ctx, fresh, stale)
+
+    assert ctx.data_freshness == "stale"
+    assert ctx.market_health["status"] == "degraded"
+    assert "stale_cache_fallback" in ctx.market_health["warnings"]
 
 
 def test_resolve_universe_prefilters_from_pool(tmp_path):
