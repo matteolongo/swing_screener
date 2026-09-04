@@ -32,6 +32,14 @@
 | [`ranking-data-signals`](2026-09-04-ranking-data-signals.md) | 11, 12, 13 | Global order 11 → 12 → 13 |
 | [`configuration-cleanup`](2026-09-04-configuration-cleanup.md) | 17, 18 | Global order 17 → 18 |
 
+## Implementation Progress
+
+| PR | Status | Branch | Pull request |
+| --- | --- | --- | --- |
+| 1 | Implemented; awaiting merge | `codex/preserve-structural-targets` | [#445](https://github.com/matteolongo/swing_screener/pull/445) |
+| 2 | Implemented; awaiting PR 1 | `codex/version-eval-cache-provenance` | [#446](https://github.com/matteolongo/swing_screener/pull/446) |
+| 3–18 | Not started | See subsystem plans | — |
+
 ## Linear Stack Coordinator Checklist
 
 - [ ] **Step 1: Build and merge PRs 1–3**
