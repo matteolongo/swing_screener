@@ -35,6 +35,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Current-date final-close screens now reject market-data caches written before
+  the latest active-market close and retain stale fallback provenance.
 - Evaluation-cache hits now require matching candle, market-phase, strategy,
   sector-input, and schema provenance; legacy unversioned entries miss safely.
 - Trade-thesis enrichment now preserves independently sourced structural and

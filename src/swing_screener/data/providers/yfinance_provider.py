@@ -1,9 +1,10 @@
 """Yfinance market data provider - wraps existing market_data.py logic."""
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterable, Iterator, Optional
+from typing import Iterator, Optional
 import hashlib
 import json
 import logging
@@ -12,10 +13,13 @@ import uuid
 import pandas as pd
 import yfinance as yf
 
-from .base import MarketDataProvider
+from .base import MarketDataCachePolicy, MarketDataProvider
 from ..market_data import fetch_ticker_metadata
 from swing_screener.data.source_health import (
-    DataSourceHealth, SourceDescriptor, ProbeResult, record_fallback,
+    DataSourceHealth,
+    SourceDescriptor,
+    ProbeResult,
+    record_fallback,
 )
 from swing_screener.data.providers._probe import ohlcv_canary_probe
 from swing_screener.utils import normalize_tickers
@@ -26,11 +30,11 @@ logger = logging.getLogger(__name__)
 class YfinanceProvider(MarketDataProvider):
     """
     Yahoo Finance market data provider.
-    
+
     Self-contained provider with integrated caching logic.
     Fetches OHLCV data from Yahoo Finance and caches to parquet files.
     """
-    
+
     _THREAD_SAFE_BATCH_SIZE = 20
     _RETRY_CHUNK_SIZE = 10
 
@@ -55,11 +59,12 @@ class YfinanceProvider(MarketDataProvider):
         self.auto_adjust = auto_adjust
         self.progress = progress
         self.same_day_cache_ttl_minutes = float(same_day_cache_ttl_minutes)
+        self._last_fetch_used_stale_cache = False
 
         # Create cache directory
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._configure_yf_tz_cache()
-    
+
     def _slice_window(
         self,
         frame: Optional[pd.DataFrame],
@@ -67,7 +72,11 @@ class YfinanceProvider(MarketDataProvider):
         end_exclusive: str,
     ) -> Optional[pd.DataFrame]:
         """Trim a cached frame (which may cover a wider window) to the request."""
-        if frame is None or frame.empty or not isinstance(frame.index, pd.DatetimeIndex):
+        if (
+            frame is None
+            or frame.empty
+            or not isinstance(frame.index, pd.DatetimeIndex)
+        ):
             return frame
         start_ts = pd.Timestamp(start_date, tz=frame.index.tz)
         end_ts = pd.Timestamp(end_exclusive, tz=frame.index.tz)
@@ -87,7 +96,9 @@ class YfinanceProvider(MarketDataProvider):
         if safe != ticker:
             safe = f"{safe}__{hashlib.sha1(ticker.encode('utf-8')).hexdigest()[:8]}"
         interval_token = self._cache_interval_token(interval)
-        interval_suffix = "" if interval_token == "1d" else f"__interval={interval_token}"
+        interval_suffix = (
+            "" if interval_token == "1d" else f"__interval={interval_token}"
+        )
         return (
             self._ticker_cache_dir()
             / f"{safe}__adj={int(self.auto_adjust)}{interval_suffix}.parquet"
@@ -152,7 +163,9 @@ class YfinanceProvider(MarketDataProvider):
                 existing = self._read_cached_ohlcv(path, [ticker])
                 if existing is not None and not existing.empty:
                     merged = pd.concat([existing, sub])
-                    merged = merged.loc[~merged.index.duplicated(keep="last")].sort_index()
+                    merged = merged.loc[
+                        ~merged.index.duplicated(keep="last")
+                    ].sort_index()
                     sub = merged
             self._write_cached_ohlcv(path, sub)
             key = self._index_key(ticker, interval)
@@ -176,10 +189,23 @@ class YfinanceProvider(MarketDataProvider):
         try:
             tz_cache_dir.mkdir(parents=True, exist_ok=True)
             yf.set_tz_cache_location(str(tz_cache_dir))
-        except Exception as exc:  # pragma: no cover - defensive, depends on host FS perms
-            logger.warning("Failed to configure yfinance tz cache at %s: %s", tz_cache_dir, exc)
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - defensive, depends on host FS perms
+            logger.warning(
+                "Failed to configure yfinance tz cache at %s: %s", tz_cache_dir, exc
+            )
 
     def get_source_health(self) -> DataSourceHealth:
+        if self._last_fetch_used_stale_cache:
+            return DataSourceHealth(
+                provider="yfinance",
+                domain="market_data",
+                status="degraded",
+                quality_score=0.45,
+                delay_policy="stale_cache_fallback",
+                warnings=["unofficial_provider", "stale_cache_fallback"],
+            )
         return DataSourceHealth(
             provider="yfinance",
             domain="market_data",
@@ -189,7 +215,9 @@ class YfinanceProvider(MarketDataProvider):
             warnings=["unofficial_provider"],
         )
 
-    def _read_cached_ohlcv(self, cache_file: Path, tickers: list[str]) -> pd.DataFrame | None:
+    def _read_cached_ohlcv(
+        self, cache_file: Path, tickers: list[str]
+    ) -> pd.DataFrame | None:
         """
         Read cached OHLCV parquet defensively.
 
@@ -203,7 +231,11 @@ class YfinanceProvider(MarketDataProvider):
             try:
                 cache_file.unlink(missing_ok=True)
             except Exception as remove_exc:
-                logger.warning("Failed to remove invalid OHLCV cache %s: %s", cache_file, remove_exc)
+                logger.warning(
+                    "Failed to remove invalid OHLCV cache %s: %s",
+                    cache_file,
+                    remove_exc,
+                )
             return None
 
     def _write_cached_ohlcv(self, cache_file: Path, df: pd.DataFrame) -> None:
@@ -219,7 +251,9 @@ class YfinanceProvider(MarketDataProvider):
             try:
                 tmp_file.unlink(missing_ok=True)
             except Exception as rm_exc:
-                logger.debug("Failed to remove temp OHLCV cache %s: %s", tmp_file, rm_exc)
+                logger.debug(
+                    "Failed to remove temp OHLCV cache %s: %s", tmp_file, rm_exc
+                )
 
     def _iter_chunks(self, tickers: list[str], size: int) -> Iterator[list[str]]:
         """Yield fixed-size chunks from a ticker list."""
@@ -240,7 +274,11 @@ class YfinanceProvider(MarketDataProvider):
         For larger batches, disable yfinance threading to avoid sporadic failures in
         multi-ticker requests.
         """
-        use_threads = threads if threads is not None else len(tickers) <= self._THREAD_SAFE_BATCH_SIZE
+        use_threads = (
+            threads
+            if threads is not None
+            else len(tickers) <= self._THREAD_SAFE_BATCH_SIZE
+        )
         return yf.download(
             tickers,
             start=start_date,
@@ -288,7 +326,9 @@ class YfinanceProvider(MarketDataProvider):
             )
             return pd.DataFrame()
 
-    def _merge_ohlcv_frames(self, base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
+    def _merge_ohlcv_frames(
+        self, base: pd.DataFrame, extra: pd.DataFrame
+    ) -> pd.DataFrame:
         """Merge two normalized OHLCV frames and deduplicate overlapping columns."""
         if base is None or base.empty:
             return extra
@@ -357,8 +397,10 @@ class YfinanceProvider(MarketDataProvider):
                     ),
                 )
         return out
-    
-    def _standardize_columns(self, df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
+
+    def _standardize_columns(
+        self, df: pd.DataFrame, tickers: list[str]
+    ) -> pd.DataFrame:
         """Standardize column format to (field, ticker) MultiIndex."""
         if not isinstance(df.columns, pd.MultiIndex):
             t = tickers[0]
@@ -389,11 +431,11 @@ class YfinanceProvider(MarketDataProvider):
         raise ValueError(
             "Unable to infer MultiIndex level order (field, ticker) vs (ticker, field)."
         )
-    
+
     def _clean_ohlcv(self, df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
         """
         Clean and standardize OHLCV data.
-        
+
         - Keeps only Open/High/Low/Close/Volume
         - Removes rows that are completely NaN
         - Sorts index by date
@@ -405,7 +447,9 @@ class YfinanceProvider(MarketDataProvider):
 
         # Keep only standard OHLCV fields
         keep_fields = ["Open", "High", "Low", "Close", "Volume"]
-        existing_fields = [f for f in keep_fields if f in df.columns.get_level_values(0)]
+        existing_fields = [
+            f for f in keep_fields if f in df.columns.get_level_values(0)
+        ]
         df = df.loc[:, df.columns.get_level_values(0).isin(existing_fields)]
 
         # Ensure all ticker columns are present
@@ -418,16 +462,32 @@ class YfinanceProvider(MarketDataProvider):
         # Drop rows that are completely NaN
         df = df.dropna(how="all")
         return df
-    
-    def _cache_is_fresh(self, cache_file: Path, max_age_sec: Optional[float]) -> bool:
+
+    def _cache_is_fresh(
+        self,
+        cache_file: Path,
+        max_age_sec: Optional[float],
+        cache_policy: MarketDataCachePolicy | None = None,
+    ) -> bool:
         """A cache file is fresh when no max age applies or its mtime is within it."""
-        if max_age_sec is None:
-            return True
         try:
-            age = datetime.now().timestamp() - cache_file.stat().st_mtime
+            modified_at = datetime.fromtimestamp(
+                cache_file.stat().st_mtime, tz=timezone.utc
+            )
         except OSError:
             return False
-        return age <= max_age_sec
+        if (
+            cache_policy is not None
+            and cache_policy.fresh_after_utc is not None
+            and modified_at < cache_policy.fresh_after_utc.astimezone(timezone.utc)
+        ):
+            return False
+        if max_age_sec is None:
+            return True
+        return (
+            datetime.now(timezone.utc).timestamp() - modified_at.timestamp()
+            <= max_age_sec
+        )
 
     def _fetch_ohlcv_with_config(
         self,
@@ -438,6 +498,7 @@ class YfinanceProvider(MarketDataProvider):
         use_cache: bool = True,
         force_refresh: bool = False,
         allow_cache_fallback_on_error: bool = True,
+        cache_policy: MarketDataCachePolicy | None = None,
         cache_max_age_sec: Optional[float] = None,
     ) -> pd.DataFrame:
         """
@@ -457,7 +518,11 @@ class YfinanceProvider(MarketDataProvider):
         stale_fallback: dict[str, Path] = {}
         misses: list[str] = []
         read_cache = use_cache and not force_refresh
-        index = self._load_ticker_index() if (read_cache or allow_cache_fallback_on_error) else {}
+        index = (
+            self._load_ticker_index()
+            if (read_cache or allow_cache_fallback_on_error)
+            else {}
+        )
         for ticker in tks:
             path = self._ticker_cache_path(ticker, interval)
             entry = index.get(self._index_key(ticker, interval))
@@ -470,7 +535,9 @@ class YfinanceProvider(MarketDataProvider):
             if not covered:
                 misses.append(ticker)
                 continue
-            if not read_cache or not self._cache_is_fresh(path, cache_max_age_sec):
+            if not read_cache or not self._cache_is_fresh(
+                path, cache_max_age_sec, cache_policy
+            ):
                 # Covering but unusable directly (cache reads disabled, forced
                 # refresh, or past TTL): keep as error fallback only.
                 stale_fallback[ticker] = path
@@ -512,12 +579,15 @@ class YfinanceProvider(MarketDataProvider):
                 if allow_cache_fallback_on_error:
                     for ticker, path in stale_fallback.items():
                         frame = self._slice_window(
-                            self._read_cached_ohlcv(path, [ticker]), start_date, end_for_coverage
+                            self._read_cached_ohlcv(path, [ticker]),
+                            start_date,
+                            end_for_coverage,
                         )
                         if frame is not None and not frame.empty:
                             cached_frames.append(frame)
                             _served_stale_tickers_1.append(ticker)
                 if len(cached_frames) > _pre_stale_len_1:
+                    self._last_fetch_used_stale_cache = True
                     record_fallback(
                         domain="market_data",
                         from_provider="yfinance",
@@ -558,12 +628,15 @@ class YfinanceProvider(MarketDataProvider):
                         if path is None:
                             continue
                         frame = self._slice_window(
-                            self._read_cached_ohlcv(path, [ticker]), start_date, end_for_coverage
+                            self._read_cached_ohlcv(path, [ticker]),
+                            start_date,
+                            end_for_coverage,
                         )
                         if frame is not None and not frame.empty:
                             cached_frames.append(frame)
                             _served_stale_tickers.append(ticker)
                 if len(cached_frames) > _pre_stale_len:
+                    self._last_fetch_used_stale_cache = True
                     record_fallback(
                         domain="market_data",
                         from_provider="yfinance",
@@ -584,8 +657,10 @@ class YfinanceProvider(MarketDataProvider):
         if out is None or out.empty:
             raise RuntimeError("Download empty. Check tickers or connection.")
 
-        return self._clean_ohlcv(out, tks)
-    
+        result = self._clean_ohlcv(out, tks)
+        result.attrs["stale_cache_fallback"] = self._last_fetch_used_stale_cache
+        return result
+
     def fetch_ohlcv(
         self,
         tickers: list[str],
@@ -595,10 +670,11 @@ class YfinanceProvider(MarketDataProvider):
         use_cache: bool = True,
         force_refresh: bool = False,
         allow_cache_fallback_on_error: bool = True,
+        cache_policy: MarketDataCachePolicy | None = None,
     ) -> pd.DataFrame:
         """
         Fetch OHLCV data from Yahoo Finance.
-        
+
         Args:
             tickers: List of ticker symbols
             start_date: Start date in YYYY-MM-DD format
@@ -607,18 +683,19 @@ class YfinanceProvider(MarketDataProvider):
             use_cache: Enable caching (default: True)
             force_refresh: Force refresh even if cache exists (default: False)
             allow_cache_fallback_on_error: Use cached data if download fails (default: True)
-            
+
         Returns:
             DataFrame with MultiIndex columns (field, ticker)
-            
+
         Raises:
             ValueError: If invalid tickers
             RuntimeError: If download fails
-            
+
         Note:
             Yfinance's end parameter is exclusive, so we add 1 day to ensure
             end_date is included in the results.
         """
+        self._last_fetch_used_stale_cache = False
         # Yfinance end param is exclusive - add 1 day to include end_date.
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         end_dt_inclusive = end_dt + timedelta(days=1)
@@ -642,18 +719,19 @@ class YfinanceProvider(MarketDataProvider):
             force_refresh,
             allow_cache_fallback_on_error,
             cache_max_age_sec=cache_max_age_sec,
+            cache_policy=cache_policy,
         )
-    
+
     def fetch_latest_price(self, ticker: str) -> float:
         """
         Get latest price for a ticker from Yahoo Finance.
-        
+
         Args:
             ticker: Ticker symbol
-            
+
         Returns:
             Latest price as float
-            
+
         Raises:
             ValueError: If invalid ticker
             ConnectionError: If download fails
@@ -670,18 +748,20 @@ class YfinanceProvider(MarketDataProvider):
                 raise ValueError(f"No price data available for {ticker}")
             return float(price)
         except Exception as e:
-            raise ConnectionError(f"Failed to fetch latest price for {ticker}: {e}") from e
-    
+            raise ConnectionError(
+                f"Failed to fetch latest price for {ticker}: {e}"
+            ) from e
+
     def get_ticker_info(self, ticker: str) -> dict:
         """
         Get ticker metadata from Yahoo Finance.
-        
+
         Args:
             ticker: Ticker symbol
-            
+
         Returns:
             Dictionary with metadata (name, sector, industry, market_cap)
-            
+
         Raises:
             ValueError: If invalid ticker
             ConnectionError: If download fails
@@ -690,13 +770,15 @@ class YfinanceProvider(MarketDataProvider):
             # Use existing fetch_ticker_metadata for consistency
             df = fetch_ticker_metadata([ticker], use_cache=True)
             row = df.loc[ticker]
-            
+
             # Get additional info from yfinance Ticker
             tk = yf.Ticker(ticker)
             info = tk.get_info()
-            
+
             return {
-                "name": row.get("name") or info.get("shortName") or info.get("longName"),
+                "name": row.get("name")
+                or info.get("shortName")
+                or info.get("longName"),
                 "sector": info.get("sector"),
                 "industry": info.get("industry"),
                 "market_cap": info.get("marketCap"),
@@ -704,21 +786,23 @@ class YfinanceProvider(MarketDataProvider):
                 "exchange": row.get("exchange"),
             }
         except Exception as e:
-            raise ConnectionError(f"Failed to fetch ticker info for {ticker}: {e}") from e
-    
+            raise ConnectionError(
+                f"Failed to fetch ticker info for {ticker}: {e}"
+            ) from e
+
     def is_market_open(self) -> bool:
         """
         Check if market is open.
-        
+
         Returns:
             False (yfinance provides historical data only)
-            
+
         Note:
             Yfinance is a historical data provider and doesn't provide
             real-time market status. Always returns False.
         """
         return False
-    
+
     def get_provider_name(self) -> str:
         """
         Get provider name.
