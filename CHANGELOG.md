@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Screener sizing now takes account currency from application configuration and
+  resolves direct or inverse FX pairs explicitly; missing conversion blocks an
+  actionable cross-currency plan.
+
 - Supported currency codes and their market-session boundaries now come from a
   single registry shared by ticker inference, screening windows, and API validation.
 
