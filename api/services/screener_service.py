@@ -39,6 +39,8 @@ from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
 from swing_screener.indicators.candles import detect_patterns, CandleConfig
 from swing_screener.execution.guidance import apply_pattern_stop, ExecutionConfig
 from api.repositories.strategy_repo import StrategyRepository
+from api.repositories.config_repo import ConfigRepository
+from api.services.screener_fx import resolve_fx_conversion
 from swing_screener.data.universe import (
     filter_tickers_by_metadata,
     get_instrument_record,
@@ -216,13 +218,6 @@ def _apply_market_data_provenance(ctx: "_RunContext", *frames: pd.DataFrame) -> 
     ctx.market_health = health
 
 
-def _account_currency_from_strategy(strategy: dict) -> str:
-    raw_risk = strategy.get("risk") if isinstance(strategy, dict) else None
-    if not isinstance(raw_risk, dict):
-        return "EUR"
-    return str(raw_risk.get("account_currency") or "EUR").upper()
-
-
 def _approval_claims_for_candidate(
     candidate: object, strategy_id: str, strategy_revision_value: str
 ) -> ApprovalTokenClaims | None:
@@ -357,6 +352,7 @@ class _RunContext:
 
     request: ScreenerRequest
     strategy: dict
+    account_currency: str = "EUR"
     warnings: list[str] = field(default_factory=list)
     # populated by steps as the run progresses
     universe_cfg: SelectionUniverseConfig | None = None
@@ -399,12 +395,14 @@ class ScreenerService:
         pool_repo=None,
         review_repo=None,
         approval_signer: OrderApprovalTokenSigner | None = None,
+        config_repo: ConfigRepository | None = None,
     ) -> None:
         self._strategy_repo = strategy_repo
         self._portfolio_service = portfolio_service
         self._provider = provider or get_market_data_provider()
         self._orders_service = orders_service
         self._approval_signer = approval_signer
+        self._config_repo = config_repo or ConfigRepository()
         if eval_cache is not None:
             self._eval_cache: EvalCache = eval_cache
         else:
@@ -973,7 +971,7 @@ class ScreenerService:
     def _screener_fx_rate_maps(
         self, ctx: _RunContext, ticker_info: dict
     ) -> tuple[dict[str, float], dict[str, float]]:
-        account_currency = _account_currency_from_strategy(ctx.strategy)
+        account_currency = ctx.account_currency
         quote_currencies = set()
         if getattr(ctx.request, "currencies", None):
             for currency in ctx.active_currencies or []:
@@ -983,50 +981,45 @@ class ScreenerService:
         quote_currencies.discard("UNKNOWN")
         account_quote_currencies = set(quote_currencies)
         account_quote_currencies.discard(account_currency)
-        needs_eurusd = "USD" in quote_currencies or any(
-            {account_currency, quote} == {"EUR", "USD"}
-            for quote in account_quote_currencies
-        )
-        if not needs_eurusd:
+        required_pairs = set()
+        for quote in account_quote_currencies:
+            required_pairs.update(
+                {f"{account_currency}{quote}=X", f"{quote}{account_currency}=X"}
+            )
+        for quote in quote_currencies - {"EUR"}:
+            required_pairs.update({f"EUR{quote}=X", f"{quote}EUR=X"})
+        if not required_pairs:
             return {}, {}
 
         force_refresh = bool(getattr(ctx.request, "force_refresh", False))
         try:
             fx = self._provider.fetch_ohlcv(
-                ["EURUSD=X"],
+                sorted(required_pairs),
                 start_date=ctx.start_date or ctx.asof_str,
                 end_date=ctx.end_date or ctx.asof_str,
                 force_refresh=force_refresh,
                 cache_policy=ctx.cache_policy,
             )
             _apply_market_data_provenance(ctx, fx)
-            eurusd_rate = _last_close_for_ticker(fx, "EURUSD=X")
+            rates = {pair: _last_close_for_ticker(fx, pair) for pair in required_pairs}
         except Exception as exc:
             logger.warning("Failed to fetch EURUSD rate for screener sizing: %s", exc)
             ctx.warnings.append(
-                "EURUSD FX rate unavailable; cross-currency sizing may be omitted."
-            )
-            return {}, {}
-
-        if eurusd_rate is None or eurusd_rate <= 0:
-            ctx.warnings.append(
-                "EURUSD FX rate unavailable; cross-currency sizing may be omitted."
+                "FX rates unavailable; cross-currency sizing is blocked."
             )
             return {}, {}
 
         account_to_quote_rates: dict[str, float] = {}
         quote_to_eur_rates: dict[str, float] = {}
         for quote in quote_currencies:
-            if quote == "EUR":
-                quote_to_eur_rates["EUR"] = 1.0
-            elif quote == "USD":
-                quote_to_eur_rates["USD"] = 1.0 / eurusd_rate
+            result = resolve_fx_conversion("EUR", quote, rates)
+            if result.status == "available" and result.rate is not None:
+                quote_to_eur_rates[quote] = 1.0 / result.rate
 
         for quote in account_quote_currencies:
-            if account_currency == "EUR" and quote == "USD":
-                account_to_quote_rates["USD"] = eurusd_rate
-            elif account_currency == "USD" and quote == "EUR":
-                account_to_quote_rates["EUR"] = 1.0 / eurusd_rate
+            result = resolve_fx_conversion(account_currency, quote, rates)
+            if result.status == "available" and result.rate is not None:
+                account_to_quote_rates[quote] = result.rate
         unsupported = sorted(
             quote
             for quote in account_quote_currencies
@@ -1058,7 +1051,7 @@ class ScreenerService:
         universe_cfg = ctx.universe_cfg
         signals_cfg = ctx.signals_cfg
         sector_rotation_by_name = ctx.sector_rotation_by_name
-        account_currency = _account_currency_from_strategy(ctx.strategy)
+        account_currency = ctx.account_currency
 
         ticker_list = [str(idx) for idx in results.index]
 
@@ -1501,6 +1494,7 @@ class ScreenerService:
             ctx = _RunContext(
                 request=request,
                 strategy=self._resolve_strategy(request.strategy_id, strategy_override),
+                account_currency=self._config_repo.get().risk.account_currency,
                 combined_priority_cfg=CombinedPriorityConfig(),
             )
             requested_top = self._resolve_universe_and_window(ctx)

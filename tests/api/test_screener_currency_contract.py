@@ -11,6 +11,25 @@ from api.main import app
 import api.services.screener_service as screener_service
 from swing_screener.data.providers import MarketDataProvider
 from swing_screener.data.source_health import DataSourceHealth
+from api.services.screener_fx import resolve_fx_conversion
+
+
+def test_fx_resolver_handles_identity_direct_and_inverse_rates():
+    assert resolve_fx_conversion("EUR", "EUR", {}).rate == 1.0
+    direct = resolve_fx_conversion("EUR", "USD", {"EURUSD=X": 1.25})
+    assert direct.status == "available"
+    assert direct.rate == 1.25
+    inverse = resolve_fx_conversion("USD", "EUR", {"EURUSD=X": 1.25})
+    assert inverse.status == "available"
+    assert inverse.rate == pytest.approx(0.8)
+
+
+def test_fx_resolver_returns_typed_unavailable_for_missing_or_invalid_rate():
+    missing = resolve_fx_conversion("EUR", "GBP", {})
+    assert missing.status == "unavailable"
+    assert missing.reason == "fx_rate_unavailable"
+    invalid = resolve_fx_conversion("EUR", "USD", {"EURUSD=X": float("nan")})
+    assert invalid.status == "unavailable"
 
 
 def _ohlcv() -> pd.DataFrame:
@@ -52,7 +71,9 @@ class _PortfolioStub:
         return type("Positions", (), {"positions": []})()
 
 
-def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monkeypatch):
+def test_screener_candidate_exposes_quote_and_account_currency_money_fields(
+    monkeypatch,
+):
     def fake_build_daily_report(*args, **kwargs):
         return pd.DataFrame(
             {
@@ -81,7 +102,9 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
             index=["ABN.AS", "AAPL"],
         )
 
-    monkeypatch.setattr(screener_service, "get_market_data_provider", lambda **kwargs: _mock_provider())
+    monkeypatch.setattr(
+        screener_service, "get_market_data_provider", lambda **kwargs: _mock_provider()
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,
@@ -94,7 +117,9 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
     monkeypatch.setattr(
         screener_service,
         "fetch_next_earnings_days",
-        lambda tickers, finnhub_api_key, asof_date, **kwargs: {ticker: None for ticker in tickers},
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {
+            ticker: None for ticker in tickers
+        },
     )
 
     app.dependency_overrides[get_portfolio_service] = lambda: _PortfolioStub()
@@ -107,7 +132,9 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
         app.dependency_overrides.pop(get_portfolio_service, None)
 
     assert response.status_code == 200
-    candidates = {candidate["ticker"]: candidate for candidate in response.json()["candidates"]}
+    candidates = {
+        candidate["ticker"]: candidate for candidate in response.json()["candidates"]
+    }
 
     eur = candidates["ABN.AS"]
     assert eur["quote_currency"] == "EUR"
@@ -131,7 +158,9 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(monk
     )
 
 
-def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(monkeypatch):
+def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(
+    monkeypatch,
+):
     def fake_build_daily_report(*args, **kwargs):
         return pd.DataFrame(
             {
@@ -157,7 +186,9 @@ def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(
             index=["AAPL"],
         )
 
-    monkeypatch.setattr(screener_service, "get_market_data_provider", lambda **kwargs: _mock_provider())
+    monkeypatch.setattr(
+        screener_service, "get_market_data_provider", lambda **kwargs: _mock_provider()
+    )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
         screener_service,
@@ -167,7 +198,9 @@ def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(
     monkeypatch.setattr(
         screener_service,
         "fetch_next_earnings_days",
-        lambda tickers, finnhub_api_key, asof_date, **kwargs: {ticker: None for ticker in tickers},
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {
+            ticker: None for ticker in tickers
+        },
     )
 
     app.dependency_overrides[get_portfolio_service] = lambda: _PortfolioStub()
