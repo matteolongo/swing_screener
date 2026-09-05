@@ -28,7 +28,17 @@ def test_normalize_currency_codes_deduplicates():
 
 def test_normalize_currency_codes_filters_unsupported():
     result = normalize_currency_codes(["USD", "JPY", "GBP"])
-    assert result == ["USD"]
+    assert result == ["USD", "GBP"]
+
+
+def test_market_effective_date_uses_registry_for_every_supported_currency():
+    from swing_screener.data.currencies import supported_currency_codes
+
+    now_utc = dt.datetime(2026, 2, 19, 21, 30, tzinfo=dt.timezone.utc)
+    for code in supported_currency_codes():
+        effective_date, is_closed = market_effective_date(code, now_utc)
+        assert effective_date == now_utc.date()
+        assert is_closed is True, code
 
 
 def test_normalize_currency_codes_none_returns_empty():

@@ -17,6 +17,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Supported currency codes and their market-session boundaries now come from a
+  single registry shared by ticker inference, screening windows, and API validation.
+
 - The symbol workspace header now exposes symbol context, screener close status,
   aggregate source health, and a non-intelligence bulk refresh; candle-provider
   failures are retryable errors rather than empty successful histories.
