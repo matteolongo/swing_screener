@@ -39,7 +39,8 @@
 | 1 | Implemented; awaiting merge | `codex/preserve-structural-targets` | [#445](https://github.com/matteolongo/swing_screener/pull/445) |
 | 2 | Implemented; awaiting PR 1 | `codex/version-eval-cache-provenance` | [#446](https://github.com/matteolongo/swing_screener/pull/446) |
 | 3 | Implemented; awaiting PR 2 | `codex/prevent-partial-final-promotion` | [#447](https://github.com/matteolongo/swing_screener/pull/447) |
-| 4–18 | Not started | See subsystem plans | — |
+| 4 | Implemented; awaiting PR 3 | `codex/centralize-currency-registry` | [#448](https://github.com/matteolongo/swing_screener/pull/448) |
+| 5–18 | Not started | See subsystem plans | — |
 
 ## Linear Stack Coordinator Checklist
 
