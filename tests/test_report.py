@@ -1,9 +1,18 @@
 import pandas as pd
 import json
 
-from swing_screener.reporting.report import build_daily_report, ReportConfig
+from swing_screener.reporting.report import (
+    build_daily_report,
+    export_report_csv,
+    today_actions,
+    ReportConfig,
+)
 from swing_screener.selection.universe import UniverseConfig, UniverseFilterConfig
-from swing_screener.risk.position_sizing import RiskConfig
+from swing_screener.risk.position_sizing import (
+    RiskConfig,
+    TRADE_PLAN_COLUMNS,
+    build_trade_plans,
+)
 from swing_screener.strategy.modules.momentum import build_momentum_report
 
 
@@ -248,9 +257,38 @@ def test_build_momentum_report_omits_trade_plan_when_fx_rate_missing():
     report = build_momentum_report(pd.DataFrame(), cfg, records=records)
 
     assert "AAPL" in report.index
-    assert "shares" not in report.columns
-    assert "account_to_quote_rate" not in report.columns
-    assert "realized_risk_account" not in report.columns
+    assert report.loc["AAPL", "plan_status"] == "blocked"
+    assert report.loc["AAPL", "block_reason"] == "fx_rate_missing"
+    assert pd.isna(report.loc["AAPL", "shares"])
+
+
+def test_trade_plan_schema_is_stable_for_empty_and_blocked_inputs():
+    empty = build_trade_plans(pd.DataFrame(), pd.DataFrame())
+    assert list(empty.columns) == list(TRADE_PLAN_COLUMNS)
+
+    ranked = pd.DataFrame(
+        {"atr14": [2.0], "last": [100.0], "currency": ["USD"]}, index=["AAPL"]
+    )
+    board = pd.DataFrame({"signal": ["breakout"], "last": [100.0]}, index=["AAPL"])
+    blocked = build_trade_plans(ranked, board, RiskConfig(account_currency="EUR"))
+    assert list(blocked.columns) == list(TRADE_PLAN_COLUMNS)
+    assert blocked.loc["AAPL", "plan_status"] == "blocked"
+    assert blocked.loc["AAPL", "block_reason"] == "fx_rate_missing"
+
+
+def test_empty_and_blocked_trade_plans_are_exportable_and_non_actionable(tmp_path):
+    empty = build_trade_plans(pd.DataFrame(), pd.DataFrame())
+    path = export_report_csv(empty, str(tmp_path / "empty.csv"))
+    exported = pd.read_csv(path)
+    assert list(exported.columns) == ["ticker", *TRADE_PLAN_COLUMNS]
+    assert today_actions(empty) == "No candidates. Today: no trade."
+
+    ranked = pd.DataFrame(
+        {"atr14": [2.0], "last": [100.0], "currency": ["USD"]}, index=["AAPL"]
+    )
+    board = pd.DataFrame({"signal": ["breakout"], "last": [100.0]}, index=["AAPL"])
+    blocked = build_trade_plans(ranked, board, RiskConfig(account_currency="EUR"))
+    assert "Today: no trade." in today_actions(blocked)
 
 
 def test_build_daily_report_keeps_weekly_trend_column():

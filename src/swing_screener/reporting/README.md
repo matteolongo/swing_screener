@@ -46,6 +46,11 @@ Delegates to `strategy.orchestrator.build_strategy_report()`. Returns a DataFram
 ### `export_report_csv(report, path="out/daily_report.csv")`
 Saves the report DataFrame to CSV. Creates parent directories automatically.
 
+Trade-plan rows use one ordered nullable schema for ready, blocked, and empty
+results. `plan_status` is `ready` or `blocked`; blocked candidates remain in the
+report with a machine-readable `block_reason` such as `fx_rate_missing` instead
+of disappearing. Empty plan frames retain the same columns and dtypes.
+
 ### `today_actions(report, max_rows=5)`
 Returns a plain-text summary of tradable signals (signal in `["both", "breakout", "pullback"]` with `shares >= 1`). Useful for quick daily review without opening the CSV.
 

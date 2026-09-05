@@ -9,6 +9,56 @@ import pandas as pd
 from swing_screener.risk.currency import normalize_account_to_quote_rate
 from swing_screener.settings import get_settings_manager
 
+TRADE_PLAN_DTYPES = {
+    "signal": "string",
+    "plan_status": "string",
+    "block_reason": "string",
+    "entry": "Float64",
+    "stop": "Float64",
+    "atr14": "Float64",
+    "k_atr": "Float64",
+    "shares": "Int64",
+    "account_currency": "string",
+    "quote_currency": "string",
+    "account_to_quote_rate": "Float64",
+    "position_value": "Float64",
+    "position_value_quote": "Float64",
+    "position_value_account": "Float64",
+    "risk_amount_target": "Float64",
+    "risk_amount_target_quote": "Float64",
+    "risk_amount_target_account": "Float64",
+    "risk_per_share": "Float64",
+    "realized_risk": "Float64",
+    "realized_risk_quote": "Float64",
+    "realized_risk_account": "Float64",
+    "max_position_value": "Float64",
+    "max_position_value_quote": "Float64",
+    "max_position_value_account": "Float64",
+}
+TRADE_PLAN_COLUMNS = tuple(TRADE_PLAN_DTYPES)
+
+
+def _empty_trade_plans() -> pd.DataFrame:
+    frame = pd.DataFrame(
+        {name: pd.Series(dtype=dtype) for name, dtype in TRADE_PLAN_DTYPES.items()}
+    )
+    frame.index.name = "ticker"
+    return frame
+
+
+@dataclass(frozen=True)
+class PositionPlanOutcome:
+    plan: Optional[Dict[str, Any]]
+    status: str
+    block_reason: str | None = None
+
+
+def position_plan_outcome(*args, **kwargs) -> PositionPlanOutcome:
+    plan = position_plan(*args, **kwargs)
+    if plan is None:
+        return PositionPlanOutcome(None, "blocked", "position_size_unavailable")
+    return PositionPlanOutcome(plan, "ready")
+
 
 def _risk_defaults() -> dict:
     return get_settings_manager().get_low_level_defaults_payload("risk")
@@ -225,10 +275,10 @@ def build_trade_plans(
     Returns per-ticker trade plan for tickers with signal != 'none' and tradable sizing.
     """
     if ranked_universe is None or ranked_universe.empty:
-        return pd.DataFrame()
+        return _empty_trade_plans()
 
     if signal_board is None or signal_board.empty:
-        return pd.DataFrame()
+        return _empty_trade_plans()
 
     if atr_col is None:
         atr_candidates = [
@@ -248,26 +298,58 @@ def build_trade_plans(
 
     active = signal_board[signal_board["signal"] != "none"].copy()
     if active.empty:
-        return pd.DataFrame()
+        return _empty_trade_plans()
 
     out_rows = []
     for t in active.index:
         if vetoes and t in vetoes:
+            out_rows.append(
+                {
+                    "ticker": t,
+                    "signal": active.loc[t, "signal"],
+                    "plan_status": "blocked",
+                    "block_reason": "vetoed",
+                }
+            )
             continue
 
         if t not in ranked_universe.index:
+            out_rows.append(
+                {
+                    "ticker": t,
+                    "signal": active.loc[t, "signal"],
+                    "plan_status": "blocked",
+                    "block_reason": "missing_ranked_candidate",
+                }
+            )
             continue
 
         entry = float(active.loc[t, "last"])
         atr14 = float(ranked_universe.loc[t, atr_col])
         account_currency = _normalize_currency(cfg.account_currency)
         if "currency" not in ranked_universe.columns:
+            out_rows.append(
+                {
+                    "ticker": t,
+                    "signal": active.loc[t, "signal"],
+                    "plan_status": "blocked",
+                    "block_reason": "currency_missing",
+                }
+            )
             continue
         quote_currency = _normalize_quote_currency(
             ranked_universe.loc[t, "currency"],
             account_currency,
         )
         if quote_currency is None:
+            out_rows.append(
+                {
+                    "ticker": t,
+                    "signal": active.loc[t, "signal"],
+                    "plan_status": "blocked",
+                    "block_reason": "currency_missing",
+                }
+            )
             continue
         account_to_quote_rate = _lookup_account_to_quote_rate(
             account_currency=account_currency,
@@ -275,6 +357,14 @@ def build_trade_plans(
             account_to_quote_rates=account_to_quote_rates,
         )
         if account_to_quote_rate is None:
+            out_rows.append(
+                {
+                    "ticker": t,
+                    "signal": active.loc[t, "signal"],
+                    "plan_status": "blocked",
+                    "block_reason": "fx_rate_missing",
+                }
+            )
             continue
 
         risk_mult = risk_multipliers.get(t, 1.0) if risk_multipliers else 1.0
@@ -292,28 +382,28 @@ def build_trade_plans(
                 max_position_pct=cfg.max_position_pct * max_mult,
             )
 
-        plan = position_plan(
+        outcome = position_plan_outcome(
             entry,
             atr14,
             cfg_for_t,
             quote_currency=quote_currency,
             account_to_quote_rate=account_to_quote_rate,
         )
-        if plan is None:
-            continue
-
         out_rows.append(
             {
                 "ticker": t,
                 "signal": active.loc[t, "signal"],
-                **plan,
+                "plan_status": outcome.status,
+                "block_reason": outcome.block_reason,
+                **(outcome.plan or {}),
             }
         )
 
     if not out_rows:
-        return pd.DataFrame()
+        return _empty_trade_plans()
 
     df = pd.DataFrame(out_rows).set_index("ticker")
+    df = df.reindex(columns=TRADE_PLAN_COLUMNS).astype(TRADE_PLAN_DTYPES)
 
     sig_order = {"both": 0, "breakout": 1, "pullback": 2}
     df["signal_order"] = df["signal"].map(sig_order).fillna(99).astype(int)
