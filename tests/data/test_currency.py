@@ -1,4 +1,32 @@
 from swing_screener.data.currency import detect_currency
+from swing_screener.data.currencies import (
+    get_currency_definition,
+    supported_currency_codes,
+)
+
+
+def test_currency_registry_owns_every_supported_currency():
+    assert supported_currency_codes() == (
+        "CHF",
+        "DKK",
+        "EUR",
+        "GBP",
+        "NOK",
+        "SEK",
+        "USD",
+    )
+    for code in supported_currency_codes():
+        definition = get_currency_definition(code.lower())
+        assert definition.code == code
+        assert definition.timezone
+        assert definition.close_time.tzinfo is None
+
+
+def test_currency_registry_rejects_unknown_codes():
+    import pytest
+
+    with pytest.raises(ValueError, match="Unsupported currency code: JPY"):
+        get_currency_definition("jpy")
 
 
 def test_detect_currency_uses_instrument_master_for_known_us_tickers():

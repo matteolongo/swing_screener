@@ -6,14 +6,13 @@ import datetime as dt
 import math
 from zoneinfo import ZoneInfo
 
+from swing_screener.data.currencies import (
+    get_currency_definition,
+    supported_currency_codes,
+)
 from swing_screener.data.universe import get_instrument_record
 
-SUPPORTED_CURRENCIES = {"USD", "EUR"}
-MARKET_CLOSE_BY_CURRENCY: dict[str, tuple[str, int, int]] = {
-    # (IANA timezone, close hour, close minute), with a small post-close buffer.
-    "USD": ("America/New_York", 16, 10),
-    "EUR": ("Europe/Amsterdam", 17, 40),
-}
+SUPPORTED_CURRENCIES = frozenset(supported_currency_codes())
 
 _FETCH_TRADING_TO_CALENDAR = 1.45
 _FETCH_WINDOW_BUFFER_DAYS = 45
@@ -39,11 +38,8 @@ def previous_weekday(day: dt.date) -> dt.date:
 
 
 def market_effective_date(currency: str, now_utc: dt.datetime) -> tuple[dt.date, bool]:
-    tz_name, close_hour, close_minute = MARKET_CLOSE_BY_CURRENCY.get(
-        currency,
-        MARKET_CLOSE_BY_CURRENCY["USD"],
-    )
-    tz = ZoneInfo(tz_name)
+    definition = get_currency_definition(currency)
+    tz = ZoneInfo(definition.timezone)
     local_now = now_utc.astimezone(tz)
     local_date = local_now.date()
 
@@ -52,7 +48,7 @@ def market_effective_date(currency: str, now_utc: dt.datetime) -> tuple[dt.date,
 
     close_local = dt.datetime.combine(
         local_date,
-        dt.time(hour=close_hour, minute=close_minute),
+        definition.close_time,
         tzinfo=tz,
     )
     is_closed = local_now >= close_local
@@ -141,11 +137,11 @@ def latest_market_close_utc(
     active = normalize_currency_codes(currencies) or ["USD", "EUR"]
     closes = []
     for currency in active:
-        tz_name, close_hour, close_minute = MARKET_CLOSE_BY_CURRENCY[currency]
+        definition = get_currency_definition(currency)
         close_local = dt.datetime.combine(
             resolved,
-            dt.time(hour=close_hour, minute=close_minute),
-            tzinfo=ZoneInfo(tz_name),
+            definition.close_time,
+            tzinfo=ZoneInfo(definition.timezone),
         )
         closes.append(close_local.astimezone(dt.timezone.utc))
     return max(closes)

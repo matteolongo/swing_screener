@@ -45,7 +45,8 @@ currency = detect_currency("ASML.AS")  # EUR
 | `instrument_enrichment.py` | Resolve a Yahoo symbol to an instrument-master record via yfinance `.info` (MIC, currency, country, timezone, type) |
 | `market_data.py` | Legacy `fetch_ohlcv()` wrapper (backward-compat; prefer provider factory) |
 | `ticker_info.py` | `get_ticker_info()` — name, sector, currency |
-| `currency.py` | `detect_currency()` — USD vs EUR from ticker suffix |
+| `currencies.py` | Canonical supported-currency registry and market-session metadata |
+| `currency.py` | `detect_currency()` — instrument-master and controlled suffix inference |
 | `providers/` | Abstract provider layer (factory, base, yfinance, alpaca) |
 
 ## Provider Configuration
@@ -154,5 +155,6 @@ Screener evaluation results are cached per symbol to avoid recomputing unchanged
 ## Notes
 
 - `fetch_ohlcv()` in `market_data.py` is a backward-compatibility wrapper. New code should use `get_market_data_provider()` directly.
-- `detect_currency()` uses ticker suffix heuristics (e.g., `.AS` → EUR, no suffix → USD).
+- `currencies.py` owns all supported ISO codes, market timezones, and buffered close times used by data, API validation, and screening-window logic.
+- `detect_currency()` prefers instrument-master metadata, then controlled suffix inference; unknown suffixes and unregistered no-suffix symbols resolve to `UNKNOWN`, never USD.
 - `BrokerConfig.from_env()` is called automatically when no config is passed to the factory.
