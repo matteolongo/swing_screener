@@ -4,30 +4,31 @@ import json
 import os
 from functools import lru_cache
 
+from swing_screener.data.currencies import supported_currency_codes
 
 # Suffix → currency map covering all supported trading currencies.
 _SUFFIX_CURRENCY: dict[str, str] = {
     # EUR venues
-    "AS": "EUR",   # Euronext Amsterdam
-    "BR": "EUR",   # Euronext Brussels
-    "PA": "EUR",   # Euronext Paris
-    "DE": "EUR",   # XETRA
-    "MI": "EUR",   # Borsa Italiana
-    "MC": "EUR",   # Bolsa de Madrid
-    "LS": "EUR",   # Euronext Lisbon
-    "IR": "EUR",   # Euronext Dublin
-    "HE": "EUR",   # Nasdaq Helsinki
-    "VI": "EUR",   # Wiener Borse
+    "AS": "EUR",  # Euronext Amsterdam
+    "BR": "EUR",  # Euronext Brussels
+    "PA": "EUR",  # Euronext Paris
+    "DE": "EUR",  # XETRA
+    "MI": "EUR",  # Borsa Italiana
+    "MC": "EUR",  # Bolsa de Madrid
+    "LS": "EUR",  # Euronext Lisbon
+    "IR": "EUR",  # Euronext Dublin
+    "HE": "EUR",  # Nasdaq Helsinki
+    "VI": "EUR",  # Wiener Borse
     # Non-EUR European venues
-    "ST": "SEK",   # Nasdaq Stockholm
-    "CO": "DKK",   # Nasdaq Copenhagen
-    "OL": "NOK",   # Oslo Bors
-    "SW": "CHF",   # SIX Swiss Exchange
-    "L": "GBP",    # London Stock Exchange
+    "ST": "SEK",  # Nasdaq Stockholm
+    "CO": "DKK",  # Nasdaq Copenhagen
+    "OL": "NOK",  # Oslo Bors
+    "SW": "CHF",  # SIX Swiss Exchange
+    "L": "GBP",  # London Stock Exchange
 }
 
 # Supported packaged-universe trading currencies.
-SUPPORTED_CURRENCIES = frozenset({"USD", "EUR", "GBP", "CHF", "SEK", "DKK", "NOK"})
+SUPPORTED_CURRENCIES = frozenset(supported_currency_codes())
 
 
 @lru_cache(maxsize=8)
