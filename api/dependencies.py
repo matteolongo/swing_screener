@@ -1,4 +1,5 @@
 """Shared dependencies for API routers."""
+
 from __future__ import annotations
 
 import hashlib
@@ -43,7 +44,9 @@ from api.db.session import DatabaseRuntime, create_database_runtime
 from api.db.settings import DatabaseSettings
 from api.db.unit_of_work import PortfolioUnitOfWork
 from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
-from swing_screener.fundamentals import FundamentalsAnalysisService as _FundamentalsAnalysisService
+from swing_screener.fundamentals import (
+    FundamentalsAnalysisService as _FundamentalsAnalysisService,
+)
 
 _finnhub_client: FinnhubEnrichmentClient | None = None
 _finnhub_client_api_key: str | None = None
@@ -79,15 +82,24 @@ def get_finnhub_client() -> FinnhubEnrichmentClient | None:
             _finnhub_client_api_key = api_key
         return _finnhub_client
 
+
 # Repository root
 DATA_DIR = data_dir()
-POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", DATA_DIR / "positions.json")
+POSITIONS_FILE = get_settings_manager().resolve_runtime_path(
+    "positions_file", DATA_DIR / "positions.json"
+)
 ORDERS_FILE = DATA_DIR / "orders.json"
 _DEFAULT_POSITIONS_FILE = POSITIONS_FILE
 _DEFAULT_ORDERS_FILE = ORDERS_FILE
-WATCHLIST_FILE = get_settings_manager().resolve_runtime_path("watchlist_file", DATA_DIR / "watchlist.json")
-SYMBOL_POOL_FILE = get_settings_manager().resolve_runtime_path("symbol_pool_file", DATA_DIR / "symbol_pool.json")
-REVIEW_QUEUE_FILE = get_settings_manager().resolve_runtime_path("review_queue_file", DATA_DIR / "review_queue.json")
+WATCHLIST_FILE = get_settings_manager().resolve_runtime_path(
+    "watchlist_file", DATA_DIR / "watchlist.json"
+)
+SYMBOL_POOL_FILE = get_settings_manager().resolve_runtime_path(
+    "symbol_pool_file", DATA_DIR / "symbol_pool.json"
+)
+REVIEW_QUEUE_FILE = get_settings_manager().resolve_runtime_path(
+    "review_queue_file", DATA_DIR / "review_queue.json"
+)
 
 # Patchable path aliases used by tests (monkeypatch these to redirect I/O).
 # Set to None to fall through to the module-level constants.
@@ -104,7 +116,10 @@ _database_runtimes: dict[str, DatabaseRuntime] = {}
 def get_positions_path() -> Path:
     """Get path to positions.json."""
     import api.dependencies as _self
-    return _self._positions_path if _self._positions_path is not None else POSITIONS_FILE
+
+    return (
+        _self._positions_path if _self._positions_path is not None else POSITIONS_FILE
+    )
 
 
 def get_watchlist_path() -> Path:
@@ -147,9 +162,7 @@ def _database_context() -> tuple[str, Path, Path, bool]:
             )
         else:
             database_path = (
-                Path.home()
-                / ".cache"
-                / f"swing-screener-test-{os.getpid()}-v2.db"
+                Path.home() / ".cache" / f"swing-screener-test-{os.getpid()}-v2.db"
             )
         database_path.parent.mkdir(parents=True, exist_ok=True)
         return f"sqlite:///{database_path}", orders_path, positions_path, True
@@ -229,7 +242,7 @@ def get_fundamentals_config_repo() -> FundamentalsConfigRepository:
 
 def get_config_repo() -> ConfigRepository:
     """Get the singleton config repository (thread-safe).
-    
+
     Returns a singleton instance to maintain config state across requests.
     Uses double-checked locking for thread-safe lazy initialization.
     """
@@ -297,6 +310,7 @@ def get_screener_service(
     pool_repo: SymbolPoolRepository = Depends(get_symbol_pool_repo),
     review_repo: ReviewQueueRepository = Depends(get_review_queue_repo),
     approval_signer: OrderApprovalTokenSigner = Depends(get_order_approval_signer),
+    config_repo: ConfigRepository = Depends(get_config_repo),
 ) -> ScreenerService:
     return ScreenerService(
         strategy_repo=strategy_repo,
@@ -305,6 +319,7 @@ def get_screener_service(
         pool_repo=pool_repo,
         review_repo=review_repo,
         approval_signer=approval_signer,
+        config_repo=config_repo,
     )
 
 
@@ -321,8 +336,11 @@ def get_fundamentals_service(
 ) -> FundamentalsService:
     return FundamentalsService(
         config_repo=config_repo,
-        analysis_service=_FundamentalsAnalysisService(finnhub_client=get_finnhub_client()),
+        analysis_service=_FundamentalsAnalysisService(
+            finnhub_client=get_finnhub_client()
+        ),
     )
+
 
 _datasources_service: DatasourcesService | None = None
 
@@ -332,6 +350,8 @@ def get_datasources_service() -> DatasourcesService:
     if _datasources_service is None:
         _datasources_service = DatasourcesService()
     return _datasources_service
+
+
 _cache_service: CacheService | None = None
 
 
@@ -344,11 +364,13 @@ def get_cache_service() -> CacheService:
 
 SCREENER_HISTORY_FILE = DATA_DIR / "screener_history.json"
 
+
 def get_screener_history_repo() -> ScreenerHistoryRepository:
     return ScreenerHistoryRepository(SCREENER_HISTORY_FILE)
 
 
 WEEKLY_REVIEWS_FILE = DATA_DIR / "weekly_reviews.json"
+
 
 def get_weekly_reviews_repo() -> WeeklyReviewsRepository:
     return WeeklyReviewsRepository(WEEKLY_REVIEWS_FILE)
