@@ -1,4 +1,19 @@
-from api.models.screener import PriceHistoryPoint, CandlePatternOut
+import pytest
+from pydantic import ValidationError
+
+from api.models.screener import PriceHistoryPoint, CandlePatternOut, ScreenerRequest
+from swing_screener.data.currencies import supported_currency_codes
+
+
+def test_screener_request_accepts_exact_currency_registry():
+    assert ScreenerRequest(
+        currencies=list(supported_currency_codes())
+    ).currencies == list(supported_currency_codes())
+
+
+def test_screener_request_rejects_currency_outside_registry():
+    with pytest.raises(ValidationError, match="Unsupported currency codes: JPY"):
+        ScreenerRequest(currencies=["JPY"])
 
 
 def test_price_history_point_optional_ohlcv_defaults_none():

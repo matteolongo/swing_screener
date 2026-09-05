@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
+from swing_screener.data.currencies import supported_currency_codes
 from api.models.recommendation import Recommendation
 from swing_screener.data.symbol_pool import TaxonomyFilterSpec
 from swing_screener.fundamentals.models import FundamentalSnapshot
@@ -248,7 +249,8 @@ class ScreenerRequest(BaseModel):
         cleaned = [str(v).strip().upper() for v in values if str(v).strip()]
         if not cleaned:
             return ["USD", "EUR"]
-        invalid = [v for v in cleaned if v not in {"USD", "EUR"}]
+        supported = frozenset(supported_currency_codes())
+        invalid = [v for v in cleaned if v not in supported]
         if invalid:
             raise ValueError(f"Unsupported currency codes: {', '.join(invalid)}")
         return list(dict.fromkeys(cleaned))
