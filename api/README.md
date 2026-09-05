@@ -163,6 +163,10 @@ Strategy (`/api/strategy`):
 
 Screener (`/api/screener`):
 - `POST /api/screener/run` (sync locally, async job launch on dyno by default). Accepts `taxonomy_filter` (region / market_cap_tier / sector / index_memberships / **instrument_type** (coarse equity/etf) / instrument_type_detail / provider / currency / exchange_mics / liquidity_tier) and `preset` to pre-filter the unified symbol pool. Filtering on enrichment-derived dimensions (sector / market_cap_tier / instrument_type_detail / liquidity_tier) excludes symbols whose data is not yet enriched and surfaces a warning counting them. The `universe` field is **deprecated** — it now resolves to `taxonomy_filter.index_memberships=[universe]` and will be removed in a later release.
+  Screener sizing reads the account currency from the application configuration
+  repository once per run; strategy currency values do not override it. FX
+  resolution tries the direct Yahoo pair and then its inverse. Missing or invalid
+  conversion blocks cross-currency sizing with `FX_RATE_MISSING`.
 - `GET /api/screener/run/{job_id}` (poll async screener status/result)
 - `GET /api/screener/recurrence`
 

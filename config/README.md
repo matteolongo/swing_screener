@@ -18,6 +18,9 @@ server-owned calendar-age policy for persisted position and order ledgers.
 Portfolio endpoints return the derived freshness; clients must not substitute
 their cache/refetch timers for this domain status.
 
+`app_config.risk.account_currency` is the authoritative account base currency
+for screener sizing and FX conversion. Strategy-level values cannot override it.
+
 Candlestick pattern + structural-stop settings live under `low_level`:
 
 - `low_level.candles` — thresholds for the deterministic candlestick engine
