@@ -114,7 +114,8 @@ def test_build_trade_plans_filters_none_and_requires_signal():
     plans = build_trade_plans(ranked, signals, cfg)
 
     assert "AAA" in plans.index
-    assert "BBB" not in plans.index  # too volatile -> None
+    assert plans.loc["BBB", "plan_status"] == "blocked"
+    assert plans.loc["BBB", "block_reason"] == "position_size_unavailable"
     assert plans.loc["AAA", "shares"] >= 1
 
 
@@ -137,7 +138,8 @@ def test_build_trade_plans_skips_missing_quote_currency():
 
     plans = build_trade_plans(ranked, signals, cfg)
 
-    assert plans.empty
+    assert plans.loc["AAA", "plan_status"] == "blocked"
+    assert plans.loc["AAA", "block_reason"] == "currency_missing"
 
 
 def test_build_trade_plans_skips_unknown_quote_currency():
@@ -159,7 +161,8 @@ def test_build_trade_plans_skips_unknown_quote_currency():
 
     plans = build_trade_plans(ranked, signals, cfg)
 
-    assert plans.empty
+    assert plans.loc["AAA", "plan_status"] == "blocked"
+    assert plans.loc["AAA", "block_reason"] == "currency_missing"
 
 
 def test_build_trade_plans_skips_cross_currency_when_rate_missing():
@@ -181,7 +184,8 @@ def test_build_trade_plans_skips_cross_currency_when_rate_missing():
 
     plans = build_trade_plans(ranked, signals, cfg)
 
-    assert plans.empty
+    assert plans.loc["AAPL", "plan_status"] == "blocked"
+    assert plans.loc["AAPL", "block_reason"] == "fx_rate_missing"
 
 
 def test_build_trade_plans_infers_atr_column():
