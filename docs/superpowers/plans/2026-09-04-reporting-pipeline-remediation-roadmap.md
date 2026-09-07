@@ -45,7 +45,8 @@
 | 7 | Implemented; awaiting PR 6 | `codex/fail-closed-pending-orders` | [#451](https://github.com/matteolongo/swing_screener/pull/451) |
 | 8 | Implemented; awaiting PR 7 | `codex/separate-review-evaluation-errors` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/fail-closed-pending-orders...codex/separate-review-evaluation-errors?expand=1) |
 | 9 | Implemented; awaiting PR 8 | `codex/use-stateless-review-orders` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/separate-review-evaluation-errors...codex/use-stateless-review-orders?expand=1) |
-| 10–18 | Not started | See subsystem plans | — |
+| 10 | Implemented; awaiting PR 9 | `codex/make-review-persistence-explicit` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/use-stateless-review-orders...codex/make-review-persistence-explicit?expand=1) |
+| 11–18 | Not started | See subsystem plans | — |
 
 ## Linear Stack Coordinator Checklist
 
