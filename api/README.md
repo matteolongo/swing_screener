@@ -253,6 +253,13 @@ Daily Review (`/api/daily-review`):
 - `GET /api/daily-review` — accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) for the legacy combined review. Pass `include_candidates=false` for a portfolio/watchlist-only review that does not run the screener.
 - `POST /api/daily-review/compute` — supports the same `include_candidates` switch for local-persistence mode.
 
+Both review responses expose `evaluation_errors` for individual positions whose
+stop evaluation could not be completed. Each item contains `symbol`, the stable
+code `position_evaluation_failed`, and a sanitized message. These failures are
+not reported as successful `positions_hold` actions;
+`summary.evaluation_error_count` counts them independently. Unexpected
+request-wide invariant failures still fail the request.
+
 Intelligence (`/api/intelligence`):
 - `GET /api/intelligence/{ticker}/evidence/latest` — read-only metadata for the newest valid persisted evidence cache. Returns `{ticker, cached_at, item_count, providers, freshness_status}` where the server derives `fresh`, `cached`, or `stale` from `config.evidence.cache_stale_after_days`. A normal cache absence returns 404 with `{detail, code: "evidence_not_cached"}`. It never calls collectors, an LLM, or mutates analysis, positions, orders, or trading state.
 - `POST /api/intelligence/{ticker}/evidence/refresh` — read-only refresh of configured intelligence evidence collectors. It does not call the LLM, generate/cache `SymbolIntelligence`, or mutate positions, orders, or trading state. Returns `{ticker, refreshed_at, status, sources}` where overall `status` is `fresh`, `partial`, or `failed`; each source includes `source`, provider id, `status` (`fresh` or `failed`), `item_count`, `as_of`, and a nullable sanitized `message`. Invalid tickers return 422. Provider exceptions and secrets are never returned.
