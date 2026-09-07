@@ -809,6 +809,43 @@ def test_compute_daily_review_from_state_uses_client_payload(
     assert kwargs["strategy_override"] == strategy
 
 
+def test_stateless_review_uses_client_orders_for_pending_review(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    orders_repo = Mock()
+    orders_repo.list_orders.return_value = (
+        [{"order_id": "SERVER", "ticker": "MSFT", "order_kind": "entry"}],
+        "2026-09-07",
+    )
+    service = DailyReviewService(
+        mock_screener_service,
+        mock_portfolio_service,
+        orders_repo=orders_repo,
+        data_dir=tmp_path,
+    )
+    client_orders = [
+        {
+            "order_id": "CLIENT",
+            "ticker": "AAPL",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_date": "2026-09-07",
+        }
+    ]
+
+    review = service.compute_daily_review_from_state(
+        strategy=_default_strategy_payload(),
+        positions=[],
+        orders=client_orders,
+        include_candidates=False,
+    )
+
+    assert [item.order_id for item in review.pending_orders_review] == ["CLIENT"]
+    orders_repo.list_orders.assert_not_called()
+
+
 # ── Pending orders review tests ──────────────────────────────────────────────
 
 
