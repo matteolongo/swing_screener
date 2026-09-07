@@ -15,6 +15,7 @@ from api.models.daily_review import (
     DailyReviewPositionUpdate,
     DailyReviewPositionClose,
     DailyReviewPositionExitSignal,
+    DailyReviewPositionEvaluationError,
     DailyReviewSummary,
     PendingOrderReview,
     TrimSuggestion,
@@ -85,10 +86,6 @@ class _PositionActionContext:
     """
 
     position_id: str
-    err_ticker: str
-    err_entry_price: float
-    err_stop_price: float
-    err_current_price: float
     trim_r_threshold: float
     #: suggestion -> (ticker, entry_price, stop_price) for the success branches.
     success_fields: Callable[[PositionUpdate], tuple[str, float, float]]
@@ -189,13 +186,10 @@ class DailyReviewService:
         positions = positions_response.positions
 
         buckets = _ActionBuckets()
+        evaluation_errors: list[DailyReviewPositionEvaluationError] = []
         for pos in positions:
             ctx = _PositionActionContext(
                 position_id=pos.position_id,
-                err_ticker=pos.ticker,
-                err_entry_price=pos.entry_price,
-                err_stop_price=pos.stop_price,
-                err_current_price=pos.current_price or pos.entry_price,
                 trim_r_threshold=trim_r_threshold,
                 success_fields=lambda _s, p=pos: (
                     p.ticker,
@@ -214,17 +208,18 @@ class DailyReviewService:
                     pos.ticker,
                     exc.detail,
                 )
-                buckets.hold.append(
-                    self._error_hold(ctx, f"Stop suggestion unavailable: {exc.detail}")
+                evaluation_errors.append(
+                    DailyReviewPositionEvaluationError(symbol=pos.ticker)
                 )
                 continue
-            except Exception as exc:
-                logger.exception(
-                    "Unexpected error generating stop suggestion for %s",
+            except (TypeError, ValueError) as exc:
+                logger.warning(
+                    "Invalid position data while generating stop suggestion for %s: %s",
                     pos.ticker,
+                    type(exc).__name__,
                 )
-                buckets.hold.append(
-                    self._error_hold(ctx, f"Stop suggestion unavailable: {exc}")
+                evaluation_errors.append(
+                    DailyReviewPositionEvaluationError(symbol=pos.ticker)
                 )
                 continue
 
@@ -245,6 +240,7 @@ class DailyReviewService:
             new_candidates=len(new_candidates),
             add_on_candidates=len(add_on_candidates),
             watchlist_near_trigger=len(watchlist_near_trigger),
+            evaluation_error_count=len(evaluation_errors),
             review_date=date.today(),
         )
 
@@ -258,6 +254,7 @@ class DailyReviewService:
             positions_update_stop=positions_update,
             positions_close=positions_close,
             positions_exit_signal=positions_exit_signal,
+            evaluation_errors=evaluation_errors,
             summary=summary,
             pending_orders_review=pending_orders_review,
         )
@@ -396,22 +393,6 @@ class DailyReviewService:
             "time_stop_min_r": cfg.time_stop_min_r,
             "exit_signal_days": cfg.exit_signal_days,
         }
-
-    @staticmethod
-    def _error_hold(
-        ctx: _PositionActionContext, reason: str
-    ) -> DailyReviewPositionHold:
-        """Build a hold entry for a position whose stop suggestion failed."""
-        return DailyReviewPositionHold(
-            position_id=ctx.position_id,
-            ticker=ctx.err_ticker,
-            entry_price=ctx.err_entry_price,
-            stop_price=ctx.err_stop_price,
-            current_price=ctx.err_current_price,
-            r_now=0.0,
-            **ctx.time_stop(0.0),
-            reason=reason,
-        )
 
     def _classify_position_action(
         self,
@@ -552,6 +533,7 @@ class DailyReviewService:
         )
 
         buckets = _ActionBuckets()
+        evaluation_errors: list[DailyReviewPositionEvaluationError] = []
         for pos in positions:
             if pos.get("status") != "open":
                 continue
@@ -561,12 +543,6 @@ class DailyReviewService:
             )
             ctx = _PositionActionContext(
                 position_id=position_id,
-                err_ticker=str(pos.get("ticker", "")),
-                err_entry_price=float(pos.get("entry_price", 0.0)),
-                err_stop_price=float(pos.get("stop_price", 0.0)),
-                err_current_price=float(
-                    pos.get("current_price") or pos.get("entry_price") or 0.0
-                ),
                 trim_r_threshold=trim_r_threshold_state,
                 success_fields=lambda s: (s.ticker, s.entry, s.stop_old),
                 time_stop=lambda r, p=pos: self._time_stop_payload(
@@ -583,17 +559,22 @@ class DailyReviewService:
                     pos.get("ticker"),
                     exc.detail,
                 )
-                buckets.hold.append(
-                    self._error_hold(ctx, f"Stop suggestion unavailable: {exc.detail}")
+                evaluation_errors.append(
+                    DailyReviewPositionEvaluationError(
+                        symbol=str(pos.get("ticker", ""))
+                    )
                 )
                 continue
-            except Exception as exc:
-                logger.exception(
-                    "Unexpected stateless stop suggestion error for %s",
+            except (TypeError, ValueError) as exc:
+                logger.warning(
+                    "Invalid stateless position data for %s: %s",
                     pos.get("ticker"),
+                    type(exc).__name__,
                 )
-                buckets.hold.append(
-                    self._error_hold(ctx, f"Stop suggestion unavailable: {exc}")
+                evaluation_errors.append(
+                    DailyReviewPositionEvaluationError(
+                        symbol=str(pos.get("ticker", ""))
+                    )
                 )
                 continue
 
@@ -612,6 +593,7 @@ class DailyReviewService:
             positions_update_stop=positions_update,
             positions_close=positions_close,
             positions_exit_signal=positions_exit_signal,
+            evaluation_errors=evaluation_errors,
             summary=DailyReviewSummary(
                 total_positions=len(
                     [
@@ -627,6 +609,7 @@ class DailyReviewService:
                 new_candidates=len(new_candidates),
                 add_on_candidates=len(add_on_candidates),
                 watchlist_near_trigger=0,
+                evaluation_error_count=len(evaluation_errors),
                 review_date=date.today(),
             ),
         )

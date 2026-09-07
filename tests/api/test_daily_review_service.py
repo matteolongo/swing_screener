@@ -642,6 +642,55 @@ def test_generate_daily_review_survives_stop_suggestion_error(
     assert len(review.positions_close) == 1
 
 
+def test_generate_daily_review_reports_position_evaluation_error_separately(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    original_side_effect = mock_portfolio_service.suggest_position_stop.side_effect
+
+    def side_effect(position_id: str):
+        if position_id == "pos2":
+            raise UpstreamError("provider token=secret failed")
+        return original_side_effect(position_id)
+
+    mock_portfolio_service.suggest_position_stop.side_effect = side_effect
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
+    review = service.generate_daily_review(top_n=10)
+
+    assert [error.model_dump() for error in review.evaluation_errors] == [
+        {
+            "symbol": "GOOGL",
+            "code": "position_evaluation_failed",
+            "message": "Position evaluation could not be completed.",
+        }
+    ]
+    assert [position.ticker for position in review.positions_hold] == ["NVDA"]
+    assert [position.ticker for position in review.positions_close] == ["TSLA"]
+    assert review.summary.total_positions == 3
+    assert review.summary.evaluation_error_count == 1
+    assert review.summary.no_action == 1
+
+
+def test_generate_daily_review_propagates_unexpected_evaluator_failure(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    mock_portfolio_service.suggest_position_stop.side_effect = RuntimeError(
+        "broken invariant"
+    )
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
+    with pytest.raises(RuntimeError, match="broken invariant"):
+        service.generate_daily_review(top_n=10)
+
+
 def test_compute_daily_review_from_state_uses_client_payload(
     mock_screener_service,
     mock_portfolio_service,

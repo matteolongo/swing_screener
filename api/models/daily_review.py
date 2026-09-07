@@ -111,6 +111,14 @@ class DailyReviewPositionExitSignal(BaseModel):
     reason: str = Field(..., description="Human-readable reason for the signal")
 
 
+class DailyReviewPositionEvaluationError(BaseModel):
+    """Sanitized failure produced while evaluating one position."""
+
+    symbol: str
+    code: Literal["position_evaluation_failed"] = "position_evaluation_failed"
+    message: str = "Position evaluation could not be completed."
+
+
 class DailyReviewSummary(BaseModel):
     """Summary statistics for the daily review."""
 
@@ -122,6 +130,7 @@ class DailyReviewSummary(BaseModel):
     new_candidates: int
     add_on_candidates: int = 0
     watchlist_near_trigger: int = 0
+    evaluation_error_count: int = 0
     review_date: date
 
 
@@ -147,6 +156,9 @@ class DailyReview(BaseModel):
     positions_update_stop: list[DailyReviewPositionUpdate]
     positions_close: list[DailyReviewPositionClose]
     positions_exit_signal: list[DailyReviewPositionExitSignal] = Field(
+        default_factory=list
+    )
+    evaluation_errors: list[DailyReviewPositionEvaluationError] = Field(
         default_factory=list
     )
     summary: DailyReviewSummary
