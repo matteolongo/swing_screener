@@ -73,6 +73,8 @@ class ScreenerCandidate(BaseModel):
     score: float
     confidence: float
     rank: int
+    technical_rank: Optional[int] = None
+    confidence_rank: Optional[int] = None
     priority_rank: Optional[int] = None
     fundamentals_coverage_status: Optional[str] = None
     fundamentals_freshness_status: Optional[str] = None

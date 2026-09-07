@@ -8,8 +8,8 @@ export type DecisionActionFilter = 'all' | DecisionAction;
 export function prioritizeCandidates(candidates: ScreenerCandidate[]): ScreenerCandidate[] {
   return [...candidates]
     .sort((left, right) => {
-      const leftRank = left.priorityRank ?? left.rank;
-      const rightRank = right.priorityRank ?? right.rank;
+      const leftRank = left.priorityRank ?? left.technicalRank ?? left.rank;
+      const rightRank = right.priorityRank ?? right.technicalRank ?? right.rank;
       if (leftRank !== rightRank) {
         return leftRank - rightRank;
       }
