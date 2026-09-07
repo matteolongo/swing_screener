@@ -2,65 +2,93 @@
 
 from __future__ import annotations
 
-from dataclasses import replace, asdict, dataclass, field
-from typing import Optional
 import datetime as dt
-from datetime import datetime
 import logging
 import math
 import os
+from dataclasses import asdict, dataclass, field, replace
+from datetime import datetime
+from typing import Optional
 
 import pandas as pd
-from swing_screener.errors import (
-    DomainError,
-    NotFoundError,
-    ValidationError,
-    UnprocessableError,
-    ServiceError,
-)
 
+from api.models.portfolio import Position
+from api.models.recommendation import Recommendation
 from api.models.screener import (
+    CandlePatternOut,
+    ScreenerCandidate,
     ScreenerRequest,
+    ScreenerResponse,
     ScreenerRunLaunchResponse,
     ScreenerRunStatusResponse,
-    ScreenerResponse,
-    ScreenerCandidate,
-    CandlePatternOut,
 )
-from api.models.recommendation import Recommendation
-from api.models.portfolio import Position
-from api.services.portfolio_service import PortfolioService
+from api.repositories.config_repo import ConfigRepository
+from api.repositories.strategy_repo import StrategyRepository
+from api.services.decision_context import (
+    apply_cached_fundamentals_context,
+    apply_decision_priority_ranking,
+    apply_decision_summary_context,
+    load_fundamentals_snapshots,
+)
 from api.services.order_approval_token import (
     ApprovalTokenClaims,
     OrderApprovalTokenSigner,
     strategy_revision,
 )
+from api.services.portfolio_service import PortfolioService
 from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
-from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
-from swing_screener.indicators.candles import detect_patterns, CandleConfig
-from swing_screener.execution.guidance import apply_pattern_stop, ExecutionConfig
-from api.repositories.strategy_repo import StrategyRepository
-from api.repositories.config_repo import ConfigRepository
 from api.services.screener_fx import resolve_fx_conversion
+from api.services.screener_run_manager import get_screener_run_manager
+from api.utils.converters import to_iso as _to_iso
+from swing_screener.data import sector_rotation
+from swing_screener.data.currency import detect_currency
+from swing_screener.data.price_history import (
+    aligned_benchmark_price_history,
+    last_bar_map,
+    merge_ohlcv,
+    price_history_change_pct,
+    price_history_map,
+)
+from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
+from swing_screener.data.providers.base import MarketDataCachePolicy
+from swing_screener.data.symbol_pool import deserialize_pool, filter_pool_by_taxonomy
+from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.data.universe import (
     filter_tickers_by_metadata,
     get_instrument_record,
     get_universe_benchmark,
 )
-from swing_screener.data.symbol_pool import deserialize_pool, filter_pool_by_taxonomy
-from swing_screener.data.providers import MarketDataProvider, get_market_data_provider
-from swing_screener.data.providers.base import MarketDataCachePolicy
-from swing_screener.data.currency import detect_currency
-from swing_screener.data.ticker_info import get_multiple_ticker_info
-from swing_screener.data import sector_rotation
-from swing_screener.reporting.report import ReportConfig, build_daily_report
-from swing_screener.reporting.concentration import sector_concentration_warnings
+from swing_screener.errors import (
+    DomainError,
+    NotFoundError,
+    ServiceError,
+    UnprocessableError,
+    ValidationError,
+)
+from swing_screener.execution.guidance import ExecutionConfig, apply_pattern_stop
 from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+from swing_screener.indicators.candles import CandleConfig, detect_patterns
+from swing_screener.recommendation import build_decision_summary
 from swing_screener.recommendation.priority import (
     CombinedPriorityConfig,
     compute_combined_priority,
 )
-from swing_screener.recommendation import build_decision_summary
+from swing_screener.reporting.concentration import sector_concentration_warnings
+from swing_screener.reporting.report import ReportConfig, build_daily_report
+from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
+from swing_screener.risk.position_sizing import RiskConfig
+from swing_screener.risk.regime import compute_regime_risk_multiplier
+from swing_screener.selection.entries import EntrySignalConfig
+from swing_screener.selection.eval_cache import EvalCache
+from swing_screener.selection.ranking import RankingConfig
+from swing_screener.selection.screening_window import (
+    latest_market_close_utc,
+    resolve_data_freshness,
+    resolve_default_asof_date,
+    resolve_fetch_start_date,
+    resolve_screening_currencies,
+)
+from swing_screener.selection.universe import UniverseConfig as SelectionUniverseConfig
 from swing_screener.settings import get_settings_manager
 from swing_screener.strategy.config import (
     build_entry_config,
@@ -68,40 +96,11 @@ from swing_screener.strategy.config import (
     build_risk_config,
     build_universe_config,
 )
-from swing_screener.risk.regime import compute_regime_risk_multiplier
-from api.utils.converters import to_iso as _to_iso
-from swing_screener.data.price_history import (
-    merge_ohlcv,
-    last_bar_map,
-    price_history_map,
-    price_history_change_pct,
-    aligned_benchmark_price_history,
-)
 from swing_screener.utils.coerce import (
     is_na_scalar,
     safe_float,
     safe_optional_float,
 )
-from api.services.decision_context import (
-    apply_cached_fundamentals_context,
-    apply_decision_priority_ranking,
-    apply_decision_summary_context,
-    load_fundamentals_snapshots,
-)
-from swing_screener.selection.universe import UniverseConfig as SelectionUniverseConfig
-from swing_screener.selection.ranking import RankingConfig
-from swing_screener.selection.entries import EntrySignalConfig
-from swing_screener.risk.position_sizing import RiskConfig
-from swing_screener.selection.eval_cache import EvalCache
-from swing_screener.selection.screening_window import (
-    resolve_screening_currencies,
-    resolve_default_asof_date,
-    resolve_data_freshness,
-    resolve_fetch_start_date,
-    latest_market_close_utc,
-)
-
-from api.services.screener_run_manager import get_screener_run_manager
 
 logger = logging.getLogger(__name__)
 
@@ -386,6 +385,7 @@ class _RunContext:
     portfolio_orders: list[dict] = field(default_factory=list)
     order_state_available: bool = True
     state_snapshot: PortfolioStateSnapshot | None = None
+    run_policy: "ScreenerRunPolicy" = field(default_factory=lambda: ScreenerRunPolicy())
 
 
 @dataclass(frozen=True)
@@ -394,6 +394,18 @@ class PortfolioStateSnapshot:
 
     positions: tuple[Position, ...]
     orders: tuple[dict, ...]
+
+
+@dataclass(frozen=True)
+class ScreenerRunPolicy:
+    """Controls side effects for one screener invocation."""
+
+    write_eval_cache: bool = True
+    write_review_artifacts: bool = True
+
+    @classmethod
+    def read_only(cls) -> "ScreenerRunPolicy":
+        return cls(write_eval_cache=False, write_review_artifacts=False)
 
 
 class ScreenerService:
@@ -811,6 +823,8 @@ class ScreenerService:
 
         Best-effort: a failure here never aborts the screen.
         """
+        if not ctx.run_policy.write_review_artifacts:
+            return
         try:
             from swing_screener.data.symbol_pool import load_symbol_pool_thresholds
 
@@ -971,6 +985,11 @@ class ScreenerService:
             ctx, ticker_info
         )
 
+        eval_cache = (
+            self._eval_cache
+            if ctx.run_policy.write_eval_cache
+            else self._eval_cache.read_only()
+        )
         results = build_daily_report(
             ctx.ohlcv,
             cfg=ctx.report_cfg,
@@ -978,13 +997,13 @@ class ScreenerService:
             sector_benchmark_returns=sector_benchmark_returns,
             account_to_quote_rates=account_to_quote_rates,
             quote_to_eur_rates=quote_to_eur_rates,
-            eval_cache=self._eval_cache,
+            eval_cache=eval_cache,
             asof_date=ctx.asof_str,
             force_refresh=bool(getattr(ctx.request, "force_refresh", False)),
             market_phase=ctx.data_freshness,
         )
         try:
-            self._eval_cache.prune()
+            eval_cache.prune()
         except Exception as exc:
             logger.debug("Eval cache prune failed (non-fatal): %s", exc)
         if results is None or results.empty:
@@ -1543,6 +1562,7 @@ class ScreenerService:
         request: ScreenerRequest,
         strategy_override: Optional[dict] = None,
         state_snapshot: PortfolioStateSnapshot | None = None,
+        run_policy: ScreenerRunPolicy | None = None,
     ) -> ScreenerResponse:
         try:
             ctx = _RunContext(
@@ -1551,6 +1571,7 @@ class ScreenerService:
                 account_currency=self._config_repo.get().risk.account_currency,
                 combined_priority_cfg=CombinedPriorityConfig(),
                 state_snapshot=state_snapshot,
+                run_policy=run_policy or ScreenerRunPolicy(),
             )
             requested_top = self._resolve_universe_and_window(ctx)
 

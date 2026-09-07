@@ -2,9 +2,11 @@
 
 from datetime import date
 from typing import Literal, Optional
+
 from pydantic import BaseModel, Field
-from api.models.recommendation import Recommendation
+
 from api.models.portfolio import Position
+from api.models.recommendation import Recommendation
 from api.models.screener import SameSymbolCandidateContext, TaxonomyFilter
 from api.models.strategy import Strategy
 from api.models.watchlist import WatchlistItemView
@@ -163,6 +165,21 @@ class DailyReview(BaseModel):
     )
     summary: DailyReviewSummary
     pending_orders_review: list[PendingOrderReview] = Field(default_factory=list)
+
+
+class DailyReviewSnapshotRequest(BaseModel):
+    """Explicit command to persist an already-computed daily review."""
+
+    review: DailyReview
+    strategy_name: str = Field(
+        default="default", min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"
+    )
+
+
+class DailyReviewSnapshotResponse(BaseModel):
+    """Acknowledgement for a persisted daily-review snapshot."""
+
+    saved: bool = True
 
 
 class DailyReviewComputeRequest(BaseModel):

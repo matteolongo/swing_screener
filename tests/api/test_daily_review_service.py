@@ -2,17 +2,18 @@
 
 from datetime import date, timedelta
 from unittest.mock import Mock
+
 import pytest
-from swing_screener.errors import UpstreamError
 
 from api.models.daily_review import DailyReview, PendingOrderReview
+from api.models.portfolio import Position, PositionsResponse, PositionUpdate
 from api.models.screener import (
-    ScreenerResponse,
-    ScreenerCandidate,
     SameSymbolCandidateContext,
+    ScreenerCandidate,
+    ScreenerResponse,
 )
-from api.models.portfolio import Position, PositionUpdate, PositionsResponse
 from api.services.daily_review_service import DailyReviewService
+from swing_screener.errors import UpstreamError
 from swing_screener.recommendation.models import DecisionSummary
 from swing_screener.strategy.storage import _default_strategy_payload
 
@@ -573,6 +574,43 @@ def test_generate_daily_review_no_candidates(mock_portfolio_service, tmp_path):
     assert review.summary.total_positions == 3
 
 
+def test_generate_daily_review_does_not_persist_snapshot_by_default(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    data_dir = tmp_path / "missing-data-dir"
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=data_dir
+    )
+    service._writer.save = Mock(side_effect=AssertionError("forbidden write"))
+
+    review = service.generate_daily_review(top_n=10)
+
+    assert isinstance(review, DailyReview)
+    assert not data_dir.exists()
+    service._writer.save.assert_not_called()
+    run_policy = mock_screener_service.run_screener.call_args.kwargs["run_policy"]
+    assert run_policy.write_eval_cache is False
+    assert run_policy.write_review_artifacts is False
+
+
+def test_save_daily_review_snapshot_performs_one_explicit_write(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+    review = service.generate_daily_review(top_n=10)
+    service._writer.save = Mock()
+
+    service.save_snapshot(review, "momentum")
+
+    service._writer.save.assert_called_once_with(review, "momentum")
+
+
 def test_generate_daily_review_includes_watchlist_near_trigger(
     mock_screener_service,
     mock_portfolio_service,
@@ -744,6 +782,8 @@ def test_compute_daily_review_from_state_uses_client_payload(
     assert args[0].top == 5
     assert args[0].universe == "usd_all"
     assert kwargs["strategy_override"] == strategy
+    assert kwargs["run_policy"].write_eval_cache is False
+    assert kwargs["run_policy"].write_review_artifacts is False
 
 
 def test_stateless_review_uses_client_orders_for_pending_review(

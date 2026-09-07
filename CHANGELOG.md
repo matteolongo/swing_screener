@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Daily-review computation is now read-only; snapshot persistence uses an
+  explicit atomic `POST /api/daily-review/snapshots` command, while stateless
+  review screens suppress evaluation-cache and review-queue writes.
+
 - Stateless daily reviews now use the request's position and order snapshot
   throughout pending-order and same-symbol screening instead of mixing it with
   persisted server state.

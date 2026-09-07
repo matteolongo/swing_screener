@@ -217,6 +217,25 @@ def test_prune_removes_old_files(tmp_path):
     assert cache._path("MSFT", "2026-06-16", "abc").exists()
 
 
+def test_read_only_cache_reuses_hits_without_writing_or_pruning(tmp_path):
+    writable = EvalCache(root=tmp_path)
+    identities = {"AAPL": _identity()}
+    writable.write(_records(["AAPL"]), identities=identities)
+    path = writable._path("AAPL", "2026-06-16", "abc")
+    old = time.time() - 25 * 3600
+    os.utime(path, (old, old))
+
+    read_only = writable.read_only()
+    hits, misses = read_only.split(["AAPL"], identities=identities)
+    read_only.write(_records(["MSFT"]), identities={"MSFT": _identity()})
+    read_only.prune(max_age_sec=24 * 3600)
+
+    assert misses == []
+    assert list(hits.index) == ["AAPL"]
+    assert path.exists()
+    assert not writable._path("MSFT", "2026-06-16", "abc").exists()
+
+
 def test_build_daily_report_reuses_only_exact_input_identity(tmp_path, monkeypatch):
     cache = EvalCache(root=tmp_path)
     calls = []
