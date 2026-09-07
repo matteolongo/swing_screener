@@ -98,6 +98,11 @@ structural target determines the validated reward-to-risk ratio. The separate
 replaces an independently sourced target. Missing or invalid structural targets
 remain non-actionable.
 
+Callers may also pass the resolved order state. `pending_order_exists` and
+`order_state_unavailable` both block the plan gate and produce the stable
+reasons `PENDING_ORDER_EXISTS` and `ORDER_STATE_UNAVAILABLE`, respectively.
+This prevents uncertain or duplicate entry state from becoming actionable.
+
 ## Execution Workflow Classification
 
 `recommendations/workflow.py` is the authoritative, deterministic classifier

@@ -148,6 +148,7 @@ def build_recommendation(
     currency: Optional[str] = None,
     account_currency: Optional[str] = None,
     account_to_quote_rate: Optional[float] = None,
+    order_state: str = "clear",
     thesis: Optional[dict] = None,  # Trade Thesis dictionary
 ) -> RecommendationPayload:
     if entry is None or not math.isfinite(entry) or entry <= 0:
@@ -268,8 +269,19 @@ def build_recommendation(
     risk_ok = not sizing_blocked and (
         risk_pct <= risk_pct_target + 1e-9 if risk_pct_target > 0 else False
     )
+    order_state_clear = order_state == "clear"
 
     checklist = [
+        ChecklistGate(
+            gate_name="order_state_clear",
+            passed=order_state_clear,
+            explanation=(
+                "No pending buy order exists for this symbol."
+                if order_state_clear
+                else "Order state blocks a new entry for this symbol."
+            ),
+            rule="R5",
+        ),
         ChecklistGate(
             gate_name="setup_qualified",
             passed=setup_qualified,
@@ -358,6 +370,27 @@ def build_recommendation(
 
     reasons_detailed: list[Reason] = []
     suggestions: list[str] = []
+
+    if order_state == "pending_order_exists":
+        reasons_detailed.append(
+            Reason(
+                code="PENDING_ORDER_EXISTS",
+                message="A pending buy order already exists for this symbol.",
+                severity="block",
+                rule="R5",
+            )
+        )
+        suggestions.append("Manage the existing order before considering a new entry.")
+    elif order_state != "clear":
+        reasons_detailed.append(
+            Reason(
+                code="ORDER_STATE_UNAVAILABLE",
+                message="Order state is unavailable, so a new entry cannot be evaluated safely.",
+                severity="block",
+                rule="R5",
+            )
+        )
+        suggestions.append("Restore order-state access before considering a new entry.")
 
     if not setup_qualified:
         reasons_detailed.append(
@@ -509,7 +542,13 @@ def build_recommendation(
     )
 
     plan_passed = (
-        data_current and stop_defined and tradable_size and risk_ok and rr_ok and fee_ok
+        order_state_clear
+        and data_current
+        and stop_defined
+        and tradable_size
+        and risk_ok
+        and rr_ok
+        and fee_ok
     )
     decision_gates = DecisionGateState(
         setup=DecisionGate(

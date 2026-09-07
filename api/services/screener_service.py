@@ -382,6 +382,8 @@ class _RunContext:
     benchmark_change_pct: float | None = None
     benchmark_last_bar: pd.Series | None = None
     pool_meta: dict = field(default_factory=dict)
+    portfolio_orders: list[dict] = field(default_factory=list)
+    order_state_available: bool = True
 
 
 class ScreenerService:
@@ -432,6 +434,37 @@ class ScreenerService:
                 )
             )
         self._available_providers = self._resolve_available_providers()
+
+    def _load_order_state(self, ctx: _RunContext) -> None:
+        """Load entry-order state once; repository failures block new entries."""
+
+        if self._orders_service is None:
+            ctx.portfolio_orders = []
+            ctx.order_state_available = True
+            return
+        try:
+            ctx.portfolio_orders = list(
+                self._orders_service.list_local_orders().get("orders", [])
+            )
+            ctx.order_state_available = True
+        except Exception as exc:  # noqa: BLE001 - any ledger failure must fail closed
+            logger.warning("Failed to load order state for screener: %s", exc)
+            ctx.portfolio_orders = []
+            ctx.order_state_available = False
+
+    @staticmethod
+    def _order_state_for_ticker(ctx: _RunContext, ticker: str) -> str:
+        if not ctx.order_state_available:
+            return "order_state_unavailable"
+        normalized = ticker.upper()
+        pending = any(
+            str(order.get("ticker") or "").upper() == normalized
+            and order.get("status") in {"pending", "submitted"}
+            and order.get("order_kind") == "entry"
+            for order in ctx.portfolio_orders
+            if isinstance(order, dict)
+        )
+        return "pending_order_exists" if pending else "clear"
 
     @staticmethod
     def _resolve_available_providers() -> set[str]:
@@ -1216,6 +1249,7 @@ class ScreenerService:
                 currency=currency,
                 account_currency=account_currency,
                 account_to_quote_rate=account_to_quote_rate,
+                order_state=self._order_state_for_ticker(ctx, ticker_str),
             )
             recommendation = Recommendation.model_validate(asdict(rec_payload))
             rec_risk = recommendation.risk
@@ -1357,16 +1391,7 @@ class ScreenerService:
         portfolio_closed = self._portfolio_service.list_positions(
             status="closed"
         ).positions
-        portfolio_orders: list = []
-        if self._orders_service is not None:
-            try:
-                portfolio_orders = self._orders_service.list_local_orders().get(
-                    "orders", []
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Failed to load orders for same-symbol evaluation: %s", exc
-                )
+        portfolio_orders = ctx.portfolio_orders
         same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
         same_symbol_suppressed_count = 0
         same_symbol_add_on_count = 0
@@ -1518,6 +1543,7 @@ class ScreenerService:
                     same_symbol_add_on_count=0,
                 )
 
+            self._load_order_state(ctx)
             candidates = self._build_candidates(ctx, results)
 
             candidates, same_symbol_suppressed_count, same_symbol_add_on_count = (

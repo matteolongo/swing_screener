@@ -52,6 +52,7 @@ def evaluate_recommendation(
     currency: Optional[str] = None,
     account_currency: Optional[str] = None,
     account_to_quote_rate: Optional[float] = None,
+    order_state: str = "clear",
 ) -> RecommendationPayload:
     """
     Evaluate recommendation with optional Trade Thesis generation.
@@ -144,5 +145,6 @@ def evaluate_recommendation(
         currency=currency,
         account_currency=account_currency,
         account_to_quote_rate=account_to_quote_rate,
+        order_state=order_state,
         thesis=thesis_dict,
     )

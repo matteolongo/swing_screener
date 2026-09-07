@@ -1,7 +1,51 @@
-import pandas as pd
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pandas as pd
+
 from swing_screener.data.price_history import price_history_map
+
+
+def test_screener_marks_existing_entry_order_as_non_actionable():
+    from api.services.screener_service import ScreenerService
+
+    ctx = SimpleNamespace(
+        order_state_available=True,
+        portfolio_orders=[
+            {
+                "ticker": "AAPL",
+                "status": "pending",
+                "order_kind": "entry",
+            }
+        ],
+    )
+
+    assert ScreenerService._order_state_for_ticker(ctx, "aapl") == (
+        "pending_order_exists"
+    )
+
+
+def test_screener_fails_closed_when_order_repository_is_unavailable(tmp_path):
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import (
+        ScreenerService,
+        _approval_claims_for_candidate,
+        _RunContext,
+    )
+
+    svc, _cache, _provider = _make_screener_service(tmp_path)
+    svc._orders_service = MagicMock()
+    svc._orders_service.list_local_orders.side_effect = OSError("orders unavailable")
+    ctx = _RunContext(request=ScreenerRequest(), strategy={})
+
+    svc._load_order_state(ctx)
+
+    assert ScreenerService._order_state_for_ticker(ctx, "AAPL") == (
+        "order_state_unavailable"
+    )
+    candidate = MagicMock()
+    candidate.recommendation.verdict = "NOT_RECOMMENDED"
+    assert _approval_claims_for_candidate(candidate, "strategy", "revision") is None
 
 
 def _ohlcv():
