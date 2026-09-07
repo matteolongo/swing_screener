@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Stateless daily reviews now use the request's position and order snapshot
+  throughout pending-order and same-symbol screening instead of mixing it with
+  persisted server state.
+
 - Daily reviews now report per-position evaluation failures in a typed,
   sanitized `evaluation_errors` collection and count instead of misclassifying
   them as successful hold actions.

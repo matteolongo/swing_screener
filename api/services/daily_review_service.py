@@ -20,10 +20,10 @@ from api.models.daily_review import (
     PendingOrderReview,
     TrimSuggestion,
 )
-from api.models.portfolio import PositionUpdate
+from api.models.portfolio import Position, PositionUpdate
 from api.models.screener import ScreenerRequest, TaxonomyFilter
 from api.repositories.orders_repo import OrdersRepository
-from api.services.screener_service import ScreenerService
+from api.services.screener_service import PortfolioStateSnapshot, ScreenerService
 from api.services.portfolio_service import PortfolioService
 from api.services.watchlist_service import WatchlistService
 from api.services.daily_review import DailyReviewWriter
@@ -274,6 +274,12 @@ class DailyReviewService:
             logger.exception("Unable to load pending orders for daily review")
             return []
 
+        return self._pending_orders_review(orders)
+
+    @classmethod
+    def _pending_orders_review(cls, orders: list[dict]) -> list[PendingOrderReview]:
+        """Classify pending entry orders from an explicit state snapshot."""
+
         today = date.today()
         result: list[PendingOrderReview] = []
         for order in orders:
@@ -287,7 +293,7 @@ class DailyReviewService:
                 days_pending = max((today - order_date).days, 0)
                 category: Literal["stale", "still_valid", "no_data"] = (
                     "stale"
-                    if days_pending >= self.STALE_DAYS_THRESHOLD
+                    if days_pending >= cls.STALE_DAYS_THRESHOLD
                     else "still_valid"
                 )
             except (ValueError, TypeError):
@@ -482,7 +488,12 @@ class DailyReviewService:
         include_candidates: bool = True,
     ) -> DailyReview:
         """Compute daily review from client-provided strategy/portfolio state."""
-        _ = orders  # Reserved for future order-aware categorization logic.
+        snapshot = PortfolioStateSnapshot(
+            positions=tuple(
+                Position.model_validate(position) for position in positions
+            ),
+            orders=tuple(dict(order) for order in orders),
+        )
 
         candidates = []
         if include_candidates:
@@ -506,7 +517,9 @@ class DailyReviewService:
                 currencies=filt_cfg.get("currencies"),
             )
             screener_result = self.screener.run_screener(
-                screener_request, strategy_override=strategy
+                screener_request,
+                strategy_override=strategy,
+                state_snapshot=snapshot,
             )
             candidates = screener_result.candidates[:top_n]
 
@@ -612,4 +625,5 @@ class DailyReviewService:
                 evaluation_error_count=len(evaluation_errors),
                 review_date=date.today(),
             ),
+            pending_orders_review=self._pending_orders_review(orders),
         )

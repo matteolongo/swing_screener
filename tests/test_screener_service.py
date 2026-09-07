@@ -48,6 +48,78 @@ def test_screener_fails_closed_when_order_repository_is_unavailable(tmp_path):
     assert _approval_claims_for_candidate(candidate, "strategy", "revision") is None
 
 
+def test_screener_uses_explicit_state_snapshot_without_reading_repositories(tmp_path):
+    from api.models.portfolio import Position
+    from api.models.screener import ScreenerCandidate, ScreenerRequest
+    from api.services.screener_service import (
+        PortfolioStateSnapshot,
+        ScreenerService,
+        _RunContext,
+    )
+    from swing_screener.risk.position_sizing import RiskConfig
+
+    svc, _cache, _provider = _make_screener_service(tmp_path)
+    svc._orders_service = MagicMock()
+    snapshot = PortfolioStateSnapshot(
+        positions=(
+            Position(
+                ticker="AAPL",
+                status="open",
+                entry_date="2026-09-01",
+                entry_price=100.0,
+                stop_price=95.0,
+                shares=10,
+            ),
+        ),
+        orders=(
+            {
+                "order_id": "CLIENT",
+                "ticker": "AAPL",
+                "status": "pending",
+                "order_kind": "entry",
+            },
+        ),
+    )
+    ctx = _RunContext(request=ScreenerRequest(), strategy={}, state_snapshot=snapshot)
+    ctx.risk_cfg = RiskConfig(
+        account_size=100000.0,
+        risk_pct=0.01,
+        max_position_pct=0.6,
+        min_shares=1,
+        k_atr=2.0,
+        min_rr=2.0,
+        max_fee_risk_pct=0.2,
+    )
+
+    svc._load_order_state(ctx)
+
+    assert ScreenerService._order_state_for_ticker(ctx, "AAPL") == (
+        "pending_order_exists"
+    )
+    svc._orders_service.list_local_orders.assert_not_called()
+
+    filtered, suppressed, _add_ons = svc._apply_same_symbol_filter(
+        ctx,
+        [
+            ScreenerCandidate(
+                ticker="AAPL",
+                close=101.0,
+                atr=2.0,
+                momentum_6m=0.1,
+                momentum_12m=0.2,
+                rel_strength=0.05,
+                score=0.8,
+                confidence=80.0,
+                rank=1,
+            )
+        ],
+    )
+
+    assert filtered == []
+    assert suppressed == 1
+    svc._portfolio_service.list_positions.assert_not_called()
+
+
 def _ohlcv():
     idx = pd.date_range("2024-01-01", periods=3, freq="B")
     cols = pd.MultiIndex.from_tuples(
