@@ -4,17 +4,22 @@ import json
 
 from fastapi import APIRouter, Depends, Query
 
-from api.models.daily_review import DailyReview, DailyReviewComputeRequest
+from api.dependencies import (
+    get_portfolio_service,
+    get_screener_service,
+    get_watchlist_service,
+)
+from api.models.daily_review import (
+    DailyReview,
+    DailyReviewComputeRequest,
+    DailyReviewSnapshotRequest,
+    DailyReviewSnapshotResponse,
+)
 from api.models.screener import TaxonomyFilter
 from api.services.daily_review_service import DailyReviewService
-from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
+from api.services.screener_service import ScreenerService
 from api.services.watchlist_service import WatchlistService
-from api.dependencies import (
-    get_watchlist_service,
-    get_screener_service,
-    get_portfolio_service,
-)
 
 router = APIRouter(prefix="/daily-review", tags=["daily-review"])
 
@@ -106,3 +111,13 @@ def compute_daily_review(
         taxonomy_filter=request.taxonomy_filter,
         include_candidates=request.include_candidates,
     )
+
+
+@router.post("/snapshots", response_model=DailyReviewSnapshotResponse, status_code=201)
+def save_daily_review_snapshot(
+    request: DailyReviewSnapshotRequest,
+    service: DailyReviewService = Depends(get_daily_review_service),
+) -> DailyReviewSnapshotResponse:
+    """Persist an explicitly supplied daily-review snapshot."""
+    service.save_snapshot(request.review, request.strategy_name)
+    return DailyReviewSnapshotResponse()

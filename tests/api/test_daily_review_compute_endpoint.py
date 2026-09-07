@@ -59,6 +59,9 @@ class StubDailyReviewService:
             ),
         )
 
+    def save_snapshot(self, review, strategy_name):
+        self.saved = (review, strategy_name)
+
 
 def test_daily_review_compute_endpoint():
     stub_service = StubDailyReviewService()
@@ -239,5 +242,28 @@ def test_daily_review_compute_normalizes_snapshot_order_fields():
         assert stub_service.received["orders"][0]["ticker"] == "AAPL"
         assert stub_service.received["orders"][0]["status"] == "pending"
         assert stub_service.received["orders"][0]["order_kind"] == "entry"
+    finally:
+        app.dependency_overrides.pop(get_daily_review_service, None)
+
+
+def test_daily_review_snapshot_endpoint_is_the_explicit_write_command():
+    stub_service = StubDailyReviewService()
+    app.dependency_overrides[get_daily_review_service] = lambda: stub_service
+    review = stub_service.compute_daily_review_from_state({}, [], [])
+
+    try:
+        response = TestClient(app).post(
+            "/api/daily-review/snapshots",
+            json={
+                "review": review.model_dump(mode="json"),
+                "strategy_name": "momentum",
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json() == {"saved": True}
+        saved_review, strategy_name = stub_service.saved
+        assert saved_review == review
+        assert strategy_name == "momentum"
     finally:
         app.dependency_overrides.pop(get_daily_review_service, None)

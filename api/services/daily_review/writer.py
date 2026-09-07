@@ -1,6 +1,9 @@
 """Persistence for daily review snapshots."""
+
 import json
 import logging
+import os
+import uuid
 from pathlib import Path
 
 from api.models.daily_review import DailyReview
@@ -22,7 +25,15 @@ class DailyReviewWriter:
 
         review_dict = review.model_dump(mode="json")
 
-        with open(filepath, "w") as f:
-            json.dump(review_dict, f, indent=2)
+        self.daily_reviews_dir.mkdir(parents=True, exist_ok=True)
+        temporary = filepath.with_name(f".{filepath.name}.tmp-{uuid.uuid4().hex}")
+        try:
+            with temporary.open("w", encoding="utf-8") as handle:
+                json.dump(review_dict, handle, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, filepath)
+        finally:
+            temporary.unlink(missing_ok=True)
 
         logger.info(f"Daily review saved to {filepath}")
