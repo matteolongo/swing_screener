@@ -53,7 +53,7 @@
 | 15 | Implemented; awaiting PR 14 | `codex/deprecate-usd-money-aliases` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/harden-position-sizing-inputs...codex/deprecate-usd-money-aliases?expand=1) |
 | 16 | Implemented; awaiting PR 15 | `codex/define-sector-concentration` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/deprecate-usd-money-aliases...codex/define-sector-concentration?expand=1) |
 | 17 | Implemented; awaiting PR 16 | `codex/remove-import-time-configs` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/define-sector-concentration...codex/remove-import-time-configs?expand=1) |
-| 18 | Not started | See subsystem plan | — |
+| 18 | Implemented; awaiting PR 17 | `codex/remove-dead-report-config-paths` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/remove-import-time-configs...codex/remove-dead-report-config-paths?expand=1) |
 
 ## Linear Stack Coordinator Checklist
 
