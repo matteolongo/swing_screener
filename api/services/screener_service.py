@@ -65,7 +65,7 @@ from swing_screener.errors import (
     UnprocessableError,
     ValidationError,
 )
-from swing_screener.execution.guidance import ExecutionConfig, apply_pattern_stop
+from swing_screener.execution.guidance import apply_pattern_stop
 from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
 from swing_screener.indicators.candles import CandleConfig, detect_patterns
 from swing_screener.recommendation import build_decision_summary
@@ -1134,7 +1134,7 @@ class ScreenerService:
         # Build price history only for candidate tickers to improve performance
         price_history_by_ticker = price_history_map(ohlcv, tickers=ticker_list)
         patterns_map = detect_patterns(ohlcv, tickers=ticker_list, cfg=CandleConfig())
-        exec_cfg = ExecutionConfig()
+        exec_cfg = ctx.report_cfg.execution
         benchmark_history = price_history_map(ohlcv, tickers=[benchmark]).get(
             benchmark, []
         )

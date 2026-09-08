@@ -51,6 +51,10 @@ cfg = ExecutionConfig(
 report = add_execution_guidance(screener_df, cfg)
 ```
 
+When `cfg` is omitted, `add_execution_guidance()` constructs a fresh
+YAML-backed `ExecutionConfig` at call time. Report generation passes its
+request-scoped `ReportConfig.execution` instance explicitly.
+
 ## Files
 
 | File | Purpose |

@@ -2,22 +2,22 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 import pandas as pd
 
-from swing_screener.strategy.report_config import ReportConfig
+from swing_screener.execution.guidance import add_execution_guidance
+from swing_screener.indicators.setup_quality import compute_setup_quality
+from swing_screener.risk.position_sizing import build_trade_plans
+from swing_screener.selection.entries import build_signal_board
 from swing_screener.selection.eval_cache import (
     build_evaluation_cache_identities,
     strategy_signature,
 )
 from swing_screener.selection.ranking import top_candidates
 from swing_screener.selection.universe import build_universe
-from swing_screener.selection.entries import build_signal_board
-from swing_screener.indicators.setup_quality import compute_setup_quality
-from swing_screener.risk.position_sizing import build_trade_plans
-from swing_screener.execution.guidance import add_execution_guidance
+from swing_screener.strategy.report_config import ReportConfig
 
 # Marker column persisted in the per-symbol records frame holding the JSON list
 # of universe feature-table columns. Ranking must run only on those columns so
@@ -323,7 +323,7 @@ def build_momentum_report(
             ["signal_order", "score"], ascending=[True, False]
         ).drop(columns=["signal_order"])
 
-    report = add_execution_guidance(report)
+    report = add_execution_guidance(report, cfg.execution)
     return report
 
 
@@ -334,7 +334,7 @@ class MomentumStrategyModule:
     def build_report(
         self,
         ohlcv: pd.DataFrame,
-        cfg: ReportConfig = ReportConfig(),
+        cfg: ReportConfig | None = None,
         exclude_tickers: Iterable[str] | None = None,
         sector_benchmark_returns: dict[str, float] | None = None,
         eval_cache=None,
@@ -344,6 +344,7 @@ class MomentumStrategyModule:
         account_to_quote_rates: dict[str, float] | None = None,
         quote_to_eur_rates: dict[str, float] | None = None,
     ) -> pd.DataFrame:
+        cfg = cfg or ReportConfig()
         if eval_cache is None or asof_date is None:
             return build_momentum_report(
                 ohlcv,

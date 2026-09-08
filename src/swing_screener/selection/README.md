@@ -121,6 +121,9 @@ class EntrySignalConfig:
 
 Signal values: `"breakout"`, `"pullback"`, `"both"`, `"none"`.
 
+Public selection functions accept `cfg=None` and construct their YAML-backed
+defaults at call time; they never retain a config instance created at import.
+
 Breakout evaluation requires exactly `breakout_lookback + 1` closes: the final
 close is the current comparison bar and is excluded from the preceding-high
 window. Pullback reclaim requires exactly `pullback_ma + 1` closes so both the
