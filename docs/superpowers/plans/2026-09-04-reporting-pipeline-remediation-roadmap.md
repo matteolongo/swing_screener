@@ -55,6 +55,26 @@
 | 17 | Implemented; awaiting PR 16 | `codex/remove-import-time-configs` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/define-sector-concentration...codex/remove-import-time-configs?expand=1) |
 | 18 | Implemented; awaiting PR 17 | `codex/remove-dead-report-config-paths` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/remove-import-time-configs...codex/remove-dead-report-config-paths?expand=1) |
 
+## Final Stack Audit — 2026-09-08
+
+- All 18 implementation branches are present on `origin` and form the planned
+  linear ancestry. Every stacked comparison contains exactly one root-cause
+  commit, a non-empty diff, and no `git diff --check` errors.
+- The combined tip is `365a3de2` on
+  `codex/remove-dead-report-config-paths`. Web UI verification passed with
+  `npm run typecheck`, 930 tests, and `npm run build`.
+- Backend verification completed with 1,644 passing tests and 7 skips. The six
+  remaining failures reproduce the pre-existing Windows baseline: two
+  backtest-worker timeouts, two screener-worker timeouts, runtime path separator
+  normalization, and concurrent file locking.
+- `python scripts/check_release_version.py` passed for version `3.0.0`.
+  Repository-wide `ruff check .` remains blocked by the pre-existing lint
+  backlog (1,632 findings); remediation PRs were linted on their focused changed
+  surfaces during implementation.
+- Documentation was searched for the superseded silent-FX, unchanged
+  pattern-stop-share, implicit-USD-fallback, and write-free-computation claims;
+  none remain.
+
 ## Linear Stack Coordinator Checklist
 
 - [ ] **Step 1: Build and merge PRs 1–3**
