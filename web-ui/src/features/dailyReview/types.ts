@@ -161,10 +161,10 @@ export interface DailyReviewCandidate {
   momentum6m?: number;
   momentum12m?: number;
   relStrength?: number;
-  entry?: number;
-  stop?: number;
-  shares?: number;
-  rReward?: number;
+  entry: number | null;
+  stop: number | null;
+  shares: number | null;
+  rReward: number | null;
   name: string | null;
   sector: string | null;
   volumeRatio?: number;
@@ -198,10 +198,10 @@ export function dailyReviewCandidateFromScreener(candidate: ScreenerCandidate): 
     momentum6m: candidate.momentum6m,
     momentum12m: candidate.momentum12m,
     relStrength: candidate.relStrength,
-    entry: candidate.entry,
-    stop: candidate.stop,
-    shares: candidate.shares,
-    rReward: candidate.rr,
+    entry: candidate.entry ?? null,
+    stop: candidate.stop ?? null,
+    shares: candidate.shares ?? null,
+    rReward: candidate.rr ?? null,
     name: candidate.name ?? null,
     sector: candidate.sector ?? null,
     volumeRatio: candidate.volumeRatio,
@@ -322,10 +322,10 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
     momentum6m: api.momentum_6m ?? undefined,
     momentum12m: api.momentum_12m ?? undefined,
     relStrength: api.rel_strength ?? undefined,
-    entry: api.entry ?? undefined,
-    stop: api.stop ?? undefined,
-    shares: api.shares ?? undefined,
-    rReward: api.r_reward ?? undefined,
+    entry: api.entry,
+    stop: api.stop,
+    shares: api.shares,
+    rReward: api.r_reward,
     name: api.name,
     sector: api.sector,
     volumeRatio: api.volume_ratio ?? undefined,

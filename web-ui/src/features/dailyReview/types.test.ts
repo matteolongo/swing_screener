@@ -15,7 +15,7 @@ import {
 import type { ScreenerCandidate } from '@/features/screener/types';
 
 describe('Daily Review nullable candidate plans', () => {
-  it('preserves a missing saved-screener plan as unavailable', () => {
+  it('preserves a missing saved-screener plan as explicit nulls', () => {
     const candidate: ScreenerCandidate = {
       ticker: 'AAPL',
       currency: 'USD',
@@ -34,13 +34,13 @@ describe('Daily Review nullable candidate plans', () => {
 
     const result = dailyReviewCandidateFromScreener(candidate);
 
-    expect(result.entry).toBeUndefined();
-    expect(result.stop).toBeUndefined();
-    expect(result.shares).toBeUndefined();
-    expect(result.rReward).toBeUndefined();
+    expect(result.entry).toBeNull();
+    expect(result.stop).toBeNull();
+    expect(result.shares).toBeNull();
+    expect(result.rReward).toBeNull();
   });
 
-  it('transforms null API plan values to unavailable domain values', () => {
+  it('preserves null API plan values in the domain model', () => {
     const candidate: DailyReviewCandidateAPI = {
       ticker: 'AAPL',
       signal: 'UNKNOWN',
@@ -55,10 +55,10 @@ describe('Daily Review nullable candidate plans', () => {
 
     const result = transformCandidate(candidate);
 
-    expect(result.entry).toBeUndefined();
-    expect(result.stop).toBeUndefined();
-    expect(result.shares).toBeUndefined();
-    expect(result.rReward).toBeUndefined();
+    expect(result.entry).toBeNull();
+    expect(result.stop).toBeNull();
+    expect(result.shares).toBeNull();
+    expect(result.rReward).toBeNull();
   });
 });
 
