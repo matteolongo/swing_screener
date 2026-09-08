@@ -3,8 +3,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
-from api.models.screener import SameSymbolCandidateContext
+from api.models.screener import ExecutionEligibilityOut, SameSymbolCandidateContext
 from api.services.order_approval import resolve_execution_eligibility
 from api.services.screener_service import _approval_claims_for_candidate
 
@@ -341,3 +342,33 @@ def test_pre_token_eligibility_does_not_require_approval_identity():
     assert eligibility.reason is None
     assert draft is not None
     assert draft.approval_token is None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param(
+            {"allowed": True, "mode": None, "reason": None},
+            id="allowed-without-mode",
+        ),
+        pytest.param(
+            {"allowed": True, "mode": "ready", "reason": "plan_invalid"},
+            id="allowed-with-reason",
+        ),
+        pytest.param(
+            {
+                "allowed": False,
+                "mode": "pending_pullback",
+                "reason": "workflow_not_actionable",
+            },
+            id="blocked-with-mode",
+        ),
+        pytest.param(
+            {"allowed": False, "mode": None, "reason": None},
+            id="blocked-without-reason",
+        ),
+    ],
+)
+def test_execution_eligibility_rejects_contradictory_discriminator_states(payload):
+    with pytest.raises(ValidationError):
+        ExecutionEligibilityOut.model_validate(payload)

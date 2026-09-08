@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from api.models.recommendation import Recommendation
 from swing_screener.data.currencies import supported_currency_codes
@@ -52,6 +52,14 @@ class ExecutionEligibilityOut(BaseModel):
     allowed: bool
     mode: ExecutionEligibilityMode | None = None
     reason: ExecutionEligibilityReason | None = None
+
+    @model_validator(mode="after")
+    def validate_discriminator(self) -> "ExecutionEligibilityOut":
+        if self.allowed and (self.mode is None or self.reason is not None):
+            raise ValueError("allowed eligibility requires mode and forbids reason")
+        if not self.allowed and (self.reason is None or self.mode is not None):
+            raise ValueError("blocked eligibility requires reason and forbids mode")
+        return self
 
 
 class CanonicalOrderDraftOut(BaseModel):
