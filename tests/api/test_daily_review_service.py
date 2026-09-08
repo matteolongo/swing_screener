@@ -12,7 +12,10 @@ from api.models.screener import (
     ScreenerCandidate,
     ScreenerResponse,
 )
-from api.services.daily_review_service import DailyReviewService
+from api.services.daily_review_service import (
+    DailyReviewService,
+    to_daily_review_candidate,
+)
 from swing_screener.errors import UpstreamError
 from swing_screener.recommendation.models import DecisionSummary
 from swing_screener.strategy.storage import _default_strategy_payload
@@ -192,6 +195,27 @@ def mock_portfolio_service():
     service.suggest_position_stop.side_effect = mock_suggest_stop
 
     return service
+
+
+def test_to_daily_review_candidate_preserves_missing_plan_values():
+    candidate = ScreenerCandidate(
+        ticker="AAPL",
+        close=150.0,
+        atr=2.5,
+        momentum_6m=0.15,
+        momentum_12m=0.25,
+        rel_strength=1.2,
+        score=85.0,
+        confidence=0.9,
+        rank=1,
+    )
+
+    daily_review_candidate = to_daily_review_candidate(candidate)
+
+    assert daily_review_candidate.entry is None
+    assert daily_review_candidate.stop is None
+    assert daily_review_candidate.shares is None
+    assert daily_review_candidate.r_reward is None
 
 
 def test_generate_daily_review_basic(

@@ -31,10 +31,10 @@ class DailyReviewCandidate(BaseModel):
     momentum_6m: float | None = None
     momentum_12m: float | None = None
     rel_strength: float | None = None
-    entry: float
-    stop: float
-    shares: int
-    r_reward: float = Field(..., description="Potential reward in R-multiples")
+    entry: float | None
+    stop: float | None
+    shares: int | None
+    r_reward: float | None = Field(..., description="Potential reward in R-multiples")
     name: str | None = None
     sector: str | None = None
     suggested_order_type: Optional[str] = None
