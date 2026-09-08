@@ -1398,10 +1398,30 @@ class ScreenerService:
                     shares=rec_risk.shares,
                     quote_currency=currency,
                     account_currency=account_currency,
+                    entry_quote=rec_risk.entry,
+                    stop_quote=rec_risk.stop if stop_val is not None else None,
+                    target_quote=rec_risk.target,
+                    risk_per_share_quote=(
+                        abs(rec_risk.entry - rec_risk.stop)
+                        if rec_risk.stop is not None
+                        else None
+                    ),
                     position_size_quote=rec_risk.position_size,
                     risk_quote=rec_risk.risk_amount,
-                    position_size_usd=rec_risk.position_size,
-                    risk_usd=rec_risk.risk_amount,
+                    position_size_account=(
+                        rec_risk.position_size_account
+                        if rec_risk.account_to_quote_rate is not None
+                        else None
+                    ),
+                    risk_account=(
+                        rec_risk.risk_amount_account
+                        if rec_risk.account_to_quote_rate is not None
+                        else None
+                    ),
+                    position_size_usd=(
+                        rec_risk.position_size if currency == "USD" else None
+                    ),
+                    risk_usd=rec_risk.risk_amount if currency == "USD" else None,
                     risk_pct=rec_risk.risk_pct,
                     recommendation=recommendation,
                     price_history=price_history_by_ticker.get(ticker_str, []),

@@ -132,6 +132,18 @@ describe('transformScreenerResponse', () => {
           fundamentals_freshness_status: 'current',
           fundamentals_summary: 'Growth metrics are supportive.',
           signal: 'breakout',
+          quote_currency: 'USD',
+          account_currency: 'EUR',
+          entry_quote: 100,
+          stop_quote: 96,
+          target_quote: 108,
+          risk_per_share_quote: 4,
+          position_size_quote: 1000,
+          risk_quote: 40,
+          position_size_account: 800,
+          risk_account: 32,
+          position_size_usd: 1000,
+          risk_usd: 40,
           days_to_earnings: 12,
           dist_52w_high_pct: -0.03,
           near_52w_high: true,
@@ -190,6 +202,18 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].priorityRank).toBe(1);
     expect(result.candidates[0].fundamentalsCoverageStatus).toBe('supported');
     expect(result.candidates[0].fundamentalsSummary).toBe('Growth metrics are supportive.');
+    expect(result.candidates[0]).toMatchObject({
+      quoteCurrency: 'USD',
+      accountCurrency: 'EUR',
+      entryQuote: 100,
+      stopQuote: 96,
+      targetQuote: 108,
+      riskPerShareQuote: 4,
+      positionSizeQuote: 1000,
+      riskQuote: 40,
+      positionSizeAccount: 800,
+      riskAccount: 32,
+    });
     expect(result.candidates[0].sectorRs).toBe(0.04);
     expect(result.candidates[0].daysToEarnings).toBe(12);
     expect(result.candidates[0].dist52wHighPct).toBe(-0.03);

@@ -22,7 +22,7 @@ export interface CandidateViewModel {
   entry: number | null;
   stop: number | null;
   rr: number | null;
-  riskUsd: number | null;
+  riskAccount: number | null;
   
   // Advanced metrics
   score: number;
@@ -57,7 +57,7 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
   const entry = candidate.entry ?? null;
   const stop = candidate.recommendation?.risk?.stop ?? candidate.stop ?? null;
   const rr = candidate.recommendation?.risk?.rr ?? candidate.rr ?? null;
-  const riskUsd = candidate.recommendation?.risk?.riskAmount ?? candidate.riskUsd ?? null;
+  const riskAccount = candidate.riskAccount ?? null;
   
   // Fix recommendations
   const fixes = candidate.recommendation?.education?.whatWouldMakeValid ?? [];
@@ -80,7 +80,7 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
     entry,
     stop,
     rr,
-    riskUsd,
+    riskAccount,
     
     // Advanced metrics
     score: candidate.score,

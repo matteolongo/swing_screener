@@ -465,12 +465,28 @@ class SameSymbolReentryEvaluator:
         )
         candidate.recommendation = adjusted_recommendation
         candidate.stop = _safe_round(current_stop)
+        candidate.stop_quote = candidate.stop
+        candidate.risk_per_share_quote = _safe_round(
+            abs(adjusted_recommendation.risk.entry - current_stop)
+        )
         candidate.rr = adjusted_recommendation.risk.rr
         candidate.risk_quote = adjusted_recommendation.risk.risk_amount
-        candidate.risk_usd = adjusted_recommendation.risk.risk_amount
+        candidate.risk_account = adjusted_recommendation.risk.risk_amount_account
+        candidate.risk_usd = (
+            adjusted_recommendation.risk.risk_amount
+            if candidate.quote_currency == "USD"
+            else None
+        )
         candidate.risk_pct = adjusted_recommendation.risk.risk_pct
         candidate.position_size_quote = adjusted_recommendation.risk.position_size
-        candidate.position_size_usd = adjusted_recommendation.risk.position_size
+        candidate.position_size_account = (
+            adjusted_recommendation.risk.position_size_account
+        )
+        candidate.position_size_usd = (
+            adjusted_recommendation.risk.position_size
+            if candidate.quote_currency == "USD"
+            else None
+        )
         candidate.shares = adjusted_recommendation.risk.shares
         context.mode = "SCALE_BACK" if has_partial_closes else "ADD_ON"
         reason_prefix = (

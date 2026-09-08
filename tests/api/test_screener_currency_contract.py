@@ -8,10 +8,10 @@ from fastapi.testclient import TestClient
 
 from api.dependencies import get_portfolio_service
 from api.main import app
-import api.services.screener_service as screener_service
+from api.services import screener_service
+from api.services.screener_fx import resolve_fx_conversion
 from swing_screener.data.providers import MarketDataProvider
 from swing_screener.data.source_health import DataSourceHealth
-from api.services.screener_fx import resolve_fx_conversion
 
 
 def test_fx_resolver_handles_identity_direct_and_inverse_rates():
@@ -139,16 +139,42 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(
     eur = candidates["ABN.AS"]
     assert eur["quote_currency"] == "EUR"
     assert eur["account_currency"] == "EUR"
+    assert eur["entry_quote"] == 35.42
+    assert eur["stop_quote"] == 34.0
+    assert eur["target_quote"] == eur["recommendation"]["risk"]["target"]
+    assert eur["risk_per_share_quote"] == pytest.approx(1.42)
     assert eur["position_size_quote"] == eur["recommendation"]["risk"]["position_size"]
     assert eur["risk_quote"] == eur["recommendation"]["risk"]["risk_amount"]
+    assert (
+        eur["position_size_account"]
+        == eur["recommendation"]["risk"]["position_size_account"]
+    )
+    assert eur["risk_account"] == eur["recommendation"]["risk"]["risk_amount_account"]
+    assert eur["position_size_usd"] is None
+    assert eur["risk_usd"] is None
     assert eur["recommendation"]["risk"]["currency"] == "EUR"
     assert eur["recommendation"]["risk"]["account_currency"] == "EUR"
 
     usd = candidates["AAPL"]
     assert usd["quote_currency"] == "USD"
     assert usd["account_currency"] == "EUR"
+    assert usd["entry_quote"] == 181.0
+    assert usd["stop_quote"] == 177.0
+    assert usd["target_quote"] == usd["recommendation"]["risk"]["target"]
+    assert usd["risk_per_share_quote"] == 4.0
     assert usd["position_size_quote"] == usd["recommendation"]["risk"]["position_size"]
     assert usd["risk_quote"] == usd["recommendation"]["risk"]["risk_amount"]
+    assert (
+        usd["position_size_account"]
+        == usd["recommendation"]["risk"]["position_size_account"]
+    )
+    assert usd["position_size_account"] == pytest.approx(
+        usd["position_size_quote"] / 1.25
+    )
+    assert usd["risk_account"] == usd["recommendation"]["risk"]["risk_amount_account"]
+    assert usd["risk_account"] == pytest.approx(usd["risk_quote"] / 1.25)
+    assert usd["position_size_usd"] == usd["position_size_quote"]
+    assert usd["risk_usd"] == usd["risk_quote"]
     assert usd["risk_pct"] == usd["recommendation"]["risk"]["risk_pct"]
     assert usd["recommendation"]["risk"]["currency"] == "USD"
     assert usd["recommendation"]["risk"]["account_currency"] == "EUR"
@@ -217,6 +243,8 @@ def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(
     assert candidate["quote_currency"] == "USD"
     assert candidate["account_currency"] == "EUR"
     assert candidate["risk_quote"] == 0.0
+    assert candidate["position_size_account"] is None
+    assert candidate["risk_account"] is None
     assert candidate["risk_pct"] == 0.0
     risk = candidate["recommendation"]["risk"]
     assert risk["account_to_quote_rate"] is None
@@ -225,3 +253,10 @@ def test_screener_candidate_does_not_derive_risk_pct_from_quote_risk_without_fx(
         reason["code"] for reason in candidate["recommendation"]["reasons_detailed"]
     }
     assert "FX_RATE_MISSING" in reason_codes
+
+
+def test_legacy_usd_candidate_fields_are_marked_deprecated_in_openapi():
+    candidate_schema = app.openapi()["components"]["schemas"]["ScreenerCandidate"]
+
+    assert candidate_schema["properties"]["position_size_usd"]["deprecated"] is True
+    assert candidate_schema["properties"]["risk_usd"]["deprecated"] is True
