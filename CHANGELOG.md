@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Entry signals now use explicit inclusive history windows: breakouts compare
+  the current close with exactly the prior lookback, and pullback moving
+  averages include exactly their configured number of closes.
+
 - OHLCV frames are now validated and normalized once at public ingestion
   boundaries, with deterministic ascending dates, last-row duplicate-date
   handling, and explicit errors for malformed columns or missing closes.

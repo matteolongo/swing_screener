@@ -114,12 +114,18 @@ Equal scores use the ticker as the deterministic ascending tie-breaker.
 ```python
 @dataclass(frozen=True)
 class EntrySignalConfig:
-    breakout_lookback: int = 50    # bars: close > max(close[-50:-1])
-    pullback_ma:       int = 20    # bars: SMA20 for pullback-reclaim
+    breakout_lookback: int = 50    # prior comparison bars; current bar is additional
+    pullback_ma:       int = 20    # closes per moving average; current bar included
     min_history:       int = 260   # minimum bars of history required (~1 year)
 ```
 
 Signal values: `"breakout"`, `"pullback"`, `"both"`, `"none"`.
+
+Breakout evaluation requires exactly `breakout_lookback + 1` closes: the final
+close is the current comparison bar and is excluded from the preceding-high
+window. Pullback reclaim requires exactly `pullback_ma + 1` closes so both the
+yesterday-ending and current-ending moving averages contain `pullback_ma`
+observations. Shorter histories return the existing insufficient-history result.
 
 ## Output
 
