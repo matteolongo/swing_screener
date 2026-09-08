@@ -933,7 +933,7 @@ def test_screener_anchors_entry_stop_to_structural_pattern_stop(monkeypatch):
         assert candidate["recommendation"]["risk"]["stop"] == 22.20
         assert candidate["pattern_stop"] == 22.20
         # Share count is unchanged; risk is recomputed from the tighter stop.
-        assert candidate["risk_usd"] == pytest.approx(
+        assert candidate["risk_quote"] == pytest.approx(
             (candidate["entry"] - candidate["stop"]) * candidate["shares"], abs=1e-6
         )
     finally:

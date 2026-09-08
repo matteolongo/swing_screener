@@ -39,7 +39,7 @@ describe('screener viewModel', () => {
       expect(vm.entry).toBeNull();
       expect(vm.stop).toBeNull();
       expect(vm.rr).toBeNull();
-      expect(vm.riskUsd).toBeNull();
+      expect(vm.riskAccount).toBeNull();
       expect(vm.fundamentalsCoverageStatus).toBe('supported');
       expect(vm.fundamentalsSummary).toBe('Growth metrics are supportive.');
     });
@@ -50,7 +50,7 @@ describe('screener viewModel', () => {
         entry: 180.0,
         stop: 175.0,
         rr: 2.5,
-        riskUsd: 500,
+        riskAccount: 500,
       };
       
       const vm = toCandidateViewModel(candidate);
@@ -58,7 +58,7 @@ describe('screener viewModel', () => {
       expect(vm.entry).toBe(180.0);
       expect(vm.stop).toBe(175.0);
       expect(vm.rr).toBe(2.5);
-      expect(vm.riskUsd).toBe(500);
+      expect(vm.riskAccount).toBe(500);
     });
 
     it('prefers recommendation.risk fields over candidate fields', () => {
@@ -67,7 +67,7 @@ describe('screener viewModel', () => {
         entry: 180.0,
         stop: 175.0,
         rr: 2.5,
-        riskUsd: 500,
+        riskAccount: 500,
         recommendation: {
           verdict: 'RECOMMENDED',
           reasonsShort: ['Strong setup'],
@@ -112,7 +112,7 @@ describe('screener viewModel', () => {
       expect(vm.entry).toBe(180.0); // from candidate
       expect(vm.stop).toBe(176.0); // from recommendation
       expect(vm.rr).toBe(3.0); // from recommendation
-      expect(vm.riskUsd).toBe(450); // from recommendation
+      expect(vm.riskAccount).toBe(500); // explicit account-currency amount
     });
 
     it('extracts fixes from recommendation education', () => {
