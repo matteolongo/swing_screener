@@ -67,6 +67,37 @@ request-scoped `ReportConfig.execution` instance explicitly.
 | `providers/` | Fee calculators per broker |
 | `__init__.py` | Package exports |
 
+The API-layer order-review boundary lives in
+`api/services/order_approval.py`. Its pure
+`resolve_execution_eligibility(candidate, require_approval=False)` resolver
+combines execution guidance with the canonical recommendation, freshness,
+validated plan, quote currency, same-symbol mode, and approval identity. Core
+execution guidance does not independently authorize order review. The default
+is the screener's pre-token phase; callers validating an already-issued
+candidate may set `require_approval=True`.
+
+## Canonical Order-Review Eligibility
+
+Screener responses expose a discriminated `execution_eligibility` result.
+Allowed results carry exactly one mode, `ready` or `pending_pullback`; blocked
+results carry exactly one stable reason: `skip_guidance`,
+`workflow_not_actionable`, `approval_missing`, `data_not_current`,
+`plan_incomplete`, `plan_invalid`, or `held_symbol_not_add_on`. Every blocked
+result has a null `canonical_order_draft`.
+
+An allowed canonical draft contains only validated `BUY_LIMIT` or `BUY_STOP`
+details: entry, stop, target, positive integer shares, R:R, a registered quote
+currency, and the approval token. Prices must be finite and positive and obey
+`stop < entry < target`. The screener first resolves every non-token gate, then
+issues approval identity; if identity cannot be issued, it replaces the
+provisional allowed result with `approval_missing` and removes the draft.
+
+The only waiting workflow eligible for manual review is
+`waiting_trigger` / `wait_pullback` with pending `BUY_LIMIT` guidance and an
+approval token. Its mode is `pending_pullback`, not `ready`. `SKIP` is never an
+executable signal: it cannot produce approval claims, a token, or a draft even
+if an earlier analytical signal looked actionable.
+
 ## DeGiro Fee Import
 
 ```python
