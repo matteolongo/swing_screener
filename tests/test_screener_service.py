@@ -48,6 +48,39 @@ def test_screener_fails_closed_when_order_repository_is_unavailable(tmp_path):
     assert _approval_claims_for_candidate(candidate, "strategy", "revision") is None
 
 
+def test_skip_guidance_builds_no_approval_claims():
+    from api.services.screener_service import _approval_claims_for_candidate
+
+    candidate = SimpleNamespace(
+        ticker="AAA",
+        suggested_order_type="SKIP",
+        data_status="current",
+        data_asof="2026-09-08",
+        days_to_earnings=10,
+        recommendation=SimpleNamespace(
+            verdict="RECOMMENDED",
+            workflow_status="ready",
+            next_step=SimpleNamespace(code="review_order"),
+            decision_gates=SimpleNamespace(
+                setup=SimpleNamespace(status="PASS"),
+                trigger=SimpleNamespace(status="PASS"),
+                plan=SimpleNamespace(status="PASS"),
+            ),
+            risk=SimpleNamespace(
+                entry=100.0,
+                stop=95.0,
+                target=110.0,
+                target_source="structural",
+                account_currency="USD",
+                currency="USD",
+                account_to_quote_rate=1.0,
+            ),
+        ),
+    )
+
+    assert _approval_claims_for_candidate(candidate, "momentum", "revision") is None
+
+
 def test_screener_uses_explicit_state_snapshot_without_reading_repositories(tmp_path):
     from api.models.portfolio import Position
     from api.models.screener import ScreenerCandidate, ScreenerRequest
@@ -118,6 +151,139 @@ def test_screener_uses_explicit_state_snapshot_without_reading_repositories(tmp_
     assert filtered == []
     assert suppressed == 1
     svc._portfolio_service.list_positions.assert_not_called()
+
+
+def test_skip_guidance_blocks_original_breakout_and_approval(tmp_path, monkeypatch):
+    from api.models.screener import ExecutionEligibilityOut, ScreenerRequest
+    from swing_screener.recommendation.priority import CombinedPriorityConfig
+    from swing_screener.risk.position_sizing import RiskConfig
+    from swing_screener.selection.entries import EntrySignalConfig
+    from swing_screener.selection.universe import UniverseConfig
+    from swing_screener.strategy.report_config import ReportConfig
+
+    svc, _cache, _provider = _make_screener_service(tmp_path)
+    signer = MagicMock()
+    signer.issue.return_value = "signed-approval"
+    svc._approval_signer = signer
+    svc._strategy_repo.get_active_strategy_id.return_value = "momentum"
+    svc._config_repo = MagicMock()
+    svc._config_repo.get.return_value = SimpleNamespace(
+        risk=SimpleNamespace(account_currency="USD")
+    )
+
+    ohlcv = _make_ohlcv(["AAA", "BBB", "SPY"], periods=10)
+    for ticker in ("AAA", "BBB"):
+        ohlcv[("Open", ticker)] = [99.0] * 10
+        ohlcv[("High", ticker)] = [
+            101,
+            102,
+            103,
+            104,
+            110,
+            104,
+            103,
+            102,
+            101,
+            101,
+        ]
+        ohlcv[("Low", ticker)] = [98.0] * 10
+        ohlcv[("Close", ticker)] = [100.0] * 10
+    asof = ohlcv.index[-1].date().isoformat()
+    results = pd.DataFrame(
+        {
+            "atr14": [2.0, 2.0],
+            "mom_6m": [0.1, 0.1],
+            "mom_12m": [0.2, 0.2],
+            "rs_6m": [0.05, 0.05],
+            "score": [0.9, 0.8],
+            "confidence": [80.0, 75.0],
+            "last": [100.0, 100.0],
+            "ma20_level": [98.0, 98.0],
+            "dist_sma50_pct": [5.0, 5.0],
+            "dist_sma200_pct": [10.0, 10.0],
+            "rank": [1, 2],
+            "signal": ["breakout", "pullback"],
+            "entry": [100.0, 100.0],
+            "stop": [95.0, 95.0],
+            "account_to_quote_rate": [1.0, 1.0],
+            "suggested_order_type": ["SKIP", "BUY_LIMIT"],
+            "suggested_order_price": [None, 100.0],
+        },
+        index=["AAA", "BBB"],
+    )
+
+    def resolve_universe(ctx):
+        ctx.asof_str = asof
+        ctx.screening_tickers = ["AAA", "BBB"]
+        ctx.benchmark = "SPY"
+        return 2
+
+    def build_market_data(ctx, requested_top):
+        ctx.ohlcv = ohlcv
+        ctx.last_bar_map = {"AAA": asof, "BBB": asof, "SPY": asof}
+        ctx.data_freshness = "final_close"
+        ctx.market_data_ticker_count = 2
+        ctx.ranked_candidate_count = 2
+        ctx.ticker_info = {
+            "AAA": {"currency": "USD"},
+            "BBB": {"currency": "USD"},
+        }
+
+    def build_configs(ctx, requested_top):
+        ctx.universe_cfg = UniverseConfig()
+        ctx.signals_cfg = EntrySignalConfig()
+        ctx.risk_cfg = RiskConfig(
+            account_size=100_000.0,
+            account_currency="USD",
+            risk_pct=0.01,
+            max_position_pct=0.2,
+            min_shares=1,
+            min_rr=2.0,
+        )
+        ctx.report_cfg = ReportConfig(risk=ctx.risk_cfg)
+        ctx.combined_priority_cfg = CombinedPriorityConfig()
+
+    monkeypatch.setattr(svc, "_resolve_universe_and_window", resolve_universe)
+    monkeypatch.setattr(svc, "_build_signals_and_fetch_ohlcv", build_market_data)
+    monkeypatch.setattr(svc, "_build_run_configs", build_configs)
+    monkeypatch.setattr(svc, "_run_daily_report", lambda ctx, requested_top: results)
+    monkeypatch.setattr(
+        svc,
+        "_apply_same_symbol_filter",
+        lambda ctx, candidates: (candidates, 0, 0),
+    )
+    monkeypatch.setattr(
+        svc,
+        "_enrich_and_rank",
+        lambda ctx, candidates, requested_top, suppressed: [
+            candidate.model_copy(update={"days_to_earnings": 10})
+            for candidate in candidates
+        ],
+    )
+
+    candidates = svc.run_screener(
+        ScreenerRequest(tickers=["AAA", "BBB"], top=2)
+    ).candidates
+    candidate_by_ticker = {candidate.ticker: candidate for candidate in candidates}
+    actionable = candidate_by_ticker["BBB"]
+    assert actionable.execution_eligibility == ExecutionEligibilityOut(
+        allowed=True, mode="pending_pullback"
+    )
+    assert actionable.approval_token == "signed-approval"
+    assert actionable.canonical_order_draft.approval_token == "signed-approval"
+    assert actionable.canonical_order_draft.order_type == "BUY_LIMIT"
+    candidate = candidate_by_ticker["AAA"]
+
+    assert candidate.signal == "breakout"
+    assert candidate.suggested_order_type == "SKIP"
+    assert candidate.recommendation.workflow_status != "ready"
+    assert candidate.recommendation.next_step.code != "review_order"
+    assert candidate.approval_token is None
+    assert candidate.execution_eligibility == ExecutionEligibilityOut(
+        allowed=False, reason="skip_guidance"
+    )
+    assert candidate.canonical_order_draft is None
+    signer.issue.assert_called_once()
 
 
 def _ohlcv():
