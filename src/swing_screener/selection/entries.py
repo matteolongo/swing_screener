@@ -16,9 +16,25 @@ def _signal_defaults() -> dict:
 
 @dataclass(frozen=True)
 class EntrySignalConfig:
-    breakout_lookback: int = field(default_factory=lambda: int(_signal_defaults().get("breakout_lookback", 50)))
-    pullback_ma: int = field(default_factory=lambda: int(_signal_defaults().get("pullback_ma", 20)))
-    min_history: int = field(default_factory=lambda: int(_signal_defaults().get("min_history", 260)))
+    breakout_lookback: int = field(
+        default_factory=lambda: int(_signal_defaults().get("breakout_lookback", 50))
+    )
+    pullback_ma: int = field(
+        default_factory=lambda: int(_signal_defaults().get("pullback_ma", 20))
+    )
+    min_history: int = field(
+        default_factory=lambda: int(_signal_defaults().get("min_history", 260))
+    )
+
+
+def _comparison_window_with_current(
+    close_s: pd.Series, comparison_bars: int
+) -> pd.Series | None:
+    """Return exactly ``comparison_bars`` history rows plus the current bar."""
+    required = comparison_bars + 1
+    if comparison_bars < 1 or len(close_s) < required:
+        return None
+    return close_s.iloc[-required:]
 
 
 def breakout_signal(close_s: pd.Series, lookback: int) -> tuple[bool, float]:
@@ -26,11 +42,12 @@ def breakout_signal(close_s: pd.Series, lookback: int) -> tuple[bool, float]:
     Breakout if today's close > max(close) over previous `lookback` bars (excluding today).
     Returns: (is_breakout, breakout_level)
     """
-    if len(close_s) < lookback + 2:
+    window = _comparison_window_with_current(close_s, lookback)
+    if window is None:
         return False, float("nan")
 
-    prior_high = close_s.iloc[-(lookback + 1) : -1].max()
-    return bool(close_s.iloc[-1] > prior_high), float(prior_high)
+    prior_high = window.iloc[:-1].max()
+    return bool(window.iloc[-1] > prior_high), float(prior_high)
 
 
 def pullback_reclaim_signal(close_s: pd.Series, ma_window: int) -> tuple[bool, float]:
@@ -38,12 +55,13 @@ def pullback_reclaim_signal(close_s: pd.Series, ma_window: int) -> tuple[bool, f
     Pullback reclaim if yesterday close < MA and today close > MA.
     Returns: (is_pullback, ma_today)
     """
-    if len(close_s) < ma_window + 5:
+    window = _comparison_window_with_current(close_s, ma_window)
+    if window is None:
         return False, float("nan")
 
-    ma = sma(close_s, ma_window)
-    y = close_s.iloc[-2]
-    t = close_s.iloc[-1]
+    ma = sma(window, ma_window)
+    y = window.iloc[-2]
+    t = window.iloc[-1]
     y_ma = ma.iloc[-2]
     t_ma = ma.iloc[-1]
 
