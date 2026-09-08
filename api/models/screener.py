@@ -36,6 +36,34 @@ class CandlePatternOut(BaseModel):
 
 SameSymbolMode = Literal["NEW_ENTRY", "ADD_ON", "MANAGE_ONLY", "RE_ENTRY", "SCALE_BACK"]
 
+ExecutionEligibilityMode = Literal["ready", "pending_pullback"]
+ExecutionEligibilityReason = Literal[
+    "skip_guidance",
+    "workflow_not_actionable",
+    "approval_missing",
+    "data_not_current",
+    "plan_incomplete",
+    "plan_invalid",
+    "held_symbol_not_add_on",
+]
+
+
+class ExecutionEligibilityOut(BaseModel):
+    allowed: bool
+    mode: ExecutionEligibilityMode | None = None
+    reason: ExecutionEligibilityReason | None = None
+
+
+class CanonicalOrderDraftOut(BaseModel):
+    order_type: Literal["BUY_LIMIT", "BUY_STOP"]
+    entry: float
+    stop: float
+    target: float
+    shares: int
+    rr: float
+    quote_currency: str
+    approval_token: str | None = None
+
 
 class SameSymbolCandidateContext(BaseModel):
     mode: SameSymbolMode
@@ -125,6 +153,8 @@ class ScreenerCandidate(BaseModel):
     suggested_order_price: Optional[float] = None
     execution_note: Optional[str] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
+    execution_eligibility: ExecutionEligibilityOut | None = None
+    canonical_order_draft: CanonicalOrderDraftOut | None = None
     decision_summary: Optional[DecisionSummary] = None
     fundamentals_snapshot: Optional[FundamentalSnapshot] = Field(
         default=None, exclude=True

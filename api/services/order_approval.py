@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 
 from api.models.portfolio import PortfolioApprovalGate, PortfolioOrderApproval
+from api.models.screener import (
+    CanonicalOrderDraftOut,
+    ExecutionEligibilityOut,
+    ExecutionEligibilityReason,
+)
 from api.services.order_approval_token import VerifiedApprovalToken
 from api.services.order_exposure import ExposureSnapshot, country_from_ticker
+from swing_screener.data.currencies import supported_currency_codes
 
 
 @dataclass(frozen=True)
@@ -31,6 +38,106 @@ class SubmittedPlan:
     entry: Decimal
     stop: Decimal
     target: Decimal
+
+
+def _blocked_execution(
+    reason: ExecutionEligibilityReason,
+) -> tuple[ExecutionEligibilityOut, None]:
+    return ExecutionEligibilityOut(allowed=False, reason=reason), None
+
+
+def _positive_finite(value: object) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and math.isfinite(float(value))
+        and float(value) > 0
+    )
+
+
+def resolve_execution_eligibility(
+    candidate: object, *, require_approval: bool = False
+) -> tuple[ExecutionEligibilityOut, CanonicalOrderDraftOut | None]:
+    """Return the canonical order-review capability and validated draft."""
+
+    order_type = (
+        str(getattr(candidate, "suggested_order_type", "") or "").strip().upper()
+    )
+    if order_type == "SKIP":
+        return _blocked_execution("skip_guidance")
+
+    recommendation = getattr(candidate, "recommendation", None)
+    workflow_status = getattr(recommendation, "workflow_status", None)
+    next_step = getattr(getattr(recommendation, "next_step", None), "code", None)
+    if workflow_status == "ready" and next_step == "review_order":
+        mode = "ready"
+    elif (
+        workflow_status == "waiting_trigger"
+        and next_step == "wait_pullback"
+        and order_type == "BUY_LIMIT"
+    ):
+        mode = "pending_pullback"
+    else:
+        return _blocked_execution("workflow_not_actionable")
+
+    approval_token = str(getattr(candidate, "approval_token", "") or "").strip()
+    data_asof = getattr(candidate, "data_asof", None)
+    if (
+        getattr(candidate, "data_status", None) != "current"
+        or not isinstance(data_asof, str)
+        or not data_asof.strip()
+    ):
+        return _blocked_execution("data_not_current")
+
+    entry = getattr(candidate, "entry", None)
+    stop = getattr(candidate, "stop", None)
+    target = getattr(candidate, "target", None)
+    shares = getattr(candidate, "shares", None)
+    rr = getattr(candidate, "rr", None)
+    quote_currency = str(getattr(candidate, "quote_currency", "") or "").strip().upper()
+    if any(value is None for value in (entry, stop, target, shares, rr)) or not (
+        order_type and quote_currency
+    ):
+        return _blocked_execution("plan_incomplete")
+
+    valid_numbers = all(_positive_finite(value) for value in (entry, stop, target, rr))
+    valid_shares = (
+        isinstance(shares, int) and not isinstance(shares, bool) and shares > 0
+    )
+    if (
+        not valid_numbers
+        or not valid_shares
+        or not float(stop) < float(entry) < float(target)
+        or order_type not in {"BUY_LIMIT", "BUY_STOP"}
+        or quote_currency not in supported_currency_codes()
+    ):
+        return _blocked_execution("plan_invalid")
+
+    same_symbol = getattr(candidate, "same_symbol", None)
+    same_symbol_mode = getattr(same_symbol, "mode", None)
+    held_symbol = same_symbol is not None and (
+        bool(getattr(same_symbol, "position_id", None))
+        or getattr(same_symbol, "current_position_entry", None) is not None
+        or getattr(same_symbol, "current_position_stop", None) is not None
+        or same_symbol_mode == "MANAGE_ONLY"
+    )
+    if held_symbol and same_symbol_mode not in {"ADD_ON", "SCALE_BACK"}:
+        return _blocked_execution("held_symbol_not_add_on")
+    if require_approval and not approval_token:
+        return _blocked_execution("approval_missing")
+
+    eligibility = ExecutionEligibilityOut(allowed=True, mode=mode)
+    draft = CanonicalOrderDraftOut(
+        order_type=order_type,
+        entry=float(entry),
+        stop=float(stop),
+        target=float(target),
+        shares=shares,
+        rr=float(rr),
+        quote_currency=quote_currency,
+        approval_token=approval_token or None,
+    )
+    return eligibility, draft
 
 
 def _number(value: Decimal) -> float:
