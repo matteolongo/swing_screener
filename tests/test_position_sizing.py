@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from swing_screener.risk.position_sizing import (
     position_plan,
@@ -15,6 +16,65 @@ def test_position_plan_returns_plan():
     assert plan["shares"] >= 1
     assert plan["stop"] < plan["entry"]
     assert plan["position_value"] <= cfg.account_size * cfg.max_position_pct + 1e-9
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "entry", "atr14", "overrides"),
+    [
+        ("entry", float("nan"), float("nan"), 1.0, {}),
+        ("entry", float("inf"), float("inf"), 1.0, {}),
+        ("entry", 0.0, 0.0, 1.0, {}),
+        ("atr14", float("-inf"), 10.0, float("-inf"), {}),
+        ("account_size", 0.0, 10.0, 1.0, {"account_size": 0.0}),
+        ("risk_pct", -0.01, 10.0, 1.0, {"risk_pct": -0.01}),
+        ("k_atr", 0.0, 10.0, 1.0, {"k_atr": 0.0}),
+        (
+            "max_position_pct",
+            float("nan"),
+            10.0,
+            1.0,
+            {"max_position_pct": float("nan")},
+        ),
+    ],
+)
+def test_position_plan_rejects_non_finite_or_non_positive_inputs(
+    field, value, entry, atr14, overrides
+):
+    cfg = RiskConfig(**overrides)
+
+    with pytest.raises(ValueError, match=field):
+        position_plan(entry=entry, atr14=atr14, cfg=cfg)
+
+
+def test_position_plan_rejects_prices_that_collapse_at_execution_precision():
+    cfg = RiskConfig(
+        account_size=10_000,
+        risk_pct=0.01,
+        k_atr=1.0,
+        max_position_pct=1.0,
+    )
+
+    with pytest.raises(ValueError, match="stop"):
+        position_plan(entry=10.004, atr14=0.003, cfg=cfg)
+
+
+def test_position_plan_sizes_and_reports_from_executable_prices():
+    cfg = RiskConfig(
+        account_size=1_000,
+        risk_pct=0.01,
+        k_atr=1.0,
+        max_position_pct=1.0,
+    )
+
+    plan = position_plan(entry=10.006, atr14=0.994, cfg=cfg)
+
+    assert plan is not None
+    assert plan["entry"] == 10.01
+    assert plan["stop"] == 9.01
+    assert plan["risk_per_share"] == 1.0
+    assert plan["shares"] == 10
+    assert plan["position_value"] == 100.1
+    assert plan["realized_risk"] == 10.0
 
 
 def test_position_plan_converts_account_budget_to_quote_currency():

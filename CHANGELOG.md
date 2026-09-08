@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Position sizing now rejects non-finite or non-positive scalar inputs and uses
+  the same cent-normalized entry and stop for share count, position value, and
+  reported R-risk.
+
 - Entry signals now use explicit inclusive history windows: breakouts compare
   the current close with exactly the prior lookback, and pullback moving
   averages include exactly their configured number of closes.
