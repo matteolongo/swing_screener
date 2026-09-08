@@ -51,7 +51,8 @@
 | 13 | Implemented; awaiting PR 12 | `codex/correct-signal-history-boundaries` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/normalize-ohlcv-ingress...codex/correct-signal-history-boundaries?expand=1) |
 | 14 | Implemented; awaiting PR 13 | `codex/harden-position-sizing-inputs` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/correct-signal-history-boundaries...codex/harden-position-sizing-inputs?expand=1) |
 | 15 | Implemented; awaiting PR 14 | `codex/deprecate-usd-money-aliases` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/harden-position-sizing-inputs...codex/deprecate-usd-money-aliases?expand=1) |
-| 16–18 | Not started | See subsystem plans | — |
+| 16 | Implemented; awaiting PR 15 | `codex/define-sector-concentration` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/deprecate-usd-money-aliases...codex/define-sector-concentration?expand=1) |
+| 17–18 | Not started | See subsystem plans | — |
 
 ## Linear Stack Coordinator Checklist
 
