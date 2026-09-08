@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from api.main import app
 from api.models.daily_review import (
     DailyReview,
+    DailyReviewCandidate,
     DailyReviewPositionEvaluationError,
     DailyReviewSummary,
 )
@@ -37,7 +38,17 @@ class StubDailyReviewService:
             "include_candidates": include_candidates,
         }
         return DailyReview(
-            new_candidates=[],
+            new_candidates=[
+                DailyReviewCandidate(
+                    ticker="AAPL",
+                    signal="UNKNOWN",
+                    close=150.0,
+                    entry=None,
+                    stop=None,
+                    shares=None,
+                    r_reward=None,
+                )
+            ],
             positions_hold=[],
             positions_update_stop=[],
             positions_close=[],
@@ -53,7 +64,7 @@ class StubDailyReviewService:
                 no_action=0,
                 update_stop=0,
                 close_positions=0,
-                new_candidates=0,
+                new_candidates=1,
                 evaluation_error_count=1,
                 review_date=date.today(),
             ),
@@ -123,7 +134,16 @@ def test_daily_review_compute_endpoint():
 
         assert response.status_code == 200
         body = response.json()
-        assert body["summary"]["new_candidates"] == 0
+        assert body["summary"]["new_candidates"] == 1
+        assert {
+            key: body["new_candidates"][0][key]
+            for key in ("entry", "stop", "shares", "r_reward")
+        } == {
+            "entry": None,
+            "stop": None,
+            "shares": None,
+            "r_reward": None,
+        }
         assert body["summary"]["evaluation_error_count"] == 1
         assert body["evaluation_errors"] == [
             {
@@ -162,6 +182,10 @@ def test_daily_review_snapshot_endpoint_is_the_explicit_write_command():
         assert response.json() == {"saved": True}
         saved_review, strategy_name = stub_service.saved
         assert saved_review == review
+        assert saved_review.new_candidates[0].entry is None
+        assert saved_review.new_candidates[0].stop is None
+        assert saved_review.new_candidates[0].shares is None
+        assert saved_review.new_candidates[0].r_reward is None
         assert strategy_name == "momentum"
     finally:
         app.dependency_overrides.pop(get_daily_review_service, None)
