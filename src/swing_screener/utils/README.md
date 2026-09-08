@@ -59,6 +59,7 @@ Used by `portfolio/state.py` and `execution/orders.py` to prevent concurrent wri
 ### `dataframe_helpers.py`
 
 ```python
+normalize_ohlcv(ohlcv) -> pd.DataFrame       # validate shape; normalize/sort dates; deduplicate dates
 get_close_matrix(ohlcv) -> pd.DataFrame      # (field, ticker) MultiIndex → (date x ticker) close prices
 get_field_matrix(ohlcv, field) -> pd.DataFrame  # same but for any OHLCV field
 sma(series, period, min_periods=None) -> pd.Series  # simple rolling average
@@ -66,6 +67,9 @@ ema(series, span, min_periods=0) -> pd.Series       # exponential moving average
 ```
 
 All indicator functions in `indicators/` use `get_close_matrix()` as their first step.
+`normalize_ohlcv()` is the canonical public-ingress validator. It rejects
+duplicate `(field, ticker)` columns and missing `Close`; duplicate dates keep
+the last supplied row before ascending stable sort.
 
 ## Notes
 

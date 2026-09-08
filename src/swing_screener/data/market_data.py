@@ -11,6 +11,7 @@ import pandas as pd
 import yfinance as yf
 
 from swing_screener.utils import normalize_tickers
+from swing_screener.utils.dataframe_helpers import normalize_ohlcv
 
 if TYPE_CHECKING:
     from swing_screener.data.providers.base import MarketDataCachePolicy
@@ -78,7 +79,7 @@ def fetch_ohlcv(
         # Use "today" as a sentinel that gets converted in provider
         # but for cache purposes we want None behavior preserved
         # Let's use a special fetch method that handles None
-        return provider._fetch_ohlcv_with_config(
+        result = provider._fetch_ohlcv_with_config(
             list(tickers),
             start_date=cfg.start,
             end_date=None,
@@ -87,9 +88,10 @@ def fetch_ohlcv(
             allow_cache_fallback_on_error=allow_cache_fallback_on_error,
             cache_policy=cache_policy,
         )
+        return normalize_ohlcv(result) if not result.empty else result
 
     # Call provider's fetch_ohlcv with explicit end date
-    return provider.fetch_ohlcv(
+    result = provider.fetch_ohlcv(
         list(tickers),
         start_date=cfg.start,
         end_date=end_date,
@@ -98,6 +100,7 @@ def fetch_ohlcv(
         allow_cache_fallback_on_error=allow_cache_fallback_on_error,
         cache_policy=cache_policy,
     )
+    return normalize_ohlcv(result) if not result.empty else result
 
 
 def _standardize_columns(df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:

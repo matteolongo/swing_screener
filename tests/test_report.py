@@ -16,6 +16,34 @@ from swing_screener.risk.position_sizing import (
 from swing_screener.strategy.modules.momentum import build_momentum_report
 
 
+def test_build_daily_report_normalizes_direct_dataframe_input(monkeypatch):
+    columns = pd.MultiIndex.from_tuples([("Close", "AAPL")])
+    raw = pd.DataFrame(
+        [[12.0], [10.0], [11.0]],
+        index=["2026-01-03", "2026-01-01", "2026-01-03"],
+        columns=columns,
+    )
+    captured = {}
+
+    def fake_build_strategy_report(*, ohlcv, **kwargs):
+        captured["ohlcv"] = ohlcv
+        return pd.DataFrame()
+
+    monkeypatch.setattr(
+        "swing_screener.strategy.orchestrator.build_strategy_report",
+        fake_build_strategy_report,
+    )
+
+    build_daily_report(raw)
+
+    normalized = captured["ohlcv"]
+    assert normalized.index.tolist() == [
+        pd.Timestamp("2026-01-01"),
+        pd.Timestamp("2026-01-03"),
+    ]
+    assert normalized.iloc[-1, 0] == 11.0
+
+
 def _make_ohlcv_for_report():
     idx = pd.bdate_range("2023-01-02", periods=260)
 

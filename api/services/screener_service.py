@@ -101,6 +101,7 @@ from swing_screener.utils.coerce import (
     safe_float,
     safe_optional_float,
 )
+from swing_screener.utils.dataframe_helpers import normalize_ohlcv
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +182,7 @@ def _fetch_ohlcv_chunked(
     out.attrs["stale_cache_fallback"] = any(
         bool(frame.attrs.get("stale_cache_fallback")) for frame in frames
     )
-    return out
+    return normalize_ohlcv(out)
 
 
 def _market_data_cache_policy(
