@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+
 import pandas as pd
+
 from swing_screener.settings import get_settings_manager
 
 
@@ -56,7 +58,7 @@ def _validate_weights(cfg: RankingConfig) -> None:
 
 
 def compute_hot_score(
-    df: pd.DataFrame, cfg: RankingConfig = RankingConfig()
+    df: pd.DataFrame, cfg: RankingConfig | None = None
 ) -> pd.DataFrame:
     """
     Adds:
@@ -65,6 +67,7 @@ def compute_hot_score(
 
     Input df must contain columns: mom_6m, mom_12m, rs_6m
     """
+    cfg = cfg or RankingConfig()
     _validate_weights(cfg)
 
     required = ["mom_6m", "mom_12m", "rs_6m"]
@@ -149,11 +152,10 @@ def normalize_technical_score(df: pd.DataFrame) -> pd.Series:
     return (s - s.min()) / rng
 
 
-def top_candidates(
-    df: pd.DataFrame, cfg: RankingConfig = RankingConfig()
-) -> pd.DataFrame:
+def top_candidates(df: pd.DataFrame, cfg: RankingConfig | None = None) -> pd.DataFrame:
     """
     Returns top N rows by score.
     """
+    cfg = cfg or RankingConfig()
     scored = compute_hot_score(df, cfg)
     return scored.head(cfg.top_n)

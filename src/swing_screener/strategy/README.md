@@ -95,9 +95,13 @@ cfg = ReportConfig(
     ranking=RankingConfig(),
     entry=EntrySignalConfig(),
     risk=RiskConfig(account_size=50_000, risk_pct=0.01),
+    execution=ExecutionConfig(),
     manage=ManageConfig(),
 )
 ```
+
+Omitted configs are created at call time. One `ReportConfig.execution` instance
+is shared by momentum guidance and API pattern-stop evaluation for the request.
 
 ### Strategy Storage
 
