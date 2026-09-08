@@ -392,6 +392,17 @@ low_level:
     allow_second_chance_breakout: true
     pattern_stop_enabled: true
     pattern_stop_atr_buffer: 0.25
+  reporting:
+    confidence:
+      score_weight: 0.50
+      signal_weight: 0.25
+      trend_weight: 0.15
+      volatility_weight: 0.10
+      both_strength: 1.0
+      breakout_strength: 0.8
+      pullback_strength: 0.6
+      none_strength: 0.0
+      unknown_strength: 0.5
   candles:
     lookback: 10
     doji_body_ratio: 0.1

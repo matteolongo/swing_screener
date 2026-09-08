@@ -17,7 +17,7 @@ from swing_screener.selection.eval_cache import (
 )
 from swing_screener.selection.ranking import top_candidates
 from swing_screener.selection.universe import build_universe
-from swing_screener.strategy.report_config import ReportConfig
+from swing_screener.strategy.report_config import ConfidenceConfig, ReportConfig
 
 # Marker column persisted in the per-symbol records frame holding the JSON list
 # of universe feature-table columns. Ranking must run only on those columns so
@@ -60,7 +60,11 @@ def _normalize_ticker_set(items: Iterable[str] | None) -> set[str]:
     return out
 
 
-def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
+def _compute_confidence(
+    report: pd.DataFrame,
+    max_atr_pct: float,
+    cfg: ConfidenceConfig,
+) -> pd.Series:
     """
     Confidence (0-100) for all candidates.
     Uses existing features: score, signal (optional), dist_sma200_pct, atr_pct.
@@ -77,12 +81,20 @@ def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
 
     # Signal strength (optional - if no signal column, use 0.5 as neutral)
     if "signal" in report.columns:
-        sig_map = {"both": 1.0, "breakout": 0.8, "pullback": 0.6, "none": 0.0}
+        sig_map = {
+            "both": cfg.both_strength,
+            "breakout": cfg.breakout_strength,
+            "pullback": cfg.pullback_strength,
+            "none": cfg.none_strength,
+        }
         sig_strength = (
-            report["signal"].map(sig_map).fillna(0.5).clip(lower=0.0, upper=1.0)
+            report["signal"]
+            .map(sig_map)
+            .fillna(cfg.unknown_strength)
+            .clip(lower=0.0, upper=1.0)
         )
     else:
-        sig_strength = pd.Series(0.5, index=report.index)
+        sig_strength = pd.Series(cfg.unknown_strength, index=report.index)
 
     if "dist_sma200_pct" in report.columns:
         trend_strength = (report["dist_sma200_pct"].clip(lower=0.0) / 20.0).clip(
@@ -100,8 +112,18 @@ def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
     else:
         vol_strength = pd.Series(0.0, index=report.index)
 
-    conf = 100.0 * (
-        0.50 * score + 0.25 * sig_strength + 0.15 * trend_strength + 0.10 * vol_strength
+    total_weight = (
+        cfg.score_weight + cfg.signal_weight + cfg.trend_weight + cfg.volatility_weight
+    )
+    conf = (
+        100.0
+        * (
+            cfg.score_weight * score
+            + cfg.signal_weight * sig_strength
+            + cfg.trend_weight * trend_strength
+            + cfg.volatility_weight * vol_strength
+        )
+        / total_weight
     )
     conf = conf.round(1)
     return conf
@@ -265,7 +287,9 @@ def build_momentum_report(
             report = report.drop(columns=["signal_plan"], errors="ignore")
 
     # confidence score for active signals only
-    report["confidence"] = _compute_confidence(report, cfg.universe.filt.max_atr_pct)
+    report["confidence"] = _compute_confidence(
+        report, cfg.universe.filt.max_atr_pct, cfg.confidence
+    )
 
     # tidy columns order
     ma_col = f"ma{cfg.signals.pullback_ma}_level"

@@ -93,6 +93,7 @@ from swing_screener.settings import get_settings_manager
 from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
+    build_report_config,
     build_risk_config,
     build_universe_config,
 )
@@ -943,11 +944,12 @@ class ScreenerService:
                     f"Risk scaled by {multiplier:.2f}x due to regime conditions."
                 )
 
-        ctx.report_cfg = ReportConfig(
-            universe=ctx.universe_cfg,
-            ranking=ctx.ranking_cfg,
-            signals=ctx.signals_cfg,
-            risk=ctx.risk_cfg,
+        ctx.report_cfg = build_report_config(
+            ctx.strategy,
+            universe_override=ctx.universe_cfg,
+            ranking_override=ctx.ranking_cfg,
+            signals_override=ctx.signals_cfg,
+            risk_override=ctx.risk_cfg,
         )
 
     def _run_daily_report(
