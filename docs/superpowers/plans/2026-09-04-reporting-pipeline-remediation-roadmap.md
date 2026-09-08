@@ -43,17 +43,17 @@
 | 5 | Implemented; awaiting PR 4 | `codex/authoritative-account-currency` | [#449](https://github.com/matteolongo/swing_screener/pull/449) |
 | 6 | Implemented; awaiting PR 5 | `codex/stabilize-report-plan-schema` | [#450](https://github.com/matteolongo/swing_screener/pull/450) |
 | 7 | Implemented; awaiting PR 6 | `codex/fail-closed-pending-orders` | [#451](https://github.com/matteolongo/swing_screener/pull/451) |
-| 8 | Implemented; awaiting PR 7 | `codex/separate-review-evaluation-errors` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/fail-closed-pending-orders...codex/separate-review-evaluation-errors?expand=1) |
-| 9 | Implemented; awaiting PR 8 | `codex/use-stateless-review-orders` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/separate-review-evaluation-errors...codex/use-stateless-review-orders?expand=1) |
-| 10 | Implemented; awaiting PR 9 | `codex/make-review-persistence-explicit` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/use-stateless-review-orders...codex/make-review-persistence-explicit?expand=1) |
-| 11 | Implemented; awaiting PR 10 | `codex/preserve-rank-provenance` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/make-review-persistence-explicit...codex/preserve-rank-provenance?expand=1) |
-| 12 | Implemented; awaiting PR 11 | `codex/normalize-ohlcv-ingress` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/preserve-rank-provenance...codex/normalize-ohlcv-ingress?expand=1) |
-| 13 | Implemented; awaiting PR 12 | `codex/correct-signal-history-boundaries` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/normalize-ohlcv-ingress...codex/correct-signal-history-boundaries?expand=1) |
-| 14 | Implemented; awaiting PR 13 | `codex/harden-position-sizing-inputs` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/correct-signal-history-boundaries...codex/harden-position-sizing-inputs?expand=1) |
-| 15 | Implemented; awaiting PR 14 | `codex/deprecate-usd-money-aliases` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/harden-position-sizing-inputs...codex/deprecate-usd-money-aliases?expand=1) |
-| 16 | Implemented; awaiting PR 15 | `codex/define-sector-concentration` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/deprecate-usd-money-aliases...codex/define-sector-concentration?expand=1) |
-| 17 | Implemented; awaiting PR 16 | `codex/remove-import-time-configs` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/define-sector-concentration...codex/remove-import-time-configs?expand=1) |
-| 18 | Implemented; awaiting PR 17 | `codex/remove-dead-report-config-paths` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/remove-import-time-configs...codex/remove-dead-report-config-paths?expand=1) |
+| 8 | Implemented; awaiting PR 7 | `codex/separate-review-evaluation-errors` | [#452](https://github.com/matteolongo/swing_screener/pull/452) |
+| 9 | Implemented; awaiting PR 8 | `codex/use-stateless-review-orders` | [#453](https://github.com/matteolongo/swing_screener/pull/453) |
+| 10 | Implemented; awaiting PR 9 | `codex/make-review-persistence-explicit` | [#454](https://github.com/matteolongo/swing_screener/pull/454) |
+| 11 | Implemented; awaiting PR 10 | `codex/preserve-rank-provenance` | [#455](https://github.com/matteolongo/swing_screener/pull/455) |
+| 12 | Implemented; awaiting PR 11 | `codex/normalize-ohlcv-ingress` | [#456](https://github.com/matteolongo/swing_screener/pull/456) |
+| 13 | Implemented; awaiting PR 12 | `codex/correct-signal-history-boundaries` | [#457](https://github.com/matteolongo/swing_screener/pull/457) |
+| 14 | Implemented; awaiting PR 13 | `codex/harden-position-sizing-inputs` | [#458](https://github.com/matteolongo/swing_screener/pull/458) |
+| 15 | Implemented; awaiting PR 14 | `codex/deprecate-usd-money-aliases` | [#459](https://github.com/matteolongo/swing_screener/pull/459) |
+| 16 | Implemented; awaiting PR 15 | `codex/define-sector-concentration` | [#460](https://github.com/matteolongo/swing_screener/pull/460) |
+| 17 | Implemented; awaiting PR 16 | `codex/remove-import-time-configs` | [#461](https://github.com/matteolongo/swing_screener/pull/461) |
+| 18 | Implemented; awaiting PR 17 | `codex/remove-dead-report-config-paths` | [#462](https://github.com/matteolongo/swing_screener/pull/462) |
 
 ## Final Stack Audit — 2026-09-08
 
