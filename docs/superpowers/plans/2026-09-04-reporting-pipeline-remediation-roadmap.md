@@ -47,7 +47,8 @@
 | 9 | Implemented; awaiting PR 8 | `codex/use-stateless-review-orders` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/separate-review-evaluation-errors...codex/use-stateless-review-orders?expand=1) |
 | 10 | Implemented; awaiting PR 9 | `codex/make-review-persistence-explicit` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/use-stateless-review-orders...codex/make-review-persistence-explicit?expand=1) |
 | 11 | Implemented; awaiting PR 10 | `codex/preserve-rank-provenance` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/make-review-persistence-explicit...codex/preserve-rank-provenance?expand=1) |
-| 12–18 | Not started | See subsystem plans | — |
+| 12 | Implemented; awaiting PR 11 | `codex/normalize-ohlcv-ingress` | [Open PR](https://github.com/matteolongo/swing_screener/compare/codex/preserve-rank-provenance...codex/normalize-ohlcv-ingress?expand=1) |
+| 13–18 | Not started | See subsystem plans | — |
 
 ## Linear Stack Coordinator Checklist
 
