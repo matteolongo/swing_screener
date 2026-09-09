@@ -35,6 +35,8 @@ export interface PersistedTradingStoreV2 {
 }
 
 export interface PersistedTradingStoreV3 {
+  revision?: number;
+  appliedCommands?: Record<string, string>;
   version: typeof TRADING_STORE_SCHEMA_VERSION;
   updatedAt: string;
   strategies: Strategy[];
