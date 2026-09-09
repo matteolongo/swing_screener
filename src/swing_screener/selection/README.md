@@ -61,8 +61,13 @@ SelectionResult(universe, ranked, board)
 
 Per-symbol evaluation rows are reused only when the cache schema version,
 as-of date, last candle timestamp, market phase, strategy signature, and input
-fingerprint all match. The fingerprint covers that symbol's OHLCV slice and its
-sector-benchmark return when one is consumed. Identity fields are stored as
+fingerprint all match. The fingerprint covers that symbol's OHLCV slice, its
+sector-benchmark return when one is consumed, and the global momentum
+benchmark 6-month return consumed via `rs_6m` (resolved once per build from
+`cfg.universe.mom.benchmark`/`lookback_6m`; only the computed return value
+participates, so unrelated benchmark edits cannot invalidate the cache).
+Cached files must also contain exactly one row whose index matches the
+requested ticker; otherwise the entry misses. Identity fields are stored as
 reserved Parquet metadata columns and removed before cached rows return to the
 ranking pipeline.
 

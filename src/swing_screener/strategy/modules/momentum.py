@@ -10,6 +10,7 @@ import pandas as pd
 from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.selection.eval_cache import (
     build_evaluation_cache_identities,
+    resolve_benchmark_momentum_6m,
     strategy_signature,
 )
 from swing_screener.selection.ranking import top_candidates
@@ -356,6 +357,11 @@ class MomentumStrategyModule:
             if "Close" in set(level0)
             else []
         )
+        benchmark_mom_6m = resolve_benchmark_momentum_6m(
+            ohlcv,
+            cfg.universe.mom.benchmark,
+            cfg.universe.mom.lookback_6m,
+        )
         identities = build_evaluation_cache_identities(
             ohlcv,
             all_tickers,
@@ -363,6 +369,7 @@ class MomentumStrategyModule:
             market_phase=market_phase,
             strategy_signature=sig,
             sector_benchmark_returns=sector_benchmark_returns,
+            benchmark_momentum_6m=benchmark_mom_6m,
         )
         if force_refresh:
             hits, misses = pd.DataFrame(), all_tickers
@@ -370,7 +377,15 @@ class MomentumStrategyModule:
             hits, misses = eval_cache.split(all_tickers, identities=identities)
         miss_records = pd.DataFrame()
         if misses:
-            miss_ohlcv = ohlcv.loc[:, ohlcv.columns.get_level_values(1).isin(misses)]
+            benchmark_ticker = str(cfg.universe.mom.benchmark).strip().upper()
+            needed = set(misses)
+            if benchmark_ticker and benchmark_ticker in {
+                str(t).strip().upper() for t in all_tickers
+            }:
+                needed.add(benchmark_ticker)
+            level1 = ohlcv.columns.get_level_values(1)
+            mask = [str(t).strip().upper() in needed for t in level1]
+            miss_ohlcv = ohlcv.loc[:, mask]
             miss_records = compute_symbol_records(
                 miss_ohlcv,
                 cfg,

@@ -50,10 +50,87 @@ def _iso_timestamp(value) -> str:
     return timestamp.isoformat()
 
 
+def _normalize_benchmark_momentum(value: float | None) -> float | None:
+    """Normalize the consumed benchmark momentum return for fingerprinting.
+
+    ``None`` covers missing, NaN, or non-computable benchmark momentum so that
+    an unavailable benchmark fingerprints identically regardless of how the
+    absence was expressed.
+    """
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def resolve_benchmark_momentum_6m(
+    ohlcv: pd.DataFrame,
+    benchmark: str,
+    lookback_6m: int,
+) -> float | None:
+    """Return the exact 6-month benchmark return consumed by ``rs_6m``.
+
+    Mirrors :func:`swing_screener.indicators.momentum.compute_returns` for the
+    single benchmark ticker (per-ticker ``dropna``, ``last / prev - 1`` over
+    ``lookback_6m`` bars). Call once per report build and share the result
+    across every symbol identity so the full benchmark OHLCV is never hashed
+    per ticker. Returns ``None`` when the benchmark input is unavailable,
+    exactly matching the cases where momentum evaluation cannot compute it.
+    """
+    try:
+        benchmark_key = str(benchmark).strip()
+    except Exception:
+        return None
+    if not benchmark_key:
+        return None
+    try:
+        lookback = int(lookback_6m)
+    except (TypeError, ValueError):
+        return None
+    if lookback <= 1:
+        return None
+    if ohlcv is None or getattr(ohlcv, "empty", True):
+        return None
+    try:
+        if not isinstance(ohlcv.columns, pd.MultiIndex):
+            return None
+        if "Close" not in set(ohlcv.columns.get_level_values(0)):
+            return None
+        close = ohlcv["Close"]
+    except Exception:
+        return None
+    try:
+        if isinstance(close, pd.Series):
+            if str(close.name) != benchmark_key:
+                return None
+            series = close.dropna()
+        else:
+            if benchmark_key not in close.columns:
+                return None
+            series = close[benchmark_key].dropna()
+        if len(series) < lookback + 1:
+            return None
+        last_val = series.iloc[-1]
+        prev_val = series.iloc[-(lookback + 1)]
+        if pd.isna(last_val) or pd.isna(prev_val) or prev_val == 0:
+            return None
+        return float(last_val / prev_val - 1.0)
+    except Exception:
+        return None
+
+
 def _symbol_input_fingerprint(
     ohlcv: pd.DataFrame,
     ticker: str,
     sector_benchmark_return: float | None,
+    benchmark_momentum_6m: float | None = None,
 ) -> tuple[str, str]:
     columns = [column for column in ohlcv.columns if str(column[1]).upper() == ticker]
     frame = ohlcv.loc[:, columns].dropna(how="all")
@@ -67,7 +144,12 @@ def _symbol_input_fingerprint(
     digest.update(pd.util.hash_pandas_object(frame, index=True).values.tobytes())
     digest.update(
         json.dumps(
-            {"sector_benchmark_return": sector_benchmark_return},
+            {
+                "sector_benchmark_return": sector_benchmark_return,
+                "benchmark_momentum_6m": _normalize_benchmark_momentum(
+                    benchmark_momentum_6m
+                ),
+            },
             sort_keys=True,
             separators=(",", ":"),
             allow_nan=False,
@@ -84,6 +166,7 @@ def build_evaluation_cache_identities(
     market_phase: str,
     strategy_signature: str,
     sector_benchmark_returns: Mapping[str, float] | None = None,
+    benchmark_momentum_6m: float | None = None,
 ) -> dict[str, EvaluationCacheIdentity]:
     """Build deterministic per-symbol identities from all evaluation inputs."""
 
@@ -91,13 +174,17 @@ def build_evaluation_cache_identities(
         str(key).strip().upper(): float(value) if pd.notna(value) else None
         for key, value in (sector_benchmark_returns or {}).items()
     }
+    normalized_benchmark = _normalize_benchmark_momentum(benchmark_momentum_6m)
     identities: dict[str, EvaluationCacheIdentity] = {}
     for raw_ticker in tickers:
         ticker = str(raw_ticker).strip().upper()
         if not ticker:
             continue
         last_bar, fingerprint = _symbol_input_fingerprint(
-            ohlcv, ticker, normalized_sector_returns.get(ticker)
+            ohlcv,
+            ticker,
+            normalized_sector_returns.get(ticker),
+            normalized_benchmark,
         )
         identities[ticker] = EvaluationCacheIdentity(
             schema_version=EVALUATION_CACHE_SCHEMA_VERSION,
@@ -167,6 +254,17 @@ class EvalCache:
                 continue
             try:
                 frame = pd.read_parquet(path)
+                if len(frame) != 1:
+                    misses.append(ticker)
+                    continue
+                try:
+                    cached_ticker = str(frame.index[0]).strip().upper()
+                except Exception:
+                    misses.append(ticker)
+                    continue
+                if cached_ticker != ticker:
+                    misses.append(ticker)
+                    continue
                 expected = dataclasses.asdict(identity)
                 if any(
                     column not in frame.columns
