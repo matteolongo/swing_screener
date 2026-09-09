@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from api.models.recommendation import Recommendation
 from swing_screener.data.currencies import supported_currency_codes
@@ -35,6 +35,42 @@ class CandlePatternOut(BaseModel):
 
 
 SameSymbolMode = Literal["NEW_ENTRY", "ADD_ON", "MANAGE_ONLY", "RE_ENTRY", "SCALE_BACK"]
+
+ExecutionEligibilityMode = Literal["ready", "pending_pullback"]
+ExecutionEligibilityReason = Literal[
+    "skip_guidance",
+    "workflow_not_actionable",
+    "approval_missing",
+    "data_not_current",
+    "plan_incomplete",
+    "plan_invalid",
+    "held_symbol_not_add_on",
+]
+
+
+class ExecutionEligibilityOut(BaseModel):
+    allowed: bool
+    mode: ExecutionEligibilityMode | None = None
+    reason: ExecutionEligibilityReason | None = None
+
+    @model_validator(mode="after")
+    def validate_discriminator(self) -> "ExecutionEligibilityOut":
+        if self.allowed and (self.mode is None or self.reason is not None):
+            raise ValueError("allowed eligibility requires mode and forbids reason")
+        if not self.allowed and (self.reason is None or self.mode is not None):
+            raise ValueError("blocked eligibility requires reason and forbids mode")
+        return self
+
+
+class CanonicalOrderDraftOut(BaseModel):
+    order_type: Literal["BUY_LIMIT", "BUY_STOP"]
+    entry: float
+    stop: float
+    target: float
+    shares: int
+    rr: float
+    quote_currency: str
+    approval_token: str | None = None
 
 
 class SameSymbolCandidateContext(BaseModel):
@@ -125,6 +161,8 @@ class ScreenerCandidate(BaseModel):
     suggested_order_price: Optional[float] = None
     execution_note: Optional[str] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
+    execution_eligibility: ExecutionEligibilityOut | None = None
+    canonical_order_draft: CanonicalOrderDraftOut | None = None
     decision_summary: Optional[DecisionSummary] = None
     fundamentals_snapshot: Optional[FundamentalSnapshot] = Field(
         default=None, exclude=True

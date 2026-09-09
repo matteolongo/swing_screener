@@ -9,6 +9,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Screener candidates now expose a discriminated backend-owned execution
+  eligibility result and, only when allowed, a canonical order draft carrying
+  the validated prices, shares, R:R, quote currency, and approval identity.
+
 - The Today page now expands a selected symbol into a decision-first workspace
   with a context-preserving symbol rail, full-screen and mobile layouts,
   canonical fundamentals, explicit evidence and intelligence actions, and
@@ -16,6 +20,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reporting.
 
 ### Changed
+
+- Daily Review candidate plan keys are now nullable end to end, preserving
+  unavailable entry, stop, share, and R:R values as explicit `null` instead of
+  executable-looking zeroes.
 
 - Report configuration now has one canonical builder, and deterministic
   confidence weights plus named signal contributions are validated and loaded
@@ -90,6 +98,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Zones while preserving the existing Backtest workflow.
 
 ### Fixed
+
+- `SKIP` execution guidance now always produces a non-actionable recommendation
+  with no approval token or order draft, while token-gated pending `BUY_LIMIT`
+  pullbacks retain their explicit `pending_pullback` review exception.
 
 - Current-date final-close screens now reject market-data caches written before
   the latest active-market close and retain stale fallback provenance.

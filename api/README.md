@@ -183,6 +183,29 @@ status/code pairs, missing waiting-trigger parameters, malformed or unknown
 currency codes, and non-finite or non-positive trigger prices to
 `needs_review` / `refresh_data`.
 
+Each returned candidate also exposes the backend-owned
+`execution_eligibility` capability. It is a discriminated result: an allowed
+candidate has `{allowed: true, mode: "ready" | "pending_pullback", reason:
+null}`, while a blocked candidate has `{allowed: false, mode: null, reason:
+<code>}`. Stable block reasons are:
+
+| Reason | Meaning |
+| --- | --- |
+| `skip_guidance` | Execution guidance selected `SKIP`. |
+| `workflow_not_actionable` | The canonical workflow is neither `ready` / `review_order` nor the pending-pullback exception. |
+| `approval_missing` | All non-token gates passed, but an approval identity could not be issued. |
+| `data_not_current` | `data_status` is not `current`, or `data_asof` is missing. |
+| `plan_incomplete` | An entry, stop, target, share count, R:R, order type, or quote currency is missing. |
+| `plan_invalid` | A plan value is non-finite or non-positive, shares are not a positive integer, prices do not satisfy `stop < entry < target`, the order type is unsupported, or the quote currency is not registered. |
+| `held_symbol_not_add_on` | Existing position context is present but its mode is neither `ADD_ON` nor `SCALE_BACK`. |
+
+`canonical_order_draft` is non-null only when eligibility is allowed and the
+approval identity has been issued. It contains `order_type` (`BUY_LIMIT` or
+`BUY_STOP`), `entry`, `stop`, `target`, positive integer `shares`, `rr`,
+`quote_currency`, and `approval_token`. The draft token and the candidate's
+top-level `approval_token` are the same opaque identity. Clients must use this
+draft for order-review defaults and must not synthesize missing plan values.
+
 Candidate ranking provenance is additive and explicit: `technical_rank` records
 the deterministic technical-selection order, `confidence_rank` records the
 confidence-prefilter order, and `priority_rank` records the final
@@ -198,9 +221,17 @@ aliases: they are populated only when `quote_currency` is genuinely `USD`, are
 `null` for other quote currencies, and will be removed in the next major
 release.
 
-A `waiting_trigger` / `wait_pullback` candidate may expose manual order review
-only with its pending `BUY_LIMIT` approval token. This does not make the
+A `waiting_trigger` / `wait_pullback` candidate may expose
+`execution_eligibility.mode="pending_pullback"` and a manual order-review draft
+only for a pending `BUY_LIMIT` with an approval token. This does not make the
 candidate `ready`: `ready` remains reserved for an observed trigger pass.
+Waiting breakout orders do not receive this exception.
+
+`suggested_order_type="SKIP"` is an unconditional fail-closed invariant. The
+screener preserves that guidance for display but evaluates no executable entry
+signal, produces a non-actionable recommendation, constructs no approval
+claims, returns no token or canonical draft, and reports
+`execution_eligibility.reason="skip_guidance"`.
 
 Before recommendation evaluation, the screener loads the current entry-order
 ledger once. A symbol with a `pending` or `submitted` entry order is
@@ -280,6 +311,11 @@ code `position_evaluation_failed`, and a sanitized message. These failures are
 not reported as successful `positions_hold` actions;
 `summary.evaluation_error_count` counts them independently. Unexpected
 request-wide invariant failures still fail the request.
+
+Daily Review candidate plan fields `entry`, `stop`, `shares`, and `r_reward`
+are required response keys but are nullable. When the screener has no validated
+plan, the mapper, JSON response, snapshot validation, and frontend boundary
+preserve explicit `null` values; they never fabricate zero-valued plan data.
 
 Intelligence (`/api/intelligence`):
 - `GET /api/intelligence/{ticker}/evidence/latest` — read-only metadata for the newest valid persisted evidence cache. Returns `{ticker, cached_at, item_count, providers, freshness_status}` where the server derives `fresh`, `cached`, or `stale` from `config.evidence.cache_stale_after_days`. A normal cache absence returns 404 with `{detail, code: "evidence_not_cached"}`. It never calls collectors, an LLM, or mutates analysis, positions, orders, or trading state.

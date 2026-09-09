@@ -16,6 +16,7 @@ from api.models.portfolio import Position
 from api.models.recommendation import Recommendation
 from api.models.screener import (
     CandlePatternOut,
+    ExecutionEligibilityOut,
     ScreenerCandidate,
     ScreenerRequest,
     ScreenerResponse,
@@ -30,6 +31,7 @@ from api.services.decision_context import (
     apply_decision_summary_context,
     load_fundamentals_snapshots,
 )
+from api.services.order_approval import resolve_execution_eligibility
 from api.services.order_approval_token import (
     ApprovalTokenClaims,
     OrderApprovalTokenSigner,
@@ -223,6 +225,11 @@ def _apply_market_data_provenance(ctx: "_RunContext", *frames: pd.DataFrame) -> 
 def _approval_claims_for_candidate(
     candidate: object, strategy_id: str, strategy_revision_value: str
 ) -> ApprovalTokenClaims | None:
+    if (
+        str(getattr(candidate, "suggested_order_type", "") or "").strip().upper()
+        == "SKIP"
+    ):
+        return None
     recommendation = getattr(candidate, "recommendation", None)
     if recommendation is None:
         return None
@@ -1243,15 +1250,14 @@ class ScreenerService:
                 )
             if pattern_stop_val is not None:
                 stop_val = pattern_stop_val
-            evaluation_signal = (
-                "BUY_ON_PULLBACK"
-                if suggested_order_type == "BUY_LIMIT"
-                else (
-                    "WAIT_FOR_BREAKOUT"
-                    if suggested_order_type == "BUY_STOP"
-                    else str(signal) if not is_na_scalar(signal) else None
-                )
-            )
+            if suggested_order_type == "SKIP":
+                evaluation_signal = None
+            elif suggested_order_type == "BUY_LIMIT":
+                evaluation_signal = "BUY_ON_PULLBACK"
+            elif suggested_order_type == "BUY_STOP":
+                evaluation_signal = "WAIT_FOR_BREAKOUT"
+            else:
+                evaluation_signal = str(signal) if not is_na_scalar(signal) else None
             structural_target = (
                 _structural_target_from_history(candidate_history, entry=plan_entry)
                 if plan_entry is not None
@@ -1641,6 +1647,8 @@ class ScreenerService:
             candidates = self._enrich_and_rank(
                 ctx, candidates, requested_top, same_symbol_suppressed_count
             )
+            strategy_id = ""
+            active_strategy_revision = ""
             if self._approval_signer is not None:
                 strategy_id = str(
                     ctx.strategy.get("id")
@@ -1648,16 +1656,32 @@ class ScreenerService:
                     or self._strategy_repo.get_active_strategy_id()
                 )
                 active_strategy_revision = strategy_revision(ctx.strategy)
-                signed_candidates: list[ScreenerCandidate] = []
-                for candidate in candidates:
+            eligible_candidates: list[ScreenerCandidate] = []
+            for candidate in candidates:
+                eligibility, draft = resolve_execution_eligibility(candidate)
+                token = None
+                if eligibility.allowed and self._approval_signer is not None:
                     claims = _approval_claims_for_candidate(
                         candidate, strategy_id, active_strategy_revision
                     )
                     token = self._approval_signer.issue(claims) if claims else None
-                    signed_candidates.append(
-                        candidate.model_copy(update={"approval_token": token})
+                if eligibility.allowed and token is None:
+                    eligibility = ExecutionEligibilityOut(
+                        allowed=False, reason="approval_missing"
                     )
-                candidates = signed_candidates
+                    draft = None
+                elif draft is not None:
+                    draft = draft.model_copy(update={"approval_token": token})
+                eligible_candidates.append(
+                    candidate.model_copy(
+                        update={
+                            "approval_token": token,
+                            "execution_eligibility": eligibility,
+                            "canonical_order_draft": draft,
+                        }
+                    )
+                )
+            candidates = eligible_candidates
 
             response = ScreenerResponse(
                 candidates=candidates,
