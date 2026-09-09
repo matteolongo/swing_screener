@@ -217,10 +217,19 @@ export interface StrategyIntelligenceLLMAPI {
   enabled?: boolean;
   provider?: 'openai';
   model?: string;
+  base_url?: string;
+  enable_cache?: boolean;
+  enable_audit?: boolean;
+  cache_path?: string;
+  audit_path?: string;
+  max_concurrency?: number;
 }
 
 export interface StrategyIntelligenceCatalystAPI {
   lookback_hours?: number;
+  recency_half_life_hours?: number;
+  false_catalyst_return_z?: number;
+  min_price_reaction_atr?: number;
   require_price_confirmation?: boolean;
 }
 
@@ -228,6 +237,7 @@ export interface StrategyIntelligenceThemeAPI {
   enabled?: boolean;
   min_cluster_size?: number;
   min_peer_confirmation?: number;
+  curated_peer_map_path?: string;
 }
 
 export interface StrategyIntelligenceOpportunityAPI {
@@ -239,6 +249,9 @@ export interface StrategyIntelligenceOpportunityAPI {
 
 export interface StrategyMarketIntelligenceAPI {
   enabled?: boolean;
+  providers?: string[];
+  universe_scope?: 'screener_universe' | 'strategy_universe';
+  market_context_symbols?: string[];
   llm?: StrategyIntelligenceLLMAPI;
   catalyst?: StrategyIntelligenceCatalystAPI;
   theme?: StrategyIntelligenceThemeAPI;

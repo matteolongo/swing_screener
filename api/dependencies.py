@@ -7,15 +7,21 @@ import os
 import threading
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Optional
 
 if TYPE_CHECKING:
     from api.services.backtest_service import BacktestService
 
-from fastapi import Depends
-from alembic import command
 from alembic.config import Config
+from fastapi import Depends
 
+from alembic import command
+from api.db.import_legacy import LEGACY_IMPORT_SCHEMA_REVISION, import_legacy_portfolio
+from api.db.readiness import require_database_schema_at_head
+from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
+from api.db.session import DatabaseRuntime, create_database_runtime
+from api.db.settings import DatabaseSettings
+from api.db.unit_of_work import PortfolioUnitOfWork
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.fundamentals_config_repo import FundamentalsConfigRepository
 from api.repositories.review_queue_repo import ReviewQueueRepository
@@ -24,29 +30,24 @@ from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.symbol_pool_repo import SymbolPoolRepository
 from api.repositories.watchlist_repo import WatchlistRepository
 from api.repositories.weekly_reviews_repo import WeeklyReviewsRepository
-from api.services.fundamentals_service import FundamentalsService
+from api.security.settings import get_auth_settings
 from api.services.cache_service import CacheService
 from api.services.datasources_service import DatasourcesService
-from api.services.orders_service import OrdersService
+from api.services.fundamentals_service import FundamentalsService
 from api.services.order_approval_token import OrderApprovalTokenSigner
-from api.security.settings import get_auth_settings
+from api.services.orders_service import OrdersService
 from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.screener_service import ScreenerService
+from api.services.stateless_trading_service import StatelessTradingService
 from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
-from swing_screener.settings import data_dir, get_settings_manager
-from swing_screener.runtime_env import get_env_value
-from api.db.import_legacy import LEGACY_IMPORT_SCHEMA_REVISION, import_legacy_portfolio
-from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
-from api.db.readiness import require_database_schema_at_head
-from api.db.session import DatabaseRuntime, create_database_runtime
-from api.db.settings import DatabaseSettings
-from api.db.unit_of_work import PortfolioUnitOfWork
-from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
 from swing_screener.fundamentals import (
     FundamentalsAnalysisService as _FundamentalsAnalysisService,
 )
+from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+from swing_screener.runtime_env import get_env_value
+from swing_screener.settings import data_dir, get_settings_manager
 
 _finnhub_client: FinnhubEnrichmentClient | None = None
 _finnhub_client_api_key: str | None = None
@@ -271,6 +272,14 @@ def get_orders_service(
         approval_signer=approval_signer,
         uow=uow,
     )
+
+
+def get_stateless_trading_service(
+    config_repo: Annotated[ConfigRepository, Depends(get_config_repo)],
+    strategy_repo: Annotated[StrategyRepository, Depends(get_strategy_repo)],
+    approval_signer: Annotated[OrderApprovalTokenSigner, Depends(get_order_approval_signer)],
+) -> StatelessTradingService:
+    return StatelessTradingService(config_repo, strategy_repo, approval_signer)
 
 
 def get_portfolio_service(

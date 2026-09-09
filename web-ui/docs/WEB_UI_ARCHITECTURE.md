@@ -45,6 +45,24 @@
 - Client/UI state: Zustand stores in `src/stores/`.
 - No local persistence by default (`VITE_PERSISTENCE_MODE=api`).
 
+Local persistence is a storage choice, not a second trading engine.
+`features/persistence/portfolioService.ts` serializes the browser snapshot and
+dispatches `/api/portfolio/state/commands`; backend services own lifecycle,
+approval, risk, fee and FX calculations. A Web Lock serializes command execution
+across tabs, and the adapter compares the stored state before accepting the
+response. Revision, idempotency receipts, orders, positions and returned active
+strategy are persisted together only on success. Retried requests retain their
+explicit effective time and new-position identity. Missing Web Locks fails closed.
+Local position metrics and summaries use the read-only `/api/portfolio/state/metrics`
+projection; these read models never replace the stored snapshot. Browser ledger
+freshness stays unknown rather than inheriting server-database freshness.
+
+`UpdateStopRequest.marketPrice` carries the caller's ticker, price, observation
+timestamp and `current` status in local mode. It must come from an actual observed
+quote or explicit user observation; adapters do not relabel stored prices as fresh.
+Close and partial-close success invalidate linked order queries as well as position
+and review queries, because canonical commands may replace or cancel exit orders.
+
 ### Symbol workspace ownership
 
 The Today workspace keeps only session and layout state in

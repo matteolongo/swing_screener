@@ -1,843 +1,259 @@
-import type {
-  ClosePositionRequest,
-  CreateOrderRequest,
-  FillOrderRequest,
-  Order,
-  OrderStatus,
-  Position,
-  PositionStatus,
-  UpdateStopRequest,
-} from '@/features/portfolio/types';
-import {
-  currentDateIso,
-  nextOrderId,
-  nextPositionId,
-  randomOrderId,
-} from '@/features/persistence/ids';
-import { mutateTradingStore, readTradingStore } from '@/features/persistence/storage';
-
-export interface LocalPositionMetrics {
-  ticker: string;
-  pnl: number;
-  pnlPercent: number;
-  rNow: number;
-  entryValue: number;
-  currentValue: number;
-  perShareRisk: number;
-  totalRisk: number;
-}
-
-export interface LocalPositionWithMetrics extends Position {
-  pnl: number;
-  pnlPercent: number;
-  rNow: number;
-  rFxAdjusted?: number | null;
-  entryValue: number;
-  currentValue: number;
-  perShareRisk: number;
-  totalRisk: number;
-  feesEur: number;
-  daysOpen: number;
-  timeStopWarning: boolean;
-  priceSource: 'live' | 'cached' | 'entry';
-  rUsesInitialRisk: boolean;
-}
-
-export interface LocalConcentrationGroup {
-  country: string;
-  riskAmount: number;
-  riskPct: number;
-  positionCount: number;
-  warning: boolean;
-}
-
-export interface LocalPortfolioSummary {
-  totalPositions: number;
-  totalValue: number;
-  totalCostBasis: number;
-  totalPnl: number;
-  totalPnlPercent: number;
-  openRisk: number;
-  openRiskPercent: number;
-  accountSize: number;
-  availableCapital: number;
-  largestPositionValue: number;
-  largestPositionTicker: string;
-  bestPerformerTicker: string;
-  bestPerformerPnlPct: number;
-  worstPerformerTicker: string;
-  worstPerformerPnlPct: number;
-  avgRNow: number;
-  positionsProfitable: number;
-  positionsLosing: number;
-  winRate: number;
-  concentration: LocalConcentrationGroup[];
-  realizedPnl: number;
-  effectiveAccountSize: number;
-}
+import type { ClosePositionRequest, CreateOrderRequest, FillOrderRequest, OrderStatus, Position, PositionStatus, UpdateStopRequest } from '@/features/portfolio/types';
+import { transformCreateOrderRequest, transformOrder, transformPosition } from '@/features/portfolio/types';
+import type { OrderApiResponse } from '@/types/order';
+import type { PositionApiResponse } from '@/types/position';
+import { toStrategyUpdateRequest, transformStrategy, type StrategyAPI } from '@/features/strategy/types';
+import { readTradingStore, writeTradingStore } from '@/features/persistence/storage';
+import type { PersistedTradingStore } from '@/features/persistence/schema';
+import { fetchJson } from '@/lib/fetchJson';
 
 export type LocalOrderFilterStatus = OrderStatus | 'all';
 export type LocalPositionFilterStatus = PositionStatus | 'all';
 
-type LocalOrderKind = 'entry' | 'stop' | 'take_profit';
-
-function cloneValue<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
+export interface TradingSnapshotApi {
+  revision: number;
+  strategy: StrategyAPI;
+  orders: OrderApiResponse[];
+  positions: PositionApiResponse[];
 }
 
-function normalizeTicker(value: string): string {
-  return value.trim().toUpperCase();
-}
-
-function countryFromTicker(ticker: string): string {
-  const suffixMap: Record<string, string> = {
-    '.AS': 'NL',
-    '.PA': 'FR',
-    '.DE': 'DE',
-    '.MC': 'ES',
-    '.MI': 'IT',
-    '.ST': 'SE',
-    '.L': 'UK',
-    '.BR': 'BE',
-    '.LS': 'PT',
-    '.HE': 'FI',
-    '.CO': 'DK',
-    '.OL': 'NO',
-  };
-  const normalized = normalizeTicker(ticker);
-  for (const [suffix, country] of Object.entries(suffixMap)) {
-    if (normalized.endsWith(suffix)) return country;
+// Serialization only: preserve nested events and all optional fee/FX/broker fields.
+export function toTradingApi(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(toTradingApi);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+      key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`), toTradingApi(item),
+    ]));
   }
-  return 'US';
+  return value;
 }
 
-function roundToCents(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function roundToFourDecimals(value: number): number {
-  return Math.round((value + Number.EPSILON) * 10000) / 10000;
-}
-
-function concentrationGroups(positions: LocalPositionWithMetrics[], openRisk: number): LocalConcentrationGroup[] {
-  const countryRisk = new Map<string, number>();
-  const countryCount = new Map<string, number>();
-  for (const position of positions) {
-    if (position.totalRisk <= 0) continue;
-    const country = countryFromTicker(position.ticker);
-    countryRisk.set(country, (countryRisk.get(country) ?? 0) + position.totalRisk);
-    countryCount.set(country, (countryCount.get(country) ?? 0) + 1);
+function fromTradingApi(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(fromTradingApi);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+      key.replace(/_([a-z])/g, (_match, letter: string) => letter.toUpperCase()), fromTradingApi(item),
+    ]));
   }
-
-  return Array.from(countryRisk.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([country, riskAmount]) => {
-      const riskPct = openRisk > 0 ? (riskAmount / openRisk) * 100 : 0;
-      return {
-        country,
-        riskAmount,
-        riskPct,
-        positionCount: countryCount.get(country) ?? 0,
-        warning: riskPct >= 60,
-      };
-    });
+  return value;
 }
 
-function inferOrderKind(order: Pick<Order, 'orderKind' | 'orderType'>): LocalOrderKind | null {
-  if (order.orderKind) {
-    return order.orderKind;
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+const isFiniteNumber = (value: unknown): value is number => (
+  typeof value === 'number' && Number.isFinite(value)
+);
+const isNullable = (value: unknown, valid: (item: unknown) => boolean) => value === null || valid(value);
+const hasStrings = (value: Record<string, unknown>, keys: string[]) => keys.every(key => typeof value[key] === 'string');
+const hasFiniteNumbers = (value: Record<string, unknown>, keys: string[]) => keys.every(key => isFiniteNumber(value[key]));
+const isOptional = (value: unknown, valid: (item: unknown) => boolean) => value === undefined || valid(value);
+const isOneOf = (value: unknown, values: readonly string[]) => typeof value === 'string' && values.includes(value);
+const isOrderStatus = (value: unknown) => isOneOf(value, ['pending', 'submitted', 'filled', 'cancelled']);
+const isPositionStatus = (value: unknown) => isOneOf(value, ['open', 'closed']);
+const isOrderKind = (value: unknown) => isOneOf(value, ['entry', 'stop', 'take_profit']);
+const isTrailMethod = (value: unknown) => isOneOf(value, ['sma20', 'atr', 'fixed_pct', 'manual']);
+const isStringArray = (value: unknown) => Array.isArray(value) && value.every(item => typeof item === 'string');
+const hasOptionalValues = (value: Record<string, unknown>, keys: string[], valid: (item: unknown) => boolean) => (
+  keys.every(key => isOptional(value[key], valid))
+);
+
+function isStrategyIntelligenceLlm(value: unknown): boolean {
+  return isRecord(value)
+    && hasOptionalValues(value, ['enabled', 'enable_cache', 'enable_audit'], item => typeof item === 'boolean')
+    && isOptional(value.provider, item => isOneOf(item, ['openai']))
+    && hasOptionalValues(value, ['model', 'base_url', 'cache_path', 'audit_path'], item => typeof item === 'string')
+    && isOptional(value.max_concurrency, isFiniteNumber);
+}
+
+function isStrategyIntelligenceCatalyst(value: unknown): boolean {
+  return isRecord(value)
+    && hasOptionalValues(value, ['lookback_hours', 'recency_half_life_hours', 'false_catalyst_return_z', 'min_price_reaction_atr'], isFiniteNumber)
+    && isOptional(value.require_price_confirmation, item => typeof item === 'boolean');
+}
+
+function isStrategyIntelligenceTheme(value: unknown): boolean {
+  return isRecord(value)
+    && isOptional(value.enabled, item => typeof item === 'boolean')
+    && hasOptionalValues(value, ['min_cluster_size', 'min_peer_confirmation'], isFiniteNumber)
+    && isOptional(value.curated_peer_map_path, item => typeof item === 'string');
+}
+
+function isStrategyIntelligenceOpportunity(value: unknown): boolean {
+  return isRecord(value)
+    && hasOptionalValues(value, ['technical_weight', 'catalyst_weight', 'max_daily_opportunities', 'min_opportunity_score'], isFiniteNumber);
+}
+
+function isStrategyMarketIntelligence(value: unknown): boolean {
+  return isRecord(value)
+    && isOptional(value.enabled, item => typeof item === 'boolean')
+    && isOptional(value.providers, isStringArray)
+    && isOptional(value.universe_scope, item => isOneOf(item, ['screener_universe', 'strategy_universe']))
+    && isOptional(value.market_context_symbols, isStringArray)
+    && isOptional(value.llm, isStrategyIntelligenceLlm)
+    && isOptional(value.catalyst, isStrategyIntelligenceCatalyst)
+    && isOptional(value.theme, isStrategyIntelligenceTheme)
+    && isOptional(value.opportunity, isStrategyIntelligenceOpportunity);
+}
+
+function isTradingStrategy(value: unknown): value is StrategyAPI {
+  if (!isRecord(value) || !hasStrings(value, ['id', 'name', 'created_at', 'updated_at']) || typeof value.is_default !== 'boolean') return false;
+  if (!isOptional(value.description, item => isNullable(item, item => typeof item === 'string')) || !isOptional(value.module, item => typeof item === 'string')) return false;
+  const { universe, ranking, signals, risk, manage, market_intelligence: marketIntelligence } = value;
+  if (!isRecord(universe) || !isRecord(universe.trend) || !isRecord(universe.vol) || !isRecord(universe.mom) || !isRecord(universe.filt)) return false;
+  if (!hasFiniteNumbers(universe.trend, ['sma_fast', 'sma_mid', 'sma_long']) || !hasFiniteNumbers(universe.vol, ['atr_window']) || !hasFiniteNumbers(universe.mom, ['lookback_6m', 'lookback_12m']) || !hasStrings(universe.mom, ['benchmark'])) return false;
+  if (!hasFiniteNumbers(universe.filt, ['min_price', 'max_price', 'max_atr_pct']) || typeof universe.filt.require_trend_ok !== 'boolean' || typeof universe.filt.require_rs_positive !== 'boolean') return false;
+  if (!isOptional(universe.filt.require_weekly_uptrend, item => typeof item === 'boolean') || !isOptional(universe.filt.currencies, item => Array.isArray(item) && item.every(currency => typeof currency === 'string'))) return false;
+  if (!isRecord(ranking) || !hasFiniteNumbers(ranking, ['w_mom_6m', 'w_mom_12m', 'w_rs_6m', 'top_n'])) return false;
+  if (!isRecord(signals) || !hasFiniteNumbers(signals, ['breakout_lookback', 'pullback_ma', 'min_history'])) return false;
+  if (!isRecord(risk) || !hasFiniteNumbers(risk, ['account_size', 'risk_pct', 'max_position_pct', 'min_shares', 'k_atr'])) return false;
+  if (!isOptional(risk.min_rr, isFiniteNumber) || !isOptional(risk.rr_target, isFiniteNumber) || !isOptional(risk.commission_pct, isFiniteNumber) || !isOptional(risk.max_fee_risk_pct, isFiniteNumber) || !isOptional(risk.account_size_mode, item => isOneOf(item, ['base', 'equity'])) || !isOptional(risk.regime_enabled, item => typeof item === 'boolean') || !['regime_trend_sma', 'regime_trend_multiplier', 'regime_vol_atr_window', 'regime_vol_atr_pct_threshold', 'regime_vol_multiplier'].every(key => isOptional(risk[key], isFiniteNumber))) return false;
+  if (!isRecord(manage) || !hasFiniteNumbers(manage, ['breakeven_at_r', 'trail_after_r', 'trail_sma', 'sma_buffer_pct', 'max_holding_days']) || !hasStrings(manage, ['benchmark'])) return false;
+  if (!isOptional(manage.time_stop_days, isFiniteNumber) || !isOptional(manage.time_stop_min_r, isFiniteNumber)) return false;
+  return marketIntelligence === undefined || isStrategyMarketIntelligence(marketIntelligence);
+}
+
+function isTradingOrder(value: unknown): value is OrderApiResponse {
+  if (!isRecord(value) || !hasStrings(value, ['order_id', 'ticker', 'status', 'order_type', 'order_date', 'filled_date', 'notes']) || !hasFiniteNumbers(value, ['quantity'])) return false;
+  if (!isOrderStatus(value.status)) return false;
+  if (![value.limit_price, value.stop_price, value.entry_price].every(item => isNullable(item, isFiniteNumber))) return false;
+  if (!isOptional(value.target_price, item => isNullable(item, isFiniteNumber))) return false;
+  if (!isNullable(value.order_kind, isOrderKind) || ![value.parent_order_id, value.position_id, value.tif].every(item => isNullable(item, item => typeof item === 'string'))) return false;
+  return ['fee_eur', 'fill_fx_rate'].every(key => isOptional(value[key], item => isNullable(item, isFiniteNumber)))
+    && ['broker_order_id', 'broker', 'broker_synced_at'].every(key => isOptional(value[key], item => isNullable(item, item => typeof item === 'string')));
+}
+
+function isTradingPosition(value: unknown): value is PositionApiResponse {
+  if (!isRecord(value) || !hasStrings(value, ['ticker', 'status', 'entry_date', 'notes']) || !hasFiniteNumbers(value, ['entry_price', 'stop_price', 'shares'])) return false;
+  if (!isPositionStatus(value.status)) return false;
+  if (!['position_id', 'source_order_id', 'initial_risk', 'max_favorable_price', 'exit_date', 'exit_price', 'current_price', 'exit_order_ids'].every(key => key in value)) return false;
+  if (![value.position_id, value.source_order_id, value.exit_date].every(item => isNullable(item, item => typeof item === 'string')) || ![value.initial_risk, value.max_favorable_price, value.exit_price, value.current_price].every(item => isNullable(item, isFiniteNumber)) || !isNullable(value.exit_order_ids, item => Array.isArray(item) && item.every(id => typeof id === 'string'))) return false;
+  if (!['target_price', 'entry_fee_eur', 'exit_fee_eur', 'exit_fx_rate', 'entry_fx_rate', 'trail_param'].every(key => isOptional(value[key], item => isNullable(item, isFiniteNumber))) || !['broker', 'broker_product_id', 'isin', 'broker_synced_at', 'thesis', 'lesson'].every(key => isOptional(value[key], item => isNullable(item, item => typeof item === 'string'))) || !isOptional(value.trail_method, item => isNullable(item, isTrailMethod)) || !isOptional(value.tags, item => isNullable(item, item => Array.isArray(item) && item.every(tag => typeof tag === 'string')))) return false;
+  return isOptional(value.partial_closes, item => isNullable(item, item => Array.isArray(item) && item.every(event => isRecord(event) && hasStrings(event, ['date']) && hasFiniteNumbers(event, ['shares_closed', 'price', 'r_at_close']) && ['fee_eur', 'fx_rate'].every(key => isOptional(event[key], fee => isNullable(fee, isFiniteNumber))))));
+}
+
+function isTradingSnapshot(value: TradingSnapshotApi, expectedRevision: number): boolean {
+  return value.revision === expectedRevision + 1
+    && isTradingStrategy(value.strategy)
+    && Array.isArray(value.orders) && value.orders.every(isTradingOrder)
+    && Array.isArray(value.positions) && value.positions.every(isTradingPosition);
+}
+
+function cloneTradingValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(cloneTradingValue);
+  if (isRecord(value)) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneTradingValue(item)]));
+  return value;
+}
+
+function preserveNestedExtensions<T>(typed: T, generic: unknown): T {
+  if (Array.isArray(typed)) {
+    const source = Array.isArray(generic) ? generic : [];
+    return typed.map((item, index) => preserveNestedExtensions(item, source[index])) as T;
   }
-  const normalizedType = order.orderType.trim().toUpperCase();
-  if (normalizedType.startsWith('BUY_')) return 'entry';
-  if (normalizedType === 'SELL_STOP' || normalizedType === 'STOP') return 'stop';
-  if (normalizedType === 'SELL_LIMIT') return 'take_profit';
-  return null;
-}
-
-function quoteFee(order: Order): number {
-  if (order.feeEur == null) return 0;
-  if (order.fillFxRate != null && order.fillFxRate > 0) {
-    return Math.abs(order.feeEur) * order.fillFxRate;
+  if (isRecord(typed)) {
+    const source = isRecord(generic) ? generic : {};
+    const result = cloneTradingValue(source) as Record<string, unknown>;
+    for (const [key, value] of Object.entries(typed)) {
+      if (value === undefined && source[key] !== undefined) continue;
+      result[key] = preserveNestedExtensions(value, source[key]);
+    }
+    return result as T;
   }
-  return Math.abs(order.feeEur);
+  return typed;
 }
 
-function feeMapByPosition(orders: Order[]): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const order of orders) {
-    if (order.status !== 'filled' || !order.positionId) continue;
-    const current = map.get(order.positionId) ?? 0;
-    map.set(order.positionId, current + quoteFee(order));
-  }
-  return map;
-}
-
-function currentPriceForPosition(position: Position): number {
-  if (position.status === 'closed') {
-    return position.exitPrice ?? position.currentPrice ?? position.entryPrice;
-  }
-  return position.currentPrice ?? position.entryPrice;
-}
-
-function perShareRisk(position: Position): number {
-  const direct = position.initialRisk;
-  if (direct != null && Number.isFinite(direct) && direct > 0) {
-    return direct;
-  }
-  const computed = position.entryPrice - position.stopPrice;
-  return computed > 0 ? computed : 0;
-}
-
-function daysBetween(startIso: string, endIso: string): number {
-  const start = new Date(`${startIso}T00:00:00`);
-  const end = new Date(`${endIso}T00:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
-  return Math.max(Math.floor((end.getTime() - start.getTime()) / 86_400_000), 0);
-}
-
-function toPositionWithMetrics(position: Position, feesByPosition: Map<string, number>): LocalPositionWithMetrics {
-  const currentPrice = currentPriceForPosition(position);
-  const entryValue = position.entryPrice * position.shares;
-  const currentValue = currentPrice * position.shares;
-  const fee = position.positionId ? feesByPosition.get(position.positionId) ?? 0 : 0;
-  const pnl = (currentPrice - position.entryPrice) * position.shares - fee;
-  const riskPerShare = perShareRisk(position);
-  const totalRisk = riskPerShare * position.shares;
-  const store = readTradingStore();
-  const active = store.strategies.find((strategy) => strategy.id === store.activeStrategyId);
-  const daysOpen = daysBetween(position.entryDate, currentDateIso());
-  const rNow = totalRisk > 0 ? pnl / totalRisk : 0;
-  const timeStopDays = active?.manage.timeStopDays ?? 15;
-  const timeStopMinR = active?.manage.timeStopMinR ?? 0.5;
-
+export function tradingSnapshotLocal(store = readTradingStore()): TradingSnapshotApi {
+  const strategy = store.strategies.find(item => item.id === store.activeStrategyId);
+  if (!strategy) throw new Error('Active local strategy not found.');
+  const serializedStrategy = preserveNestedExtensions(toStrategyUpdateRequest(strategy), toTradingApi(strategy));
   return {
-    ...cloneValue(position),
-    currentPrice: position.status === 'open' ? currentPrice : position.currentPrice,
-    pnl,
-    pnlPercent: entryValue > 0 ? (pnl / entryValue) * 100 : 0,
-    rNow,
-    rFxAdjusted: null,
-    entryValue,
-    currentValue,
-    perShareRisk: riskPerShare,
-    totalRisk,
-    feesEur: fee,
-    daysOpen,
-    timeStopWarning: position.status === 'open' && daysOpen >= timeStopDays && rNow < timeStopMinR,
-    priceSource: 'entry' as const,
-    rUsesInitialRisk: false,
+    revision: store.revision ?? 0,
+    strategy: { ...serializedStrategy, id: strategy.id, is_default: strategy.isDefault, created_at: strategy.createdAt, updated_at: strategy.updatedAt } as StrategyAPI,
+    orders: toTradingApi(store.orders) as OrderApiResponse[],
+    positions: toTradingApi(store.positions) as PositionApiResponse[],
   };
 }
 
-function activeAccountSize(): number {
-  const store = readTradingStore();
-  const active = store.strategies.find((strategy) => strategy.id === store.activeStrategyId);
-  if (!active) return 50000;
-  return active.risk.accountSize;
-}
+type CommandContext = { effective_at: string; new_position_id?: string; market_price?: unknown };
+const retryContexts = new Map<string, { fingerprint: string; context: CommandContext }>();
+let commandQueue: Promise<unknown> = Promise.resolve();
 
-export function listOrdersLocal(status: LocalOrderFilterStatus): Order[] {
-  const store = readTradingStore();
-  const filtered = status === 'all'
-    ? store.orders
-    : store.orders.filter((order) => order.status === status);
-  return cloneValue(filtered);
-}
-
-export function getAllOrdersLocal(): Order[] {
-  return cloneValue(readTradingStore().orders);
-}
-
-export function createOrderLocal(request: CreateOrderRequest): void {
-  mutateTradingStore((store) => {
-    const ticker = normalizeTicker(request.ticker);
-    if (!ticker) {
-      throw new Error('Ticker cannot be empty');
-    }
-
-    const existingIds = new Set(store.orders.map((order) => order.orderId));
-    const orderId = nextOrderId(ticker, existingIds);
-    const normalizedOrderType = request.orderType.trim().toUpperCase();
-    const orderKind = request.orderKind ?? inferOrderKind({ orderKind: null, orderType: normalizedOrderType });
-    const approvedPendingPullback = request.triggerStatus === 'WAIT'
-      && normalizedOrderType === 'BUY_LIMIT'
-      && Boolean(request.approvalToken);
-    const openPosition = store.positions.find(
-      (position) => position.status === 'open' && normalizeTicker(position.ticker) === ticker,
-    );
-
-    if (orderKind === 'entry') {
-      if (
-        request.setupStatus !== 'PASS'
-        || (request.triggerStatus !== 'PASS' && !approvedPendingPullback)
-        || request.dataStatus !== 'current'
-        || !request.dataAsOf
-        || !['structural', 'manual'].includes(request.targetSource ?? '')
-      ) {
-        throw new Error('Order blocked: setup, trigger, coherent-plan, and current-data gates must pass.');
-      }
-      if (request.daysToEarnings == null || request.daysToEarnings <= 3) {
-        throw new Error('Order blocked: earnings status is unknown or inside the three-day risk window.');
-      }
-      const entry = request.limitPrice ?? 0;
-      const stop = request.stopPrice ?? 0;
-      const target = request.targetPrice ?? 0;
-      if (entry <= 0 || stop <= 0 || stop >= entry || target <= entry) {
-        throw new Error('Order blocked: entry, stop, and structural target are incoherent.');
-      }
-      const active = store.strategies.find((strategy) => strategy.id === store.activeStrategyId);
-      const accountSize = active?.risk.accountSize ?? 0;
-      const minRr = active?.risk.minRr ?? 2;
-      if ((target - entry) / (entry - stop) < minRr) {
-        throw new Error('Order blocked: structural reward/risk is below policy.');
-      }
-      const openNotional = store.positions
-        .filter((position) => position.status === 'open')
-        .reduce((sum, position) => sum + position.entryPrice * position.shares, 0);
-      const pendingNotional = store.orders
-        .filter((order) => order.status === 'pending' && inferOrderKind(order) === 'entry')
-        .reduce((sum, order) => sum + (order.limitPrice ?? 0) * order.quantity, 0);
-      if (entry * request.quantity > accountSize - openNotional - pendingNotional) {
-        throw new Error('Order blocked: insufficient unreserved capital.');
-      }
-      const openRisk = store.positions
-        .filter((position) => position.status === 'open')
-        .reduce((sum, position) => sum + Math.max(0, position.entryPrice - position.stopPrice) * position.shares, 0);
-      const pendingRisk = store.orders
-        .filter((order) => order.status === 'pending' && inferOrderKind(order) === 'entry')
-        .reduce(
-          (sum, order) => sum + Math.max(0, (order.limitPrice ?? 0) - (order.stopPrice ?? 0)) * order.quantity,
-          0,
-        );
-      const projectedRisk = openRisk + pendingRisk + (entry - stop) * request.quantity;
-      if (projectedRisk > accountSize * 0.06) {
-        throw new Error('Order blocked: projected portfolio heat exceeds 6% of account equity.');
-      }
-      const country = countryFromTicker(ticker);
-      const countryOpenNotional = store.positions
-        .filter((position) => position.status === 'open' && countryFromTicker(position.ticker) === country)
-        .reduce((sum, position) => sum + position.entryPrice * position.shares, 0);
-      const countryPendingNotional = store.orders
-        .filter(
-          (order) => order.status === 'pending' && inferOrderKind(order) === 'entry' && countryFromTicker(order.ticker) === country,
-        )
-        .reduce((sum, order) => sum + (order.limitPrice ?? 0) * order.quantity, 0);
-      if (countryOpenNotional + countryPendingNotional + entry * request.quantity > accountSize * 0.6) {
-        throw new Error(`Order blocked: projected ${country} concentration exceeds 60% of account equity.`);
-      }
-      const pendingSameSymbolEntry = store.orders.some(
-        (order) =>
-          order.status === 'pending' &&
-          normalizeTicker(order.ticker) === ticker &&
-          inferOrderKind(order) === 'entry',
-      );
-      if (pendingSameSymbolEntry) {
-        throw new Error(`${ticker}: pending entry order already exists.`);
-      }
-
-      if (request.entryMode === 'ADD_ON') {
-        if (!openPosition) {
-          throw new Error(`${ticker}: no open position found for add-on order.`);
-        }
-      } else if (openPosition) {
-        throw new Error(`${ticker}: open position already exists. Create this as an ADD_ON order instead.`);
-      }
-    }
-
-    const order: Order = {
-      orderId,
-      ticker,
-      status: 'pending',
-      orderType: normalizedOrderType,
-      quantity: request.quantity,
-      limitPrice: request.limitPrice ?? null,
-      stopPrice: request.stopPrice ?? null,
-      targetPrice: request.targetPrice ?? null,
-      orderDate: currentDateIso(),
-      filledDate: '',
-      entryPrice: null,
-      notes: request.notes?.trim() ?? '',
-      orderKind,
-      parentOrderId: null,
-      positionId: request.entryMode === 'ADD_ON' ? (request.positionId ?? openPosition?.positionId ?? null) : null,
-      tif: 'GTC',
-      feeEur: null,
-      fillFxRate: null,
-    };
-
-    store.orders.push(order);
-  });
-}
-
-export function fillOrderLocal(orderId: string, request: FillOrderRequest): void {
-  mutateTradingStore((store) => {
-    const orderIndex = store.orders.findIndex((order) => order.orderId === orderId);
-    if (orderIndex < 0) {
-      throw new Error(`Order not found: ${orderId}`);
-    }
-
-    const currentOrder = store.orders[orderIndex];
-    if (currentOrder.status !== 'pending') {
-      throw new Error(`Order not pending: ${currentOrder.status}`);
-    }
-
-    const kind = inferOrderKind(currentOrder);
-
-    if (kind === 'entry') {
-      if (currentOrder.quantity <= 0) {
-        throw new Error('Order quantity must be > 0');
-      }
-      const openPositionIndex = store.positions.findIndex(
-        (position) =>
-          position.status === 'open' && normalizeTicker(position.ticker) === normalizeTicker(currentOrder.ticker),
-      );
-      const openPosition = openPositionIndex >= 0 ? store.positions[openPositionIndex] : undefined;
-
-      if (openPosition) {
-        const positionId = openPosition.positionId ?? nextPositionId(openPosition.ticker, openPosition.entryDate, store.positions);
-        const totalShares = openPosition.shares + currentOrder.quantity;
-        const blendedEntryPrice = (
-          (openPosition.entryPrice * openPosition.shares) + (request.filledPrice * currentOrder.quantity)
-        ) / totalShares;
-        const stopPrice = openPosition.stopPrice;
-
-        if (blendedEntryPrice <= stopPrice) {
-          throw new Error('Blended entry must be above stop price.');
-        }
-
-        const filledOrder: Order = {
-          ...currentOrder,
-          status: 'filled',
-          filledDate: request.filledDate,
-          entryPrice: request.filledPrice,
-          quantity: currentOrder.quantity,
-          stopPrice,
-          orderKind: 'entry',
-          positionId,
-          tif: currentOrder.tif ?? 'GTC',
-          feeEur: request.feeEur ?? null,
-          fillFxRate: request.fillFxRate ?? null,
-        };
-        store.orders[orderIndex] = filledOrder;
-
-        let stopOrderId: string | undefined;
-        for (let index = 0; index < store.orders.length; index += 1) {
-          if (index === orderIndex) continue;
-          const existingOrder = store.orders[index];
-          if (existingOrder.positionId !== positionId) continue;
-
-          const existingKind = inferOrderKind(existingOrder);
-          if (existingKind === 'stop') {
-            stopOrderId = existingOrder.orderId;
-            store.orders[index] = {
-              ...existingOrder,
-              quantity: totalShares,
-              stopPrice,
-            };
-            continue;
-          }
-          if (existingKind === 'take_profit') {
-            store.orders[index] = {
-              ...existingOrder,
-              quantity: totalShares,
-            };
-          }
-        }
-
-        if (!stopOrderId) {
-          stopOrderId = `ORD-STOP-${positionId}`;
-          store.orders.push({
-            orderId: stopOrderId,
-            ticker: currentOrder.ticker,
-            status: 'pending',
-            orderType: 'SELL_STOP',
-            quantity: totalShares,
-            limitPrice: null,
-            stopPrice,
-            orderDate: request.filledDate,
-            filledDate: '',
-            entryPrice: null,
-            notes: 'auto-linked stop (scale-in)',
-            orderKind: 'stop',
-            parentOrderId: openPosition.sourceOrderId ?? currentOrder.orderId,
-            positionId,
-            tif: 'GTC',
-            feeEur: null,
-            fillFxRate: null,
-          });
-        }
-
-        const exitOrderIds = new Set(openPosition.exitOrderIds ?? []);
-        exitOrderIds.add(stopOrderId);
-        const currentMaxFavorablePrice = openPosition.maxFavorablePrice ?? openPosition.entryPrice;
-
-        store.positions[openPositionIndex] = {
-          ...openPosition,
-          positionId,
-          entryPrice: blendedEntryPrice,
-          stopPrice,
-          shares: totalShares,
-          initialRisk: roundToFourDecimals(blendedEntryPrice - stopPrice),
-          maxFavorablePrice: Math.max(currentMaxFavorablePrice, request.filledPrice),
-          exitOrderIds: Array.from(exitOrderIds),
-        };
-        return;
-      }
-
-      const stopPrice = request.stopPrice ?? currentOrder.stopPrice ?? undefined;
-      if (stopPrice == null) {
-        throw new Error('stop_price is required for entry fills');
-      }
-      if (stopPrice >= request.filledPrice) {
-        throw new Error('stop_price must be below fill_price.');
-      }
-
-      const positionId = nextPositionId(currentOrder.ticker, request.filledDate, store.positions);
-      const filledOrder: Order = {
-        ...currentOrder,
-        status: 'filled',
-        filledDate: request.filledDate,
-        entryPrice: request.filledPrice,
-        quantity: currentOrder.quantity,
-        stopPrice,
-        orderKind: 'entry',
-        positionId,
-        tif: currentOrder.tif ?? 'GTC',
-        feeEur: request.feeEur ?? null,
-        fillFxRate: request.fillFxRate ?? null,
-      };
-      store.orders[orderIndex] = filledOrder;
-
-      const stopOrderId = `ORD-STOP-${positionId}`;
-      const stopOrder: Order = {
-        orderId: stopOrderId,
-        ticker: currentOrder.ticker,
-        status: 'pending',
-        orderType: 'SELL_STOP',
-        quantity: currentOrder.quantity,
-        limitPrice: null,
-        stopPrice,
-        targetPrice: null,
-        orderDate: request.filledDate,
-        filledDate: '',
-        entryPrice: null,
-        notes: 'auto-linked stop',
-        orderKind: 'stop',
-        parentOrderId: currentOrder.orderId,
-        positionId,
-        tif: 'GTC',
-        feeEur: null,
-        fillFxRate: null,
-      };
-      store.orders.push(stopOrder);
-
-      const position: Position = {
-        ticker: currentOrder.ticker,
-        status: 'open',
-        entryDate: request.filledDate,
-        entryPrice: request.filledPrice,
-        stopPrice,
-        targetPrice: currentOrder.targetPrice ?? undefined,
-        shares: currentOrder.quantity,
-        positionId,
-        sourceOrderId: currentOrder.orderId,
-        initialRisk: request.filledPrice - stopPrice,
-        maxFavorablePrice: request.filledPrice,
-        notes: currentOrder.notes,
-        exitOrderIds: [stopOrderId],
-      };
-      store.positions.push(position);
+export function executeTradingCommandLocal(
+  operation: string,
+  payload: unknown,
+  idempotencyKey: string = crypto.randomUUID(),
+  marketPrice?: UpdateStopRequest['marketPrice'],
+): Promise<void> {
+  const fingerprint = JSON.stringify({ operation, payload, marketPrice });
+  const execute = async () => {
+    const before = readTradingStore();
+    const previous = before.appliedCommands?.[idempotencyKey];
+    if (previous !== undefined) {
+      if (previous !== fingerprint) throw new Error('Idempotency key reused for a different request.');
       return;
     }
-
-    store.orders[orderIndex] = {
-      ...currentOrder,
-      status: 'filled',
-      filledDate: request.filledDate,
-      entryPrice: request.filledPrice,
-      feeEur: request.feeEur ?? null,
-      fillFxRate: request.fillFxRate ?? null,
+    const retry = retryContexts.get(idempotencyKey);
+    if (retry && retry.fingerprint !== fingerprint) throw new Error('Idempotency key reused for a different request.');
+    const context = retry?.context ?? {
+      effective_at: new Date().toISOString(),
+      ...(operation === 'fill_order' ? { new_position_id: `POS-${idempotencyKey}` } : {}),
+      ...(marketPrice ? { market_price: toTradingApi(marketPrice) } : {}),
     };
-  });
-}
-
-export function cancelOrderLocal(orderId: string): void {
-  mutateTradingStore((store) => {
-    const index = store.orders.findIndex((order) => order.orderId === orderId);
-    if (index < 0) {
-      throw new Error(`Order not found: ${orderId}`);
-    }
-    if (store.orders[index].status !== 'pending') {
-      throw new Error(`Order not pending: ${store.orders[index].status}`);
-    }
-    store.orders[index] = {
-      ...store.orders[index],
-      status: 'cancelled',
-    };
-  });
-}
-
-export function listPositionsLocal(status: LocalPositionFilterStatus): LocalPositionWithMetrics[] {
-  const store = readTradingStore();
-  const filtered = status === 'all'
-    ? store.positions
-    : store.positions.filter((position) => position.status === status);
-  const feesByPosition = feeMapByPosition(store.orders);
-  return filtered.map((position) => toPositionWithMetrics(position, feesByPosition));
-}
-
-export function getAllPositionsLocal(): Position[] {
-  return cloneValue(readTradingStore().positions);
-}
-
-export function getPositionByIdLocal(positionId: string): Position | null {
-  const store = readTradingStore();
-  const match = store.positions.find((position) => position.positionId === positionId);
-  return match ? cloneValue(match) : null;
-}
-
-export function positionMetricsLocal(positionId: string): LocalPositionMetrics {
-  const store = readTradingStore();
-  const position = store.positions.find((item) => item.positionId === positionId);
-  if (!position) {
-    throw new Error(`Position not found: ${positionId}`);
-  }
-
-  const feesByPosition = feeMapByPosition(store.orders);
-  const metrics = toPositionWithMetrics(position, feesByPosition);
-  return {
-    ticker: metrics.ticker,
-    pnl: metrics.pnl,
-    pnlPercent: metrics.pnlPercent,
-    rNow: metrics.rNow,
-    entryValue: metrics.entryValue,
-    currentValue: metrics.currentValue,
-    perShareRisk: metrics.perShareRisk,
-    totalRisk: metrics.totalRisk,
-  };
-}
-
-export function portfolioSummaryLocal(): LocalPortfolioSummary {
-  const accountSize = activeAccountSize();
-  const closedPositions = listPositionsLocal('closed');
-  const realizedPnl = closedPositions.reduce(
-    (sum, position) => sum + ((position.exitPrice ?? position.entryPrice) - position.entryPrice) * position.shares - (position.exitFeeEur ?? 0),
-    0,
-  );
-  const effectiveAccountSize = accountSize + realizedPnl;
-  const positions = listPositionsLocal('open');
-  if (positions.length === 0) {
-    return {
-      totalPositions: 0,
-      totalValue: 0,
-      totalCostBasis: 0,
-      totalPnl: 0,
-      totalPnlPercent: 0,
-      openRisk: 0,
-      openRiskPercent: 0,
-      accountSize,
-      availableCapital: accountSize,
-      largestPositionValue: 0,
-      largestPositionTicker: '',
-      bestPerformerTicker: '',
-      bestPerformerPnlPct: 0,
-      worstPerformerTicker: '',
-      worstPerformerPnlPct: 0,
-      avgRNow: 0,
-      positionsProfitable: 0,
-      positionsLosing: 0,
-      winRate: 0,
-      concentration: [],
-      realizedPnl,
-      effectiveAccountSize,
-    };
-  }
-
-  let totalValue = 0;
-  let totalCostBasis = 0;
-  let totalPnl = 0;
-  let openRisk = 0;
-  let largestPositionValue = 0;
-  let largestPositionTicker = '';
-  let bestPerformerTicker = '';
-  let bestPerformerPnlPct = Number.NEGATIVE_INFINITY;
-  let worstPerformerTicker = '';
-  let worstPerformerPnlPct = Number.POSITIVE_INFINITY;
-  let totalRNow = 0;
-  let rCount = 0;
-  let positionsProfitable = 0;
-  let positionsLosing = 0;
-
-  positions.forEach((position) => {
-    totalValue += position.currentValue;
-    totalCostBasis += position.entryValue;
-    totalPnl += position.pnl;
-
-    if (position.totalRisk > 0) {
-      openRisk += position.totalRisk;
-      totalRNow += position.rNow;
-      rCount += 1;
-    }
-
-    if (position.currentValue > largestPositionValue) {
-      largestPositionValue = position.currentValue;
-      largestPositionTicker = position.ticker;
-    }
-
-    if (position.pnlPercent > bestPerformerPnlPct) {
-      bestPerformerPnlPct = position.pnlPercent;
-      bestPerformerTicker = position.ticker;
-    }
-
-    if (position.pnlPercent < worstPerformerPnlPct) {
-      worstPerformerPnlPct = position.pnlPercent;
-      worstPerformerTicker = position.ticker;
-    }
-
-    if (position.pnl > 0) {
-      positionsProfitable += 1;
-    } else if (position.pnl < 0) {
-      positionsLosing += 1;
-    }
-  });
-
-  return {
-    totalPositions: positions.length,
-    totalValue,
-    totalCostBasis,
-    totalPnl,
-    totalPnlPercent: totalCostBasis > 0 ? (totalPnl / totalCostBasis) * 100 : 0,
-    openRisk,
-    openRiskPercent: effectiveAccountSize > 0 ? (openRisk / effectiveAccountSize) * 100 : 0,
-    accountSize,
-    availableCapital: effectiveAccountSize - totalValue,
-    largestPositionValue,
-    largestPositionTicker,
-    bestPerformerTicker,
-    bestPerformerPnlPct: bestPerformerTicker ? bestPerformerPnlPct : 0,
-    worstPerformerTicker,
-    worstPerformerPnlPct: worstPerformerTicker ? worstPerformerPnlPct : 0,
-    avgRNow: rCount > 0 ? totalRNow / rCount : 0,
-    positionsProfitable,
-    positionsLosing,
-    winRate: positions.length > 0 ? (positionsProfitable / positions.length) * 100 : 0,
-    concentration: concentrationGroups(positions, openRisk),
-    realizedPnl,
-    effectiveAccountSize,
-  };
-}
-
-export function updatePositionStopLocal(positionId: string, request: UpdateStopRequest): void {
-  mutateTradingStore((store) => {
-    const positionIndex = store.positions.findIndex((position) => position.positionId === positionId);
-    if (positionIndex < 0) {
-      throw new Error(`Position not found: ${positionId}`);
-    }
-
-    const position = store.positions[positionIndex];
-    if (position.status !== 'open') {
-      throw new Error('Cannot update stop on closed position');
-    }
-
-    const newStop = roundToCents(request.newStop);
-    const oldStop = roundToCents(position.stopPrice);
-
-    if (newStop <= oldStop) {
-      throw new Error(`Cannot move stop down. Current: ${oldStop}, Requested: ${newStop}`);
-    }
-
-    const currentPrice = position.currentPrice;
-    if (currentPrice != null && Number.isFinite(currentPrice) && newStop > currentPrice) {
-      throw new Error(
-        `Stop price (${newStop}) must be at or below current price (${currentPrice}) for long positions`,
-      );
-    }
-
-    const nextNotes = request.reason
-      ? `${position.notes ? `${position.notes}\n` : ''}Stop updated to ${newStop}: ${request.reason}`
-      : position.notes;
-
-    store.positions[positionIndex] = {
-      ...position,
-      stopPrice: newStop,
-      notes: nextNotes,
-    };
-
-    const cancelledOrderIds: string[] = [];
-    store.orders = store.orders.map((order) => {
-      if (
-        order.positionId === positionId &&
-        inferOrderKind(order) === 'stop' &&
-        order.status === 'pending'
-      ) {
-        cancelledOrderIds.push(order.orderId);
-        return {
-          ...order,
-          status: 'cancelled',
-          notes: `${order.notes ? `${order.notes}\n` : ''}Replaced with new stop at ${newStop} (was ${oldStop})`,
-        };
-      }
-      return order;
+    retryContexts.set(idempotencyKey, { fingerprint, context });
+    const snapshot = tradingSnapshotLocal(before);
+    const response = await fetchJson<TradingSnapshotApi>('/api/portfolio/state/commands', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ snapshot, expected_revision: snapshot.revision, command: { operation, payload }, context }),
+      errorMessage: 'Failed to apply trading command',
     });
-
-    const replacementOrderId = randomOrderId('ORD');
-    const replacementOrder: Order = {
-      orderId: replacementOrderId,
-      ticker: position.ticker,
-      status: 'pending',
-      orderType: 'STOP',
-      quantity: position.shares,
-      limitPrice: null,
-      stopPrice: newStop,
-      orderDate: currentDateIso(),
-      filledDate: '',
-      entryPrice: null,
-      notes: `Auto-created from position stop update (was ${oldStop})`,
-      orderKind: 'stop',
-      parentOrderId: position.sourceOrderId ?? null,
-      positionId,
-      tif: 'GTC',
-      feeEur: null,
-      fillFxRate: null,
+    if (!isTradingSnapshot(response, snapshot.revision)) {
+      throw new Error('Invalid trading command snapshot.');
+    }
+    const current = readTradingStore();
+    if (JSON.stringify(current) !== JSON.stringify(before)) throw new Error('Local trading state changed while the command was running. Retry with refreshed state.');
+    const strategy = preserveNestedExtensions(transformStrategy(response.strategy), fromTradingApi(response.strategy));
+    const next: PersistedTradingStore = {
+      ...current, revision: response.revision,
+      orders: response.orders.map(order => preserveNestedExtensions(transformOrder(order), fromTradingApi(order))),
+      positions: response.positions.map(position => preserveNestedExtensions(transformPosition(position), fromTradingApi(position))),
+      activeStrategyId: strategy.id,
+      strategies: current.strategies.map(item => item.id === current.activeStrategyId ? strategy : item),
+      appliedCommands: { ...current.appliedCommands, [idempotencyKey]: fingerprint },
     };
-
-    const existingExitOrders = store.positions[positionIndex].exitOrderIds ?? [];
-    const nextExitOrders = [
-      ...existingExitOrders.filter((orderId) => !cancelledOrderIds.includes(orderId)),
-      replacementOrderId,
-    ];
-
-    store.positions[positionIndex] = {
-      ...store.positions[positionIndex],
-      exitOrderIds: nextExitOrders,
-    };
-
-    store.orders.push(replacementOrder);
-  });
+    writeTradingStore(next);
+    retryContexts.delete(idempotencyKey);
+  };
+  const run = async () => {
+    if (!navigator.locks) throw new Error('Browser Web Locks support is required for local trading mutations.');
+    await navigator.locks.request('swing-screener.trading-command', execute);
+  };
+  const result = commandQueue.then(run, run);
+  commandQueue = result.catch(() => undefined);
+  return result;
 }
 
-export function closePositionLocal(positionId: string, request: ClosePositionRequest): void {
-  mutateTradingStore((store) => {
-    const index = store.positions.findIndex((position) => position.positionId === positionId);
-    if (index < 0) {
-      throw new Error(`Position not found: ${positionId}`);
-    }
-
-    const current = store.positions[index];
-    if (current.status !== 'open') {
-      throw new Error('Position already closed');
-    }
-
-    store.positions[index] = {
-      ...current,
-      status: 'closed',
-      exitPrice: request.exitPrice,
-      exitFeeEur: request.feeEur,
-      exitDate: currentDateIso(),
-      tags: request.tags ?? [],
-      notes: request.reason
-        ? `${current.notes ? `${current.notes}\n` : ''}Closed: ${request.reason}`
-        : current.notes,
-    };
-  });
+export function listOrdersLocal(status: LocalOrderFilterStatus) {
+  const orders = readTradingStore().orders;
+  return status === 'all' ? orders : orders.filter(order => order.status === status);
+}
+export function getAllOrdersLocal() { return readTradingStore().orders; }
+export function getAllPositionsLocal(): Position[] { return readTradingStore().positions; }
+export function getPositionByIdLocal(positionId: string): Position | null {
+  return readTradingStore().positions.find(position => position.positionId === positionId) ?? null;
+}
+export function createOrderLocal(request: CreateOrderRequest, key?: string) {
+  return executeTradingCommandLocal('create_order', transformCreateOrderRequest(request), key);
+}
+export function fillOrderLocal(orderId: string, request: FillOrderRequest, key?: string) {
+  return executeTradingCommandLocal('fill_order', { order_id: orderId, ...toTradingApi(request) as object }, key);
+}
+export function cancelOrderLocal(orderId: string, key?: string) {
+  return executeTradingCommandLocal('cancel_order', { order_id: orderId }, key);
+}
+export function updatePositionStopLocal(positionId: string, request: UpdateStopRequest, key?: string) {
+  if (!request.marketPrice) return Promise.reject(new Error('A current timestamped market price observation is required to update the stop.'));
+  return executeTradingCommandLocal('update_stop', { position_id: positionId, new_stop: request.newStop, reason: request.reason ?? '' }, key, request.marketPrice);
+}
+export function closePositionLocal(positionId: string, request: ClosePositionRequest, key?: string) {
+  return executeTradingCommandLocal('close_position', { position_id: positionId, ...toTradingApi(request) as object }, key);
 }
