@@ -255,6 +255,7 @@ export function useClosePositionMutation(onSuccess?: () => void) {
         idempotencyKeyForMutation(variables),
       ),
     onSuccess: async () => {
+      await invalidateOrderQueries(queryClient);
       await invalidatePositionQueries(queryClient);
       await invalidateDailyReviewQueries(queryClient);
       onSuccess?.();
@@ -272,6 +273,7 @@ export function usePartialClosePositionMutation(onSuccess?: () => void) {
         idempotencyKeyForMutation(variables),
       ),
     onSuccess: async () => {
+      await invalidateOrderQueries(queryClient);
       await invalidatePositionQueries(queryClient);
       await invalidateDailyReviewQueries(queryClient);
       onSuccess?.();

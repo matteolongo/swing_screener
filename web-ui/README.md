@@ -16,6 +16,23 @@ React 18 + TypeScript frontend for Swing Screener.
 
 ## Development
 
+Local persistence keeps the portfolio ledger in browser storage, but trading
+mutations and portfolio metrics require the API. Order creation, submission,
+cancellation, fills, stop updates, partial closes and final closes use canonical
+stateless commands. The browser only serializes input and stores a successful
+returned snapshot. Mutations require Web Locks support on a secure origin
+(`localhost` is supported), and stop updates require an explicitly timestamped
+current price observation. A stored `currentPrice` is not treated as a fresh quote.
+
+Existing browser schema-v3 stores need no destructive migration: an absent
+`revision` starts at zero, and `appliedCommands` is initialized on the first
+successful command. Both are written with orders, positions and the returned
+active strategy in one localStorage update. Failed requests and stale responses
+leave the stored ledger unchanged. Metrics come from `/api/portfolio/state/metrics`
+and are never written back as trading state. Browser-ID DeGiro lookup and trail
+configuration remain unavailable locally; manually supplied DeGiro fee/FX values
+travel with the ordinary fill command.
+
 ```bash
 cd web-ui
 npm install

@@ -14,9 +14,8 @@ import {
   getPositionByIdLocal,
   isLocalPersistenceMode,
   listOrdersLocal,
-  listPositionsLocal,
-  portfolioSummaryLocal,
-  positionMetricsLocal,
+  executeTradingCommandLocal,
+  tradingSnapshotLocal,
   updatePositionStopLocal,
 } from '@/features/persistence';
 import {
@@ -256,7 +255,7 @@ export async function createOrder(
   idempotencyKey?: string,
 ): Promise<void> {
   if (isLocalPersistenceMode()) {
-    createOrderLocal(request);
+    await createOrderLocal(request, resolveIdempotencyKey(idempotencyKey));
     return;
   }
   if ((request.orderKind ?? 'entry') === 'entry' && !request.approvalToken) {
@@ -279,7 +278,7 @@ export async function fillOrder(
   idempotencyKey?: string,
 ): Promise<void> {
   if (isLocalPersistenceMode()) {
-    fillOrderLocal(orderId, request);
+    await fillOrderLocal(orderId, request, resolveIdempotencyKey(idempotencyKey));
     return;
   }
   const payload: Record<string, number | string> = {
@@ -308,6 +307,10 @@ export async function fillOrder(
 }
 
 export async function submitOrder(orderId: string): Promise<void> {
+  if (isLocalPersistenceMode()) {
+    await executeTradingCommandLocal('submit_order', { order_id: orderId }, `submit-order:${orderId}`);
+    return;
+  }
   await fetchJson<void>(`/api/portfolio/orders/${orderId}/submit`, {
     method: 'PATCH',
     errorMessage: 'Failed to mark order submitted',
@@ -316,7 +319,7 @@ export async function submitOrder(orderId: string): Promise<void> {
 
 export async function cancelOrder(orderId: string): Promise<void> {
   if (isLocalPersistenceMode()) {
-    cancelOrderLocal(orderId);
+    await cancelOrderLocal(orderId, `cancel-order:${orderId}`);
     return;
   }
   await fetchJson<void>(API_ENDPOINTS.order(orderId), {
@@ -378,7 +381,8 @@ export async function fillOrderFromDegiro(
 
 export async function fetchPositions(status: PositionFilterStatus): Promise<SnapshotCollection<PositionWithMetrics>> {
   if (isLocalPersistenceMode()) {
-    return attachSnapshotMetadata(listPositionsLocal(status), {});
+    const projection = await fetchLocalPortfolioProjection();
+    return attachSnapshotMetadata(projection.positions.filter(position => status === 'all' || position.status === status).map(transformPositionWithMetrics), {});
   }
   const params = status !== 'all' ? `?status=${status}` : '';
   const data = await fetchJson<{
@@ -395,7 +399,10 @@ export async function fetchPositions(status: PositionFilterStatus): Promise<Snap
 
 export async function fetchPositionMetrics(positionId: string): Promise<PositionMetrics> {
   if (isLocalPersistenceMode()) {
-    return positionMetricsLocal(positionId);
+    const projection = await fetchLocalPortfolioProjection();
+    const position = projection.positions.find(item => item.position_id === positionId);
+    if (!position) throw new Error(`Position not found: ${positionId}`);
+    return transformPositionMetrics(position);
   }
   const data = await fetchJson<PositionMetricsApiResponse>(API_ENDPOINTS.positionMetrics(positionId), {
     errorMessage: 'Failed to fetch position metrics',
@@ -405,7 +412,7 @@ export async function fetchPositionMetrics(positionId: string): Promise<Position
 
 export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
   if (isLocalPersistenceMode()) {
-    return portfolioSummaryLocal();
+    return transformPortfolioSummary((await fetchLocalPortfolioProjection()).summary);
   }
   const data = await fetchJson<PortfolioSummaryApiResponse>(API_ENDPOINTS.portfolioSummary, {
     errorMessage: 'Failed to fetch portfolio summary',
@@ -439,7 +446,7 @@ export async function updatePositionStop(
   idempotencyKey?: string,
 ): Promise<void> {
   if (isLocalPersistenceMode()) {
-    updatePositionStopLocal(positionId, request);
+    await updatePositionStopLocal(positionId, request, resolveIdempotencyKey(idempotencyKey));
     return;
   }
   await fetchJson<void>(API_ENDPOINTS.positionStop(positionId), {
@@ -577,7 +584,7 @@ export async function closePosition(
   idempotencyKey?: string,
 ): Promise<void> {
   if (isLocalPersistenceMode()) {
-    closePositionLocal(positionId, request);
+    await closePositionLocal(positionId, request, resolveIdempotencyKey(idempotencyKey));
     return;
   }
   await fetchJson<void>(API_ENDPOINTS.positionClose(positionId), {
@@ -603,6 +610,13 @@ export async function partialClosePosition(
   request: PartialCloseRequest,
   idempotencyKey?: string,
 ): Promise<void> {
+  if (isLocalPersistenceMode()) {
+    await executeTradingCommandLocal('partial_close', {
+      position_id: positionId, shares_closed: request.sharesClosed, price: request.price,
+      fee_eur: request.feeEur, fx_rate: request.fxRate,
+    }, resolveIdempotencyKey(idempotencyKey));
+    return;
+  }
   await fetchJson<void>(API_ENDPOINTS.positionPartialClose(positionId), {
     method: 'POST',
     headers: {
@@ -616,6 +630,14 @@ export async function partialClosePosition(
       fx_rate: request.fxRate,
     }),
     errorMessage: 'Failed to partial close position',
+  });
+}
+
+async function fetchLocalPortfolioProjection() {
+  return fetchJson<{ positions: PositionWithMetricsApiResponse[]; summary: PortfolioSummaryApiResponse }>('/api/portfolio/state/metrics', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tradingSnapshotLocal()),
+    errorMessage: 'Failed to fetch local portfolio metrics',
   });
 }
 

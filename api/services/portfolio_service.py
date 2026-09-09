@@ -47,6 +47,7 @@ class PortfolioService:
         provider: Optional[MarketDataProvider] = None,
         config_repo: Optional[ConfigRepository] = None,
         uow: PortfolioUnitOfWork | None = None,
+        business_date: Callable[[], str] | None = None,
     ) -> None:
         self._positions_repo = positions_repo
         self._provider = provider or get_market_data_provider()
@@ -62,6 +63,7 @@ class PortfolioService:
             self._provider,
             self._config_repo,
             begin_write=self._uow.begin_write if self._uow is not None else None,
+            business_date=business_date,
         )
         self._advisor = PositionStopAdvisor(
             self._positions_repo, self._provider, self._config_repo

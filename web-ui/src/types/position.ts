@@ -93,6 +93,12 @@ export interface PositionUpdateApiResponse {
 export interface UpdateStopRequest {
   newStop: number;
   reason?: string;
+  marketPrice?: {
+    ticker: string;
+    price: number;
+    observedAt: string;
+    dataStatus: 'current';
+  };
 }
 
 export interface ClosePositionRequest {
@@ -133,7 +139,7 @@ export interface PositionApiResponse {
   thesis?: string | null;
   lesson?: string | null;
   tags?: string[] | null;
-  trail_method?: string | null;
+  trail_method?: TrailMethod | null;
   trail_param?: number | null;
   partial_closes?: Array<{
     date: string;

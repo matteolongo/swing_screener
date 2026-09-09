@@ -50,11 +50,13 @@ class PortfolioWriteService:
         provider: Optional[MarketDataProvider] = None,
         config_repo: Optional[ConfigRepository] = None,
         begin_write: Callable[[], None] | None = None,
+        business_date: Callable[[], str] | None = None,
     ) -> None:
         self._positions_repo = positions_repo
         self._provider = provider or get_market_data_provider()
         self._config_repo = config_repo or ConfigRepository()
         self._begin_write = begin_write or (lambda: None)
+        self._business_date = business_date or get_today_str
 
     def create_position(self, request: CreatePositionRequest) -> Position:
         """Register a position directly (after manual fill at DeGiro)."""
@@ -100,7 +102,7 @@ class PortfolioWriteService:
             positions = data.get("positions", [])
             positions.append(new_position)
             data["positions"] = positions
-            data["asof"] = get_today_str()
+            data["asof"] = self._business_date()
             return data
 
         self._begin_write()
@@ -131,7 +133,7 @@ class PortfolioWriteService:
         ticker = pos0.get("ticker")
         current_price = None
         try:
-            end_date = get_today_str()
+            end_date = self._business_date()
             start_date = (pd.Timestamp(end_date) - pd.Timedelta(days=5)).strftime(
                 "%Y-%m-%d"
             )
@@ -187,7 +189,7 @@ class PortfolioWriteService:
                         pos["notes"] = (
                             f"{current_notes}\nStop updated to {new_stop}: {request.reason}".strip()
                         )
-                    data["asof"] = get_today_str()
+                    data["asof"] = self._business_date()
                     result["old_stop"] = locked_stop
                     return data
             raise NotFoundError(f"Position not found: {position_id}")
@@ -216,7 +218,7 @@ class PortfolioWriteService:
 
                     pos["status"] = "closed"
                     pos["exit_price"] = request.exit_price
-                    pos["exit_date"] = get_today_str()
+                    pos["exit_date"] = self._business_date()
                     pos["exit_fee_eur"] = request.fee_eur
                     pos["exit_fx_rate"] = request.exit_fx_rate
                     if request.reason:
@@ -227,7 +229,7 @@ class PortfolioWriteService:
                     if request.lesson is not None:
                         pos["lesson"] = request.lesson
                     pos["tags"] = list(request.tags)
-                    data["asof"] = get_today_str()
+                    data["asof"] = self._business_date()
                     return data
             raise NotFoundError(f"Position not found: {position_id}")
 
@@ -275,7 +277,7 @@ class PortfolioWriteService:
                 )
 
                 event = {
-                    "date": get_today_str(),
+                    "date": self._business_date(),
                     "shares_closed": request.shares_closed,
                     "price": request.price,
                     "r_at_close": round(r_at_close, 4),
@@ -287,7 +289,7 @@ class PortfolioWriteService:
                     pos["partial_closes"] = []
                 pos["partial_closes"].append(event)
                 pos["shares"] = current_shares - request.shares_closed
-                data["asof"] = get_today_str()
+                data["asof"] = self._business_date()
                 result["r_at_close"] = round(r_at_close, 4)
                 result["shares_remaining"] = pos["shares"]
                 return data
@@ -319,7 +321,7 @@ class PortfolioWriteService:
                         )
                     pos["trail_method"] = request.trail_method
                     pos["trail_param"] = request.trail_param
-                    data["asof"] = get_today_str()
+                    data["asof"] = self._business_date()
                     return data
             raise NotFoundError(f"Position {position_id} not found")
 

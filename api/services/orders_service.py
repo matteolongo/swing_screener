@@ -67,6 +67,8 @@ class OrdersService:
         approval_signer: OrderApprovalTokenSigner | None = None,
         approval_now: Callable[[], int] | None = None,
         uow: PortfolioUnitOfWork | None = None,
+        business_date: Callable[[], str] | None = None,
+        position_id_factory: Callable[[], str] | None = None,
     ) -> None:
         self._orders_repo = orders_repo
         self._positions_repo = positions_repo
@@ -75,6 +77,10 @@ class OrdersService:
         self._approval_signer = approval_signer
         self._approval_now = approval_now or (lambda: int(time.time()))
         self._uow = uow
+        self._business_date = business_date or get_today_str
+        self._position_id_factory = position_id_factory or (
+            lambda: f"POS-{uuid.uuid4().hex[:8].upper()}"
+        )
 
     @staticmethod
     def _country(ticker: str) -> str:
@@ -521,7 +527,7 @@ class OrdersService:
             "limit_price": request.limit_price,
             "stop_price": request.stop_price,
             "target_price": request.target_price,
-            "order_date": get_today_str(),
+            "order_date": self._business_date(),
             "filled_date": None,
             "entry_price": None,
             "notes": request.notes.strip(),
@@ -743,7 +749,7 @@ class OrdersService:
                             pos["entry_fee_eur"] = float(prior_fee) + float(
                                 request.fee_eur
                             )
-                        data["asof"] = get_today_str()
+                        data["asof"] = self._business_date()
                         return data
                 raise NotFoundError(
                     f"Position not found for add-on: {target_position_id}"
@@ -761,7 +767,7 @@ class OrdersService:
             )
 
         isin = order.get("isin") or _resolve_isin(ticker)
-        position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
+        position_id = self._position_id_factory()
         initial_risk = round(request.filled_price - stop_price, 4)
 
         new_position: dict = {
@@ -788,7 +794,7 @@ class OrdersService:
             positions = data.get("positions", [])
             positions.append(new_position)
             data["positions"] = positions
-            data["asof"] = get_today_str()
+            data["asof"] = self._business_date()
             return data
 
         self._positions_repo.update(_append)

@@ -275,6 +275,57 @@ Universes (`/api/universes`):
 - `POST /api/universes/{universe_id}/benchmark`
 
 Portfolio (`/api/portfolio`):
+- `POST /api/portfolio/state/commands` — apply one canonical lifecycle command to
+  browser-owned state without reading or writing the server portfolio database.
+  Request: `{snapshot: {revision, strategy, positions, orders}, expected_revision,
+  command: {operation, payload}, context: {effective_at, new_position_id?,
+  market_price?}}`. Operations are `create_order`, `submit_order`,
+  `cancel_order`, `fill_order`, `update_stop`, `partial_close`, and `close_position`.
+  Payloads use the corresponding existing request fields plus `order_id` or
+  `position_id` when applicable. DeGiro-enriched fills use `fill_order` with
+  `fee_eur` and `fill_fx_rate`; they do not introduce a separate fill operation.
+  `context.effective_at` is a required timestamp with timezone. Its calendar
+  date supplies order/close business dates; fills retain their explicit
+  `filled_date`. Every new-position fill requires a nonblank
+  `context.new_position_id` that does not already exist in the snapshot.
+  Add-on fills retain the referenced position ID, while new order IDs use the
+  canonical deterministic allocator over the supplied order ledger.
+  Stop commands require `context.market_price: {ticker, price, observed_at,
+  data_status: "current"}`. The finite positive price must match the position
+  ticker; `observed_at` must include a timezone, must not be after `effective_at`,
+  and must be within the configured `portfolio_snapshot_stale_after_days`
+  elapsed-day interval. Missing or invalid context fails closed with `422`.
+  The supplied observation feeds canonical stop-price validation without live
+  provider I/O. It is caller-provided local-state context, not a server-attested
+  market quotation. Business dates and new-position identity enter the existing
+  services through optional `business_date`/`position_id_factory` constructor
+  dependencies; persisted workflows keep their existing defaults.
+  The response is the complete next snapshot with `revision` incremented once,
+  `affected_order_ids`, and `affected_position_ids`. Invalid input returns `422`;
+  revision mismatches return `409` before lifecycle work. Canonical lifecycle
+  errors retain their existing status codes. Any failure discards command-local
+  changes. No `Idempotency-Key` or server replay record is used: callers must
+  atomically accept a response only while their local revision still matches
+  the submitted revision. The API compares the two supplied revision values;
+  it cannot observe concurrent changes in browser storage.
+  Signed entry approval, configured backend strategy and risk policy remain
+  authoritative; the browser strategy is round-tripped without allowing it to
+  relax backend policy. Holdings and pending exposure come from the supplied
+  snapshot. Successful transitions are deterministic for identical request
+  context and configured policy. Authentication/authorization freshness is an
+  explicit security exception: approval-token expiry is always checked against
+  trusted server time, never `effective_at`. An expired token cannot be replayed
+  by submitting an earlier business timestamp. This endpoint computes a
+  local-state transition only; broker execution stays manual.
+- `POST /api/portfolio/state/metrics` — read-only projection from a supplied
+  `{revision, strategy, positions, orders}` snapshot. Returns `{positions, summary}`
+  using the existing canonical position metrics and portfolio summary services.
+  Holdings come exclusively from the supplied snapshot; account/risk policy comes
+  from backend configuration, as for persisted portfolio reads. Market quotes and
+  FX use the existing pricing service. The endpoint does not open the portfolio
+  database, mutate the supplied snapshot, or persist a command/revision. Browser
+  clients must not save the returned read models as trading state. No performance
+  or edge-analysis API is added by this projection.
 - `GET /api/portfolio/positions` — includes additive server-derived
   `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
 - `GET /api/portfolio/positions/{position_id}`

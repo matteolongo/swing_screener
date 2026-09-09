@@ -15,6 +15,7 @@ vi.mock('@/features/portfolio/api', () => ({
   updatePositionStop: vi.fn(),
   fillOrderFromDegiro: vi.fn(),
   closePosition: vi.fn(),
+  partialClosePosition: vi.fn(),
 }))
 
 vi.mock('@/lib/queryInvalidation', () => ({
@@ -30,6 +31,8 @@ import {
   useOrders,
   usePositionStopSuggestion,
   useUpdateStopMutation,
+  useClosePositionMutation,
+  usePartialClosePositionMutation,
 } from '@/features/portfolio/hooks'
 
 function createQueryClient() {
@@ -48,6 +51,16 @@ function createWrapper(queryClient: QueryClient) {
 }
 
 describe('portfolio hooks', () => {
+  it.each([useClosePositionMutation, usePartialClosePositionMutation])('invalidates linked order queries after a close mutation', async useHook => {
+    const queryClient = createQueryClient()
+    vi.mocked(portfolioApi.closePosition).mockResolvedValue(undefined)
+    vi.mocked(portfolioApi.partialClosePosition).mockResolvedValue(undefined)
+    const { result } = renderHook(() => useHook(), { wrapper: createWrapper(queryClient) })
+    await act(async () => {
+      await result.current.mutateAsync({ positionId: 'POS-1', request: { exitPrice: 110, sharesClosed: 2, price: 110 } })
+    })
+    expect(queryInvalidation.invalidateOrderQueries).toHaveBeenCalledWith(queryClient)
+  })
   const mockedFetchOrders = vi.mocked(portfolioApi.fetchOrders)
   const mockedCreateOrder = vi.mocked(portfolioApi.createOrder)
   const mockedFetchPositionStopSuggestion = vi.mocked(portfolioApi.fetchPositionStopSuggestion)

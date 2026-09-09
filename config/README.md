@@ -17,6 +17,10 @@ Low-level shared defaults for the system:
 server-owned calendar-age policy for persisted position and order ledgers.
 Portfolio endpoints return the derived freshness; clients must not substitute
 their cache/refetch timers for this domain status.
+Stateless stop commands also use this configured number of elapsed days as the
+maximum interval between their explicit market observation and `effective_at`.
+Future observations are rejected; the comparison never substitutes server time
+for the supplied deterministic business timestamp.
 
 `app_config.risk.account_currency` is the authoritative account base currency
 for screener sizing and FX conversion. Strategy-level values cannot override it.

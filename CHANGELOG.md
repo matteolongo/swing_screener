@@ -9,6 +9,13 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Browser-owned portfolios can apply canonical order and position lifecycle
+  commands through a stateless API, with signed backend approval, isolated
+  snapshot updates, and optimistic revisions.
+  Commands carry explicit business timestamps, fill identity, and stop-price
+  observations so retries return stable state while signed approval expiry
+  remains enforced against server time.
+
 - Screener candidates now expose a discriminated backend-owned execution
   eligibility result and, only when allowed, a canonical order draft carrying
   the validated prices, shares, R:R, quote currency, and approval identity.
@@ -20,6 +27,12 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reporting.
 
 ### Changed
+
+- Local browser portfolios now use the stateless trading API for lifecycle
+  commands and canonical position/summary metrics. Failed or conflicting
+  commands preserve browser state; successful responses are stored atomically,
+  with retry receipts and cross-tab command locking. Local stop updates require
+  an explicit current price observation.
 
 - Daily Review candidate plan keys are now nullable end to end, preserving
   unavailable entry, stop, share, and R:R values as explicit `null` instead of
