@@ -8,6 +8,7 @@ from typing import Optional
 from swing_screener.risk.recommendations.engine import (
     RecommendationPayload,
     build_recommendation,
+    resolve_target,
 )
 from swing_screener.risk.recommendations.thesis import (
     build_trade_thesis,
@@ -88,16 +89,21 @@ def evaluate_recommendation(
         ]
     ):
         try:
-            # Calculate RR for thesis (will be recalculated in build_recommendation)
-            rr = 0.0
-            if thesis_stop is not None:
-                risk_per_share = entry - thesis_stop
-                thesis_target = (
-                    target
-                    if target is not None and math.isfinite(target) and target > entry
-                    else entry + (rr_target * risk_per_share)
-                )
-                rr = (thesis_target - entry) / risk_per_share
+            # Thesis RR uses the same canonical target validity as the plan:
+            # only a valid independently sourced target produces a validated RR.
+            # The advisory desired_target must never make the thesis look
+            # actionable, so fall back to 0.0 (no validated RR) instead.
+            _, thesis_rr, thesis_target_is_independent = resolve_target(
+                entry=entry,
+                stop=thesis_stop,
+                target=target,
+                target_source=target_source,
+            )
+            rr = (
+                thesis_rr
+                if thesis_target_is_independent and thesis_rr is not None
+                else 0.0
+            )
 
             thesis = build_trade_thesis(
                 ticker=ticker,

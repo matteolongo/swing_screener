@@ -18,6 +18,54 @@ Verdict = Literal["RECOMMENDED", "NOT_RECOMMENDED"]
 ReasonSeverity = Literal["info", "warn", "block"]
 GateStatus = Literal["PASS", "WAIT", "BLOCK", "UNKNOWN"]
 
+#: Target sources that count as independently validated price structure.
+#: Only these sources may produce a validated reward/risk ratio.
+INDEPENDENT_TARGET_SOURCES = frozenset({"structural", "manual"})
+
+
+def resolve_target(
+    *,
+    entry: Optional[float],
+    stop: Optional[float],
+    target: Optional[float],
+    target_source: str,
+) -> tuple[Optional[float], Optional[float], bool]:
+    """Resolve a candidate target into its plan values.
+
+    Canonical target-validity rule shared by recommendation gating and trade
+    thesis enrichment. Returns `(target, rr, target_is_independent)`:
+
+    - `target_is_independent` reports whether `target_source` is independently
+      sourced (`structural`/`manual`). Provenance and validity are separate
+      concepts: a non-independent source can still carry a numeric `rr`, but
+      that `rr` never validates the plan.
+    - When entry/stop cannot define positive per-share risk, the raw `target`
+      candidate is echoed with `rr=None` (nothing to measure against).
+    - Otherwise a non-finite target, or one at/below entry, normalizes to
+      `(None, None)`.
+    - Otherwise returns the supplied target with its actual reward/risk ratio.
+
+    `desired_target` (the advisory price implied by `rr_target`) is computed
+    separately and never flows through this helper.
+    """
+    target_is_independent = target_source in INDEPENDENT_TARGET_SOURCES
+    if (
+        entry is None
+        or not math.isfinite(entry)
+        or entry <= 0
+        or stop is None
+        or not math.isfinite(stop)
+        or stop <= 0
+        or stop >= entry
+    ):
+        return (target, None, target_is_independent)
+    risk_per_share = entry - stop
+    if risk_per_share <= 0:
+        return (target, None, target_is_independent)
+    if target is None or not math.isfinite(target) or target <= entry:
+        return (None, None, target_is_independent)
+    return (target, (target - entry) / risk_per_share, target_is_independent)
+
 
 @dataclass(frozen=True)
 class Reason:
@@ -234,13 +282,11 @@ def build_recommendation(
     risk_pct = (risk_amount_account / account_size) if account_size > 0 else 0.0
 
     desired_target = None
-    rr = None
     if stop_defined and risk_per_share and risk_per_share > 0:
         desired_target = entry + (rr_target * risk_per_share)
-        if target is not None and math.isfinite(target) and target > entry:
-            rr = (target - entry) / risk_per_share
-        else:
-            target = None
+    target, rr, target_is_independent = resolve_target(
+        entry=entry, stop=stop, target=target, target_source=target_source
+    )
 
     costs = _estimate_costs(
         entry=entry,
@@ -261,7 +307,6 @@ def build_recommendation(
         ),
     )
 
-    target_is_independent = target_source in {"structural", "manual"}
     rr_ok = target_is_independent and rr is not None and rr >= min_rr
     data_current = data_status == "current"
     fee_ok = fee_to_risk_pct is not None and fee_to_risk_pct <= max_fee_risk_pct
