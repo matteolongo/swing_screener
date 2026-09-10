@@ -128,9 +128,9 @@ export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPan
     setTodayRunFromLastRun,
   } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
-  const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
+  const selection = useWorkspaceStore((state) => state.selection);
   const analysisTab = useWorkspaceStore((state) => state.analysisTab);
-  const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
+  const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const runScreenerTrigger = useWorkspaceStore((state) => state.runScreenerTrigger);
   const activeStrategyQuery = useActiveStrategyQuery();
@@ -203,7 +203,17 @@ export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPan
       useForToday,
     );
     if (data.candidates.length > 0) {
-      setSelectedTicker(data.candidates[0].ticker, 'screener');
+      const run = useForToday
+        ? useScreenerStore.getState().todayRun
+        : useScreenerStore.getState().lastRunContext;
+      const source = useForToday ? 'today_run' : 'last_run';
+      setWorkspaceSelection({
+        ticker: data.candidates[0].ticker,
+        source,
+        runId: run?.completedAt,
+        candidate: data.candidates[0],
+        rowId: `${source}:${run?.completedAt ?? data.asofDate}:${data.candidates[0].ticker}`,
+      });
     }
     setIsFormCollapsed(true);
     setForceRefresh(false);
@@ -257,14 +267,22 @@ export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPan
   );
 
   useEffect(() => {
-    if (!displayCandidates.length || !selectedTicker || selectedTickerSource === 'portfolio') {
+    if (!displayCandidates.length || !selectedTicker || selection?.source === 'portfolio') {
       return;
     }
     const stillPresent = displayCandidates.some((candidate) => candidate.ticker.toUpperCase() === selectedTicker.toUpperCase());
     if (!stillPresent) {
-      setSelectedTicker(displayCandidates[0].ticker, 'screener');
+      const source = isLastRunTodaySource ? 'today_run' : 'last_run';
+      const runId = isLastRunTodaySource ? todayRun?.completedAt : lastRunContext?.completedAt;
+      setWorkspaceSelection({
+        ticker: displayCandidates[0].ticker,
+        source,
+        runId,
+        candidate: displayCandidates[0],
+        rowId: `${source}:${runId ?? result?.asofDate}:${displayCandidates[0].ticker}`,
+      });
     }
-  }, [displayCandidates, selectedTicker, selectedTickerSource, setSelectedTicker]);
+  }, [displayCandidates, selectedTicker, selection?.source, setWorkspaceSelection, isLastRunTodaySource, todayRun?.completedAt, lastRunContext?.completedAt, result?.asofDate]);
 
   const handleRunScreenerRef = useRef(handleRunScreener);
   useEffect(() => {
@@ -279,10 +297,20 @@ export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPan
 
   const handleSelectCandidate = useCallback(
     (ticker: string, tab: WorkspaceAnalysisTab) => {
-      setSelectedTicker(ticker);
+      const candidate = displayCandidates.find((item) => item.ticker.toUpperCase() === ticker.toUpperCase());
+      if (!candidate) return;
+      const source = isLastRunTodaySource ? 'today_run' : 'last_run';
+      const runId = isLastRunTodaySource ? todayRun?.completedAt : lastRunContext?.completedAt;
+      setWorkspaceSelection({
+        ticker,
+        source,
+        runId,
+        candidate,
+        rowId: `${source}:${runId ?? result?.asofDate}:${ticker}`,
+      });
       setAnalysisTab(tab);
     },
-    [setAnalysisTab, setSelectedTicker]
+    [displayCandidates, isLastRunTodaySource, lastRunContext?.completedAt, result?.asofDate, setAnalysisTab, setWorkspaceSelection, todayRun?.completedAt]
   );
 
   const compactRail = compact ? (
@@ -401,7 +429,7 @@ export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPan
 
       <div className="px-3 pt-3">
         <OpenPositionIntelligencePanel
-          onTickerSelect={(ticker) => setSelectedTicker(ticker, 'portfolio')}
+          onTickerSelect={(ticker) => setWorkspaceSelection({ ticker, source: 'today_position', rowId: `position:${ticker}` })}
         />
       </div>
 

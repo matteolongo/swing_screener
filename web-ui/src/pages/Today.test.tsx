@@ -49,6 +49,7 @@ beforeEach(() => {
   useWorkspaceStore.setState({
     selectedTicker: null,
     selectedTickerSource: null,
+    selection: null,
     workspaceMode: 'split',
     fullscreen: false,
     analysisTab: 'overview',
@@ -150,7 +151,7 @@ describe('Today page — expanded workspace', () => {
     ).toHaveFocus();
   });
 
-  it('supports a keyboard journey through the rail, source status, header, and every analysis tab', async () => {
+  it('supports a keyboard journey through the rail, source status, header, and every available analysis tab', async () => {
     let fundamentalsRequests = 0;
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
@@ -275,7 +276,7 @@ describe('Today page — expanded workspace', () => {
       t('workspacePage.data.sources.fundamentals'),
     );
 
-    for (const tabKey of ['overview', 'fundamentals', 'intelligence', 'backtest', 'volumeZones', 'order'] as const) {
+    for (const tabKey of ['overview', 'fundamentals', 'intelligence', 'backtest', 'volumeZones'] as const) {
       const tab = screen.getByRole('tab', {
         name: t(`workspacePage.panels.analysis.tabs.${tabKey}`),
       });

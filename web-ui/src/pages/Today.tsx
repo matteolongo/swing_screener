@@ -86,7 +86,6 @@ const LEFT_TAB_LABEL_KEYS: Record<LeftTab, 'todayPage.tabs.today' | 'todayPage.t
 };
 
 export default function Today() {
-  const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const workspaceMode = useWorkspaceStore((state) => state.workspaceMode);
   const fullscreen = useWorkspaceStore((state) => state.fullscreen);
@@ -103,8 +102,7 @@ export default function Today() {
       originControlRef.current = document.activeElement;
     }
     originTickerRef.current = ticker.trim().toUpperCase();
-    setSelectedTicker(ticker, 'screener');
-  }, [setSelectedTicker]);
+  }, []);
 
   useEffect(() => {
     const listWasRevealed =

@@ -11,6 +11,7 @@ import {
 import type { Strategy, StrategyUpdateRequestAPI } from '@/features/strategy/types';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateStrategyDependentQueries, invalidateStrategyQueries } from '@/lib/queryInvalidation';
+import { useScreenerStore } from '@/stores/screenerStore';
 
 export function useStrategiesQuery() {
   return useQuery({
@@ -31,6 +32,7 @@ export function useSetActiveStrategyMutation() {
   return useMutation({
     mutationFn: (strategyId: string) => setActiveStrategy(strategyId),
     onSuccess: async () => {
+      useScreenerStore.getState().invalidateActionableRuns();
       await invalidateStrategyDependentQueries(queryClient);
     },
   });

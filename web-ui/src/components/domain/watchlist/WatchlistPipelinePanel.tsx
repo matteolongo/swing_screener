@@ -89,7 +89,12 @@ export default function WatchlistPipelinePanel({
 }: WatchlistPipelinePanelProps) {
   const watchlistQuery = useWatchlist();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
+  const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
   const items = watchlistQuery.data ?? [];
+  const selectWatchlistTicker = (ticker: string) => {
+    setWorkspaceSelection({ ticker, source: 'today_watchlist', rowId: `watchlist:${ticker.trim().toUpperCase()}` });
+    onTickerSelect?.(ticker);
+  };
 
   if (watchlistQuery.isLoading) {
     return <div className="py-10 text-sm text-muted">{t('watchlist.pipeline.loading')}</div>;
@@ -128,7 +133,7 @@ export default function WatchlistPipelinePanel({
                     value: formatPercent(item.distanceToTriggerPct),
                   })}
             selected={selectedTicker?.toUpperCase() === item.ticker.toUpperCase()}
-            onSelect={(ticker) => onTickerSelect?.(ticker)}
+            onSelect={selectWatchlistTicker}
           />
         ))}
       </div>
@@ -173,7 +178,7 @@ export default function WatchlistPipelinePanel({
                   'align-top transition-colors',
                   onTickerSelect ? 'cursor-pointer hover:bg-foreground/5' : '',
                 )}
-                onClick={() => onTickerSelect?.(item.ticker)}
+                onClick={() => selectWatchlistTicker(item.ticker)}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
