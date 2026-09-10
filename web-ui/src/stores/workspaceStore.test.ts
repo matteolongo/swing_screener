@@ -7,6 +7,7 @@ describe('useWorkspaceStore', () => {
     useWorkspaceStore.setState({
       selectedTicker: null,
       selectedTickerSource: null,
+      selection: null,
       analysisTab: 'overview',
       runScreenerTrigger: 0,
       workspaceMode: 'split',
@@ -44,11 +45,33 @@ describe('useWorkspaceStore', () => {
     expect(useWorkspaceStore.getState().selectionVersion).toBe(2);
   });
 
-  it('does not increment the selection version for the same normalized ticker', () => {
+  it('increments the selection version when the same ticker changes source', () => {
     useWorkspaceStore.getState().setSelectedTicker('aapl', 'screener');
     useWorkspaceStore.getState().setSelectedTicker(' AAPL ', 'portfolio');
 
-    expect(useWorkspaceStore.getState().selectionVersion).toBe(1);
+    expect(useWorkspaceStore.getState().selectionVersion).toBe(2);
+  });
+
+  it('keeps divergent run candidates distinct even when their ticker matches', () => {
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'AAPL',
+      source: 'today_run',
+      runId: 'run-a',
+      rowId: 'today:run-a:AAPL',
+      candidate: { ticker: 'AAPL', score: 10 } as never,
+    });
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'AAPL',
+      source: 'last_run',
+      runId: 'run-b',
+      rowId: 'last:run-b:AAPL',
+      candidate: { ticker: 'AAPL', score: 90 } as never,
+    });
+
+    expect(useWorkspaceStore.getState().selection).toMatchObject({
+      source: 'last_run', runId: 'run-b', rowId: 'last:run-b:AAPL', candidate: { score: 90 },
+    });
+    expect(useWorkspaceStore.getState().selectionVersion).toBe(2);
   });
 
   it('clears source when ticker is null', () => {

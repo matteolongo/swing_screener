@@ -8,6 +8,7 @@ import * as catalystHooks from '@/features/intelligence/catalysts/hooks';
 import * as intelligenceHooks from '@/features/intelligence/hooks';
 import type { EvidenceRefreshResponse, SymbolIntelligence } from '@/features/intelligence/types';
 import * as screenerHooks from '@/features/screener/hooks';
+import * as portfolioHooks from '@/features/portfolio/hooks';
 import * as watchlistHooks from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -71,6 +72,11 @@ vi.mock('@/features/watchlist/hooks', () => ({
   useWatchlist: vi.fn(),
   useWatchSymbolMutation: vi.fn(),
   useUnwatchSymbolMutation: vi.fn(),
+}));
+
+vi.mock('@/features/portfolio/hooks', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/features/portfolio/hooks')>(),
+  useOpenPositions: vi.fn(),
 }));
 
 vi.mock('@/components/domain/market/CachedSymbolCandleChart', () => ({
@@ -139,6 +145,18 @@ function buildSnapshot(): FundamentalSnapshot {
 }
 
 describe('AnalysisCanvasPanel', () => {
+  const selectStoredCandidate = (source: 'today_run' | 'last_run' = 'last_run') => {
+    const candidate = useScreenerStore.getState().lastResult?.candidates[0];
+    if (!candidate) throw new Error('Expected a screener candidate');
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: candidate.ticker,
+      source,
+      runId: `${source}-fixture`,
+      rowId: `${source}-fixture:${candidate.ticker}`,
+      candidate,
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(watchlistHooks.useWatchlist).mockReturnValue({
@@ -156,6 +174,7 @@ describe('AnalysisCanvasPanel', () => {
       isPending: false,
       variables: undefined,
     } as never);
+    vi.mocked(portfolioHooks.useOpenPositions).mockReturnValue({ data: [] } as never);
     vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -197,6 +216,7 @@ describe('AnalysisCanvasPanel', () => {
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
+      selection: null,
       analysisTab: 'fundamentals',
       selectionVersion: 1,
       activities: [],
@@ -950,11 +970,36 @@ describe('AnalysisCanvasPanel', () => {
       isError: false,
       error: null,
     } as never);
-
+    const candidate = useScreenerStore.getState().lastResult?.candidates[0];
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'AAPL', source: 'last_run', runId: 'last-fixture', rowId: 'last-fixture:AAPL', candidate,
+    });
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(screen.getAllByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toHaveLength(1);
     expect(screen.getByRole('table', { name: t('workspacePage.overview.tradePlan') })).toBeVisible();
+  });
+
+  it('keeps a pinned candidate through tab switches after Last Run diverges', async () => {
+    const pinnedCandidate = {
+      ticker: 'AAPL', name: 'Pinned run', currency: 'USD', close: 180,
+      sma20: 175, sma50: 170, sma200: 160, atr: 3, momentum6m: 0.18,
+      momentum12m: 0.27, relStrength: 0.09, score: 0.82, confidence: 79, rank: 1,
+    } as any;
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'AAPL', source: 'today_run', runId: 'pinned-run',
+      rowId: 'today:pinned-run:AAPL', candidate: pinnedCandidate,
+    });
+    useScreenerStore.setState({
+      lastResult: { candidates: [{ ...pinnedCandidate, name: 'New Last Run' }] } as never,
+    });
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.getByRole('heading', { name: /Pinned run/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.fundamentals') }));
+    await user.click(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.overview') }));
+    expect(screen.getByRole('heading', { name: /Pinned run/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /New Last Run/ })).not.toBeInTheDocument();
   });
 
   it('renders the catalyst summary before the technical chart in overview', () => {
@@ -1026,6 +1071,7 @@ describe('AnalysisCanvasPanel', () => {
       error: null,
     } as never);
 
+    selectStoredCandidate();
     renderWithProviders(<AnalysisCanvasPanel />);
 
     const chart = screen.getByText('Chart AAPL');
@@ -1324,6 +1370,7 @@ describe('AnalysisCanvasPanel', () => {
       error: null,
     } as never);
 
+    selectStoredCandidate();
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toBeVisible();
@@ -1464,6 +1511,7 @@ describe('AnalysisCanvasPanel', () => {
       mutate: vi.fn(), data: undefined, isPending: false, isError: false, error: null,
     } as never);
 
+    selectStoredCandidate();
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(screen.getByText(t('workspacePage.overview.decisionRationale'))).toBeInTheDocument();
@@ -1492,15 +1540,24 @@ describe('AnalysisCanvasPanel', () => {
     });
   });
 
-  it('auto-computes a live candidate for a held position with no screener candidate', async () => {
+  it('auto-computes a live candidate again when the same ticker gets a new selection session', async () => {
     // VALE is an open position in the default MSW handler, with no cached candidate.
     const mutate = vi.fn();
     vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({
       mutate, isPending: false, isError: false, error: null,
     } as never);
+    vi.mocked(portfolioHooks.useOpenPositions).mockReturnValue({
+      data: [{
+        positionId: 'VALE-1', ticker: 'VALE', entryPrice: 10, stopPrice: 9, targetPrice: 12,
+        shares: 1, perShareRisk: 1, rNow: 0, daysOpen: 1, pnl: 0, pnlPercent: 0,
+        entryValue: 10, currentValue: 10, totalRisk: 1, feesEur: 0, rFxAdjusted: null,
+        timeStopWarning: false, trailMethod: 'sma20', trailParam: null,
+      }],
+    } as never);
     useWorkspaceStore.setState({
       selectedTicker: 'VALE',
       selectedTickerSource: 'screener',
+      selection: { ticker: 'VALE', source: 'today_position', rowId: 'position:VALE' },
       analysisTab: 'overview',
     });
     useScreenerStore.setState({ lastResult: null });
@@ -1512,6 +1569,12 @@ describe('AnalysisCanvasPanel', () => {
       expect(mutate).toHaveBeenCalledWith(
         expect.objectContaining({ tickers: ['VALE'], includeHeld: true })
       );
+    });
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'VALE', source: 'portfolio', rowId: 'portfolio:VALE',
+    });
+    await waitFor(() => {
+      expect(mutate).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -1662,6 +1725,7 @@ function mockFundamentalsIdle() {
 describe('AnalysisCanvasPanel — compute analysis button', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(portfolioHooks.useOpenPositions).mockReturnValue({ data: [] } as never);
     vi.mocked(watchlistHooks.useWatchlist).mockReturnValue({ data: [], isLoading: false, isError: false } as never);
     vi.mocked(watchlistHooks.useWatchSymbolMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined } as never);
     vi.mocked(watchlistHooks.useUnwatchSymbolMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined } as never);
@@ -1672,8 +1736,20 @@ describe('AnalysisCanvasPanel — compute analysis button', () => {
     vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
       data: undefined, isLoading: false, isError: false,
     } as never);
+    vi.mocked(intelligenceHooks.useEvidenceRefreshMutation).mockReturnValue({
+      mutate: vi.fn(), isPending: false, error: null, reset: vi.fn(),
+    } as never);
+    vi.mocked(intelligenceHooks.useRunTrace).mockReturnValue({
+      data: undefined, isLoading: false, isError: false,
+    } as never);
+    vi.mocked(intelligenceHooks.useTickerRuns).mockReturnValue({
+      data: [], refetch: vi.fn().mockResolvedValue({ data: [] }),
+    } as never);
+    vi.mocked(catalystHooks.useSymbolCatalystQuery).mockReturnValue({
+      data: undefined, isLoading: false, isError: false,
+    } as never);
     mockFundamentalsIdle();
-    useWorkspaceStore.setState({ selectedTicker: 'ENI.MI', selectedTickerSource: null, analysisTab: 'overview' });
+    useWorkspaceStore.setState({ selectedTicker: 'ENI.MI', selectedTickerSource: null, selection: null, analysisTab: 'overview' });
     useScreenerStore.setState({ lastResult: null });
   });
 
@@ -1706,6 +1782,10 @@ describe('AnalysisCanvasPanel — compute analysis button', () => {
         candidates: [{ ticker: 'AAPL', currency: 'USD', close: 180, sma20: 175, sma50: 170, sma200: 160, atr: 3, momentum6m: 0.1, momentum12m: 0.2, relStrength: 0.05, score: 0.7, confidence: 65, rank: 1 }],
       },
     });
+    const candidate = useScreenerStore.getState().lastResult?.candidates[0];
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'AAPL', source: 'last_run', runId: 'last-fixture', rowId: 'last-fixture:AAPL', candidate,
+    });
     renderWithProviders(<AnalysisCanvasPanel />);
     expect(screen.queryByRole('button', { name: 'Compute analysis' })).not.toBeInTheDocument();
   });
@@ -1720,6 +1800,30 @@ describe('AnalysisCanvasPanel — compute analysis button', () => {
     });
 
     expect(mutate).toHaveBeenCalledWith({ tickers: ['ENI.MI'], top: 1, includeHeld: true });
+  });
+
+  it('keeps Last Run unchanged when an ad-hoc compute response reaches the canvas', async () => {
+    let onSuccess: ((result: unknown, request: unknown) => void) | undefined;
+    const mutate = vi.fn();
+    vi.mocked(screenerHooks.useRunScreenerMutation).mockImplementation((success) => {
+      onSuccess = success as (result: unknown, request: unknown) => void;
+      return { mutate, isPending: false, isError: false, error: null } as never;
+    });
+    const lastRun = { candidates: [{ ticker: 'AAPL' }] } as never;
+    useScreenerStore.setState({ lastResult: lastRun });
+    useWorkspaceStore.getState().setSelectedTicker('ENI.MI');
+
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+    await user.click(screen.getByRole('button', { name: 'Compute analysis' }));
+    act(() => {
+      onSuccess?.(
+        { candidates: [{ ticker: 'ENI.MI', currency: 'EUR' }] },
+        { tickers: ['ENI.MI'], top: 1, includeHeld: true },
+      );
+    });
+
+    expect(useWorkspaceStore.getState().selection?.source).toBe('ad_hoc');
+    expect(useScreenerStore.getState().lastResult).toBe(lastRun);
   });
 
   it('shows loading text and disables button while the mutation is pending', () => {
