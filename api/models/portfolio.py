@@ -882,6 +882,95 @@ class PortfolioSummary(BaseModel):
         default=0.0,
         description="Account size adjusted for realized P&L when mode=equity",
     )
+    analytics: PortfolioAnalytics = Field(default_factory=lambda: PortfolioAnalytics())
+    analytics_metadata: PortfolioAnalyticsMetadata = Field(
+        default_factory=lambda: PortfolioAnalyticsMetadata()
+    )
+
+
+class PortfolioAnalyticsCurvePoint(BaseModel):
+    position_id: str
+    ticker: str
+    date: str
+    r: float
+    max_r: float | None = None
+    holding_days: int | None = None
+    cumulative_r: float
+    tags: list[str] = Field(default_factory=list)
+    entry_price: float
+    exit_price: float
+    shares: int
+    initial_risk: float
+    thesis: str | None = None
+    notes: str = ""
+    lesson: str | None = None
+
+
+class PortfolioAnalyticsTag(BaseModel):
+    tag: str
+    trade_count: int
+    win_count: int
+    loss_count: int
+    scratch_count: int
+    win_rate: float | None = None
+    average_r: float
+    expectancy: float
+
+
+class PortfolioAnalyticsJournalTag(BaseModel):
+    tag: str
+    trade_count: int
+    win_count: int
+    loss_count: int
+    scratch_count: int
+    average_r: float | None = None
+    average_max_r: float | None = None
+
+
+class PortfolioAnalyticsInsight(BaseModel):
+    """Backend verdict code and reason; user-facing copy remains client-localized."""
+
+    verdict: Literal["positive", "developing", "negative"] = "developing"
+    reason: Literal[
+        "insufficient_history",
+        "positive_edge",
+        "positive_average_r",
+        "low_win_rate",
+        "negative_average_r",
+    ] = "insufficient_history"
+
+
+class PortfolioAnalytics(BaseModel):
+    """Canonical closed-trade performance in original-risk R units."""
+
+    closed_trade_count: int = 0
+    excluded_trade_count: int = 0
+    win_count: int = 0
+    loss_count: int = 0
+    scratch_count: int = 0
+    win_rate: float | None = None
+    win_rate_status: Literal["positive", "negative", "neutral"] = "neutral"
+    average_r: float | None = None
+    average_max_r: float | None = None
+    profit_factor: float | None = None
+    profit_factor_status: Literal["positive", "negative", "neutral"] = "neutral"
+    average_holding_days: float | None = None
+    max_win_streak: int = 0
+    max_loss_streak: int = 0
+    equity_curve: list[PortfolioAnalyticsCurvePoint] = Field(default_factory=list)
+    tag_breakdown: list[PortfolioAnalyticsTag] = Field(default_factory=list)
+    journal_tag_breakdown: list[PortfolioAnalyticsJournalTag] = Field(default_factory=list)
+    insight: PortfolioAnalyticsInsight = Field(default_factory=PortfolioAnalyticsInsight)
+
+
+class PortfolioAnalyticsMetadata(BaseModel):
+    """Configured thresholds needed to render, never recalculate, analytics."""
+
+    heat_status: Literal["normal", "warning", "danger"] = "normal"
+    heat_warning_pct: float = 4.0
+    heat_max_pct: float = 6.0
+    concentration_warning_pct: float = 60.0
+    tag_min_sample_size: int = 5
 
 
 class TradingStateMetricsResponse(BaseModel):

@@ -96,6 +96,37 @@ interface PortfolioSummaryApiResponse {
   concentration?: ConcentrationGroupApiResponse[];
   realized_pnl?: number;
   effective_account_size?: number;
+  analytics?: PortfolioAnalyticsApiResponse;
+  analytics_metadata?: PortfolioAnalyticsMetadataApiResponse;
+}
+
+interface PortfolioAnalyticsApiResponse {
+  closed_trade_count: number;
+  excluded_trade_count: number;
+  win_count: number;
+  loss_count: number;
+  scratch_count: number;
+  win_rate: number | null;
+  win_rate_status: 'positive' | 'negative' | 'neutral';
+  average_r: number | null;
+  average_max_r: number | null;
+  profit_factor: number | null;
+  profit_factor_status: 'positive' | 'negative' | 'neutral';
+  average_holding_days: number | null;
+  max_win_streak: number;
+  max_loss_streak: number;
+  equity_curve: Array<{ position_id: string; ticker: string; date: string; r: number; max_r: number | null; holding_days: number | null; cumulative_r: number; tags: string[]; entry_price: number; exit_price: number; shares: number; initial_risk: number; thesis: string | null; notes: string; lesson: string | null }>;
+  tag_breakdown: Array<{ tag: string; trade_count: number; win_count: number; loss_count: number; scratch_count: number; win_rate: number | null; average_r: number; expectancy: number }>;
+  journal_tag_breakdown: Array<{ tag: string; trade_count: number; win_count: number; loss_count: number; scratch_count: number; average_r: number | null; average_max_r: number | null }>;
+  insight: { verdict: 'positive' | 'developing' | 'negative'; reason: 'insufficient_history' | 'positive_edge' | 'positive_average_r' | 'low_win_rate' | 'negative_average_r' };
+}
+
+interface PortfolioAnalyticsMetadataApiResponse {
+  heat_status: 'normal' | 'warning' | 'danger';
+  heat_warning_pct: number;
+  heat_max_pct: number;
+  concentration_warning_pct: number;
+  tag_min_sample_size: number;
 }
 
 interface ConcentrationGroupApiResponse {
@@ -157,6 +188,37 @@ export interface PortfolioSummary {
   concentration: ConcentrationGroup[];
   realizedPnl: number;
   effectiveAccountSize: number;
+  analytics: PortfolioAnalytics;
+  analyticsMetadata: PortfolioAnalyticsMetadata;
+}
+
+export interface PortfolioAnalytics {
+  closedTradeCount: number;
+  excludedTradeCount: number;
+  winCount: number;
+  lossCount: number;
+  scratchCount: number;
+  winRate: number | null;
+  winRateStatus: 'positive' | 'negative' | 'neutral';
+  averageR: number | null;
+  averageMaxR: number | null;
+  profitFactor: number | null;
+  profitFactorStatus: 'positive' | 'negative' | 'neutral';
+  averageHoldingDays: number | null;
+  maxWinStreak: number;
+  maxLossStreak: number;
+  equityCurve: Array<{ positionId: string; ticker: string; date: string; r: number; maxR: number | null; holdingDays: number | null; cumulativeR: number; tags: string[]; entryPrice: number; exitPrice: number; shares: number; initialRisk: number; thesis: string | null; notes: string; lesson: string | null }>;
+  tagBreakdown: Array<{ tag: string; tradeCount: number; winCount: number; lossCount: number; scratchCount: number; winRate: number | null; averageR: number; expectancy: number }>;
+  journalTagBreakdown: Array<{ tag: string; tradeCount: number; winCount: number; lossCount: number; scratchCount: number; averageR: number | null; averageMaxR: number | null }>;
+  insight: { verdict: 'positive' | 'developing' | 'negative'; reason: 'insufficient_history' | 'positive_edge' | 'positive_average_r' | 'low_win_rate' | 'negative_average_r' };
+}
+
+export interface PortfolioAnalyticsMetadata {
+  heatStatus: 'normal' | 'warning' | 'danger';
+  heatWarningPct: number;
+  heatMaxPct: number;
+  concentrationWarningPct: number;
+  tagMinSampleSize: number;
 }
 
 export interface ConcentrationGroup {
@@ -675,6 +737,17 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
 }
 
 function transformPortfolioSummary(data: PortfolioSummaryApiResponse): PortfolioSummary {
+  const analytics = data.analytics ?? {
+    closed_trade_count: 0, excluded_trade_count: 0, win_count: 0, loss_count: 0, scratch_count: 0,
+    win_rate: null, win_rate_status: 'neutral' as const, average_r: null, average_max_r: null,
+    profit_factor: null, profit_factor_status: 'neutral' as const, average_holding_days: null,
+    max_win_streak: 0, max_loss_streak: 0, equity_curve: [], tag_breakdown: [], journal_tag_breakdown: [],
+    insight: { verdict: 'developing' as const, reason: 'insufficient_history' as const },
+  };
+  const analyticsMetadata = data.analytics_metadata ?? {
+    heat_status: 'normal' as const, heat_warning_pct: 0, heat_max_pct: 0,
+    concentration_warning_pct: 0, tag_min_sample_size: 0,
+  };
   return {
     totalPositions: data.total_positions,
     totalValue: data.total_value,
@@ -704,6 +777,33 @@ function transformPortfolioSummary(data: PortfolioSummaryApiResponse): Portfolio
     })),
     realizedPnl: data.realized_pnl ?? 0,
     effectiveAccountSize: data.effective_account_size ?? data.account_size,
+    analytics: {
+      closedTradeCount: analytics.closed_trade_count,
+      excludedTradeCount: analytics.excluded_trade_count,
+      winCount: analytics.win_count,
+      lossCount: analytics.loss_count,
+      scratchCount: analytics.scratch_count,
+      winRate: analytics.win_rate,
+      winRateStatus: analytics.win_rate_status,
+      averageR: analytics.average_r,
+      averageMaxR: analytics.average_max_r ?? null,
+      profitFactor: analytics.profit_factor,
+      profitFactorStatus: analytics.profit_factor_status,
+      averageHoldingDays: analytics.average_holding_days,
+      maxWinStreak: analytics.max_win_streak,
+      maxLossStreak: analytics.max_loss_streak,
+      equityCurve: analytics.equity_curve.map(point => ({ positionId: point.position_id, ticker: point.ticker, date: point.date, r: point.r, maxR: point.max_r, holdingDays: point.holding_days, cumulativeR: point.cumulative_r, tags: point.tags ?? [], entryPrice: point.entry_price, exitPrice: point.exit_price, shares: point.shares, initialRisk: point.initial_risk, thesis: point.thesis, notes: point.notes, lesson: point.lesson })),
+      tagBreakdown: analytics.tag_breakdown.map(row => ({ tag: row.tag, tradeCount: row.trade_count, winCount: row.win_count, lossCount: row.loss_count, scratchCount: row.scratch_count, winRate: row.win_rate, averageR: row.average_r, expectancy: row.expectancy })),
+      journalTagBreakdown: (analytics.journal_tag_breakdown ?? []).map(row => ({ tag: row.tag, tradeCount: row.trade_count, winCount: row.win_count, lossCount: row.loss_count, scratchCount: row.scratch_count, averageR: row.average_r, averageMaxR: row.average_max_r })),
+      insight: analytics.insight ?? { verdict: 'developing', reason: 'insufficient_history' },
+    },
+    analyticsMetadata: {
+      heatStatus: analyticsMetadata.heat_status,
+      heatWarningPct: analyticsMetadata.heat_warning_pct,
+      heatMaxPct: analyticsMetadata.heat_max_pct,
+      concentrationWarningPct: analyticsMetadata.concentration_warning_pct,
+      tagMinSampleSize: analyticsMetadata.tag_min_sample_size,
+    },
   };
 }
 

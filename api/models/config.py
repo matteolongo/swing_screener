@@ -32,6 +32,12 @@ class RiskConfig(BaseModel):
         default=60.0,
         description="Warn when one country/exchange exceeds this share of open risk",
     )
+    portfolio_heat_warning_pct: float = Field(
+        gt=0,
+        le=1,
+        default=0.04,
+        description="Warn when aggregate open risk reaches this fraction of effective equity",
+    )
     account_size_mode: Literal["base", "equity"] = Field(
         default="equity",
         description="Whether risk calculations use base account size or equity adjusted for realized P&L",
@@ -93,4 +99,25 @@ class AppConfig(BaseModel):
         default=1,
         ge=0,
         description="Calendar age after which persisted position/order snapshots are stale",
+    )
+    portfolio_analytics_min_sample_size: int = Field(
+        default=5,
+        ge=1,
+        description="Minimum closed trades required before a tag analytics row is returned",
+    )
+    portfolio_analytics_insight_min_trade_count: int = Field(
+        default=5,
+        ge=1,
+        description="Minimum closed trades before a portfolio insight can be conclusive",
+    )
+    portfolio_analytics_insight_min_profit_factor: float = Field(
+        default=1.0,
+        ge=0,
+        description="Profit-factor threshold for a positive portfolio insight",
+    )
+    portfolio_analytics_insight_low_win_rate_pct: float = Field(
+        default=40.0,
+        ge=0,
+        le=100,
+        description="Win-rate threshold used by the negative portfolio insight",
     )

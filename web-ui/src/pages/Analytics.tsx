@@ -1,18 +1,17 @@
-import { useMemo } from 'react';
-import { usePositions } from '@/features/portfolio/hooks';
+import { usePortfolioSummary } from '@/features/portfolio/hooks';
 import { t } from '@/i18n/t';
 import { formatNumber, getSignColorClass } from '@/utils/formatters';
 import EdgeBreakdownTable from '@/components/domain/portfolio/EdgeBreakdownTable';
 import RegimeBreakdownTable from '@/components/domain/portfolio/RegimeBreakdownTable';
-import { computeAnalyticsStats } from '@/components/domain/analytics/analyticsStats';
 import { EquityCurveChart, RDistributionChart } from '@/components/domain/analytics/AnalyticsCharts';
 import { EdgeInsightCard, HowToReadBox, StatCard } from '@/components/domain/analytics/AnalyticsCards';
 import AnalyticsTradeTable from '@/components/domain/analytics/AnalyticsTradeTable';
 
 export default function Analytics() {
-  const { data, isLoading, isError } = usePositions('closed');
-
-  const stats = useMemo(() => computeAnalyticsStats(data), [data]);
+  const summary = usePortfolioSummary();
+  const stats = summary.data?.analytics;
+  const isLoading = summary.isLoading;
+  const isError = summary.isError;
 
   if (isLoading) {
     return (
@@ -37,7 +36,7 @@ export default function Analytics() {
     );
   }
 
-  const hasData = stats.rValues.length > 0;
+  const hasData = (stats?.closedTradeCount ?? 0) > 0;
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-6 space-y-6">
@@ -53,56 +52,58 @@ export default function Analytics() {
         <>
           {/* Edge insight — computed verdict above stat cards */}
           <EdgeInsightCard
-            totalTrades={stats.totalTrades}
-            avgR={stats.avgR}
-            profitFactor={stats.profitFactor}
-            winRate={stats.winRate}
+            insight={stats!.insight}
+            totalTrades={stats!.closedTradeCount}
+            averageR={stats!.averageR}
+            profitFactor={stats!.profitFactor}
+            winRate={stats!.winRate}
           />
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <StatCard
               label={t('analyticsPage.stats.winRate')}
-              value={stats.winRate != null ? `${formatNumber(stats.winRate, 1)}%` : '—'}
+              value={stats!.winRate != null ? `${formatNumber(stats!.winRate, 1)}%` : '—'}
               colorClass={
-                stats.winRate != null
-                  ? stats.winRate >= 50 ? 'text-success' : 'text-danger'
-                  : undefined
+                stats!.winRateStatus === 'neutral' ? undefined : `text-${stats!.winRateStatus === 'positive' ? 'success' : 'danger'}`
               }
-              hint={`${stats.winCount}W · ${stats.lossCount}L · ${stats.beCount}BE of ${stats.totalTrades} trades`}
+              hint={t('analyticsPage.statHints.winLossSummary', {
+                winCount: stats!.winCount,
+                lossCount: stats!.lossCount,
+                scratchCount: stats!.scratchCount,
+                closedTradeCount: stats!.closedTradeCount,
+              })}
             />
             <StatCard
               label={t('analyticsPage.stats.avgR')}
-              value={stats.avgR != null ? `${stats.avgR >= 0 ? '+' : ''}${formatNumber(stats.avgR, 2)}R` : '—'}
-              colorClass={stats.avgR != null ? getSignColorClass(stats.avgR) : undefined}
-              hint="avg R per closed trade"
+              value={stats!.averageR != null ? `${stats!.averageR >= 0 ? '+' : ''}${formatNumber(stats!.averageR, 2)}R` : '—'}
+              colorClass={stats!.averageR != null ? getSignColorClass(stats!.averageR) : undefined}
+              hint={t('analyticsPage.statHints.avgR')}
             />
             <StatCard
               label={t('analyticsPage.stats.profitFactor')}
-              value={stats.profitFactor != null ? formatNumber(stats.profitFactor, 2) : '—'}
+              value={stats!.profitFactor != null ? formatNumber(stats!.profitFactor, 2) : '—'}
               colorClass={
-                stats.profitFactor != null
-                  ? stats.profitFactor >= 1 ? 'text-success' : 'text-danger'
-                  : undefined
+                stats!.profitFactorStatus === 'neutral' ? undefined : `text-${stats!.profitFactorStatus === 'positive' ? 'success' : 'danger'}`
               }
-              hint="total gains ÷ total losses · > 1.0 = profitable"
+              hint={t('analyticsPage.statHints.profitFactor')}
             />
             <StatCard
               label={t('analyticsPage.stats.avgHoldDays')}
-              value={stats.avgHoldDays != null ? formatNumber(stats.avgHoldDays, 1) : '—'}
-              hint="days from entry to exit"
+              value={stats!.averageHoldingDays != null ? formatNumber(stats!.averageHoldingDays, 1) : '—'}
+              hint={t('analyticsPage.statHints.avgHoldDays')}
             />
             <StatCard
               label={t('analyticsPage.stats.maxWinStreak')}
-              value={String(stats.maxWinStreak)}
+              value={String(stats!.maxWinStreak)}
               colorClass="text-success"
-              hint="consecutive wins (longest run)"
+              hint={t('analyticsPage.statHints.maxWinStreak')}
             />
             <StatCard
               label={t('analyticsPage.stats.maxLossStreak')}
-              value={String(stats.maxLossStreak)}
+              value={String(stats!.maxLossStreak)}
               colorClass="text-danger"
-              hint="consecutive losses (longest run)"
+              hint={t('analyticsPage.statHints.maxLossStreak')}
             />
           </div>
 
@@ -114,9 +115,9 @@ export default function Analytics() {
                 <h2 className="text-sm font-semibold text-muted">
                   {t('analyticsPage.charts.equityCurve')}
                 </h2>
-                <span className="text-[11px] text-muted">hover a dot for trade detail</span>
+                <span className="text-[11px] text-muted">{t('analyticsPage.charts.equityCurveHint')}</span>
               </div>
-              <EquityCurveChart data={stats.equityCurve} />
+              <EquityCurveChart data={stats!.equityCurve} />
             </div>
 
             {/* R Distribution — 1/3 width */}
@@ -125,9 +126,9 @@ export default function Analytics() {
                 <h2 className="text-sm font-semibold text-muted">
                   {t('analyticsPage.charts.rDistribution')}
                 </h2>
-                <span className="text-[11px] text-muted">red = loss · green = win</span>
+                <span className="text-[11px] text-muted">{t('analyticsPage.charts.rDistributionHint')}</span>
               </div>
-              <RDistributionChart values={stats.rValues} />
+              <RDistributionChart values={stats!.equityCurve.map(point => point.r)} />
             </div>
           </div>
 
@@ -139,7 +140,7 @@ export default function Analytics() {
             <h2 className="mb-3 text-sm font-semibold text-muted">
               {t('analyticsPage.edgeBreakdown.title')}
             </h2>
-            <EdgeBreakdownTable positions={stats.sorted} />
+            <EdgeBreakdownTable rows={stats!.tagBreakdown} />
           </section>
 
           {/* By market regime */}
@@ -154,7 +155,7 @@ export default function Analytics() {
           </section>
 
           {/* Trade list table */}
-          <AnalyticsTradeTable positions={stats.sorted} />
+          <AnalyticsTradeTable curve={stats!.equityCurve} />
         </>
       )}
     </div>
