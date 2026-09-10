@@ -82,7 +82,7 @@ OHLCV data is cached locally in Parquet format to avoid redundant downloads:
 - **Location**: `.cache/market_data/by_ticker/` (one `.parquet` file per ticker, plus `index.json` recording each ticker's covered date window)
 - **Reuse**: a ticker is served from cache when its covered window contains the requested window, so universe membership changes never invalidate other tickers
 - **Freshness**: windows ending today are reused within `same_day_cache_ttl_minutes` (default 480, see `data_providers.yfinance` in `config/defaults.yaml`); historical windows never expire unless a caller supplies `MarketDataCachePolicy(fresh_after_utc=...)`
-- **Final-close boundary**: current-date `final_close` screener runs require yfinance cache files written after the latest active-market close; explicitly intraday and historical runs do not apply that threshold
+- **Final-close boundary**: current-date `final_close` screener runs require yfinance and Polygon cache files written after the latest active-market close; explicitly intraday and historical runs do not apply that threshold
 - **Fallback provenance**: a download failure may still return an older covering cache, but the frame and provider health carry `stale_cache_fallback`, so the screener labels the run and candidates stale rather than final
 - **Invalidation**: pass `force_refresh=True` to bypass cache
 - **Ticker metadata**: `.cache/ticker_meta.json`, company name/sector cache in `.cache/ticker_info.json`, earnings proximity cache in `.cache/earnings_days.json`

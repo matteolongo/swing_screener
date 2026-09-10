@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -116,14 +116,45 @@ class PolygonProvider(MarketDataProvider):
         df.index.name = None
         return df
 
+    def _cache_is_reusable(
+        self,
+        cache: Path,
+        end_date: str,
+        cache_policy: MarketDataCachePolicy | None,
+    ) -> bool:
+        """Centralize Polygon TTL and `fresh_after_utc` reuse checks.
+
+        A cache file is reusable only when its modification time is at or
+        after `cache_policy.fresh_after_utc` (when provided) **and** the
+        existing TTL rules still hold (historical windows never expire;
+        current windows reuse within `_cache_ttl_days`). Timestamps are
+        compared as timezone-aware UTC datetimes.
+        """
+        try:
+            modified_at = datetime.fromtimestamp(cache.stat().st_mtime, tz=timezone.utc)
+        except OSError:
+            return False
+        if (
+            cache_policy is not None
+            and cache_policy.fresh_after_utc is not None
+            and modified_at < cache_policy.fresh_after_utc.astimezone(timezone.utc)
+        ):
+            return False
+        if end_date < date.today().isoformat():
+            return True
+        cache_age_s = time.time() - modified_at.timestamp()
+        return cache_age_s <= self._cache_ttl_days * 86400
+
     def _fetch_ticker(
-        self, ticker: str, start_date: str, end_date: str
+        self,
+        ticker: str,
+        start_date: str,
+        end_date: str,
+        cache_policy: MarketDataCachePolicy | None = None,
     ) -> pd.DataFrame:
         cache = self._cache_path(ticker, start_date, end_date)
         if cache.exists():
-            is_historical = end_date < date.today().isoformat()
-            cache_age_s = time.time() - cache.stat().st_mtime
-            if is_historical or cache_age_s <= self._cache_ttl_days * 86400:
+            if self._cache_is_reusable(cache, end_date, cache_policy):
                 try:
                     return pd.read_parquet(cache)
                 except Exception:
@@ -162,7 +193,11 @@ class PolygonProvider(MarketDataProvider):
             if not use_cache and cache.exists():
                 cache.unlink(missing_ok=True)
 
-            frames.append(self._fetch_ticker(ticker, start_date, end_date))
+            frames.append(
+                self._fetch_ticker(
+                    ticker, start_date, end_date, cache_policy=cache_policy
+                )
+            )
 
         if not frames:
             return pd.DataFrame()
