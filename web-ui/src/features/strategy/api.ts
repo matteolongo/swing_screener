@@ -8,7 +8,6 @@ import {
   listStrategiesLocal,
   setActiveStrategyLocal,
   updateStrategyLocal,
-  validateStrategyLocally,
 } from '@/features/persistence';
 import {
   Strategy,
@@ -131,9 +130,6 @@ export async function createStrategy(
 export async function validateStrategy(
   strategyPayload: StrategyUpdateRequestAPI,
 ): Promise<StrategyValidationResult> {
-  if (isLocalPersistenceMode()) {
-    return validateStrategyLocally(strategyPayload);
-  }
   const data = await fetchJson<StrategyValidationResultApi>(API_ENDPOINTS.strategyValidate, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -56,6 +56,11 @@ explicit effective time and new-position identity. Missing Web Locks fails close
 Local position metrics and summaries use the read-only `/api/portfolio/state/metrics`
 projection; these read models never replace the stored snapshot. Browser ledger
 freshness stays unknown rather than inheriting server-database freshness.
+Closed-trade performance, self-sufficient curve rows (including stable identity
+for ID-less trades), journal tag aggregates, metric display statuses, insight
+verdict/reason codes, and portfolio heat bands also come from that projection
+(or `/api/portfolio/summary` in API mode); components localize, format, filter,
+and render them without re-deriving R, streak, sample-size, or threshold policy.
 
 `UpdateStopRequest.marketPrice` carries the caller's ticker, price, observation
 timestamp and `current` status in local mode. It must come from an actual observed

@@ -35,6 +35,90 @@ def _set_account_size(monkeypatch: pytest.MonkeyPatch, account_size: float) -> N
     monkeypatch.setattr(api.dependencies, "_config_repository", repo)
 
 
+def test_portfolio_summary_and_stateless_projection_expose_the_same_canonical_analytics(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Removing the analytics projection from either read path must break this contract."""
+    positions = [
+        {
+            "position_id": f"POS-{index}", "ticker": f"T{index}", "status": "closed",
+            "entry_date": "2026-01-01", "exit_date": f"2026-01-{10 + index:02d}",
+            "entry_price": 100.0, "stop_price": 90.0, "initial_risk": 10.0,
+            "shares": 1, "exit_price": price, "tags": ["breakout"],
+        }
+        for index, price in enumerate([120.0, 90.0, 100.0, 130.0, 80.0], start=1)
+    ]
+    positions_file = tmp_path / "positions.json"
+    positions_file.write_text(json.dumps({"asof": "2026-02-08", "positions": positions}), encoding="utf-8")
+    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
+    _set_account_size(monkeypatch, account_size=1_000.0)
+
+    client = TestClient(app)
+    persisted = client.get("/api/portfolio/summary")
+    assert persisted.status_code == 200
+    analytics = persisted.json()["analytics"]
+    assert analytics["closed_trade_count"] == 5
+    assert analytics["win_count"] == 2
+    assert analytics["loss_count"] == 2
+    assert analytics["scratch_count"] == 1
+    assert analytics["win_rate_status"] == "positive"
+    assert analytics["profit_factor_status"] == "positive"
+    assert analytics["equity_curve"][-1]["cumulative_r"] == pytest.approx(2.0)
+    assert analytics["equity_curve"][0]["tags"] == ["breakout"]
+    assert analytics["equity_curve"][0] == {
+        "position_id": "POS-1",
+        "ticker": "T1",
+        "date": "2026-01-11",
+        "r": 2.0,
+        "max_r": None,
+        "holding_days": 10,
+        "cumulative_r": 2.0,
+        "tags": ["breakout"],
+        "entry_price": 100.0,
+        "exit_price": 120.0,
+        "shares": 1,
+        "initial_risk": 10.0,
+        "thesis": None,
+        "notes": "",
+        "lesson": None,
+    }
+    assert analytics["average_max_r"] is None
+    assert analytics["tag_breakdown"] == [
+        {
+            "tag": "breakout", "trade_count": 5, "win_count": 2, "loss_count": 2,
+            "scratch_count": 1, "win_rate": 50.0, "average_r": 0.4, "expectancy": 0.4,
+        }
+    ]
+    assert analytics["journal_tag_breakdown"] == [
+        {
+            "tag": "breakout", "trade_count": 5, "win_count": 2,
+            "loss_count": 2, "scratch_count": 1, "average_r": 0.4,
+            "average_max_r": None,
+        }
+    ]
+    assert analytics["insight"] == {"verdict": "positive", "reason": "positive_edge"}
+    assert persisted.json()["analytics_metadata"]["tag_min_sample_size"] == 5
+    assert persisted.json()["analytics_metadata"]["concentration_warning_pct"] == 60.0
+
+    projected = client.post("/api/portfolio/state/metrics", json={
+        "revision": 0,
+        "strategy": {
+            "id": "analytics", "name": "Analytics",
+            "universe": {"trend": {"sma_fast": 20, "sma_mid": 50, "sma_long": 200},
+            "vol": {"atr_window": 14}, "mom": {"lookback_6m": 126, "lookback_12m": 252, "benchmark": "SPY"},
+            "filt": {"min_price": 5, "max_price": 500, "max_atr_pct": 15}},
+            "ranking": {"w_mom_6m": 0.45, "w_mom_12m": 0.35, "w_rs_6m": 0.2, "top_n": 100},
+            "signals": {"breakout_lookback": 50, "pullback_ma": 20, "min_history": 252},
+            "risk": {"account_size": 1000, "risk_pct": 0.01,
+            "max_position_pct": 0.2, "min_shares": 1, "k_atr": 2.0}, "manage": {},
+            "created_at": "2026-01-01T00:00:00", "updated_at": "2026-01-01T00:00:00",
+        },
+        "positions": positions, "orders": [],
+    })
+    assert projected.status_code == 200, projected.text
+    assert projected.json()["summary"]["analytics"] == analytics
+
+
 def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     positions_file = tmp_path / "positions.json"
     positions_file.write_text(

@@ -10,6 +10,7 @@ app_config:
     min_rr: 2.0
     max_fee_risk_pct: 0.2
     max_portfolio_heat_pct: 0.06
+    portfolio_heat_warning_pct: 0.04
     max_concentration_pct: 60.0
   indicators:
     sma_fast: 20
@@ -38,6 +39,12 @@ app_config:
   # Persisted portfolio ledgers older than this calendar age are stale in API/UI health.
   # Also caps elapsed days from a stateless stop observation to its effective_at.
   portfolio_snapshot_stale_after_days: 1
+  # Closed trades required before a setup tag is included in portfolio analytics.
+  portfolio_analytics_min_sample_size: 5
+  # Backend-owned thresholds for the localized portfolio insight verdict.
+  portfolio_analytics_insight_min_trade_count: 5
+  portfolio_analytics_insight_min_profit_factor: 1.0
+  portfolio_analytics_insight_low_win_rate_pct: 40.0
 
 strategy:
   id: default

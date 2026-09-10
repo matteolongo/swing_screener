@@ -1,8 +1,8 @@
 import { t } from '@/i18n/t';
 import { formatNumber } from '@/utils/formatters';
-import type { EquityPoint } from './analyticsStats';
+import type { PortfolioAnalytics } from '@/features/portfolio/api';
 
-export function EquityCurveChart({ data }: { data: EquityPoint[] }) {
+export function EquityCurveChart({ data }: { data: PortfolioAnalytics['equityCurve'] }) {
   const W = 600;
   const H = 240;
   const PAD = { top: 20, right: 24, bottom: 36, left: 52 };
@@ -74,7 +74,12 @@ export function EquityCurveChart({ data }: { data: EquityPoint[] }) {
       {/* trade dots with tooltips */}
       {data.map((d, i) => (
         <circle key={i} cx={xScale(i)} cy={yScale(d.cumulativeR)} r={3.5} fill={d.r > 0 ? '#16a34a' : d.r < 0 ? '#dc2626' : '#9ca3af'} opacity={0.8}>
-          <title>{d.date} — {d.r >= 0 ? '+' : ''}{formatNumber(d.r, 2)}R  (cumulative: {d.cumulativeR >= 0 ? '+' : ''}{formatNumber(d.cumulativeR, 2)}R)</title>
+          <title>{t('analyticsPage.charts.equityCurveTooltip', {
+            date: d.date,
+            r: `${d.r >= 0 ? '+' : ''}${formatNumber(d.r, 2)}`,
+            cumulativeLabel: t('analyticsPage.labels.cumulative'),
+            cumulativeR: `${d.cumulativeR >= 0 ? '+' : ''}${formatNumber(d.cumulativeR, 2)}`,
+          })}</title>
         </circle>
       ))}
 
@@ -87,7 +92,7 @@ export function EquityCurveChart({ data }: { data: EquityPoint[] }) {
         fill={lineColor}
         fontWeight="600"
       >
-        {finalCumR >= 0 ? '+' : ''}{formatNumber(finalCumR, 2)}R
+        {t('analyticsPage.charts.peakLabel', { value: `${finalCumR >= 0 ? '+' : ''}${formatNumber(finalCumR, 2)}` })}
       </text>
 
       {/* Y-axis labels */}
@@ -118,12 +123,12 @@ export function RDistributionChart({ values }: { values: number[] }) {
   const PAD = { top: 20, right: 12, bottom: 52, left: 16 };
 
   const buckets: Bucket[] = [
-    { label: t('analyticsPage.labels.bucket.veryNegative'), shortLabel: '< −2R', min: null, max: -2, count: 0, color: '#dc2626' },
-    { label: t('analyticsPage.labels.bucket.negative'), shortLabel: '−2 to −1R', min: -2, max: -1, count: 0, color: '#ef4444' },
-    { label: t('analyticsPage.labels.bucket.smallNegative'), shortLabel: '−1 to 0R', min: -1, max: 0, count: 0, color: '#f87171' },
-    { label: t('analyticsPage.labels.bucket.smallPositive'), shortLabel: '0 to +1R', min: 0, max: 1, count: 0, color: '#4ade80' },
-    { label: t('analyticsPage.labels.bucket.positive'), shortLabel: '+1 to +2R', min: 1, max: 2, count: 0, color: '#16a34a' },
-    { label: t('analyticsPage.labels.bucket.veryPositive'), shortLabel: '> +2R', min: 2, max: null, count: 0, color: '#15803d' },
+    { label: t('analyticsPage.labels.bucket.veryNegative'), shortLabel: t('analyticsPage.charts.shortBucket.veryNegative'), min: null, max: -2, count: 0, color: '#dc2626' },
+    { label: t('analyticsPage.labels.bucket.negative'), shortLabel: t('analyticsPage.charts.shortBucket.negative'), min: -2, max: -1, count: 0, color: '#ef4444' },
+    { label: t('analyticsPage.labels.bucket.smallNegative'), shortLabel: t('analyticsPage.charts.shortBucket.smallNegative'), min: -1, max: 0, count: 0, color: '#f87171' },
+    { label: t('analyticsPage.labels.bucket.smallPositive'), shortLabel: t('analyticsPage.charts.shortBucket.smallPositive'), min: 0, max: 1, count: 0, color: '#4ade80' },
+    { label: t('analyticsPage.labels.bucket.positive'), shortLabel: t('analyticsPage.charts.shortBucket.positive'), min: 1, max: 2, count: 0, color: '#16a34a' },
+    { label: t('analyticsPage.labels.bucket.veryPositive'), shortLabel: t('analyticsPage.charts.shortBucket.veryPositive'), min: 2, max: null, count: 0, color: '#15803d' },
   ];
 
   for (const v of values) {
@@ -162,7 +167,11 @@ export function RDistributionChart({ values }: { values: number[] }) {
             {/* filled bar */}
             {b.count > 0 && (
               <rect x={x} y={filledY} width={bw} height={barH} fill={b.color} rx={2} opacity={0.85}>
-                <title>{b.label}: {b.count} trade{b.count !== 1 ? 's' : ''}</title>
+                <title>{t('analyticsPage.charts.distributionTooltip', {
+                  label: b.label,
+                  count: b.count,
+                  trades: t(b.count === 1 ? 'analyticsPage.charts.singleTrade' : 'analyticsPage.charts.pluralTrades'),
+                })}</title>
               </rect>
             )}
             {/* count label */}
