@@ -439,8 +439,12 @@ class ScreenerService:
         """Load entry-order state once; repository failures block new entries."""
 
         if self._orders_service is None:
+            logger.warning(
+                "Order state unavailable: no orders service is configured; "
+                "new entries will fail closed."
+            )
             ctx.portfolio_orders = []
-            ctx.order_state_available = True
+            ctx.order_state_available = False
             return
         try:
             ctx.portfolio_orders = list(
