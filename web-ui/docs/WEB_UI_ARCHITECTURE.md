@@ -76,7 +76,14 @@ and review queries, because canonical commands may replace or cancel exit orders
 ### Symbol workspace ownership
 
 The Today workspace keeps only session and layout state in
-`workspaceStore`: normalized selected ticker, selection version, source,
+`workspaceStore`: one `WorkspaceSelection` envelope (normalized ticker, source,
+optional immutable run ID, candidate snapshot, and stable row ID), plus compatibility
+selectors for the selected ticker and selection version. Today, Last Run, position,
+watchlist, portfolio, and ad-hoc entry points write the envelope; workspace consumers
+receive its candidate directly and never re-query the unrelated Last Run by ticker.
+Single-symbol computation is a request-keyed workspace-local cache and never changes
+`lastResult` or the immutable, display-filtered `todayRun`. A strategy transition clears
+persisted actionable runs before dependent queries refresh.
 active analysis tab, expanded/split mode, full-screen mode, and activity-drawer
 visibility plus a bounded history of 20 request activities per ticker/version
 session. The drawer filters history to the live selection so an earlier symbol

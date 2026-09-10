@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
@@ -33,6 +33,7 @@ interface TodayActionListProps {
 
 export default function TodayActionList({ onTickerSelect, compact = false }: TodayActionListProps) {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
+  const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
   const {
     todayRun,
     setTodayRunDisplayFilters,
@@ -51,6 +52,7 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
     const isAddOn = (mode?: string) => mode === 'ADD_ON' || mode === 'SCALE_BACK';
 
     return {
+      candidates: visibleCandidates,
       newCandidates: visibleCandidates
         .filter((candidate) => isNewOpportunity(candidate.sameSymbol?.mode))
         .map(dailyReviewCandidateFromScreener),
@@ -81,6 +83,27 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
     [openPositionsQuery.data],
   );
 
+  const selectTodayTicker = useCallback((ticker: string) => {
+    const normalized = ticker.trim().toUpperCase();
+    const candidate = sourceOpportunities.candidates.find((item) => item.ticker.toUpperCase() === normalized);
+    const position = openPositions.find((item) => item.ticker.toUpperCase() === normalized);
+    const source = candidate
+      ? 'today_run'
+      : watchlistNearTrigger.some((item) => item.ticker.toUpperCase() === normalized)
+        ? 'today_watchlist'
+        : 'today_position';
+    setWorkspaceSelection({
+      ticker: normalized,
+      source,
+      runId: candidate ? todayRun?.completedAt : undefined,
+      candidate,
+      rowId: candidate
+        ? `today:${todayRun?.completedAt ?? 'run'}:${normalized}`
+        : position?.positionId ?? `${source}:${normalized}`,
+    });
+    onTickerSelect(normalized);
+  }, [onTickerSelect, openPositions, setWorkspaceSelection, sourceOpportunities.candidates, todayRun?.completedAt, watchlistNearTrigger]);
+
   const flatItems = useMemo(
     () => [
       ...watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}` })),
@@ -109,7 +132,7 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
     handleUpdateStop,
     handleClosePosition,
     handleItemClick,
-  } = useTodayActions(flatItems, onTickerSelect);
+  } = useTodayActions(flatItems, selectTodayTicker);
 
   const requiresActionCount =
     (review?.positionsClose.length ?? 0) + (review?.positionsUpdateStop.length ?? 0);
@@ -197,7 +220,7 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
             status={row.status}
             context={row.context}
             selected={selectedTicker?.toUpperCase() === row.ticker.toUpperCase()}
-            onSelect={onTickerSelect}
+            onSelect={selectTodayTicker}
           />
         ))}
         {isEmpty ? (

@@ -17,6 +17,7 @@ import * as strategyApi from '@/features/strategy/api';
 import { useSetActiveStrategyMutation, useUpdateStrategyMutation } from '@/features/strategy/hooks';
 import type { Strategy } from '@/features/strategy/types';
 import { queryKeys } from '@/lib/queryKeys';
+import { useScreenerStore } from '@/stores/screenerStore';
 
 function createQueryClient() {
   return new QueryClient({
@@ -35,6 +36,12 @@ const strategy = (id: string) => ({ id, name: id }) as Strategy;
 describe('strategy mutation cache invalidation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useScreenerStore.setState({
+      lastResult: { candidates: [] } as never,
+      lastRunContext: null,
+      todayRun: { request: {}, displayFilters: { recommendedOnly: false, actionFilter: 'all' }, completedAt: '2026-09-10T20:00:00Z', result: { candidates: [] } } as never,
+      todayRunInitialized: true,
+    });
   });
 
   it('invalidates every strategy-derived prefix after activating a strategy', async () => {
@@ -57,6 +64,8 @@ describe('strategy mutation cache invalidation', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['backtest'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.openPositionsIntelligence() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['intelligence'] });
+    expect(useScreenerStore.getState().lastResult).toBeNull();
+    expect(useScreenerStore.getState().todayRun).toBeNull();
   });
 
   it('uses broad invalidation when the active strategy is updated', async () => {

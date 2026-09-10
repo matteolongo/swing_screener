@@ -117,4 +117,18 @@ describe('useScreenerStore', () => {
     expect(result.current.todayRun?.result.candidates[0].ticker).toBe('TODAY');
     expect(result.current.todayRun?.displayFilters.recommendedOnly).toBe(true);
   });
+
+  it('invalidates persisted actionable runs after a strategy transition', () => {
+    const { result } = renderHook(() => useScreenerStore());
+    act(() => result.current.recordScreenerRun(
+      response([candidate('TODAY', 1)]),
+      { request: {}, displayFilters: { recommendedOnly: true, actionFilter: 'all' }, completedAt: '2026-07-10T20:00:00Z' },
+      true,
+    ));
+
+    act(() => result.current.invalidateActionableRuns());
+
+    expect(result.current.lastResult).toBeNull();
+    expect(result.current.todayRun).toBeNull();
+  });
 });

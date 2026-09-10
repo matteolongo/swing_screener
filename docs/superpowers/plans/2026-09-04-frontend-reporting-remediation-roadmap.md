@@ -50,6 +50,7 @@
 | `[BE][20]` | Complete; open | `codex/stateless-trading-transitions` / [PR #465](https://github.com/matteolongo/swing_screener/pull/465) | Portfolio/stateless regression: 92 passed; frontend full suite: 151 files and 1,000 tests passed; TypeScript typecheck, ESLint, production build, and `git diff --check` passed. The seven broader backend Windows timing/filesystem failures reproduce on the immediate BE-19 base. |
 | `[BE][21]` | Complete; open | `codex/canonical-portfolio-analytics` / [PR #466](https://github.com/matteolongo/swing_screener/pull/466) | Canonical persisted/stateless analytics now provide stable ID-less curve identities, self-sufficient journal rows, backend metric statuses, zero-safe insight config, and strategy validation in both modes; 17 focused backend tests, 17 focused frontend tests, full frontend 153 files / 993 tests, typecheck, lint, build, and diff audit passed. |
 | `[FE][01]` | Complete; [#467](https://github.com/matteolongo/swing_screener/pull/467) | `codex/consume-execution-eligibility` | Frontend transforms and validates the fail-closed backend capability/draft; unsigned or malformed drafts, signal fallbacks, fabricated plans, and browser position-cap policy are removed. Focused tests: 90 passed; lint/build/diff-check passed. Baseline typecheck and MSW/happy-dom runner failures are documented in the PR. |
+| `[FE][02]` | Complete; [#468](https://github.com/matteolongo/swing_screener/pull/468) | `codex/preserve-reporting-run-identity` | Source-aware workspace selections preserve pinned/last-run candidate identity, ad-hoc analysis remains local, and strategy activation invalidates actionable persisted runs. Focused assertions: 84 passed; lint/build/diff-check passed. Baseline typecheck and MSW/happy-dom runner failures are documented in the PR. |
 
 BE-19 is specified in `docs/superpowers/plans/2026-09-08-canonical-execution-eligibility.md` and is the first implementation target. Subsequent PRs must use the design's acceptance criteria and the boundaries below when their task-level plans are expanded immediately before execution.
 
@@ -88,13 +89,13 @@ BE-19 is specified in `docs/superpowers/plans/2026-09-08-canonical-execution-eli
 
 ## FE-02 contract: preserve reporting selection identity
 
-- [ ] Preserve the existing `lastResult` / immutable `todayRun` separation and its display-filter contract.
-- [ ] Add `WorkspaceSelection` with `ticker`, `source`, optional `runId`, optional candidate snapshot, and stable `rowId`.
-- [ ] Make Today, Last Run, positions, watchlist, portfolio, and ad-hoc entry points set the correct source.
-- [ ] Pass the resolved candidate into AnalysisCanvasPanel, SymbolAnalysisContent, and ActionPanel; remove independent last-result ticker lookup.
-- [ ] Store single-symbol compute results in a request-keyed ad-hoc cache without changing `lastResult` or `todayRun`.
-- [ ] Invalidate actionable persisted runs on strategy transition.
-- [ ] Add divergent-run, tab-switch, ad-hoc-compute, and strategy-transition regression tests.
+- [x] Preserve the existing `lastResult` / immutable `todayRun` separation and its display-filter contract.
+- [x] Add `WorkspaceSelection` with `ticker`, `source`, optional `runId`, optional candidate snapshot, and stable `rowId`.
+- [x] Make Today, Last Run, positions, watchlist, portfolio, and ad-hoc entry points set the correct source.
+- [x] Pass the resolved candidate into AnalysisCanvasPanel, SymbolAnalysisContent, and ActionPanel; remove independent last-result ticker lookup.
+- [x] Store single-symbol compute results in a request-keyed ad-hoc cache without changing `lastResult` or `todayRun`.
+- [x] Invalidate actionable persisted runs on strategy transition.
+- [x] Add divergent-run, tab-switch, ad-hoc-compute, and strategy-transition regression tests.
 
 ## FE-03 contract: refresh Daily Review dependencies
 
