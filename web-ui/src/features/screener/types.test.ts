@@ -4,6 +4,7 @@ import {
   transformScreenerResponse,
   transformCandlePattern,
   transformTickerCandles,
+  getCanonicalOrderDraft,
   type ScreenerResponseAPI,
 } from '@/features/screener/types';
 
@@ -104,6 +105,95 @@ describe('transformCandlePattern', () => {
 });
 
 describe('transformScreenerResponse', () => {
+  const canonicalResponse = (draft: Record<string, unknown>): ScreenerResponseAPI => ({
+    asof_date: '2026-09-10',
+    total_screened: 1,
+    data_freshness: 'final_close',
+    candidates: [{
+      ticker: 'AAPL', close: 100, sma_20: 99, sma_50: 98, sma_200: 95,
+      atr: 2, momentum_6m: 0.2, momentum_12m: 0.3, rel_strength: 1.1,
+      score: 0.8, confidence: 88, rank: 1,
+      execution_eligibility: { allowed: true, mode: 'ready', reason: null },
+      canonical_order_draft: draft,
+    }],
+  } as ScreenerResponseAPI);
+
+  it('maps the backend-owned execution capability and canonical order draft', () => {
+    const response = transformScreenerResponse({
+      asof_date: '2026-09-10',
+      total_screened: 1,
+      data_freshness: 'final_close',
+      candidates: [{
+        ticker: 'AAPL',
+        close: 100,
+        sma_20: 99,
+        sma_50: 98,
+        sma_200: 95,
+        atr: 2,
+        momentum_6m: 0.2,
+        momentum_12m: 0.3,
+        rel_strength: 1.1,
+        score: 0.8,
+        confidence: 88,
+        rank: 1,
+        execution_eligibility: { allowed: true, mode: 'ready', reason: null },
+        canonical_order_draft: {
+          order_type: 'BUY_STOP',
+          entry: 101.2,
+          stop: 97,
+          target: 109.6,
+          shares: 10,
+          rr: 2,
+          quote_currency: 'USD',
+          approval_token: 'signed-approval',
+        },
+      }],
+    } as ScreenerResponseAPI);
+
+    expect(response.candidates[0]).toMatchObject({
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: {
+        orderType: 'BUY_STOP',
+        entry: 101.2,
+        stop: 97,
+        target: 109.6,
+        shares: 10,
+        rr: 2,
+        quoteCurrency: 'USD',
+        approvalToken: 'signed-approval',
+      },
+    });
+  });
+
+  it('fails closed for missing or empty canonical approval tokens', () => {
+    for (const approvalToken of [undefined, '', '  ']) {
+      const candidate = transformScreenerResponse(canonicalResponse({
+        order_type: 'BUY_STOP', entry: 101.2, stop: 97, target: 109.6,
+        shares: 10, rr: 2, quote_currency: 'USD', approval_token: approvalToken,
+      })).candidates[0];
+
+      expect(candidate.canonicalOrderDraft).toBeUndefined();
+      expect(getCanonicalOrderDraft(candidate)).toBeUndefined();
+    }
+  });
+
+  it('fails closed for a malformed canonical draft even when eligibility is allowed', () => {
+    const candidate = transformScreenerResponse(canonicalResponse({
+      order_type: 'BUY_MARKET', entry: Infinity, stop: 97, target: 109.6,
+      shares: 1.5, rr: NaN, quote_currency: 'UNKNOWN', approval_token: 'signed',
+    })).candidates[0];
+
+    expect(candidate.canonicalOrderDraft).toBeUndefined();
+    expect(getCanonicalOrderDraft(candidate)).toBeUndefined();
+    expect(getCanonicalOrderDraft({
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: {
+        orderType: 'BUY_STOP', entry: Infinity, stop: 97, target: 109.6,
+        shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed',
+      },
+    })).toBeUndefined();
+  });
+
   it('maps execution guidance and fundamentals fields from API to UI shape', () => {
       const apiResponse: ScreenerResponseAPI = {
         asof_date: '2026-03-02',

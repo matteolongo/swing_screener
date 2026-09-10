@@ -1,14 +1,13 @@
 import OrderActionPanel from '@/components/domain/orders/OrderActionPanel';
 import type { OrderReviewContext } from '@/components/domain/orders/OrderReviewExperience';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
-import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useCreateOrderMutation, useOpenPositions } from '@/features/portfolio/hooks';
-import type { SameSymbolCandidateContext, ScreenerCandidate } from '@/features/screener/types';
+import { getCanonicalOrderDraft, type SameSymbolCandidateContext, type ScreenerCandidate } from '@/features/screener/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
-import { canReviewPendingPullbackOrder, formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
+import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import SourceHealthSummary from './SourceHealthSummary';
 
@@ -63,8 +62,6 @@ function buildDefaultNotes(
 export default function ActionPanel({ ticker, candidate: candidateOverride, source }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const activeStrategyQuery = useActiveStrategyQuery();
-  const configDefaultsQuery = useConfigDefaultsQuery();
-  const risk = activeStrategyQuery.data?.risk ?? configDefaultsQuery.data?.risk;
   const openPositionsQuery = useOpenPositions();
   const openPosition = openPositionsQuery.data?.find((position) => position.ticker.toUpperCase() === normalizedTicker);
   const storeCandidate = useScreenerStore((state) =>
@@ -75,55 +72,31 @@ export default function ActionPanel({ ticker, candidate: candidateOverride, sour
 
   const sameSymbol = resolveSameSymbolContext(candidate ?? null);
   const defaultNotes = buildDefaultNotes(candidate ?? null, sameSymbol, normalizedTicker);
-  const isReadyCandidate = candidate?.recommendation?.workflowStatus === 'ready'
-    || (candidate != null && canReviewPendingPullbackOrder(candidate));
+  const orderDraft = getCanonicalOrderDraft(candidate);
   const canReviewOrder = Boolean(
-    isReadyCandidate &&
+    orderDraft &&
       (!openPosition || isPositionEntryContext(candidate?.sameSymbol)),
   );
-
-  if (!risk) {
-    const configFailed = configDefaultsQuery.isError && !activeStrategyQuery.data?.risk;
-    return (
-      <div className="rounded-lg border border-border p-3 text-sm">
-        <p className={configFailed ? 'text-danger' : 'text-muted'}>
-          {configFailed ? t('common.errors.generic') : t('common.table.loading')}
-        </p>
-      </div>
-    );
-  }
 
   const context: OrderReviewContext = {
     ticker: normalizedTicker,
     signal: candidate?.signal,
     close: candidate?.close,
-    entry: candidate?.entry,
-    stop: isPositionEntryContext(sameSymbol) && sameSymbol.executionStop != null ? sameSymbol.executionStop : candidate?.stop,
-    shares: candidate?.shares,
     recommendation: candidate?.recommendation,
     sector: candidate?.sector ?? undefined,
-    rReward: candidate?.rr,
-    score: candidate?.score,
-    rank: candidate?.rank,
-    atr: candidate?.atr,
-    currency: candidate?.currency,
-    suggestedOrderType: candidate?.suggestedOrderType,
-    suggestedOrderPrice: candidate?.suggestedOrderPrice,
     executionNote: candidate?.executionNote,
     positionId: sameSymbol?.positionId,
     sameSymbol,
-    avgDailyVolumeEur: candidate?.avgDailyVolumeEur ?? null,
     dataStatus: candidate?.dataStatus ?? 'unknown',
     dataAsOf: candidate?.dataAsOf ?? candidate?.lastBar,
     daysToEarnings: candidate?.daysToEarnings ?? null,
     strategyId: activeStrategyQuery.data?.id,
-    approvalToken: candidate?.approvalToken,
+    canonicalOrderDraft: orderDraft!,
   };
 
   const content = canReviewOrder ? (
     <OrderActionPanel
       context={context}
-      risk={risk}
       defaultNotes={defaultNotes}
       showManualOrderHint={!candidate}
       onSubmitOrder={(request) => createOrderMutation.mutateAsync(request)}

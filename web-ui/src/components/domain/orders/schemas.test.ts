@@ -30,6 +30,18 @@ describe('candidateOrderSchema', () => {
   it('rejects a non-positive limit price', () => {
     expect(candidateOrderSchema.safeParse({ ...validCandidate, limitPrice: 0 }).success).toBe(false);
   });
+
+  it('rejects non-finite order values', () => {
+    for (const values of [
+      { quantity: Infinity },
+      { quantity: NaN },
+      { limitPrice: Infinity },
+      { stopPrice: NaN },
+      { targetPrice: Infinity },
+    ]) {
+      expect(candidateOrderSchema.safeParse({ ...validCandidate, ...values }).success).toBe(false);
+    }
+  });
 });
 
 describe('fillOrderSchema', () => {

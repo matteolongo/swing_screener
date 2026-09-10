@@ -3,11 +3,11 @@ import { t } from '@/i18n/t';
 
 export const candidateOrderSchema = z
   .object({
-    orderType: z.enum(['BUY_LIMIT', 'BUY_STOP', 'BUY_MARKET']),
-    quantity: z.number().int().min(1, t('order.candidateModal.quantityError')),
-    limitPrice: z.number().positive(t('order.candidateModal.limitError')),
-    stopPrice: z.number().positive(t('order.candidateModal.stopPositiveError')),
-    targetPrice: z.number().positive(t('order.candidateModal.targetPositiveError')).optional(),
+    orderType: z.enum(['BUY_LIMIT', 'BUY_STOP']),
+    quantity: z.number().finite().int().min(1, t('order.candidateModal.quantityError')),
+    limitPrice: z.number().finite().positive(t('order.candidateModal.limitError')),
+    stopPrice: z.number().finite().positive(t('order.candidateModal.stopPositiveError')),
+    targetPrice: z.number().finite().positive(t('order.candidateModal.targetPositiveError')).optional(),
     notes: z.string().optional(),
   })
   .superRefine((values, ctx) => {

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { AlertTriangle } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
@@ -10,154 +9,93 @@ import EarningsWarningBanner from '@/components/domain/screener/EarningsWarningB
 import OrderReviewSummary from '@/components/domain/orders/OrderReviewSummary';
 import OrderExecutionGuidePanel from '@/components/domain/orders/OrderExecutionGuidePanel';
 import {
-  CONCENTRATION_WARNING_THRESHOLD,
   classifyInvalidationRule,
-  countryFromTicker,
   type ReviewSectionId,
 } from '@/components/domain/orders/orderReviewHelpers';
 
-import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetrics';
 import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
 import { getSetupExecutionGuidance } from '@/features/orders/setupGuidance';
-import { normalizeSuggestedOrderType, resolveDefaultOrderType } from '@/features/orders/executionDefaults';
-import { usePortfolioSummary } from '@/features/portfolio/hooks';
-import { isLocalPersistenceMode } from '@/features/persistence';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
-import type { SameSymbolCandidateContext } from '@/features/screener/types';
-import type { RiskConfig } from '@/types/config';
+import type { CanonicalOrderDraft, SameSymbolCandidateContext } from '@/features/screener/types';
 import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
-import { canReviewPendingPullbackOrder, getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
-
-export type OrderReviewRiskConfig = Pick<
-  RiskConfig,
-  'accountSize' | 'riskPct' | 'maxPositionPct' | 'minShares'
->;
+import { getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 
 export interface OrderReviewContext {
   ticker: string;
   signal?: string;
-  entry?: number;
-  stop?: number;
   close?: number;
-  shares?: number;
   recommendation?: Recommendation;
   sector?: string | null;
-  rReward?: number;
-  score?: number;
-  rank?: number;
-  atr?: number;
-  currency?: string;
-  suggestedOrderType?: string | null;
-  suggestedOrderPrice?: number | null;
   executionNote?: string | null;
   positionId?: string | null;
   sameSymbol?: SameSymbolCandidateContext;
-  avgDailyVolumeEur?: number | null;
   dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
   dataAsOf?: string;
   daysToEarnings?: number | null;
   strategyId?: string;
-  approvalToken?: string;
+  canonicalOrderDraft: CanonicalOrderDraft;
 }
 
 interface OrderReviewExperienceProps {
   context: OrderReviewContext;
-  risk: OrderReviewRiskConfig;
   defaultNotes: string;
   onSubmitOrder: (request: CreateOrderRequest) => Promise<unknown>;
   onSuccess?: () => void;
-  enforceRecommendation?: boolean;
   showManualOrderHint?: boolean;
   successMessage?: string;
 }
 
 export default function OrderReviewExperience({
   context,
-  risk,
   defaultNotes,
   onSubmitOrder,
   onSuccess,
-  enforceRecommendation = false,
   showManualOrderHint = false,
   successMessage = t('workspacePage.panels.analysis.createOrderSuccess'),
 }: OrderReviewExperienceProps) {
   const normalizedTicker = context.ticker.trim().toUpperCase();
-  const recRisk = context.recommendation?.risk;
-  const defaultOrderType = resolveDefaultOrderType(context.signal, context.suggestedOrderType);
-  const normalizedSuggestedOrderType = normalizeSuggestedOrderType(context.suggestedOrderType);
-  const hasSuggestedOrderType = normalizedSuggestedOrderType === 'BUY_LIMIT' || normalizedSuggestedOrderType === 'BUY_STOP';
-  const hasSkipSuggestion = normalizedSuggestedOrderType === 'SKIP';
+  const orderDraft = context.canonicalOrderDraft;
+  const defaultOrderType = orderDraft.orderType;
   const thesis = context.recommendation?.thesis;
   const thesisEducation = thesis?.educationGenerated?.thesis;
-  const fallbackEntry = 100;
-  const preferredEntry = context.suggestedOrderPrice ?? recRisk?.entry;
-  const initialEntry = preferredEntry ?? context.entry ?? context.close ?? fallbackEntry;
-  const suggestedEntry = Number.isFinite(initialEntry) && initialEntry > 0 ? initialEntry : fallbackEntry;
-  const initialStop = recRisk?.stop ?? context.stop ?? suggestedEntry * 0.95;
-  const suggestedStop = Math.max(0.01, Math.min(initialStop, suggestedEntry - 0.01));
-  const recTarget = recRisk?.target ?? null;
-  const rrFallbackTarget =
-    context.rReward != null && Number.isFinite(context.rReward) && context.rReward > 0
-      ? suggestedEntry + context.rReward * (suggestedEntry - suggestedStop)
-      : null;
-  const effectiveTarget = recTarget ?? rrFallbackTarget;
-  const suggestedTarget =
-    effectiveTarget != null && Number.isFinite(effectiveTarget) && effectiveTarget > suggestedEntry
-      ? parseFloat(effectiveTarget.toFixed(2))
-      : undefined;
-  const rawSuggestedShares = recRisk?.shares ?? context.shares ?? Math.max(1, risk.minShares);
-  const maxSharesByPositionCap =
-    risk.maxPositionPct > 0 && suggestedEntry > 0
-      ? Math.floor((risk.accountSize * risk.maxPositionPct) / suggestedEntry)
-      : rawSuggestedShares;
-  const suggestedShares = Math.max(1, Math.min(rawSuggestedShares, maxSharesByPositionCap));
-  const decisionGates = context.recommendation?.decisionGates;
+  const suggestedEntry = orderDraft.entry;
+  const suggestedStop = orderDraft.stop;
+  const suggestedTarget = orderDraft.target;
+  const suggestedShares = orderDraft.shares;
   const workflow = getWorkflowPresentation(context.recommendation);
-  const pendingPullbackOrder = canReviewPendingPullbackOrder(context);
-  const recommendationOrderReady = context.recommendation?.workflowStatus === 'ready' || pendingPullbackOrder;
-  const decisionReady = Boolean(
-    !context.recommendation || (
-      recommendationOrderReady
-      && context.dataStatus === 'current'
-      && context.dataAsOf
-    ),
-  );
-  const currency = context.currency ?? 'USD';
+  const currency = orderDraft.quoteCurrency;
   const knownCurrentPrice =
     typeof context.close === 'number' && Number.isFinite(context.close) && context.close > 0 ? context.close : null;
+  const decisionGates = context.recommendation?.decisionGates;
 
   const form = useForm<CandidateOrderFormValues>({
     resolver: zodResolver(candidateOrderSchema),
     defaultValues: {
       orderType: defaultOrderType,
       quantity: suggestedShares,
-      limitPrice: parseFloat(suggestedEntry.toFixed(2)),
-      stopPrice: parseFloat(suggestedStop.toFixed(2)),
+      limitPrice: suggestedEntry,
+      stopPrice: suggestedStop,
       targetPrice: suggestedTarget,
       notes: defaultNotes,
     },
   });
 
-  const [overrideConfirmed, setOverrideConfirmed] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSucceeded, setSubmitSucceeded] = useState(false);
   const [activeSection, setActiveSection] = useState<ReviewSectionId>('decision');
   const [tradeThesis, setTradeThesis] = useState('');
-  const portfolioSummaryQuery = usePortfolioSummary();
 
   useEffect(() => {
     form.reset({
       orderType: defaultOrderType,
       quantity: suggestedShares,
-      limitPrice: parseFloat(suggestedEntry.toFixed(2)),
-      stopPrice: parseFloat(suggestedStop.toFixed(2)),
+      limitPrice: suggestedEntry,
+      stopPrice: suggestedStop,
       targetPrice: suggestedTarget,
       notes: defaultNotes,
     });
-    setOverrideConfirmed(false);
     setSubmissionError(null);
     setSubmitSucceeded(false);
     setIsSubmitting(false);
@@ -171,68 +109,8 @@ export default function OrderReviewExperience({
   const quantity = form.watch('quantity') ?? 0;
   const limitPrice = form.watch('limitPrice') ?? 0;
   const stopPrice = form.watch('stopPrice') ?? 0;
-  const hasOrderTypeMismatch = hasSuggestedOrderType && orderType !== normalizedSuggestedOrderType;
-  const needsOverrideConfirmation = hasOrderTypeMismatch || (hasSkipSuggestion && workflow.status !== 'ready');
-  const apiApprovalMissing = !isLocalPersistenceMode() && Boolean(context.recommendation) && !context.approvalToken;
-  const apiOrderTypeMismatch = !isLocalPersistenceMode() && hasOrderTypeMismatch;
-  const invalidBuyStopPrice = orderType === 'BUY_STOP' && knownCurrentPrice != null && limitPrice <= knownCurrentPrice;
   const triggerPriceLabel =
     orderType === 'BUY_STOP' ? t('order.candidateModal.triggerPrice') : t('order.candidateModal.limitPrice');
-
-  const { positionSize, riskAmount, accountPercent, riskPercent } = useOrderRiskMetrics({
-    limitPrice,
-    stopPrice,
-    quantity,
-    accountSize: risk.accountSize,
-  });
-
-  const projectedConcentration = useMemo(() => {
-    const summary = portfolioSummaryQuery.data;
-    if (!summary || riskAmount <= 0) return null;
-    const country = countryFromTicker(normalizedTicker);
-    const currentGroup = summary.concentration.find((group) => group.country === country);
-    const currentRisk = currentGroup?.riskAmount ?? 0;
-    const projectedOpenRisk = summary.openRisk + riskAmount;
-    if (projectedOpenRisk <= 0) return null;
-    const projectedRiskPct = ((currentRisk + riskAmount) / projectedOpenRisk) * 100;
-    if (projectedRiskPct < CONCENTRATION_WARNING_THRESHOLD) return null;
-    return {
-      country,
-      currentRiskPct: currentGroup?.riskPct ?? 0,
-      projectedRiskPct,
-    };
-  }, [normalizedTicker, portfolioSummaryQuery.data, riskAmount]);
-
-  const warnings = useMemo(() => {
-    const nextWarnings: string[] = [];
-    if (enforceRecommendation && !recommendationOrderReady) {
-      nextWarnings.push(t('order.candidateModal.executionNotReady', {
-        status: t(workflow.labelKey),
-      }));
-    }
-    if (hasSkipSuggestion) {
-      nextWarnings.push(t('order.candidateModal.skipSuggestedBody'));
-    }
-    if (hasOrderTypeMismatch) {
-      nextWarnings.push(
-        t('order.candidateModal.orderTypeMismatchWarning', {
-          suggestedType: normalizedSuggestedOrderType,
-        }),
-      );
-    }
-    const adv = context.avgDailyVolumeEur;
-    if (adv != null && adv > 0 && quantity > 0 && limitPrice > 0) {
-      const notional = quantity * limitPrice;
-      const pct = (notional / adv) * 100;
-      if (pct > 5) {
-        nextWarnings.push(
-          t('order.candidateModal.liquiditySlippageWarning', { pct: pct.toFixed(1) }),
-        );
-      }
-    }
-    return nextWarnings;
-  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, recommendationOrderReady, workflow.labelKey,
-      context.avgDailyVolumeEur, quantity, limitPrice]);
   const invalidationRules = context.recommendation?.thesis?.invalidationRules ?? [];
   const hardInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'hard');
   const softInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'soft');
@@ -252,46 +130,6 @@ export default function OrderReviewExperience({
   const handleSubmit = form.handleSubmit(async (values) => {
     setSubmissionError(null);
     setSubmitSucceeded(false);
-
-    if (enforceRecommendation && !recommendationOrderReady) {
-      setSubmissionError(t('order.candidateModal.notRecommended'));
-      return;
-    }
-
-    if (!decisionReady) {
-      setSubmissionError('Order blocked: setup, trigger, coherent plan, and current-data gates must pass.');
-      return;
-    }
-
-    if (apiApprovalMissing) {
-      setSubmissionError(t('order.candidateModal.approvalTokenRequired'));
-      return;
-    }
-
-    if (pendingPullbackOrder && values.orderType !== 'BUY_LIMIT') {
-      setSubmissionError(t('order.candidateModal.approvalOrderTypeMismatch'));
-      return;
-    }
-
-    if (apiOrderTypeMismatch) {
-      setSubmissionError(t('order.candidateModal.approvalOrderTypeMismatch'));
-      return;
-    }
-
-    if (invalidBuyStopPrice) {
-      setSubmissionError(
-        t('order.candidateModal.buyStopAboveMarketError', {
-          currentPrice:
-            knownCurrentPrice != null ? formatCurrency(knownCurrentPrice, currency) : t('common.placeholders.emDash'),
-        }),
-      );
-      return;
-    }
-
-    if (needsOverrideConfirmation && !overrideConfirmed) {
-      setSubmissionError(t('order.candidateModal.overrideRequired'));
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -318,10 +156,10 @@ export default function OrderReviewExperience({
             ? 'manual'
             : 'unknown',
         sector: context.sector ?? undefined,
-        currency: context.currency,
+        currency,
         daysToEarnings: context.daysToEarnings,
         strategyId: context.strategyId,
-        approvalToken: context.approvalToken,
+        approvalToken: orderDraft.approvalToken,
       });
       setSubmitSucceeded(true);
       onSuccess?.();
@@ -335,19 +173,6 @@ export default function OrderReviewExperience({
   return (
     <div className="space-y-4">
       <EarningsWarningBanner ticker={normalizedTicker} />
-      {projectedConcentration ? (
-        <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-          <span>
-            {t('concentrationWarning.orderMessage', {
-              country: projectedConcentration.country,
-              currentPct: formatNumber(projectedConcentration.currentRiskPct, 0),
-              projectedPct: formatNumber(projectedConcentration.projectedRiskPct, 0),
-            })}
-          </span>
-        </div>
-      ) : null}
-
       <OrderReviewSummary
         activeSection={activeSection}
         onSectionChange={setActiveSection}
@@ -358,14 +183,12 @@ export default function OrderReviewExperience({
         currency={currency}
         suggestedEntry={suggestedEntry}
         suggestedStop={suggestedStop}
+        suggestedTarget={suggestedTarget}
         suggestedShares={suggestedShares}
-        recRisk={recRisk}
-        contextShares={context.shares}
-        contextRReward={context.rReward}
+        suggestedRr={orderDraft.rr}
         thesis={thesis}
         thesisEducation={thesisEducation}
         guidance={guidance}
-        warnings={warnings}
         invalidationRules={invalidationRules}
         hardInvalidations={hardInvalidations}
         softInvalidations={softInvalidations}
@@ -383,31 +206,6 @@ export default function OrderReviewExperience({
           </div>
         ) : null}
 
-        {warnings.length ? (
-          <div className="mb-4 space-y-2">
-            {warnings.map((warning) => (
-              <div
-                key={`form-${warning}`}
-                className="rounded border border-warning/40 bg-warning/10 p-3 text-sm text-warning"
-              >
-                {warning}
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {!decisionReady ? (
-          <div className="mb-4 rounded border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-            {t('order.review.decisionLocked')}{' '}
-            {t('order.review.decisionGateStatus', {
-              setup: decisionGates?.setup.status ?? 'UNKNOWN',
-              trigger: decisionGates?.trigger.status ?? 'UNKNOWN',
-              plan: decisionGates?.plan.status ?? 'UNKNOWN',
-              data: context.dataStatus ?? 'unknown',
-            })}
-          </div>
-        ) : null}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <div className="space-y-4">
@@ -418,11 +216,11 @@ export default function OrderReviewExperience({
                   </label>
                   <Select
                     id={fieldIds.orderType}
+                    disabled
                     {...form.register('orderType')}
                   >
                     <option value="BUY_LIMIT">{t('order.candidateModal.orderTypeOptions.buyLimit')}</option>
                     <option value="BUY_STOP">{t('order.candidateModal.orderTypeOptions.buyStop')}</option>
-                    <option value="BUY_MARKET">{t('order.candidateModal.orderTypeOptions.buyMarket')}</option>
                   </Select>
                 </div>
 
@@ -464,16 +262,6 @@ export default function OrderReviewExperience({
                   {form.formState.errors.limitPrice ? (
                     <p className="mt-1 text-xs text-danger">{form.formState.errors.limitPrice.message}</p>
                   ) : null}
-                  {invalidBuyStopPrice ? (
-                    <p className="mt-1 text-xs text-danger">
-                      {t('order.candidateModal.buyStopAboveMarketError', {
-                        currentPrice:
-                          knownCurrentPrice != null
-                            ? formatCurrency(knownCurrentPrice, currency)
-                            : t('common.placeholders.emDash'),
-                      })}
-                    </p>
-                  ) : null}
                 </div>
 
                 <div>
@@ -511,32 +299,6 @@ export default function OrderReviewExperience({
                 </div>
               </div>
 
-              <div className="rounded-md bg-foreground/5 p-3 text-xs">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {t('order.candidateModal.positionSummary')}
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex justify-between gap-3">
-                    <span>{t('order.candidateModal.positionSize')}</span>
-                    <strong>{formatCurrency(positionSize, currency)}</strong>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>{t('order.candidateModal.accountPercent')}</span>
-                    <strong>{accountPercent.toFixed(1)}%</strong>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>{t('order.candidateModal.riskAmount')}</span>
-                    <strong>{formatCurrency(riskAmount, currency)}</strong>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>{t('order.candidateModal.riskPercent')}</span>
-                    <strong className={riskPercent > risk.riskPct * 100 ? 'text-danger' : 'text-success'}>
-                      {riskPercent.toFixed(2)}%
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
               <div>
                 <label htmlFor={fieldIds.notes} className="mb-1 block text-xs font-medium">
                   {t('order.candidateModal.notes')}
@@ -561,18 +323,6 @@ export default function OrderReviewExperience({
                 />
               </div>
 
-              {needsOverrideConfirmation ? (
-                <label className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
-                  <input
-                    type="checkbox"
-                    checked={overrideConfirmed}
-                    onChange={(event) => setOverrideConfirmed(event.target.checked)}
-                    className="mt-0.5"
-                  />
-                  <span>{t('order.candidateModal.overrideConfirm')}</span>
-                </label>
-              ) : null}
-
               {submissionError ? (
                 <div role="alert" className="rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger">
                   {submissionError}
@@ -588,14 +338,7 @@ export default function OrderReviewExperience({
                 <div className="flex justify-end">
                   <Button
                     type="submit"
-                    disabled={
-                      isSubmitting ||
-                      invalidBuyStopPrice ||
-                      (needsOverrideConfirmation && !overrideConfirmed) ||
-                      !decisionReady
-                      || apiApprovalMissing
-                      || apiOrderTypeMismatch
-                    }
+                    disabled={isSubmitting}
                     className="w-full sm:w-auto"
                   >
                     {isSubmitting ? t('order.candidateModal.creating') : t('order.candidateModal.createAction')}

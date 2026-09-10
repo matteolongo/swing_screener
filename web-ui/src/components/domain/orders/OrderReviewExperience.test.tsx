@@ -4,60 +4,23 @@ import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import OrderReviewExperience from './OrderReviewExperience';
 import type { OrderReviewContext } from './OrderReviewExperience';
-import type { RiskConfig } from '@/types/config';
 import type { Recommendation } from '@/types/recommendation';
-
-vi.mock('@/features/portfolio/api', () => ({
-  fetchPortfolioSummary: () =>
-    Promise.resolve({
-      totalPositions: 0,
-      totalValue: 0,
-      totalCostBasis: 0,
-      totalPnl: 0,
-      totalPnlPercent: 0,
-      openRisk: 0,
-      openRiskPercent: 0,
-      accountSize: 50000,
-      availableCapital: 50000,
-      largestPositionValue: 0,
-      largestPositionTicker: '',
-      bestPerformerTicker: '',
-      bestPerformerPnlPct: 0,
-      worstPerformerTicker: '',
-      worstPerformerPnlPct: 0,
-      avgRNow: 0,
-      positionsProfitable: 0,
-      positionsLosing: 0,
-      winRate: 0,
-      concentration: [],
-      realizedPnl: 0,
-      effectiveAccountSize: 50000,
-    }),
-  createOrder: vi.fn().mockResolvedValue({}),
-}));
-
-const risk: RiskConfig = {
-  accountSize: 50000,
-  riskPct: 0.01,
-  maxPositionPct: 0.6,
-  minShares: 1,
-  kAtr: 2,
-  minRr: 2,
-  maxFeeRiskPct: 0.2,
-  maxConcentrationPct: 60,
-  accountSizeMode: 'equity',
-  accountCurrency: 'EUR',
-};
 
 function makeContext(overrides: Partial<OrderReviewContext> = {}): OrderReviewContext {
   return {
     ticker: 'AAPL',
     signal: 'breakout',
-    entry: 20.0,
-    stop: 18.0,
     close: 20.5,
-    shares: 100,
-    currency: 'USD',
+    canonicalOrderDraft: {
+      orderType: 'BUY_STOP',
+      entry: 20,
+      stop: 18,
+      target: 24,
+      shares: 100,
+      rr: 2,
+      quoteCurrency: 'USD',
+      approvalToken: 'signed-token',
+    },
     ...overrides,
   };
 }
@@ -109,8 +72,7 @@ describe('OrderReviewExperience — execution readiness', () => {
   it('keeps the no-candidate manual-order path usable', async () => {
     renderWithProviders(
       <OrderReviewExperience
-        context={makeContext({ recommendation: undefined, suggestedOrderType: 'BUY_LIMIT' })}
-        risk={risk}
+        context={makeContext({ recommendation: undefined })}
         defaultNotes=""
         showManualOrderHint
         onSubmitOrder={vi.fn()}
@@ -121,7 +83,7 @@ describe('OrderReviewExperience — execution readiness', () => {
     expect(screen.getByRole('button', { name: t('order.candidateModal.createAction') })).toBeEnabled();
   });
 
-  it('keeps candidate review locked when gate re-derivation cannot override workflowStatus', async () => {
+  it('does not add a second local workflow gate to a canonical draft', async () => {
     const needsReviewRecommendation: Recommendation = {
       ...waitingRecommendation,
       verdict: 'RECOMMENDED',
@@ -136,16 +98,14 @@ describe('OrderReviewExperience — execution readiness', () => {
     renderWithProviders(
       <OrderReviewExperience
         context={makeContext({ recommendation: needsReviewRecommendation, dataStatus: 'current', dataAsOf: '2026-07-21' })}
-        risk={risk}
         defaultNotes=""
-        enforceRecommendation
         onSubmitOrder={vi.fn()}
       />,
     );
 
     expect(await screen.findByRole('button', {
       name: t('order.candidateModal.createAction'),
-    })).toBeDisabled();
+    })).toBeEnabled();
   });
 
   it('allows a canonical ready recommendation with current data to proceed to review', async () => {
@@ -166,12 +126,8 @@ describe('OrderReviewExperience — execution readiness', () => {
           recommendation: readyRecommendation,
           dataStatus: 'current',
           dataAsOf: '2026-07-21',
-          approvalToken: 'approved-token',
-          suggestedOrderType: 'BUY_LIMIT',
         })}
-        risk={risk}
         defaultNotes=""
-        enforceRecommendation
         onSubmitOrder={vi.fn()}
       />,
     );
@@ -189,12 +145,8 @@ describe('OrderReviewExperience — execution readiness', () => {
           recommendation: waitingRecommendation,
           dataStatus: 'current',
           dataAsOf: '2026-07-21',
-          approvalToken: 'approved-pullback-token',
-          suggestedOrderType: 'BUY_LIMIT',
         })}
-        risk={risk}
         defaultNotes=""
-        enforceRecommendation
         onSubmitOrder={onSubmitOrder}
       />,
     );
@@ -212,9 +164,7 @@ describe('OrderReviewExperience — execution readiness', () => {
     }));
   });
 
-  it('blocks a signed pending pullback changed to BUY_STOP in local mode', async () => {
-    vi.stubEnv('VITE_PERSISTENCE_MODE', 'local');
-    vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'true');
+  it('keeps the canonical pending-pullback order type fixed', async () => {
     const onSubmitOrder = vi.fn().mockResolvedValue({});
     renderWithProviders(
       <OrderReviewExperience
@@ -222,32 +172,20 @@ describe('OrderReviewExperience — execution readiness', () => {
           recommendation: waitingRecommendation,
           dataStatus: 'current',
           dataAsOf: '2026-07-21',
-          approvalToken: 'approved-pullback-token',
-          suggestedOrderType: 'BUY_LIMIT',
+          canonicalOrderDraft: {
+            orderType: 'BUY_LIMIT', entry: 20, stop: 18, target: 24, shares: 100, rr: 2, quoteCurrency: 'USD', approvalToken: 'approved-pullback-token',
+          },
         })}
-        risk={risk}
         defaultNotes=""
-        enforceRecommendation
         onSubmitOrder={onSubmitOrder}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText(t('order.candidateModal.orderType')), {
-      target: { value: 'BUY_STOP' },
-    });
-    fireEvent.change(screen.getByLabelText(t('order.candidateModal.triggerPrice')), {
-      target: { value: '21' },
-    });
-    fireEvent.click(screen.getByRole('checkbox'));
-
-    const submit = screen.getByRole('button', { name: t('order.candidateModal.createAction') });
-    fireEvent.submit(submit.closest('form') as HTMLFormElement);
-
-    expect(await screen.findByText(t('order.candidateModal.approvalOrderTypeMismatch'))).toBeInTheDocument();
+    expect(screen.getByLabelText(t('order.candidateModal.orderType'))).toBeDisabled();
     expect(onSubmitOrder).not.toHaveBeenCalled();
   });
 
-  it('presents a qualified conditional setup as waiting while keeping creation locked', async () => {
+  it('presents a qualified conditional setup without recreating execution policy', async () => {
     renderWithProviders(
       <OrderReviewExperience
         context={makeContext({
@@ -255,9 +193,7 @@ describe('OrderReviewExperience — execution readiness', () => {
           dataStatus: 'current',
           dataAsOf: '2026-07-21',
         })}
-        risk={risk}
         defaultNotes=""
-        enforceRecommendation
         onSubmitOrder={vi.fn()}
       />
     );
@@ -267,68 +203,16 @@ describe('OrderReviewExperience — execution readiness', () => {
     );
     const summaryCard = readinessBadge.closest('.rounded-xl');
     expect(summaryCard).toHaveClass('border-warning/40', 'bg-warning/10');
-    expect(screen.getAllByText(
-      t('order.candidateModal.executionNotReady', {
-        status: t('recommendation.workflow.status.waitingTrigger'),
-      }),
-    ).length).toBeGreaterThan(0);
-    expect(screen.getByText((_, node) => (
-      node?.tagName === 'DIV'
-      && (node.textContent?.startsWith(t('order.review.decisionLocked')) ?? false)
-    ))).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: t('order.candidateModal.createAction') })).toBeDisabled();
+    expect(screen.queryByText(t('order.review.decisionLocked'))).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('order.candidateModal.createAction') })).toBeEnabled();
   });
 });
 
-describe('OrderReviewExperience — liquidity slippage warning', () => {
-  it('shows slippage warning when order notional exceeds 5% of ADV', async () => {
-    // shares=100, entry=20 → notional=2000; ADV=10_000 → 20% > 5% → warning
-    renderWithProviders(
-      <OrderReviewExperience
-        context={makeContext({ avgDailyVolumeEur: 10_000 })}
-        risk={risk}
-        defaultNotes=""
-        onSubmitOrder={vi.fn()}
-      />
-    );
-    // Warning renders in two places (decision section + form) — getAllByText
-    const matches = await screen.findAllByText(/20\.0%.*avg daily volume/i);
-    expect(matches.length).toBeGreaterThan(0);
-  });
-
-  it('does not show slippage warning when ADV is null', async () => {
-    renderWithProviders(
-      <OrderReviewExperience
-        context={makeContext({ avgDailyVolumeEur: null })}
-        risk={risk}
-        defaultNotes=""
-        onSubmitOrder={vi.fn()}
-      />
-    );
-    // Wait for form to be present
-    await screen.findByRole('region', { name: /Order review sections/i });
-    expect(screen.queryByText(/avg daily volume/i)).toBeNull();
-  });
-
-  it('does not show slippage warning when order notional is within 5% of ADV', async () => {
-    // shares=100, entry=20 → notional=2000; ADV=1_000_000 → 0.2% < 5% → no warning
-    renderWithProviders(
-      <OrderReviewExperience
-        context={makeContext({ avgDailyVolumeEur: 1_000_000 })}
-        risk={risk}
-        defaultNotes=""
-        onSubmitOrder={vi.fn()}
-      />
-    );
-    await screen.findByRole('region', { name: /Order review sections/i });
-    expect(screen.queryByText(/avg daily volume/i)).toBeNull();
-  });
-
+describe('OrderReviewExperience — order ticket', () => {
   it('shows one clear order ticket heading and keeps broker details collapsed', async () => {
     renderWithProviders(
       <OrderReviewExperience
         context={makeContext()}
-        risk={risk}
         defaultNotes=""
         onSubmitOrder={vi.fn()}
       />
@@ -347,11 +231,11 @@ describe('OrderReviewExperience — liquidity slippage warning', () => {
     renderWithProviders(
       <OrderReviewExperience
         context={makeContext({
-          suggestedOrderType: 'BUY_LIMIT',
-          suggestedOrderPrice: 19.4,
           executionNote: 'Breakout already occurred. Do NOT use buy-stop. Limit entry only on pullback.',
+          canonicalOrderDraft: {
+            orderType: 'BUY_LIMIT', entry: 19.4, stop: 18, target: 22.2, shares: 100, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed-token',
+          },
         })}
-        risk={risk}
         defaultNotes=""
         onSubmitOrder={vi.fn()}
       />
@@ -369,12 +253,10 @@ describe('OrderReviewExperience — liquidity slippage warning', () => {
 });
 
 describe('OrderReviewExperience — target price defaulting', () => {
-  it('pre-fills the target from the R:R ratio when no explicit recommendation target exists', async () => {
-    // entry=20, stop=18, rr=2 → target = 20 + 2*(20-18) = 24
+  it('pre-fills the backend canonical target', async () => {
     renderWithProviders(
       <OrderReviewExperience
-        context={makeContext({ rReward: 2 })}
-        risk={risk}
+        context={makeContext()}
         defaultNotes=""
         onSubmitOrder={vi.fn()}
       />
@@ -383,17 +265,16 @@ describe('OrderReviewExperience — target price defaulting', () => {
     expect(targetInput).toHaveValue(24);
   });
 
-  it('leaves the target empty when neither a target nor an R:R ratio is available', async () => {
+  it('does not clear a backend canonical target', async () => {
     renderWithProviders(
       <OrderReviewExperience
-        context={makeContext({ rReward: undefined })}
-        risk={risk}
+        context={makeContext()}
         defaultNotes=""
         onSubmitOrder={vi.fn()}
       />
     );
     const targetInput = await screen.findByLabelText(t('order.candidateModal.targetPrice'));
-    expect(targetInput).toHaveValue(null);
+    expect(targetInput).toHaveValue(24);
   });
 });
 
@@ -402,7 +283,6 @@ describe('OrderReviewExperience — bottom sticky bar', () => {
     renderWithProviders(
       <OrderReviewExperience
         context={makeContext()}
-        risk={risk}
         defaultNotes=""
         onSubmitOrder={vi.fn()}
       />
