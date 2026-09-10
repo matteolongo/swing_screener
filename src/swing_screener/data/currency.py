@@ -68,11 +68,13 @@ def detect_currency(ticker: str) -> str:
 
     symbol = str(ticker).strip().upper()
 
-    # 1. Instrument master (highest precedence)
+    # 1. Instrument master (highest precedence for identification, but the
+    # result must still belong to the canonical supported-currency registry).
     master = _load_instrument_master_currencies()
     if master and symbol in master:
-        currency = master[symbol]
-        return currency if currency else "UNKNOWN"
+        raw = master[symbol]
+        currency = str(raw or "").strip().upper()
+        return currency if currency in SUPPORTED_CURRENCIES else "UNKNOWN"
 
     # 2. Suffix map
     if "." in symbol:
