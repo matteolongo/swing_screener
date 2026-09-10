@@ -156,5 +156,5 @@ Screener evaluation results are cached per symbol to avoid recomputing unchanged
 
 - `fetch_ohlcv()` in `market_data.py` is a backward-compatibility wrapper. New code should use `get_market_data_provider()` directly.
 - `currencies.py` owns all supported ISO codes, market timezones, and buffered close times used by data, API validation, and screening-window logic.
-- `detect_currency()` prefers instrument-master metadata, then controlled suffix inference; unknown suffixes and unregistered no-suffix symbols resolve to `UNKNOWN`, never USD.
+- `detect_currency()` prefers instrument-master metadata, then controlled suffix inference; unknown suffixes, unregistered no-suffix symbols, and instrument-master values outside the `currencies.py` registry resolve to `UNKNOWN`, never USD.
 - `BrokerConfig.from_env()` is called automatically when no config is passed to the factory.
