@@ -9,11 +9,8 @@ import type {
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
-import {
-  canReviewPendingPullbackOrder,
-  formatWorkflowNextStep,
-  getWorkflowPresentation,
-} from '@/components/domain/recommendation/workflowPresentation';
+import { formatWorkflowNextStep, getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
+import { getCanonicalOrderDraft } from '@/features/screener/types';
 import type { WorkflowTone } from '@/components/domain/recommendation/workflowPresentation';
 
 interface AnalysisDecisionStripProps {
@@ -109,8 +106,8 @@ export default function AnalysisDecisionStrip({
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
   const heldMode = Boolean(position);
-  const canPrepareOrder = candidate?.recommendation?.workflowStatus === 'ready'
-    || (candidate != null && canReviewPendingPullbackOrder(candidate));
+  const orderDraft = getCanonicalOrderDraft(candidate);
+  const canPrepareOrder = Boolean(orderDraft);
   const showAnalysisAction = summary && (
     !candidate?.recommendation ||
     (
@@ -124,23 +121,23 @@ export default function AnalysisDecisionStrip({
     : undefined;
   const closeEntry = heldMode
     ? position!.entryPrice
-    : (summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null);
+    : (orderDraft?.entry ?? summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null);
   const suggestedOrderEntry = isPositiveNumber(candidate?.suggestedOrderPrice) ? candidate.suggestedOrderPrice : null;
   const usesSuggestedEntry =
     !heldMode &&
     suggestedOrderEntry != null &&
     (!isPositiveNumber(closeEntry) || Math.abs(suggestedOrderEntry - closeEntry) >= 0.005);
-  const entry = usesSuggestedEntry ? suggestedOrderEntry : closeEntry;
+  const entry = orderDraft?.entry ?? (usesSuggestedEntry ? suggestedOrderEntry : closeEntry);
   const stop = heldMode
     ? position!.stopPrice
-    : (summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop ?? position?.stopPrice ?? null);
+    : (orderDraft?.stop ?? summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop ?? position?.stopPrice ?? null);
   const target = heldMode
     ? (position!.targetPrice ?? null)
-    : (summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? position?.targetPrice ?? null);
+    : (orderDraft?.target ?? summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? position?.targetPrice ?? null);
   const computedRr = target != null && entry != null && stop != null && entry > stop
     ? (target - entry) / (entry - stop)
     : null;
-  const rr = computedRr ?? summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr ?? null;
+  const rr = orderDraft?.rr ?? computedRr ?? summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr ?? null;
   const oneR = entry != null && stop != null ? entry - stop : null;
   const pctToTarget = target != null && entry != null && entry > 0 ? (target - entry) / entry * 100 : null;
   const riskPct = candidate?.recommendation?.risk?.riskPct

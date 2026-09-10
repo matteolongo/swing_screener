@@ -33,6 +33,8 @@ describe('ManagePositionPanel', () => {
     const candidate = {
       sameSymbol: { mode: 'ADD_ON' },
       recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 400, stop: 390, target: 420, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed' },
       decisionSummary: { action: 'WATCH' },
     } as any;
     renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
@@ -43,6 +45,8 @@ describe('ManagePositionPanel', () => {
     const candidate = {
       sameSymbol: { mode: 'SCALE_BACK' },
       recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 400, stop: 390, target: 420, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed' },
       decisionSummary: { action: 'WATCH' },
     } as any;
     renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
@@ -55,6 +59,8 @@ describe('ManagePositionPanel', () => {
       suggestedOrderType: 'BUY_LIMIT',
       approvalToken: 'approved-pullback-token',
       recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_pullback' } },
+      executionEligibility: { allowed: true, mode: 'pending_pullback', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_LIMIT', entry: 390, stop: 380, target: 410, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'approved-pullback-token' },
     } as any;
     renderWithProviders(<ManagePositionPanel position={position} candidate={candidate} />);
     expect(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.add') })).toBeInTheDocument();

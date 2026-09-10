@@ -5,7 +5,7 @@ import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import { renderWithProviders } from '@/test/utils';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
-import type { DecisionSummary } from '@/features/screener/types';
+import type { DecisionSummary, ScreenerCandidate } from '@/features/screener/types';
 import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 
 const { mutateMock } = vi.hoisted(() => ({
@@ -121,6 +121,25 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
             nextStep: { code: 'review_order' },
           },
           ...overrides,
+          executionEligibility: ('executionEligibility' in overrides
+            ? overrides.executionEligibility
+            : 'recommendation' in overrides
+              ? { allowed: false, mode: null, reason: 'workflow_not_actionable' }
+              : { allowed: true, mode: 'ready', reason: null }) as ScreenerCandidate['executionEligibility'],
+          canonicalOrderDraft: ('canonicalOrderDraft' in overrides
+            ? overrides.canonicalOrderDraft
+            : 'recommendation' in overrides
+              ? undefined
+              : {
+                  orderType: 'BUY_STOP',
+                  entry: 101.2,
+                  stop: 97,
+                  target: 109.6,
+                  shares: 10,
+                  rr: 2,
+                  quoteCurrency: 'USD',
+                  approvalToken: 'signed-candidate-token',
+                }) as ScreenerCandidate['canonicalOrderDraft'],
         },
       ],
     },
@@ -184,6 +203,9 @@ describe('ActionPanel', () => {
       suggestedOrderType: 'BUY_LIMIT',
       suggestedOrderPrice: 99.4,
       executionNote: 'Breakout already occurred. Do NOT use buy-stop. Limit entry only on pullback.',
+      canonicalOrderDraft: {
+        orderType: 'BUY_LIMIT', entry: 99.4, stop: 97, target: 104.2, shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed-candidate-token',
+      },
     });
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
@@ -206,7 +228,7 @@ describe('ActionPanel', () => {
 
   it('uses an explicit discovery candidate instead of a conflicting store candidate', () => {
     const storedCandidate = useScreenerStore.getState().lastResult!.candidates[0];
-    const discoveryCandidate = {
+    const discoveryCandidate: ScreenerCandidate = {
       ...storedCandidate,
       recommendation: {
         ...storedCandidate.recommendation!,
@@ -214,6 +236,8 @@ describe('ActionPanel', () => {
         workflowStatus: 'no_setup' as const,
         nextStep: { code: 'observe' as const },
       },
+      executionEligibility: { allowed: false, mode: null, reason: 'workflow_not_actionable' },
+      canonicalOrderDraft: undefined,
     };
 
     renderWithProviders(<ActionPanel ticker="AAPL" candidate={discoveryCandidate} />);
@@ -222,33 +246,38 @@ describe('ActionPanel', () => {
     expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
   });
 
-  it('does not allow a signed candidate order type to be overridden in API mode', async () => {
-    const user = userEvent.setup();
+  it('keeps the backend draft order type fixed in the review form', () => {
     setCandidate({
       suggestedOrderType: 'BUY_STOP',
       suggestedOrderPrice: 101.2,
     });
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
-    await user.selectOptions(screen.getByRole('combobox'), 'BUY_LIMIT');
-    expect(screen.getAllByText(/Selected order type does not match strategy guidance/i).length).toBeGreaterThan(0);
-
-    const submit = screen.getByRole('button', { name: 'Create Order' });
-    expect(submit).toBeDisabled();
-
-    await user.click(screen.getByRole('checkbox'));
-    expect(submit).toBeDisabled();
+    expect(screen.getByRole('combobox')).toBeDisabled();
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
   });
 
-  it('does not require override confirmation when verdict is recommended but backend guidance is SKIP', () => {
+  it('does not open an order ticket when backend eligibility blocks a ready workflow', () => {
+    setCandidate({
+      executionEligibility: { allowed: false, mode: null, reason: 'plan_incomplete' },
+      canonicalOrderDraft: undefined,
+    });
+
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
+  });
+
+  it('does not open an order ticket when backend guidance is SKIP', () => {
     setCandidate({
       suggestedOrderType: 'SKIP',
+      executionEligibility: { allowed: false, mode: null, reason: 'skip_guidance' },
+      canonicalOrderDraft: undefined,
     });
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
-    expect(screen.getAllByText(/currently not an actionable entry/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Create Order' })).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create Order' })).toBeEnabled();
   });
 
   it('keeps form values while switching review sections', async () => {
@@ -313,16 +342,19 @@ describe('ActionPanel', () => {
     );
   });
 
-  it('blocks BUY_STOP entries when trigger is at or below current price', () => {
+  it('leaves BUY_STOP consistency to backend mutation validation', () => {
     setCandidate({
       suggestedOrderType: 'BUY_STOP',
       suggestedOrderPrice: 100,
       close: 100,
+      canonicalOrderDraft: {
+        orderType: 'BUY_STOP', entry: 100, stop: 97, target: 106, shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed-candidate-token',
+      },
     });
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
-    expect(screen.getByText(/Buy Stop trigger must be above current price/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create Order' })).toBeDisabled();
+    expect(screen.queryByText(/Buy Stop trigger must be above current price/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create Order' })).toBeEnabled();
   });
 
   it.each([
