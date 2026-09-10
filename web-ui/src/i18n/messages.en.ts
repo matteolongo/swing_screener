@@ -2729,9 +2729,32 @@ export const messagesEn = {
       maxWinStreak: 'Win Streak',
       maxLossStreak: 'Loss Streak',
     },
+    statHints: {
+      winLossSummary: '{{winCount}}W · {{lossCount}}L · {{scratchCount}}BE of {{closedTradeCount}} trades',
+      avgR: 'avg R per closed trade',
+      profitFactor: 'total gains ÷ total losses · > 1.0 = profitable',
+      avgHoldDays: 'days from entry to exit',
+      maxWinStreak: 'consecutive wins (longest run)',
+      maxLossStreak: 'consecutive losses (longest run)',
+    },
     charts: {
       equityCurve: 'Equity Curve',
       rDistribution: 'R Distribution',
+      equityCurveHint: 'hover a dot for trade detail',
+      rDistributionHint: 'red = loss · green = win',
+      equityCurveTooltip: '{{date}} — {{r}}R ({{cumulativeLabel}}: {{cumulativeR}}R)',
+      peakLabel: '{{value}}R',
+      distributionTooltip: '{{label}}: {{count}} {{trades}}',
+      singleTrade: 'trade',
+      pluralTrades: 'trades',
+      shortBucket: {
+        veryNegative: '< −2R',
+        negative: '−2 to −1R',
+        smallNegative: '−1 to 0R',
+        smallPositive: '0 to +1R',
+        positive: '+1 to +2R',
+        veryPositive: '> +2R',
+      },
     },
     labels: {
       cumulative: 'Cumulative R',
@@ -2757,6 +2780,40 @@ export const messagesEn = {
         developing: 'Developing',
         negative: 'Needs Work',
       },
+      message: {
+        insufficientHistory: '{{totalTrades}} trades recorded — build more history before drawing conclusions.',
+        positiveEdge: 'Positive edge: average {{averageR}} per trade with a {{profitFactor}} profit factor. Keep executing the system.',
+        positiveAverageR: 'Average R is positive ({{averageR}}) but profit factor is {{profitFactor}} — a few large wins may be masking more frequent small losses.',
+        lowWinRate: 'Win rate is {{winRate}} and average R is {{averageR}}. Reduce full −1R losses by skipping low-conviction setups.',
+        negativeAverageR: 'Closed trades average {{averageR}} — exits may be cutting winners too short. Compare captured R vs. peak R on recent trades.',
+      },
+    },
+    howToRead: {
+      summary: 'How to read this page',
+      r: {
+        term: 'R (Risk unit)',
+        definition: '1R = your initial risk per trade (entry − stop × shares). Every result is expressed as a multiple: +2R means you made 2× your risk, −1R means you lost your full planned risk.',
+      },
+      avgR: {
+        term: 'Avg R',
+        definition: 'Average R across all closed trades. Must stay above 0R over time to grow the account. Negative avg R means every trade costs you money on average.',
+      },
+      profitFactor: {
+        term: 'Profit Factor',
+        definition: 'Total gains ÷ total losses (in R). 1.0 = break even, > 1.0 = profitable. A value of 0.20 means for every 1R gained, 5R is lost in aggregate.',
+      },
+      maxR: {
+        term: 'Max R',
+        definition: 'The best paper gain reached during the trade before exit (based on highest price). Useful to understand how much you left on the table vs. how much you captured.',
+      },
+      equityCurve: {
+        term: 'Equity Curve',
+        definition: 'Cumulative R over time — each dot is one closed trade. Hover a dot to see the individual result. A flat or rising curve above 0 is the goal.',
+      },
+      rDistribution: {
+        term: 'R Distribution',
+        definition: 'How many trades landed in each R outcome bucket. Red bars = losses, green = wins. Empty buckets appear as thin marks. Ideal shape: taller bars on the right than the left.',
+      },
     },
     table: {
       date: 'Date',
@@ -2765,6 +2822,8 @@ export const messagesEn = {
       exit: 'Exit',
       finalR: 'Final R',
       maxR: 'Max R',
+      maxRPeak: '↑peak',
+      maxRPeakTitle: 'Best paper gain reached before exit',
       holdDays: 'Hold Days',
     },
     edgeBreakdown: {

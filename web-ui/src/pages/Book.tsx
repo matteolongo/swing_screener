@@ -5,9 +5,8 @@ import ConcentrationBar from '@/components/domain/portfolio/ConcentrationBar';
 import PortfolioRiskSummary from '@/components/domain/portfolio/PortfolioRiskSummary';
 import PortfolioPanel from '@/components/domain/workspace/PortfolioPanel';
 import RChip from '@/components/common/RChip';
-import { usePortfolioSummary, usePositions } from '@/features/portfolio/hooks';
-import type { Position } from '@/features/portfolio/types';
-import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import { usePortfolioSummary } from '@/features/portfolio/hooks';
+import type { PortfolioAnalytics } from '@/features/portfolio/api';
 import { useWeeklyReviews } from '@/features/weeklyReview/hooks';
 import { cn } from '@/utils/cn';
 import { formatCurrency, formatNumber, getSignColorClass } from '@/utils/formatters';
@@ -16,22 +15,6 @@ import AnalyticsPage from './Analytics';
 import WeeklyReviewForm, { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
 import type { WeeklyReview } from '@/features/weeklyReview/api';
 import PendingOrdersTab from '@/components/domain/orders/PendingOrdersTab';
-
-// ─── Journal helpers ──────────────────────────────────────────────────────────
-
-function computeFinalR(position: Position): number | null {
-  const initialRisk = position.initialRisk;
-  if (!initialRisk || initialRisk <= 0) return null;
-  if (position.exitPrice == null) return null;
-  return (position.exitPrice - position.entryPrice) / initialRisk;
-}
-
-function computeMaxR(position: Position): number | null {
-  const initialRisk = position.initialRisk;
-  if (!initialRisk || initialRisk <= 0) return null;
-  if (position.maxFavorablePrice == null) return null;
-  return (position.maxFavorablePrice - position.entryPrice) / initialRisk;
-}
 
 function RBadge({ value }: { value: number | null }) {
   if (value == null) return <span className="text-muted">—</span>;
@@ -55,13 +38,11 @@ function getTagLabel(tag: string): string {
 }
 
 interface JournalRowProps {
-  position: Position;
+  trade: PortfolioAnalytics['equityCurve'][number];
 }
 
-function JournalRow({ position }: JournalRowProps) {
+function JournalRow({ trade }: JournalRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const finalR = computeFinalR(position);
-  const maxR = computeMaxR(position);
 
   return (
     <>
@@ -71,18 +52,16 @@ function JournalRow({ position }: JournalRowProps) {
       >
         <td className="px-4 py-3 text-sm text-muted whitespace-nowrap">
           {expanded ? <ChevronDown className="inline h-4 w-4" /> : <ChevronRight className="inline h-4 w-4" />}
-          <span className="ml-1">{position.exitDate ?? '—'}</span>
+          <span className="ml-1">{trade.date}</span>
         </td>
-        <td className="px-4 py-3 text-sm font-semibold text-foreground">{position.ticker}</td>
-        <td className="px-4 py-3 text-sm text-right tabular-nums">{formatCurrency(position.entryPrice)}</td>
-        <td className="px-4 py-3 text-sm text-right tabular-nums">
-          {position.exitPrice != null ? formatCurrency(position.exitPrice) : '—'}
-        </td>
-        <td className="px-4 py-3 text-sm text-right tabular-nums">{position.shares}</td>
+        <td className="px-4 py-3 text-sm font-semibold text-foreground">{trade.ticker}</td>
+        <td className="px-4 py-3 text-sm text-right tabular-nums">{formatCurrency(trade.entryPrice)}</td>
+        <td className="px-4 py-3 text-sm text-right tabular-nums">{formatCurrency(trade.exitPrice)}</td>
+        <td className="px-4 py-3 text-sm text-right tabular-nums">{trade.shares}</td>
         <td className="px-4 py-3 text-sm">
-          {(position.tags ?? []).length > 0 ? (
+          {trade.tags.length > 0 ? (
             <div className="flex flex-wrap gap-1">
-              {(position.tags ?? []).map((tag) => (
+              {trade.tags.map((tag) => (
                 <span
                   key={tag}
                   className="rounded-full border border-border bg-foreground/5 px-2 py-0.5 text-xs font-medium text-muted"
@@ -96,10 +75,10 @@ function JournalRow({ position }: JournalRowProps) {
           )}
         </td>
         <td className="px-4 py-3 text-sm text-right tabular-nums">
-          {position.initialRisk != null ? formatCurrency(position.initialRisk) : '—'}
+          {formatCurrency(trade.initialRisk)}
         </td>
-        <td className="px-4 py-3 text-sm text-right tabular-nums"><RBadge value={finalR} /></td>
-        <td className="px-4 py-3 text-sm text-right tabular-nums"><RBadge value={maxR} /></td>
+        <td className="px-4 py-3 text-sm text-right tabular-nums"><RBadge value={trade.r} /></td>
+        <td className="px-4 py-3 text-sm text-right tabular-nums"><RBadge value={trade.maxR} /></td>
       </tr>
 
       {expanded && (
@@ -111,7 +90,7 @@ function JournalRow({ position }: JournalRowProps) {
                   {t('journalPage.labels.thesis')}
                 </p>
                 <p className="text-foreground whitespace-pre-wrap">
-                  {position.thesis || t('journalPage.labels.noEntry')}
+                  {trade.thesis || t('journalPage.labels.noEntry')}
                 </p>
               </div>
               <div>
@@ -119,7 +98,7 @@ function JournalRow({ position }: JournalRowProps) {
                   {t('journalPage.labels.notes')}
                 </p>
                 <pre className="whitespace-pre-wrap font-sans text-foreground">
-                  {position.notes || t('journalPage.labels.noEntry')}
+                  {trade.notes || t('journalPage.labels.noEntry')}
                 </pre>
               </div>
               <div>
@@ -127,7 +106,7 @@ function JournalRow({ position }: JournalRowProps) {
                   {t('journalPage.labels.lesson')}
                 </p>
                 <p className="text-foreground whitespace-pre-wrap">
-                  {position.lesson || t('journalPage.labels.noEntry')}
+                  {trade.lesson || t('journalPage.labels.noEntry')}
                 </p>
               </div>
             </div>
@@ -141,35 +120,39 @@ function JournalRow({ position }: JournalRowProps) {
 // ─── Journal tab ──────────────────────────────────────────────────────────────
 
 function JournalTab() {
-  const { data, isLoading, isError } = usePositions('closed');
+  const summary = usePortfolioSummary();
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
+  const analytics = summary.data?.analytics;
+  const isLoading = summary.isLoading;
+  const isError = summary.isError;
 
-  const positions = (data ?? []).slice().sort((a, b) => {
-    const da = a.exitDate ?? '';
-    const db = b.exitDate ?? '';
-    return db.localeCompare(da);
-  });
+  const journalRows = useMemo(
+    () => [...(analytics?.equityCurve ?? [])]
+      .sort((left, right) => right.date.localeCompare(left.date)),
+    [analytics?.equityCurve],
+  );
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
-    positions.forEach((position) => (position.tags ?? []).forEach((tag) => tagSet.add(tag)));
+    journalRows.forEach((trade) => trade.tags.forEach((tag) => tagSet.add(tag)));
     return Array.from(tagSet).sort();
-  }, [positions]);
+  }, [journalRows]);
 
-  const filteredPositions = useMemo(
+  const filteredRows = useMemo(
     () => activeTagFilter
-      ? positions.filter((position) => (position.tags ?? []).includes(activeTagFilter))
-      : positions,
-    [activeTagFilter, positions],
+      ? journalRows.filter((trade) => trade.tags.includes(activeTagFilter))
+      : journalRows,
+    [activeTagFilter, journalRows],
   );
 
-  const totalTrades = filteredPositions.length;
-  const wins = filteredPositions.filter((p) => (computeFinalR(p) ?? 0) > 0).length;
-  const losses = filteredPositions.filter((p) => (computeFinalR(p) ?? 0) < 0).length;
-  const finalRValues = filteredPositions.map(computeFinalR).filter((r): r is number => r !== null);
-  const maxRValues = filteredPositions.map(computeMaxR).filter((r): r is number => r !== null);
-  const avgFinalR = finalRValues.length > 0 ? finalRValues.reduce((a, b) => a + b, 0) / finalRValues.length : null;
-  const avgMaxR = maxRValues.length > 0 ? maxRValues.reduce((a, b) => a + b, 0) / maxRValues.length : null;
+  const selectedTagAnalytics = activeTagFilter
+    ? analytics?.journalTagBreakdown.find((row) => row.tag === activeTagFilter)
+    : null;
+  const totalTrades = selectedTagAnalytics?.tradeCount ?? analytics?.closedTradeCount ?? 0;
+  const wins = selectedTagAnalytics?.winCount ?? analytics?.winCount ?? 0;
+  const losses = selectedTagAnalytics?.lossCount ?? analytics?.lossCount ?? 0;
+  const avgFinalR = selectedTagAnalytics?.averageR ?? analytics?.averageR ?? null;
+  const avgMaxR = selectedTagAnalytics?.averageMaxR ?? analytics?.averageMaxR ?? null;
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-6">
@@ -210,11 +193,11 @@ function JournalTab() {
         <p className="text-sm text-danger">{t('common.errors.generic')}</p>
       )}
 
-      {!isLoading && !isError && positions.length === 0 && (
+      {!isLoading && !isError && journalRows.length === 0 && (
         <p className="text-sm text-muted">{t('journalPage.empty')}</p>
       )}
 
-      {!isLoading && !isError && positions.length > 0 && (
+      {!isLoading && !isError && journalRows.length > 0 && (
         <>
           {allTags.length > 0 ? (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -273,8 +256,8 @@ function JournalTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredPositions.map((position) => (
-                  <JournalRow key={position.positionId ?? `${position.ticker}-${position.exitDate}`} position={position} />
+                {filteredRows.map((trade) => (
+                  <JournalRow key={trade.positionId} trade={trade} />
                 ))}
               </tbody>
             </table>
@@ -288,16 +271,11 @@ function JournalTab() {
 // ─── Positions tab ────────────────────────────────────────────────────────────
 
 function PositionsTab() {
-  const openPositionsQuery = usePositions('open');
-  const activeStrategyQuery = useActiveStrategyQuery();
   const portfolioSummaryQuery = usePortfolioSummary();
-  const openPositions = openPositionsQuery.data ?? [];
-  const accountSize = portfolioSummaryQuery.data?.effectiveAccountSize ?? activeStrategyQuery.data?.risk?.accountSize;
-  const realizedPnl = portfolioSummaryQuery.data?.realizedPnl;
 
   return (
     <div className="space-y-4">
-      <PortfolioRiskSummary openPositions={openPositions} accountSize={accountSize} realizedPnl={realizedPnl} />
+      <PortfolioRiskSummary summary={portfolioSummaryQuery.data} />
       <ConcentrationBar groups={portfolioSummaryQuery.data?.concentration ?? []} />
       <PortfolioPanel />
     </div>

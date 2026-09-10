@@ -22,6 +22,18 @@ maximum interval between their explicit market observation and `effective_at`.
 Future observations are rejected; the comparison never substitutes server time
 for the supplied deterministic business timestamp.
 
+`app_config.portfolio_analytics_min_sample_size` (default `5`) controls the
+minimum closed-trade count for a returned tag analytics row. The returned
+portfolio metadata also exposes `risk.portfolio_heat_warning_pct` (default
+`0.04`), `max_portfolio_heat_pct`, and `max_concentration_pct` so clients can
+render the configured status bands without recreating policy.
+
+`app_config.portfolio_analytics_insight_min_trade_count`,
+`portfolio_analytics_insight_min_profit_factor`, and
+`portfolio_analytics_insight_low_win_rate_pct` own the portfolio-insight
+verdict policy. The API sends only the verdict and reason code; the Web UI
+localizes that code and must not reproduce those thresholds.
+
 `app_config.risk.account_currency` is the authoritative account base currency
 for screener sizing and FX conversion. Strategy-level values cannot override it.
 

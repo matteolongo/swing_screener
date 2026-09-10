@@ -324,8 +324,16 @@ Portfolio (`/api/portfolio`):
   from backend configuration, as for persisted portfolio reads. Market quotes and
   FX use the existing pricing service. The endpoint does not open the portfolio
   database, mutate the supplied snapshot, or persist a command/revision. Browser
-  clients must not save the returned read models as trading state. No performance
-  or edge-analysis API is added by this projection.
+  clients must not save the returned read models as trading state. Its `summary`
+  includes the same canonical closed-trade analytics as `GET /summary`: R uses
+  immutable initial per-share risk; `0R` scratches are excluded from win rates
+  and break streaks. Curve rows carry backend-computed final/max R, holding
+  days, tags, stable response identity (including ID-less trades), and closed
+  trade display fields. The response also includes backend-computed win-rate/
+  profit-factor statuses, journal tag aggregates, and a verdict/reason code for
+  localized insight copy; clients do not recreate R, threshold, sample-size,
+  or insight policy.
+  days; metadata returns configured heat, concentration, and tag-sample limits.
 - `GET /api/portfolio/positions` — includes additive server-derived
   `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
 - `GET /api/portfolio/positions/{position_id}`
@@ -337,7 +345,8 @@ Portfolio (`/api/portfolio`):
 - `POST /api/portfolio/stop-suggestion/compute`
 - `POST /api/portfolio/positions/{position_id}/close`
 - `POST /api/portfolio/positions/{position_id}/partial-close`
-- `GET /api/portfolio/summary`
+- `GET /api/portfolio/summary` — open-risk/cash summary plus canonical
+  closed-trade analytics and configured rendering thresholds.
 - `GET /api/portfolio/earnings-proximity/{ticker}`
 - `GET /api/portfolio/analytics/regime-breakdown`
 - `POST /api/portfolio/orders`

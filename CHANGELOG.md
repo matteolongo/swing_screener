@@ -9,6 +9,12 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Canonical portfolio analytics now serve persisted and browser-supplied
+  snapshots with initial-risk R performance, scratch treatment, streaks,
+  partial-close-aware self-sufficient journal rows/aggregates, localized
+  insight codes, backend metric display statuses, and configured heat/sample
+  thresholds.
+
 - Browser-owned portfolios can apply canonical order and position lifecycle
   commands through a stateless API, with signed backend approval, isolated
   snapshot updates, and optimistic revisions.
