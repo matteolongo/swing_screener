@@ -212,16 +212,6 @@ class DailyReviewService:
                     DailyReviewPositionEvaluationError(symbol=pos.ticker)
                 )
                 continue
-            except (TypeError, ValueError) as exc:
-                logger.warning(
-                    "Invalid position data while generating stop suggestion for %s: %s",
-                    pos.ticker,
-                    type(exc).__name__,
-                )
-                evaluation_errors.append(
-                    DailyReviewPositionEvaluationError(symbol=pos.ticker)
-                )
-                continue
 
             self._classify_position_action(suggestion, ctx, buckets)
 
@@ -558,18 +548,6 @@ class DailyReviewService:
                     "Stateless daily review stop suggestion unavailable for %s: %s",
                     pos.get("ticker"),
                     exc.detail,
-                )
-                evaluation_errors.append(
-                    DailyReviewPositionEvaluationError(
-                        symbol=str(pos.get("ticker", ""))
-                    )
-                )
-                continue
-            except (TypeError, ValueError) as exc:
-                logger.warning(
-                    "Invalid stateless position data for %s: %s",
-                    pos.get("ticker"),
-                    type(exc).__name__,
                 )
                 evaluation_errors.append(
                     DailyReviewPositionEvaluationError(
