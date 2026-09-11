@@ -864,6 +864,10 @@ class ScreenerService:
             ctx.ranking_cfg = replace(ctx.ranking_cfg, top_n=prefilter_pool)
 
         ctx.risk_cfg = build_risk_config(ctx.strategy)
+        ctx.risk_cfg = replace(
+            ctx.risk_cfg,
+            account_currency=ctx.account_currency,
+        )
         multiplier, regime_meta = compute_regime_risk_multiplier(
             ctx.ohlcv, ctx.benchmark, ctx.risk_cfg
         )
@@ -1003,7 +1007,7 @@ class ScreenerService:
             _apply_market_data_provenance(ctx, fx)
             rates = {pair: _last_close_for_ticker(fx, pair) for pair in required_pairs}
         except Exception as exc:
-            logger.warning("Failed to fetch EURUSD rate for screener sizing: %s", exc)
+            logger.warning("Failed to fetch FX rates for screener sizing: %s", exc)
             ctx.warnings.append(
                 "FX rates unavailable; cross-currency sizing is blocked."
             )
