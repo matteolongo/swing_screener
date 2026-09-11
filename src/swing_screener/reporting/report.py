@@ -6,6 +6,7 @@ from typing import Iterable
 import pandas as pd
 
 from swing_screener.strategy.report_config import ReportConfig
+from swing_screener.utils.dataframe_helpers import normalize_ohlcv
 
 
 def build_daily_report(
@@ -23,7 +24,7 @@ def build_daily_report(
     from swing_screener.strategy.orchestrator import build_strategy_report
 
     return build_strategy_report(
-        ohlcv=ohlcv,
+        ohlcv=normalize_ohlcv(ohlcv),
         cfg=cfg,
         exclude_tickers=exclude_tickers,
         sector_benchmark_returns=sector_benchmark_returns,

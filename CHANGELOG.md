@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- OHLCV frames are now validated and normalized once at public ingestion
+  boundaries, with deterministic ascending dates, last-row duplicate-date
+  handling, and explicit errors for malformed columns or missing closes.
+
 - Screener candidates now preserve technical, confidence-prefilter, and final
   priority ranks as separate fields with deterministic ticker tie-breakers;
   legacy `rank` remains the technical-rank alias.
