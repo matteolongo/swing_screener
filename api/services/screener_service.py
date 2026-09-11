@@ -150,6 +150,53 @@ def _min_days_to_earnings_default() -> int:
         return 0
 
 
+def _manage_payload_from_strategy(strategy: dict) -> dict:
+    """Derive stateless stop-evaluation manage config from the run strategy.
+
+    Mirrors ``DailyReviewService._manage_cfg_payload_from_strategy`` so the
+    stateless same-symbol path reuses the same stop rules without reading
+    persisted strategy/portfolio state.
+    """
+    from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
+
+    manage = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
+    if not isinstance(manage, dict):
+        manage = {}
+    cfg = ManageStateConfig(
+        breakeven_at_R=float(manage.get("breakeven_at_r", 1.0)),
+        trail_sma=int(manage.get("trail_sma", 20)),
+        trail_after_R=float(manage.get("trail_after_r", 2.0)),
+        sma_buffer_pct=float(manage.get("sma_buffer_pct", 0.005)),
+        max_holding_days=int(manage.get("max_holding_days", 20)),
+        time_stop_days=int(manage.get("time_stop_days", 15)),
+        time_stop_min_r=float(manage.get("time_stop_min_r", 0.5)),
+        exit_signal_days=int(manage.get("exit_signal_days", 2)),
+    )
+    return {
+        "breakeven_at_r": cfg.breakeven_at_R,
+        "trail_after_r": cfg.trail_after_R,
+        "trail_sma": cfg.trail_sma,
+        "sma_buffer_pct": cfg.sma_buffer_pct,
+        "max_holding_days": cfg.max_holding_days,
+        "time_stop_days": cfg.time_stop_days,
+        "time_stop_min_r": cfg.time_stop_min_r,
+        "exit_signal_days": cfg.exit_signal_days,
+    }
+
+
+def _snapshot_position_payload(position: object) -> dict:
+    """Convert a snapshot position to the dict payload used by stateless stops."""
+    model_dump = getattr(position, "model_dump", None)
+    if callable(model_dump):
+        try:
+            return dict(model_dump(mode="json"))
+        except TypeError:
+            return dict(model_dump())
+    if isinstance(position, dict):
+        return dict(position)
+    return dict(getattr(position, "__dict__", {}) or {})
+
+
 def _fetch_ohlcv_chunked(
     provider: MarketDataProvider,
     tickers: list[str],
@@ -1418,6 +1465,19 @@ class ScreenerService:
                 for position in ctx.state_snapshot.positions
                 if position.status == "closed"
             ]
+            manage_payload = _manage_payload_from_strategy(strategy)
+
+            def _stateless_stop_action(position: object) -> str | None:
+                payload = _snapshot_position_payload(position)
+                suggestion = self._portfolio_service.compute_position_stop_suggestion(
+                    payload, manage_payload
+                )
+                return suggestion.action
+
+            same_symbol_evaluator = SameSymbolReentryEvaluator(
+                self._portfolio_service,
+                stop_action_resolver=_stateless_stop_action,
+            )
         else:
             portfolio_positions = self._portfolio_service.list_positions(
                 status="open"
@@ -1425,8 +1485,8 @@ class ScreenerService:
             portfolio_closed = self._portfolio_service.list_positions(
                 status="closed"
             ).positions
+            same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
         portfolio_orders = ctx.portfolio_orders
-        same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
         same_symbol_suppressed_count = 0
         same_symbol_add_on_count = 0
         filtered_candidates: list[ScreenerCandidate] = []
