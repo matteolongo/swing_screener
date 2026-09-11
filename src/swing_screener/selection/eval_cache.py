@@ -223,8 +223,15 @@ def _safe_symbol(symbol: str) -> str:
 class EvalCache:
     """Per-symbol parquet cache of deterministic screener evaluation rows."""
 
-    def __init__(self, root: str | Path = ".cache/eval"):
+    def __init__(
+        self, root: str | Path = ".cache/eval", *, writes_enabled: bool = True
+    ):
         self.root = Path(root)
+        self.writes_enabled = writes_enabled
+
+    def read_only(self) -> "EvalCache":
+        """Return a cache view that permits reads but suppresses mutations."""
+        return EvalCache(self.root, writes_enabled=False)
 
     def _dir(self, asof: str, sig: str) -> Path:
         return self.root / sig / asof
@@ -277,7 +284,8 @@ class EvalCache:
                 frames.append(frame.drop(columns=list(_META_COLUMNS.values())))
             except Exception as exc:
                 logger.warning("Invalid eval cache at %s: %s", path, exc)
-                path.unlink(missing_ok=True)
+                if self.writes_enabled:
+                    path.unlink(missing_ok=True)
                 misses.append(ticker)
         hits = pd.concat(frames) if frames else pd.DataFrame()
         return hits, misses
@@ -288,7 +296,7 @@ class EvalCache:
         *,
         identities: Mapping[str, EvaluationCacheIdentity],
     ) -> None:
-        if records is None or records.empty:
+        if not self.writes_enabled or records is None or records.empty:
             return
         index_name = records.index.name or "ticker"
         for ticker in records.index:
@@ -316,6 +324,8 @@ class EvalCache:
 
     def prune(self, max_age_sec: float = 24 * 3600) -> None:
         """Delete eval parquet files older than max_age_sec; drop empty dirs."""
+        if not self.writes_enabled:
+            return
         if not self.root.exists():
             return
         cutoff = time.time() - max_age_sec
