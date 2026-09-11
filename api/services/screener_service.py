@@ -8,7 +8,7 @@ import math
 import os
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -100,9 +100,45 @@ from swing_screener.utils.coerce import (
     is_na_scalar,
     safe_float,
     safe_optional_float,
+    safe_optional_int,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_rank(value: Any, fallback: int) -> int:
+    """Coerce a rank cell to ``int``, returning *fallback* when unusable.
+
+    Mirrors this module's existing ``int(...)`` convention (numeric strings
+    such as ``"5"`` still coerce) but never raises: ``None``, ``NaN``,
+    missing keys, and malformed strings all yield *fallback* instead of
+    ``ValueError``/``TypeError``.
+    """
+    rank = safe_optional_int(value)
+    return rank if rank is not None else fallback
+
+
+def _resolve_candidate_ranks(row: Any, *, position: int) -> tuple[int, int, int]:
+    """Resolve ``(rank, technical_rank, confidence_rank)`` for one result row.
+
+    ``rank`` stays the legacy technical-selection alias, ``technical_rank``
+    prefers the explicit column and falls back to legacy ``rank``, and
+    ``confidence_rank`` falls back to the deterministic candidate *position*.
+    Every path returns a valid ``int``; nothing here raises on ``None``/``NaN``,
+    partially populated frames, or legacy inputs that only carry ``rank``.
+    """
+    if hasattr(row, "get"):
+        legacy_raw = row.get("rank")
+        technical_raw = row.get("technical_rank")
+        confidence_raw = row.get("confidence_rank")
+    else:
+        legacy_raw = getattr(row, "rank", None)
+        technical_raw = getattr(row, "technical_rank", None)
+        confidence_raw = getattr(row, "confidence_rank", None)
+    legacy_rank = _safe_rank(legacy_raw, position)
+    technical_rank = _safe_rank(technical_raw, legacy_rank)
+    confidence_rank = _safe_rank(confidence_raw, position)
+    return legacy_rank, technical_rank, confidence_rank
 
 
 def _structural_target_from_history(
@@ -1319,6 +1355,9 @@ class ScreenerService:
                 )
                 for p in patterns_map.get(ticker_str, [])
             ]
+            legacy_rank, technical_rank, confidence_rank = _resolve_candidate_ranks(
+                row, position=len(candidates) + 1
+            )
             candidates.append(
                 ScreenerCandidate(
                     ticker=ticker_str,
@@ -1345,13 +1384,9 @@ class ScreenerService:
                     sector_rs=safe_optional_float(row.get("sector_rs_6m")),
                     score=safe_float(row.get("score")),
                     confidence=safe_float(row.get("confidence")),
-                    rank=int(row.get("rank", len(candidates) + 1)),
-                    technical_rank=int(
-                        row.get("technical_rank", row.get("rank", len(candidates) + 1))
-                    ),
-                    confidence_rank=int(
-                        row.get("confidence_rank", len(candidates) + 1)
-                    ),
+                    rank=legacy_rank,
+                    technical_rank=technical_rank,
+                    confidence_rank=confidence_rank,
                     sma20_slope=safe_optional_float(row.get("sma20_slope")),
                     sma50_slope=safe_optional_float(row.get("sma50_slope")),
                     consolidation_tightness=safe_optional_float(

@@ -87,6 +87,16 @@ def _label_score(
     return mapping.get((label or "").lower(), default)
 
 
+def _technical_rank(candidate: ScreenerCandidate) -> int:
+    """Explicit-``None`` compatibility fallback: ``technical_rank`` wins when
+    present, otherwise legacy ``rank`` (which aliases the technical order)."""
+    return (
+        candidate.technical_rank
+        if candidate.technical_rank is not None
+        else candidate.rank
+    )
+
+
 def _data_confidence_multiplier(snapshot: Any, floor: float) -> float:
     data_confidence = _safe_float(getattr(snapshot, "data_confidence_score", None))
     if data_confidence is None:
@@ -190,7 +200,7 @@ def compute_combined_priority(
         ) / total_weight
         combined = max(0.0, min(1.0, combined))
 
-        technical_rank = candidate.technical_rank or candidate.rank
+        technical_rank = _technical_rank(candidate)
         scored.append((candidate, combined, technical_rank))
 
     # --- sort descending -------------------------------------------------------
@@ -202,7 +212,7 @@ def compute_combined_priority(
         result.append(
             candidate.model_copy(
                 update={
-                    "raw_technical_rank": candidate.technical_rank or candidate.rank,
+                    "raw_technical_rank": _technical_rank(candidate),
                     "combined_priority_score": round(score, 6),
                 }
             )

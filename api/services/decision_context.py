@@ -134,6 +134,16 @@ def apply_decision_summary_context(
     return enriched
 
 
+def _technical_rank(candidate: ScreenerCandidate) -> int:
+    """Explicit-``None`` compatibility fallback: ``technical_rank`` wins when
+    present, otherwise legacy ``rank`` (which aliases the technical order)."""
+    return (
+        candidate.technical_rank
+        if candidate.technical_rank is not None
+        else candidate.rank
+    )
+
+
 def apply_decision_priority_ranking(
     candidates: list[ScreenerCandidate],
 ) -> list[ScreenerCandidate]:
@@ -152,7 +162,7 @@ def apply_decision_priority_ranking(
                 getattr(getattr(candidate, "decision_summary", None), "conviction", ""),
                 -1,
             ),
-            candidate.technical_rank or candidate.rank,
+            _technical_rank(candidate),
             -candidate.confidence,
             candidate.ticker,
         ),
