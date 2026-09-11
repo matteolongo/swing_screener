@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Report configuration now has one canonical builder, and deterministic
+  confidence weights plus named signal contributions are validated and loaded
+  from YAML instead of source literals.
+
 - Reporting, selection, sizing, and execution APIs now resolve omitted configs
   at call time and share one request-scoped execution config through reporting.
 

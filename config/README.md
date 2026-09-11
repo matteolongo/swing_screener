@@ -27,6 +27,13 @@ YAML-backed selection, risk, and execution defaults are resolved when a public
 pipeline call begins, not when its Python module is imported. A report owns one
 request-scoped execution config for both guidance and API pattern-stop logic.
 
+`low_level.reporting.confidence` owns the deterministic confidence formula.
+`score_weight`, `signal_weight`, `trend_weight`, and `volatility_weight` must be
+finite and non-negative with a positive total. `both_strength`,
+`breakout_strength`, `pullback_strength`, `none_strength`, and
+`unknown_strength` define the named signal contributions. Changing these YAML
+values changes confidence output without a source-code edit.
+
 - `low_level.candles` — thresholds for the deterministic candlestick engine
   (`indicators/candles.py`): `lookback`, `doji_body_ratio`,
   `hammer_lower_wick_mult`, `hammer_max_opposite_wick_ratio`,
