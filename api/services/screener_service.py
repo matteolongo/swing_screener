@@ -28,6 +28,7 @@ from api.models.screener import (
     CandlePatternOut,
 )
 from api.models.recommendation import Recommendation
+from api.models.portfolio import Position
 from api.services.portfolio_service import PortfolioService
 from api.services.order_approval_token import (
     ApprovalTokenClaims,
@@ -384,6 +385,15 @@ class _RunContext:
     pool_meta: dict = field(default_factory=dict)
     portfolio_orders: list[dict] = field(default_factory=list)
     order_state_available: bool = True
+    state_snapshot: PortfolioStateSnapshot | None = None
+
+
+@dataclass(frozen=True)
+class PortfolioStateSnapshot:
+    """Immutable portfolio state supplied by a stateless caller."""
+
+    positions: tuple[Position, ...]
+    orders: tuple[dict, ...]
 
 
 class ScreenerService:
@@ -438,6 +448,10 @@ class ScreenerService:
     def _load_order_state(self, ctx: _RunContext) -> None:
         """Load entry-order state once; repository failures block new entries."""
 
+        if ctx.state_snapshot is not None:
+            ctx.portfolio_orders = list(ctx.state_snapshot.orders)
+            ctx.order_state_available = True
+            return
         if self._orders_service is None:
             logger.warning(
                 "Order state unavailable: no orders service is configured; "
@@ -1389,12 +1403,24 @@ class ScreenerService:
         strategy = ctx.strategy
         risk_cfg = ctx.risk_cfg
 
-        portfolio_positions = self._portfolio_service.list_positions(
-            status="open"
-        ).positions
-        portfolio_closed = self._portfolio_service.list_positions(
-            status="closed"
-        ).positions
+        if ctx.state_snapshot is not None:
+            portfolio_positions = [
+                position
+                for position in ctx.state_snapshot.positions
+                if position.status == "open"
+            ]
+            portfolio_closed = [
+                position
+                for position in ctx.state_snapshot.positions
+                if position.status == "closed"
+            ]
+        else:
+            portfolio_positions = self._portfolio_service.list_positions(
+                status="open"
+            ).positions
+            portfolio_closed = self._portfolio_service.list_positions(
+                status="closed"
+            ).positions
         portfolio_orders = ctx.portfolio_orders
         same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
         same_symbol_suppressed_count = 0
@@ -1517,7 +1543,10 @@ class ScreenerService:
         return candidates
 
     def run_screener(
-        self, request: ScreenerRequest, strategy_override: Optional[dict] = None
+        self,
+        request: ScreenerRequest,
+        strategy_override: Optional[dict] = None,
+        state_snapshot: PortfolioStateSnapshot | None = None,
     ) -> ScreenerResponse:
         try:
             ctx = _RunContext(
@@ -1525,6 +1554,7 @@ class ScreenerService:
                 strategy=self._resolve_strategy(request.strategy_id, strategy_override),
                 account_currency=self._config_repo.get().risk.account_currency,
                 combined_priority_cfg=CombinedPriorityConfig(),
+                state_snapshot=state_snapshot,
             )
             requested_top = self._resolve_universe_and_window(ctx)
 
