@@ -8,17 +8,18 @@ import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisC
 import WorkspaceActivityDrawer from '@/components/domain/workspace/WorkspaceActivityDrawer';
 import { useOpenPositions } from '@/features/portfolio/hooks';
 import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorkspaceData';
-import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import type { WorkspaceSourceId } from '@/features/workspaceData/types';
 import type { EvidenceRefreshResponse } from '@/features/intelligence/types';
+import type { ScreenerCandidate } from '@/features/screener/types';
 
 export default function AnalysisCanvasPanel() {
   const [selectedSourceId, setSelectedSourceId] = useState<WorkspaceSourceId | null>(null);
   const [evidenceRefresh, setEvidenceRefresh] = useState<EvidenceRefreshResponse | null>(null);
   const evidenceRefreshActionRef = useRef<(() => void) | null>(null);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
+  const selection = useWorkspaceStore((state) => state.selection);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const selectionVersion = useWorkspaceStore((state) => state.selectionVersion);
   const fullscreen = useWorkspaceStore((state) => state.fullscreen);
@@ -31,10 +32,7 @@ export default function AnalysisCanvasPanel() {
   const setActivityDrawerOpen = useWorkspaceStore((state) => state.setActivityDrawerOpen);
   const dismissActivity = useWorkspaceStore((state) => state.dismissActivity);
   const markActivityAnnounced = useWorkspaceStore((state) => state.markActivityAnnounced);
-  const lastScreenerResult = useScreenerStore((state) => state.lastResult);
-  const selectedCandidate = lastScreenerResult?.candidates.find(
-    (candidate) => candidate.ticker.toUpperCase() === selectedTicker?.toUpperCase()
-  );
+  const selectedCandidate = selection?.candidate ?? null;
   const openPositionsQuery = useOpenPositions();
   const openPosition = openPositionsQuery.data?.find(
     (p) => p.ticker.toUpperCase() === selectedTicker?.toUpperCase()
@@ -55,8 +53,8 @@ export default function AnalysisCanvasPanel() {
     selectionVersion,
     candidate: selectedCandidate ?? null,
     position: openPosition,
-    screenerRun: selectedCandidate && lastScreenerResult
-      ? { asOf: lastScreenerResult.asofDate, freshness: lastScreenerResult.dataFreshness }
+    screenerRun: selectedCandidate?.dataAsOf
+      ? { asOf: selectedCandidate.dataAsOf, freshness: selectedCandidate.dataStatus === 'intraday' ? 'intraday' : 'final_close' }
       : null,
     evidenceRefresh,
     refreshEvidence: () => evidenceRefreshActionRef.current?.(),
@@ -83,8 +81,8 @@ export default function AnalysisCanvasPanel() {
             ticker={selectedTicker}
             companyName={workspaceData.fundamentals.data?.companyName ?? selectedCandidate?.name}
             mode={openPosition ? 'position' : selectedCandidate ? 'candidate' : 'research'}
-            runAsOf={selectedCandidate ? lastScreenerResult?.asofDate ?? null : null}
-            runFreshness={selectedCandidate ? lastScreenerResult?.dataFreshness ?? null : null}
+            runAsOf={selectedCandidate?.dataAsOf ?? selectedCandidate?.lastBar ?? null}
+            runFreshness={selectedCandidate ? selectedCandidate.dataStatus === 'intraday' ? 'intraday' : 'final_close' : null}
             health={workspaceData.health}
             isRefreshing={
               workspaceData.fundamentalsRefreshing
@@ -127,9 +125,10 @@ export default function AnalysisCanvasPanel() {
             position={openPosition}
             activeTab={activeTab}
             onTabChange={setAnalysisTab}
-            orderPanel={
+            orderPanel={(candidate) =>
               <ActionPanel
                 ticker={selectedTicker}
+                candidate={candidate && typeof candidate.currency === 'string' ? candidate as ScreenerCandidate : null}
                 source={workspaceData.sourceStates.find(({ id }) => id === 'positionOrders')}
               />
             }

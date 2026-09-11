@@ -36,6 +36,8 @@ interface ScreenerStore {
   setTodayRunFromLastRun: () => void;
   setTodayRunDisplayFilters: (filters: TodayRunDisplayFilters) => void;
   initializeTodayRunFromLegacyResult: () => void;
+  /** A strategy change makes persisted recommendations historical, not actionable. */
+  invalidateActionableRuns: () => void;
   clearLastResult: () => void;
   patchCandidate: (
     ticker: string,
@@ -95,6 +97,12 @@ export const useScreenerStore = create<ScreenerStore>()(
         set({ todayRunInitialized: true });
         if (lastResult) get().setTodayRunFromLastRun();
       },
+      invalidateActionableRuns: () => set({
+        lastResult: null,
+        lastRunContext: null,
+        todayRun: null,
+        todayRunInitialized: true,
+      }),
       clearLastResult: () => set({ lastResult: null }),
       patchCandidate: (ticker, updater) =>
         set((state) => {

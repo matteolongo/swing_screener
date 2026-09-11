@@ -20,7 +20,6 @@ import {
   useUpdateStopMutation,
 } from '@/features/portfolio/hooks';
 import { type Order } from '@/features/portfolio/types';
-import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { StopPreviewPanel, type PortfolioRow } from './PortfolioTableParts';
@@ -28,18 +27,15 @@ import { buildPortfolioColumns } from './portfolioColumns';
 
 function PortfolioSymbolModal({ ticker, position, onBack }: { ticker: string; position: PositionWithMetrics | null; onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
-  const candidate = useScreenerStore((state) =>
-    state.lastResult?.candidates.find((c) => c.ticker.toUpperCase() === ticker.toUpperCase())
-  );
   return (
     <ModalShell title={t('workspacePage.symbolDetails.title', { ticker })} onClose={onBack} className="max-w-5xl" closeOnBackdrop={false}>
       <SymbolAnalysisContent
         ticker={ticker}
-        candidate={candidate}
+        candidate={null}
         position={position}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        orderPanel={<ActionPanel ticker={ticker} />}
+        orderPanel={<ActionPanel ticker={ticker} candidate={null} />}
       />
     </ModalShell>
   );
@@ -47,7 +43,7 @@ function PortfolioSymbolModal({ ticker, position, onBack }: { ticker: string; po
 
 export default function PortfolioTable() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
-  const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
+  const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const location = useLocation();
 
@@ -170,7 +166,7 @@ export default function PortfolioTable() {
     };
 
     if (tickerParam) {
-      setSelectedTicker(tickerParam);
+      setWorkspaceSelection({ ticker: tickerParam, source: 'portfolio', rowId: `portfolio:${tickerParam.trim().toUpperCase()}` });
     }
 
     if (action === 'update-stop' || action === 'close-position') {
@@ -215,7 +211,7 @@ export default function PortfolioTable() {
     }
 
     clearPortfolioIntent();
-  }, [isReady, location, rows, setSelectedTicker]);
+  }, [isReady, location, rows, setWorkspaceSelection]);
 
   const columns = useMemo(
     () =>
@@ -232,7 +228,7 @@ export default function PortfolioTable() {
         },
         onAnalyze: (row) => setAnalyzeTarget({ ticker: row.ticker, position: row.position }),
         onAddOnEntry: (ticker) => {
-          setSelectedTicker(ticker, 'portfolio');
+          setWorkspaceSelection({ ticker, source: 'portfolio', rowId: `portfolio:${ticker.trim().toUpperCase()}` });
           setAnalysisTab('order');
         },
         onPartialClose: (position) => {
@@ -254,7 +250,7 @@ export default function PortfolioTable() {
         cancelPending: cancelOrderMutation.isPending,
         fillPending: fillOrderMutation.isPending,
       }),
-    [setAnalysisTab, setSelectedTicker, cancelOrderMutation, fillOrderMutation.isPending],
+    [setAnalysisTab, setWorkspaceSelection, cancelOrderMutation, fillOrderMutation.isPending],
   );
 
   return (
@@ -278,7 +274,7 @@ export default function PortfolioTable() {
               : 'hover:bg-foreground/5')
           );
         }}
-        onRowClick={(row) => setSelectedTicker(row.ticker)}
+        onRowClick={(row) => setWorkspaceSelection({ ticker: row.ticker, source: 'portfolio', rowId: row.id })}
       />
 
       {previewPositionId && (

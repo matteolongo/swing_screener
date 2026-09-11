@@ -4,7 +4,6 @@ import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/type
 import { useCreateOrderMutation, useOpenPositions } from '@/features/portfolio/hooks';
 import { getCanonicalOrderDraft, type SameSymbolCandidateContext, type ScreenerCandidate } from '@/features/screener/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
-import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
 import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
@@ -59,15 +58,11 @@ function buildDefaultNotes(
   });
 }
 
-export default function ActionPanel({ ticker, candidate: candidateOverride, source }: ActionPanelProps) {
+export default function ActionPanel({ ticker, candidate = null, source }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const activeStrategyQuery = useActiveStrategyQuery();
   const openPositionsQuery = useOpenPositions();
   const openPosition = openPositionsQuery.data?.find((position) => position.ticker.toUpperCase() === normalizedTicker);
-  const storeCandidate = useScreenerStore((state) =>
-    state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === normalizedTicker)
-  );
-  const candidate = candidateOverride === undefined ? storeCandidate : candidateOverride;
   const createOrderMutation = useCreateOrderMutation();
 
   const sameSymbol = resolveSameSymbolContext(candidate ?? null);

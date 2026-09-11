@@ -9,6 +9,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Workspace selections now preserve row, source, run, and candidate identity across
+  Today, Last Run, watchlist, and portfolio navigation; ad-hoc symbol analysis no
+  longer rewrites reporting runs.
+
 - Canonical portfolio analytics now serve persisted and browser-supplied
   snapshots with initial-risk R performance, scratch treatment, streaks,
   partial-close-aware self-sufficient journal rows/aggregates, localized
