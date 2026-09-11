@@ -70,6 +70,41 @@ def test_pullback_reclaim_signal_true():
     assert ma > 0
 
 
+def test_breakout_uses_exact_prior_window_and_current_bar():
+    exact = pd.Series([10.0, 11.0, 9.0, 12.0])
+    one_short = exact.iloc[1:]
+    one_extra = pd.concat([pd.Series([99.0]), exact], ignore_index=True)
+
+    assert breakout_signal(exact, lookback=3) == (True, 11.0)
+    short_result, short_level = breakout_signal(one_short, lookback=3)
+    assert short_result is False
+    assert pd.isna(short_level)
+    assert breakout_signal(one_extra, lookback=3) == (True, 11.0)
+
+
+def test_pullback_ma_includes_exact_window_ending_at_each_comparison_bar():
+    exact = pd.Series([10.0, 10.0, 5.0, 12.0])
+    one_short = exact.iloc[1:]
+    one_extra = pd.concat([pd.Series([99.0]), exact], ignore_index=True)
+
+    assert pullback_reclaim_signal(exact, ma_window=3) == (True, 9.0)
+    short_result, short_level = pullback_reclaim_signal(one_short, ma_window=3)
+    assert short_result is False
+    assert pd.isna(short_level)
+    assert pullback_reclaim_signal(one_extra, ma_window=3) == (True, 9.0)
+
+
+def test_signal_board_accepts_exact_configured_minimum_history():
+    frame = _make_ohlcv_for_signals().tail(4)
+    cfg = EntrySignalConfig(breakout_lookback=3, pullback_ma=3, min_history=4)
+
+    exact = build_signal_board(frame, ["AAA"], cfg)
+    one_short = build_signal_board(frame.tail(3), ["AAA"], cfg)
+
+    assert "AAA" in exact.index
+    assert one_short.empty
+
+
 def test_build_signal_board_assigns_signals():
     ohlcv = _make_ohlcv_for_signals()
     board = build_signal_board(
