@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Daily reviews now report per-position evaluation failures in a typed,
+  sanitized `evaluation_errors` collection and count instead of misclassifying
+  them as successful hold actions.
+
 - Screener recommendations now fail closed when a symbol already has a pending
   entry order or when the order ledger cannot be read, and blocked candidates
   no longer receive entry approval tokens.
