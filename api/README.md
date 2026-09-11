@@ -253,6 +253,19 @@ Daily Review (`/api/daily-review`):
 - `GET /api/daily-review` — accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) for the legacy combined review. Pass `include_candidates=false` for a portfolio/watchlist-only review that does not run the screener.
 - `POST /api/daily-review/compute` — supports the same `include_candidates` switch for local-persistence mode.
 
+The compute endpoint treats its validated `positions` and `orders` as one
+immutable, authoritative snapshot for the entire request. `orders` are validated
+as `OrderSnapshot` models (ticker normalized to uppercase, `status`/`order_kind`
+normalized to lowercase, extra order fields preserved); malformed items fail
+request validation with `422` instead of reaching the service. The snapshot
+stores frozen order models, so downstream code derives local mutable copies and
+cannot mutate the authoritative state. Pending-order review,
+screener duplicate-order checks, and same-symbol position ownership all consume
+that snapshot and never fall back to repository state for missing symbols.
+`pending_orders_review` lists only `status == "pending"` entry orders, mirroring
+the stateful `list_orders(status="pending")` semantics (`submitted` entries stay
+active for duplicate-order gates but are excluded here).
+
 Both review responses expose `evaluation_errors` for individual positions whose
 stop evaluation could not be completed. Each item contains `symbol`, the stable
 code `position_evaluation_failed`, and a sanitized message. These failures are
