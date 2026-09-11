@@ -89,6 +89,27 @@ class RiskConfig:
 | `recommendations/workflow.py` | Canonical execution-workflow classifier: `derive_execution_workflow()` maps recommendation gates to a workflow status and structured next step |
 | `__init__.py` | Package exports |
 
+## Target provenance
+
+`structural` and `manual` targets are independently sourced: they come from
+price structure or a documented manual level, not from the R-multiple model.
+`evaluate_recommendation()` keeps such a caller-supplied target unchanged while
+enriching the recommendation with a trade thesis.
+
+Only a valid independently sourced target determines a validated
+reward-to-risk ratio. `recommendations/engine.py::resolve_target()` is the
+canonical rule shared by plan gating and thesis enrichment: the target must be
+finite, above entry, and backed by positive per-share risk before its RR is
+used. Missing, non-finite, or at/below-entry targets normalize to no validated
+RR, and numerically valid targets from any other source stay non-actionable
+(`TARGET_NOT_VALIDATED`).
+
+The separate `desired_target` is the price implied by `rr_target`; it is
+advisory only. It never replaces an independently sourced target and does not
+contribute to recommendation eligibility or to thesis RR/setup-quality scoring
+when no validated independent target exists. Missing or invalid
+structural/manual targets remain non-actionable.
+
 ## Execution Workflow Classification
 
 `recommendations/workflow.py` is the authoritative, deterministic classifier

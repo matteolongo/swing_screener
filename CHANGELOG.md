@@ -35,6 +35,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Trade-thesis enrichment now preserves independently sourced structural and
+  manual targets instead of replacing them with the desired R-multiple target.
+  The thesis only receives a validated RR from such a target; missing, invalid,
+  or unvalidated targets no longer borrow the advisory `desired_target` RR.
 - Waiting pullbacks with a pending `BUY_LIMIT` approval token can now enter
   manual order review without being labeled `ready`; `ready` remains reserved
   for an observed entry-trigger pass.
