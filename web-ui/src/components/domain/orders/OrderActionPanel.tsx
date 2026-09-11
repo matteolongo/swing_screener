@@ -1,13 +1,11 @@
 import OrderReviewExperience, {
   type OrderReviewContext,
-  type OrderReviewRiskConfig,
 } from '@/components/domain/orders/OrderReviewExperience';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
 import { t } from '@/i18n/t';
 
 interface OrderActionPanelProps {
   context: OrderReviewContext;
-  risk: OrderReviewRiskConfig;
   defaultNotes: string;
   onSubmitOrder: (request: CreateOrderRequest) => Promise<unknown>;
   onSuccess?: () => void;
@@ -17,7 +15,6 @@ interface OrderActionPanelProps {
 
 export default function OrderActionPanel({
   context,
-  risk,
   defaultNotes,
   onSubmitOrder,
   onSuccess,
@@ -37,7 +34,6 @@ export default function OrderActionPanel({
 
       <OrderReviewExperience
         context={context}
-        risk={risk}
         defaultNotes={defaultNotes}
         showManualOrderHint={showManualOrderHint}
         onSubmitOrder={onSubmitOrder}

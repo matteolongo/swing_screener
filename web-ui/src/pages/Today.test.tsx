@@ -192,6 +192,11 @@ describe('Today page — expanded workspace', () => {
         dataFreshness: 'final_close',
         candidates: [{
           ticker: 'NVDA',
+          executionEligibility: { allowed: true, mode: 'ready', reason: null },
+          canonicalOrderDraft: {
+            orderType: 'BUY_STOP', entry: 100, stop: 95, target: 110,
+            shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed',
+          },
           recommendation: {
             workflowStatus: 'ready',
             nextStep: { code: 'review_order' },

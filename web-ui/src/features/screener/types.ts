@@ -222,9 +222,39 @@ export interface CandidateDataSourceSummary {
   intelligence?: DataSourceHealth;
 }
 
+export type ExecutionEligibilityReason =
+  | 'skip_guidance'
+  | 'workflow_not_actionable'
+  | 'approval_missing'
+  | 'data_not_current'
+  | 'plan_incomplete'
+  | 'plan_invalid'
+  | 'held_symbol_not_add_on';
+
+export type ExecutionEligibility =
+  | { allowed: true; mode: 'ready' | 'pending_pullback'; reason: null }
+  | {
+      allowed: false;
+      mode: null;
+      reason: ExecutionEligibilityReason;
+    };
+
+export interface CanonicalOrderDraft {
+  orderType: 'BUY_LIMIT' | 'BUY_STOP';
+  entry: number;
+  stop: number;
+  target: number;
+  shares: number;
+  rr: number;
+  quoteCurrency: string;
+  approvalToken: string;
+}
+
 export interface ScreenerCandidate {
   ticker: string;
   approvalToken?: string;
+  executionEligibility?: ExecutionEligibility;
+  canonicalOrderDraft?: CanonicalOrderDraft;
   currency: string;
   exchangeMic?: string;
   instrumentType?: 'equity' | 'etf' | string;
@@ -363,6 +393,21 @@ export interface DecisionSummaryAPI {
 export interface ScreenerCandidateAPI {
   ticker: string;
   approval_token?: string | null;
+  execution_eligibility?: {
+    allowed: boolean;
+    mode?: 'ready' | 'pending_pullback' | null;
+    reason?: ExecutionEligibilityReason | null;
+  } | null;
+  canonical_order_draft?: {
+    order_type: 'BUY_LIMIT' | 'BUY_STOP';
+    entry: number;
+    stop: number;
+    target: number;
+    shares: number;
+    rr: number;
+    quote_currency: string;
+    approval_token?: string | null;
+  } | null;
   currency?: string;
   exchange_mic?: string;
   instrument_type?: string;
@@ -643,12 +688,73 @@ function transformDataSourceSummary(value: unknown): CandidateDataSourceSummary 
   };
 }
 
+const EXECUTION_ELIGIBILITY_REASONS = new Set<ExecutionEligibilityReason>([
+  'skip_guidance',
+  'workflow_not_actionable',
+  'approval_missing',
+  'data_not_current',
+  'plan_incomplete',
+  'plan_invalid',
+  'held_symbol_not_add_on',
+]);
+
+function transformExecutionEligibility(
+  raw: ScreenerCandidateAPI['execution_eligibility'],
+): ExecutionEligibility | undefined {
+  if (!raw) return undefined;
+  if (raw.allowed && (raw.mode === 'ready' || raw.mode === 'pending_pullback') && raw.reason == null) {
+    return { allowed: true, mode: raw.mode, reason: null };
+  }
+  if (!raw.allowed && raw.mode == null && raw.reason && EXECUTION_ELIGIBILITY_REASONS.has(raw.reason)) {
+    return { allowed: false, mode: null, reason: raw.reason };
+  }
+  return undefined;
+}
+
+function isCanonicalOrderDraft(draft: CanonicalOrderDraft | undefined): draft is CanonicalOrderDraft {
+  return Boolean(
+    draft
+      && (draft.orderType === 'BUY_LIMIT' || draft.orderType === 'BUY_STOP')
+      && /^[A-Z]{3}$/.test(draft.quoteCurrency)
+      && draft.quoteCurrency !== 'UNKNOWN'
+      && typeof draft.approvalToken === 'string' && draft.approvalToken.trim()
+      && [draft.entry, draft.stop, draft.target, draft.rr].every((value) => Number.isFinite(value) && value > 0)
+      && Number.isInteger(draft.shares) && draft.shares > 0
+      && draft.stop < draft.entry && draft.entry < draft.target,
+  );
+}
+
+function transformCanonicalOrderDraft(raw: ScreenerCandidateAPI['canonical_order_draft']): CanonicalOrderDraft | undefined {
+  if (!raw || typeof raw.approval_token !== 'string') return undefined;
+  const draft: CanonicalOrderDraft = {
+    orderType: raw.order_type,
+    entry: raw.entry,
+    stop: raw.stop,
+    target: raw.target,
+    shares: raw.shares,
+    rr: raw.rr,
+    quoteCurrency: raw.quote_currency,
+    approvalToken: raw.approval_token,
+  };
+  return isCanonicalOrderDraft(draft) ? draft : undefined;
+}
+
+export function getCanonicalOrderDraft(
+  candidate?: Pick<ScreenerCandidate, 'executionEligibility' | 'canonicalOrderDraft'> | null,
+): CanonicalOrderDraft | undefined {
+  return candidate?.executionEligibility?.allowed && isCanonicalOrderDraft(candidate.canonicalOrderDraft)
+    ? candidate.canonicalOrderDraft
+    : undefined;
+}
+
 // Transform API response to UI format
 export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): ScreenerResponse {
   return {
     candidates: apiResponse.candidates.map(c => ({
       ticker: c.ticker,
       approvalToken: c.approval_token ?? undefined,
+      executionEligibility: transformExecutionEligibility(c.execution_eligibility),
+      canonicalOrderDraft: transformCanonicalOrderDraft(c.canonical_order_draft),
       currency: c.currency ?? 'UNKNOWN',
       exchangeMic: c.exchange_mic,
       instrumentType: c.instrument_type,

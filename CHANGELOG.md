@@ -34,6 +34,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Order review now consumes the backend execution capability and canonical draft
+  directly, so blocked, incomplete, or `SKIP` candidates cannot receive a
+  browser-fabricated order ticket.
+
 - Local browser portfolios now use the stateless trading API for lifecycle
   commands and canonical position/summary metrics. Failed or conflicting
   commands preserve browser state; successful responses are stored atomically,

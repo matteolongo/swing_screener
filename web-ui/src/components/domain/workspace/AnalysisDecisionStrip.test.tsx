@@ -109,6 +109,8 @@ describe('AnalysisDecisionStrip — order preparation authority', () => {
         candidate={buildCandidate({
           decisionSummary: buyNowSummary,
           recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } } as any,
+          executionEligibility: { allowed: true, mode: 'ready', reason: null },
+          canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 200, stop: 190, target: 220, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed' },
         })}
         onPrepareOrder={vi.fn()}
       />,
@@ -134,7 +136,12 @@ describe('AnalysisDecisionStrip — order preparation authority', () => {
     render(
       <AnalysisDecisionStrip
         ticker="AAPL"
-        candidate={buildCandidate({ decisionSummary: waitSummary, recommendation: readyRecommendation })}
+        candidate={buildCandidate({
+          decisionSummary: waitSummary,
+          recommendation: readyRecommendation,
+          executionEligibility: { allowed: true, mode: 'ready', reason: null },
+          canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 200, stop: 190, target: 220, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed' },
+        })}
         onPrepareOrder={vi.fn()}
       />,
     );

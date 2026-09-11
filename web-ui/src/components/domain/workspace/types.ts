@@ -1,8 +1,10 @@
 import type { Recommendation } from '@/types/recommendation';
 import type {
   CandidateDataSourceSummary,
+  CanonicalOrderDraft,
   CandlePattern,
   DecisionSummary,
+  ExecutionEligibility,
   SameSymbolCandidateContext,
 } from '@/features/screener/types';
 
@@ -46,6 +48,8 @@ export interface SymbolAnalysisCandidate {
   recommendation?: Recommendation;
   suggestedOrderType?: string;
   approvalToken?: string;
+  executionEligibility?: ExecutionEligibility;
+  canonicalOrderDraft?: CanonicalOrderDraft;
   suggestedOrderPrice?: number;
   executionNote?: string;
   sameSymbol?: SameSymbolCandidateContext;

@@ -32,10 +32,15 @@
   transformed `workflowStatus` / `nextStep`; they do not re-derive precedence
   from decision gates or `decisionSummary.action`. Missing workflow fields fail
   safely to `needs_review` / `refresh_data` at the API boundary.
+- Order entry also consumes the backend `executionEligibility` discriminator and
+  `canonicalOrderDraft` at that boundary. Only an allowed capability with a
+  valid signed draft (finite coherent plan, supported currency/type, positive
+  integer shares) exposes review; components do not infer an order type, price,
+  stop, share count, or position cap.
 - A `waiting_trigger` / `wait_pullback` candidate may expose manual order review
-  only with its pending `BUY_LIMIT` approval token. It remains distinct from
-  `ready`, which means the observed entry trigger passed; the token is required
-  and submission remains manual.
+  only through an allowed `pending_pullback` capability with its pending
+  `BUY_LIMIT` draft. It remains distinct from `ready`, which means the observed
+  entry trigger passed; the token is required and submission remains manual.
 - React Query keys live in `src/lib/queryKeys.ts`. Always use these for cache invalidation — do not construct key arrays inline.
 - All user-facing strings go through `src/i18n/`. No hardcoded copy in components or tests.
 

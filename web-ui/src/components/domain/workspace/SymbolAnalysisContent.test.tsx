@@ -30,6 +30,8 @@ describe('SymbolAnalysisContent held mode', () => {
     const candidate = {
       sameSymbol: { mode: 'ADD_ON' },
       recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 383.04, stop: 346.3, target: 498.26, shares: 1, rr: 3.1, quoteCurrency: 'USD', approvalToken: 'signed' },
     } as any;
     renderWithProviders(
       <SymbolAnalysisContent ticker="LRCX" candidate={candidate} position={position} activeTab="overview" onTabChange={() => {}} orderPanel={<div>order</div>} />,
@@ -41,6 +43,8 @@ describe('SymbolAnalysisContent held mode', () => {
     const candidate = {
       sameSymbol: { mode: 'SCALE_BACK' },
       recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 383.04, stop: 346.3, target: 498.26, shares: 1, rr: 3.1, quoteCurrency: 'USD', approvalToken: 'signed' },
     } as any;
     renderWithProviders(
       <SymbolAnalysisContent ticker="LRCX" candidate={candidate} position={position} activeTab="overview" onTabChange={() => {}} orderPanel={<div>order</div>} />,
@@ -67,6 +71,10 @@ function buyNowCandidate(workflowStatus: 'ready' | 'no_setup') {
       workflowStatus,
       nextStep: workflowStatus === 'ready' ? { code: 'review_order' } : { code: 'observe' },
     },
+    ...(workflowStatus === 'ready' ? {
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 200, stop: 190, target: 220, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed' },
+    } : {}),
     decisionSummary: {
       symbol: 'AAPL', action: 'BUY_NOW', conviction: 'high', technicalLabel: 'strong',
       fundamentalsLabel: 'strong', valuationLabel: 'fair', catalystLabel: 'active',

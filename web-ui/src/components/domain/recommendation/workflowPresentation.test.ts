@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ScreenerCandidate } from '@/features/screener/types';
+import { getCanonicalOrderDraft, type ScreenerCandidate } from '@/features/screener/types';
 import {
-  canReviewPendingPullbackOrder,
   formatWorkflowNextStep,
   getWorkflowPresentation,
   groupCandidatesByWorkflow,
@@ -19,30 +18,16 @@ const apiRecommendation: RecommendationAPI = {
 };
 
 describe('workflow presentation', () => {
-  it('allows only signed waiting pullback BUY_LIMIT orders into review', () => {
-    expect(canReviewPendingPullbackOrder({
-      approvalToken: 'signed-token',
-      suggestedOrderType: 'BUY_LIMIT',
-      recommendation: {
-        workflowStatus: 'waiting_trigger',
-        nextStep: { code: 'wait_pullback' },
-      },
-    })).toBe(true);
+  it('uses only an allowed backend capability for order review', () => {
+    expect(getCanonicalOrderDraft({
+      executionEligibility: { allowed: true, mode: 'pending_pullback', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_LIMIT', entry: 20, stop: 18, target: 24, shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed-token' },
+    })).toMatchObject({ orderType: 'BUY_LIMIT' });
 
-    expect(canReviewPendingPullbackOrder({
-      suggestedOrderType: 'BUY_LIMIT',
-      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_pullback' } },
-    })).toBe(false);
-    expect(canReviewPendingPullbackOrder({
-      approvalToken: 'signed-token',
-      suggestedOrderType: 'BUY_STOP',
-      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_pullback' } },
-    })).toBe(false);
-    expect(canReviewPendingPullbackOrder({
-      approvalToken: 'signed-token',
-      suggestedOrderType: 'BUY_LIMIT',
-      recommendation: { workflowStatus: 'waiting_trigger', nextStep: { code: 'wait_breakout_close' } },
-    })).toBe(false);
+    expect(getCanonicalOrderDraft({
+      executionEligibility: { allowed: false, mode: null, reason: 'workflow_not_actionable' },
+      canonicalOrderDraft: { orderType: 'BUY_LIMIT', entry: 20, stop: 18, target: 24, shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed-token' },
+    })).toBeUndefined();
   });
 
   it('formats a concrete pullback instruction', () => {

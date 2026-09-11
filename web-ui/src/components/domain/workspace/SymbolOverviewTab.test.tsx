@@ -10,6 +10,8 @@ const candidate = {
   currency: 'USD',
   entry: 200,
   stop: 190,
+  executionEligibility: { allowed: true, mode: 'ready', reason: null },
+  canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 200, stop: 190, target: 220, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed' },
   recommendation: {
     workflowStatus: 'ready',
     nextStep: { code: 'review_order' },
