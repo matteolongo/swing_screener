@@ -24,7 +24,7 @@ from swing_screener.reporting.concentration import sector_concentration_warnings
 warnings = sector_concentration_warnings(
     tickers=report.index.tolist(),
     sector_map={"AAPL": "Technology", "MSFT": "Technology", "JPM": "Financials"},
-    threshold=0.4,  # warn if any sector > 40% of candidates
+    threshold=0.4,  # warn if any named sector is at least 40% of candidates
 )
 for w in warnings:
     print(w)
@@ -55,7 +55,14 @@ of disappearing. Empty plan frames retain the same columns and dtypes.
 Returns a plain-text summary of tradable signals (signal in `["both", "breakout", "pullback"]` with `shares >= 1`). Useful for quick daily review without opening the CSV.
 
 ### `sector_concentration_warnings(tickers, sector_map, min_candidates=5, threshold=0.4)`
-Returns warning strings if a single sector exceeds `threshold` of the candidate list. Requires an externally-supplied `sector_map` (e.g., from `data.ticker_info`).
+Deduplicates candidates by ticker and returns one warning for every named sector
+whose count divided by all unique candidates is greater than or equal to
+`threshold`. Blank or unknown sectors remain in the denominator but do not form
+a sector group. Evaluation starts when the unique-candidate count reaches
+`min_candidates`. Warnings sort by descending share and then sector name;
+invalid thresholds outside `[0, 1]` and minimums below `1` are rejected.
+Requires an externally supplied `sector_map` (for example, from
+`data.ticker_info`).
 
 ## Notes
 
