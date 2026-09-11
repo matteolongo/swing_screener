@@ -187,6 +187,13 @@ A `waiting_trigger` / `wait_pullback` candidate may expose manual order review
 only with its pending `BUY_LIMIT` approval token. This does not make the
 candidate `ready`: `ready` remains reserved for an observed trigger pass.
 
+Before recommendation evaluation, the screener loads the current entry-order
+ledger once. A symbol with a `pending` or `submitted` entry order is
+non-actionable with reason `PENDING_ORDER_EXISTS`. If that ledger cannot be
+read, all new-entry recommendations fail closed with
+`ORDER_STATE_UNAVAILABLE`; neither state can receive an approval token. Open
+positions still follow the existing manual-management path.
+
 Same-symbol add-on evaluation replaces the fresh setup stop with the current
 live position stop, recalculates reward:risk and fee-to-risk, and rechecks
 `risk.min_rr` plus `risk.max_fee_risk_pct`. A live-stop plan outside either
