@@ -79,6 +79,17 @@ class RiskConfig:
 
 > **Note**: `account_size=500.0` is intentionally a minimal default (€500 for a micro account). Always set this to your actual account size in `RiskConfig` or via the strategy config.
 
+## Position-sizing validation and precision
+
+Every numeric sizing input must be finite and positive, including account
+equity, risk and position fractions, entry, ATR, ATR multiplier, minimum shares,
+and any FX conversion rate. Invalid values raise a field-specific `ValueError`.
+
+Entry and the derived stop are normalized once to two-decimal executable prices
+before calculating `1R`, share count, position value, and realized risk. If that
+normalization makes the stop non-positive or no longer strictly below entry, the
+plan is rejected rather than reporting geometry that cannot be executed.
+
 ## Files
 
 | File | Purpose |

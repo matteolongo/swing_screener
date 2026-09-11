@@ -9,6 +9,17 @@ import pandas as pd
 from swing_screener.risk.currency import normalize_account_to_quote_rate
 from swing_screener.settings import get_settings_manager
 
+EXECUTION_PRICE_DECIMALS = 2
+
+
+def _finite_positive(name: str, value: float) -> float:
+    """Return a finite positive float or raise a field-specific error."""
+    normalized = float(value)
+    if not math.isfinite(normalized) or normalized <= 0:
+        raise ValueError(f"{name} must be finite and > 0")
+    return normalized
+
+
 TRADE_PLAN_DTYPES = {
     "signal": "string",
     "plan_status": "string",
@@ -173,12 +184,9 @@ def _lookup_account_to_quote_rate(
 
 
 def compute_stop(entry: float, atr14: float, k_atr: float) -> float:
-    if entry <= 0:
-        raise ValueError("entry must be > 0")
-    if atr14 <= 0:
-        raise ValueError("atr14 must be > 0")
-    if k_atr <= 0:
-        raise ValueError("k_atr must be > 0")
+    entry = _finite_positive("entry", entry)
+    atr14 = _finite_positive("atr14", atr14)
+    k_atr = _finite_positive("k_atr", k_atr)
     return entry - (k_atr * atr14)
 
 
@@ -197,6 +205,14 @@ def position_plan(
 
     Returns dict with entry/stop/shares/etc or None if not tradable.
     """
+    entry = _finite_positive("entry", entry)
+    atr14 = _finite_positive("atr14", atr14)
+    account_size = _finite_positive("account_size", cfg.account_size)
+    risk_pct = _finite_positive("risk_pct", cfg.risk_pct)
+    k_atr = _finite_positive("k_atr", cfg.k_atr)
+    max_position_pct = _finite_positive("max_position_pct", cfg.max_position_pct)
+    min_shares = int(_finite_positive("min_shares", cfg.min_shares))
+
     account_currency = _normalize_currency(cfg.account_currency)
     quote_currency = _normalize_quote_currency(quote_currency, account_currency)
     if quote_currency is None:
@@ -206,38 +222,47 @@ def position_plan(
     elif account_to_quote_rate is None:
         return None
     else:
+        account_to_quote_rate = _finite_positive(
+            "account_to_quote_rate", account_to_quote_rate
+        )
         account_to_quote_rate = normalize_account_to_quote_rate(account_to_quote_rate)
 
-    risk_amount_account = cfg.account_size * cfg.risk_pct
+    account_to_quote_rate = _finite_positive(
+        "account_to_quote_rate", account_to_quote_rate
+    )
+    risk_amount_account = account_size * risk_pct
     risk_amount = risk_amount_account * account_to_quote_rate
-    stop = compute_stop(entry, atr14, cfg.k_atr)
+    entry_exec = round(entry, EXECUTION_PRICE_DECIMALS)
+    _finite_positive("entry", entry_exec)
+    stop_exec = round(compute_stop(entry, atr14, k_atr), EXECUTION_PRICE_DECIMALS)
+    _finite_positive("stop", stop_exec)
+    if stop_exec >= entry_exec:
+        raise ValueError("stop must be below entry at execution precision")
 
-    risk_per_share = entry - stop
-    if risk_per_share <= 0:
-        return None
+    risk_per_share = entry_exec - stop_exec
 
     shares_by_risk = math.floor(risk_amount / risk_per_share)
-    if shares_by_risk < cfg.min_shares:
+    if shares_by_risk < min_shares:
         return None
 
-    max_position_value_account = cfg.account_size * cfg.max_position_pct
+    max_position_value_account = account_size * max_position_pct
     max_position_value = max_position_value_account * account_to_quote_rate
-    shares_by_cap = math.floor(max_position_value / entry)
+    shares_by_cap = math.floor(max_position_value / entry_exec)
 
     shares = min(shares_by_risk, shares_by_cap)
-    if shares < cfg.min_shares:
+    if shares < min_shares:
         return None
 
-    position_value = shares * entry
+    position_value = shares * entry_exec
     realized_risk = shares * risk_per_share
     position_value_account = position_value / account_to_quote_rate
     realized_risk_account = realized_risk / account_to_quote_rate
 
     return {
-        "entry": round(entry, 2),
-        "stop": round(stop, 2),
+        "entry": entry_exec,
+        "stop": stop_exec,
         "atr14": round(atr14, 4),
-        "k_atr": cfg.k_atr,
+        "k_atr": k_atr,
         "shares": int(shares),
         "account_currency": account_currency,
         "quote_currency": quote_currency,
