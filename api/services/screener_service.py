@@ -28,7 +28,7 @@ from api.models.screener import (
     CandlePatternOut,
 )
 from api.models.recommendation import Recommendation
-from api.models.portfolio import Position
+from api.models.portfolio import OrderSnapshot, Position
 from api.services.portfolio_service import PortfolioService
 from api.services.order_approval_token import (
     ApprovalTokenClaims,
@@ -195,6 +195,13 @@ def _snapshot_position_payload(position: object) -> dict:
     if isinstance(position, dict):
         return dict(position)
     return dict(getattr(position, "__dict__", {}) or {})
+
+
+def _snapshot_order_field(order: object, key: str, default=None):
+    """Read an order field from either a frozen snapshot model or a raw dict."""
+    if isinstance(order, dict):
+        return order.get(key, default)
+    return getattr(order, key, default)
 
 
 def _fetch_ohlcv_chunked(
@@ -437,10 +444,15 @@ class _RunContext:
 
 @dataclass(frozen=True)
 class PortfolioStateSnapshot:
-    """Immutable portfolio state supplied by a stateless caller."""
+    """Immutable portfolio state supplied by a stateless caller.
+
+    Orders are stored as frozen ``OrderSnapshot`` models so downstream code
+    cannot mutate the authoritative request snapshot through a shared dict.
+    Derive local mutable copies via ``model_dump()`` when mutation is needed.
+    """
 
     positions: tuple[Position, ...]
-    orders: tuple[dict, ...]
+    orders: tuple[OrderSnapshot, ...]
 
 
 class ScreenerService:
@@ -523,11 +535,10 @@ class ScreenerService:
             return "order_state_unavailable"
         normalized = ticker.upper()
         pending = any(
-            str(order.get("ticker") or "").upper() == normalized
-            and order.get("status") in {"pending", "submitted"}
-            and order.get("order_kind") == "entry"
+            str(_snapshot_order_field(order, "ticker") or "").upper() == normalized
+            and _snapshot_order_field(order, "status") in {"pending", "submitted"}
+            and _snapshot_order_field(order, "order_kind") == "entry"
             for order in ctx.portfolio_orders
-            if isinstance(order, dict)
         )
         return "pending_order_exists" if pending else "clear"
 

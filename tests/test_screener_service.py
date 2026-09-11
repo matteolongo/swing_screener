@@ -383,6 +383,47 @@ def test_screener_uses_explicit_state_snapshot_without_reading_repositories(tmp_
     svc._portfolio_service.list_positions.assert_not_called()
 
 
+def test_portfolio_state_snapshot_orders_are_frozen_and_isolated():
+    """Snapshot orders are immutable; local copies cannot mutate the snapshot."""
+    import pytest
+    from pydantic import ValidationError
+
+    from api.models.portfolio import OrderSnapshot
+    from api.services.screener_service import PortfolioStateSnapshot
+
+    raw = {
+        "order_id": "ORD-1",
+        "ticker": "aapl",
+        "status": "pending",
+        "order_kind": "entry",
+        "order_date": "2026-09-01",
+    }
+    snapshot = PortfolioStateSnapshot(
+        positions=(),
+        orders=(OrderSnapshot.model_validate(raw),),
+    )
+
+    assert isinstance(snapshot.orders, tuple)
+    assert isinstance(snapshot.orders[0], OrderSnapshot)
+    # Normalization is applied once at the boundary.
+    assert snapshot.orders[0].ticker == "AAPL"
+
+    # The frozen model rejects attribute mutation.
+    with pytest.raises(ValidationError):
+        snapshot.orders[0].ticker = "MSFT"  # type: ignore[misc]
+
+    # A downstream mutable derivation cannot leak back into the snapshot.
+    derived = snapshot.orders[0].model_dump()
+    derived["ticker"] = "MSFT"
+    derived["status"] = "filled"
+    assert snapshot.orders[0].ticker == "AAPL"
+    assert snapshot.orders[0].status == "pending"
+
+    # Validating copies input data: later caller-side mutation is isolated.
+    raw["ticker"] = "MSFT"
+    assert snapshot.orders[0].ticker == "AAPL"
+
+
 def _stateless_recommended_candidate():
     from api.models.recommendation import (
         ChecklistGate,
