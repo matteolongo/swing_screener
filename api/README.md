@@ -183,6 +183,12 @@ status/code pairs, missing waiting-trigger parameters, malformed or unknown
 currency codes, and non-finite or non-positive trigger prices to
 `needs_review` / `refresh_data`.
 
+Candidate ranking provenance is additive and explicit: `technical_rank` records
+the deterministic technical-selection order, `confidence_rank` records the
+confidence-prefilter order, and `priority_rank` records the final
+recommendation order. The legacy `rank` field aliases `technical_rank`; clients
+must use `priority_rank` when displaying the final server ordering.
+
 A `waiting_trigger` / `wait_pullback` candidate may expose manual order review
 only with its pending `BUY_LIMIT` approval token. This does not make the
 candidate `ready`: `ready` remains reserved for an observed trigger pass.

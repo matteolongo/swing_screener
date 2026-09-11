@@ -108,6 +108,7 @@ class RankingConfig:
 ```
 
 `score` = weighted sum of percentile ranks (0–1, higher = stronger momentum).
+Equal scores use the ticker as the deterministic ascending tie-breaker.
 
 ### `EntrySignalConfig`
 ```python
@@ -127,8 +128,13 @@ Signal values: `"breakout"`, `"pullback"`, `"both"`, `"none"`.
 | Attribute | Description |
 |-----------|-------------|
 | `universe` | All eligible tickers with features and filter details |
-| `ranked` | Top-N tickers with `score` and `rank` columns |
+| `ranked` | Top-N tickers with `score`, `technical_rank`, and legacy alias `rank` columns |
 | `board` | Entry signals: `signal`, `last`, `breakout_level`, `ma20_level` |
+
+The screener API preserves each later ordering stage separately:
+`technical_rank` is the selection score order, `confidence_rank` is the
+confidence-prefilter order, and `priority_rank` is the final recommendation
+order. The legacy `rank` field remains an alias of `technical_rank`.
 
 ## See Also
 

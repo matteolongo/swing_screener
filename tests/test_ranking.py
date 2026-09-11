@@ -43,6 +43,21 @@ def test_top_candidates_returns_top_n():
     assert top.index[0] in ["C", "D"]  # one of the best two
 
 
+def test_equal_scores_use_ticker_tie_breaker_and_preserve_technical_rank():
+    rows = {
+        "mom_6m": [0.2, 0.2, 0.2],
+        "mom_12m": [0.1, 0.1, 0.1],
+        "rs_6m": [0.05, 0.05, 0.05],
+    }
+    first = compute_hot_score(pd.DataFrame(rows, index=["ZZZ", "AAA", "MMM"]))
+    second = compute_hot_score(pd.DataFrame(rows, index=["MMM", "ZZZ", "AAA"]))
+
+    assert list(first.index) == ["AAA", "MMM", "ZZZ"]
+    assert list(second.index) == ["AAA", "MMM", "ZZZ"]
+    assert first["technical_rank"].tolist() == [1, 2, 3]
+    assert first["rank"].tolist() == first["technical_rank"].tolist()
+
+
 def test_nan_momentum_candidates_sort_to_bottom():
     """Candidates with NaN momentum values must rank last, not scatter mid-table.
     Regression test for: rank(pct=True) without na_option propagates NaN scores."""
@@ -58,7 +73,9 @@ def test_nan_momentum_candidates_sort_to_bottom():
     out = compute_hot_score(df, RankingConfig())
 
     # "missing" must be the last row and carry the highest rank number
-    assert out.index[-1] == "missing", f"expected 'missing' last, got order {list(out.index)}"
+    assert (
+        out.index[-1] == "missing"
+    ), f"expected 'missing' last, got order {list(out.index)}"
     assert out.loc["missing", "rank"] == 3
     # "strong" must rank first
     assert out.index[0] == "strong"
@@ -72,7 +89,7 @@ def test_partial_nan_momentum_preserves_valid_ordering():
     df = pd.DataFrame(
         {
             "mom_6m": [0.25, float("nan"), 0.05],
-            "mom_12m": [0.15, 0.10, 0.03],   # "partial" has a value here
+            "mom_12m": [0.15, 0.10, 0.03],  # "partial" has a value here
             "rs_6m": [0.04, float("nan"), -0.02],
         },
         index=["good", "partial", "poor"],

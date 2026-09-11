@@ -1021,14 +1021,23 @@ class ScreenerService:
             return None
 
         if not results.empty and "confidence" in results.columns:
-            results = results.sort_values("confidence", ascending=False)
+            if "technical_rank" not in results.columns:
+                results["technical_rank"] = results["rank"]
+            results = results.assign(
+                _ticker_tie_breaker=[str(ticker) for ticker in results.index]
+            ).sort_values(
+                ["confidence", "_ticker_tie_breaker"],
+                ascending=[False, True],
+                kind="stable",
+            )
             if ctx.request.top:
                 # Stage 1: widen prefilter to allow combined priority stage to re-rank
                 prefilter_n = (
                     ctx.request.top * ctx.combined_priority_cfg.prefilter_multiplier
                 )
                 results = results.head(prefilter_n)
-            results["rank"] = range(1, len(results) + 1)
+            results["confidence_rank"] = range(1, len(results) + 1)
+            results = results.drop(columns="_ticker_tie_breaker")
 
         if len(results) < requested_top:
             message = f"Only {len(results)} candidates found for top {requested_top}."
@@ -1341,6 +1350,12 @@ class ScreenerService:
                     score=safe_float(row.get("score")),
                     confidence=safe_float(row.get("confidence")),
                     rank=int(row.get("rank", len(candidates) + 1)),
+                    technical_rank=int(
+                        row.get("technical_rank", row.get("rank", len(candidates) + 1))
+                    ),
+                    confidence_rank=int(
+                        row.get("confidence_rank", len(candidates) + 1)
+                    ),
                     sma20_slope=safe_optional_float(row.get("sma20_slope")),
                     sma50_slope=safe_optional_float(row.get("sma50_slope")),
                     consolidation_tightness=safe_optional_float(

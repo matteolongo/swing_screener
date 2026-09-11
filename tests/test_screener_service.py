@@ -510,7 +510,7 @@ def test_run_screener_response_counts_distinct_pipeline_stages(tmp_path, monkeyp
                 "mom_12m": [0.2, 0.18],
                 "rs_6m": [0.05, 0.04],
                 "score": [0.9, 0.8],
-                "confidence": [80.0, 70.0],
+                "confidence": [70.0, 80.0],
                 "last": [50.0, 40.0],
                 "ma20_level": [48.0, 38.0],
                 "dist_sma50_pct": [5.0, 4.0],
@@ -564,7 +564,7 @@ def test_run_screener_response_counts_distinct_pipeline_stages(tmp_path, monkeyp
     result = svc.run_screener(
         ScreenerRequest(
             tickers=["AAA", "BBB", "MISS"],
-            top=1,
+            top=2,
             asof_date="2024-01-03",
         )
     )
@@ -572,8 +572,14 @@ def test_run_screener_response_counts_distinct_pipeline_stages(tmp_path, monkeyp
     assert result.total_screened == 3
     assert result.total_with_market_data == 2
     assert result.total_ranked_candidates == 2
-    assert result.total_returned_candidates == 1
-    assert [candidate.ticker for candidate in result.candidates] == ["AAA"]
+    assert result.total_returned_candidates == 2
+    by_ticker = {candidate.ticker: candidate for candidate in result.candidates}
+    assert by_ticker["AAA"].technical_rank == 1
+    assert by_ticker["AAA"].confidence_rank == 2
+    assert by_ticker["AAA"].rank == 1
+    assert by_ticker["BBB"].technical_rank == 2
+    assert by_ticker["BBB"].confidence_rank == 1
+    assert sorted(candidate.priority_rank for candidate in result.candidates) == [1, 2]
 
 
 def test_run_daily_report_passes_eurusd_rate_for_usd_quotes(tmp_path, monkeypatch):

@@ -6,6 +6,7 @@ Two-stage ranking pipeline:
 
 All weights are configurable via ``selection.combined_priority`` in defaults.yaml.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -26,19 +27,29 @@ def _combined_priority_defaults() -> dict:
 @dataclass(frozen=True)
 class CombinedPriorityConfig:
     technical_weight: float = field(
-        default_factory=lambda: float(_combined_priority_defaults().get("technical_weight", 0.45))
+        default_factory=lambda: float(
+            _combined_priority_defaults().get("technical_weight", 0.45)
+        )
     )
     fundamentals_weight: float = field(
-        default_factory=lambda: float(_combined_priority_defaults().get("fundamentals_weight", 0.25))
+        default_factory=lambda: float(
+            _combined_priority_defaults().get("fundamentals_weight", 0.25)
+        )
     )
     catalyst_weight: float = field(
-        default_factory=lambda: float(_combined_priority_defaults().get("catalyst_weight", 0.20))
+        default_factory=lambda: float(
+            _combined_priority_defaults().get("catalyst_weight", 0.20)
+        )
     )
     valuation_weight: float = field(
-        default_factory=lambda: float(_combined_priority_defaults().get("valuation_weight", 0.10))
+        default_factory=lambda: float(
+            _combined_priority_defaults().get("valuation_weight", 0.10)
+        )
     )
     prefilter_multiplier: int = field(
-        default_factory=lambda: int(_combined_priority_defaults().get("prefilter_multiplier", 3))
+        default_factory=lambda: int(
+            _combined_priority_defaults().get("prefilter_multiplier", 3)
+        )
     )
 
 
@@ -70,7 +81,9 @@ def _safe_float(value: Any) -> float | None:
         return None
 
 
-def _label_score(mapping: dict[str, float], label: str | None, default: float = 0.5) -> float:
+def _label_score(
+    mapping: dict[str, float], label: str | None, default: float = 0.5
+) -> float:
     return mapping.get((label or "").lower(), default)
 
 
@@ -177,7 +190,8 @@ def compute_combined_priority(
         ) / total_weight
         combined = max(0.0, min(1.0, combined))
 
-        scored.append((candidate, combined, candidate.rank))
+        technical_rank = candidate.technical_rank or candidate.rank
+        scored.append((candidate, combined, technical_rank))
 
     # --- sort descending -------------------------------------------------------
     scored.sort(key=lambda item: (-item[1], item[2], item[0].ticker))
@@ -188,7 +202,7 @@ def compute_combined_priority(
         result.append(
             candidate.model_copy(
                 update={
-                    "raw_technical_rank": candidate.rank,
+                    "raw_technical_rank": candidate.technical_rank or candidate.rank,
                     "combined_priority_score": round(score, 6),
                 }
             )
