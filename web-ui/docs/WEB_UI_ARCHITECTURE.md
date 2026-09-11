@@ -22,6 +22,10 @@
 - Screener candidates preserve `technicalRank`, `confidenceRank`, and final
   `priorityRank`. List ordering reads `priorityRank`; legacy `rank` remains the
   technical-rank alias for older API payloads.
+- Screener monetary values expose quote-currency prices and risks as `*Quote`,
+  converted portfolio amounts as `*Account`, and carry `quoteCurrency` plus
+  `accountCurrency`. UI view models consume the account-currency risk field;
+  deprecated `*Usd` aliases remain typed only for compatibility.
 
 - API payloads arrive as `snake_case`. Transform functions in `src/types/` convert to `camelCase` before use in components. Never use raw API shape inside components.
 - Candidate workflow state is server-authoritative. Components consume

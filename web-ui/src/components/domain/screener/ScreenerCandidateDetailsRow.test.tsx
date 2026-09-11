@@ -38,7 +38,7 @@ function makeVm(volumeRatio: number | null): CandidateViewModel {
     entry: null,
     stop: null,
     rr: null,
-    riskUsd: null,
+    riskAccount: null,
     score: 0.8,
     atr: 2,
     momentum6m: 0.1,
