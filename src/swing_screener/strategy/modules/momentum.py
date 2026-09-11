@@ -254,6 +254,8 @@ def build_momentum_report(
             "realized_risk_account",
             "risk_amount_target",
             "account_to_quote_rate",
+            "plan_status",
+            "block_reason",
         ]
         plan_cols = [c for c in plan_cols if c in plans.columns]
         report = report.join(plans[plan_cols + ["signal"]], how="left", rsuffix="_plan")
@@ -305,6 +307,8 @@ def build_momentum_report(
         "realized_risk",
         "realized_risk_account",
         "account_to_quote_rate",
+        "plan_status",
+        "block_reason",
     ]
     keep = [c for c in keep if c in report.columns]
     report = report[keep]

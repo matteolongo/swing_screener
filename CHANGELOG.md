@@ -17,6 +17,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Trade-plan output now keeps a stable nullable schema for populated, blocked,
+  and empty results, preserving machine-readable planning block reasons.
+
 - Screener sizing now takes account currency from application configuration and
   resolves direct or inverse FX pairs explicitly; missing conversion blocks an
   actionable cross-currency plan.

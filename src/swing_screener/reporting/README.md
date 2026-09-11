@@ -46,8 +46,13 @@ Delegates to `strategy.orchestrator.build_strategy_report()`. Returns a DataFram
 ### `export_report_csv(report, path="out/daily_report.csv")`
 Saves the report DataFrame to CSV. Creates parent directories automatically.
 
+Trade-plan rows use one ordered nullable schema for ready, blocked, and empty
+results. `plan_status` is `ready` or `blocked`; blocked candidates remain in the
+report with a machine-readable `block_reason` such as `fx_rate_missing` instead
+of disappearing. Empty plan frames retain the same columns and dtypes.
+
 ### `today_actions(report, max_rows=5)`
-Returns a plain-text summary of tradable signals (signal in `["both", "breakout", "pullback"]` with `shares >= 1`). Useful for quick daily review without opening the CSV.
+Returns a plain-text summary of tradable signals (signal in `["both", "breakout", "pullback"]` with `shares >= 1`). When `plan_status` is present it is authoritative: only `plan_status == "ready"` rows are actionable and `blocked` plans never appear, even if `shares` is populated. Reports without `plan_status` retain the legacy signal-plus-shares behavior. Useful for quick daily review without opening the CSV.
 
 ### `sector_concentration_warnings(tickers, sector_map, min_candidates=5, threshold=0.4)`
 Returns warning strings if a single sector exceeds `threshold` of the candidate list. Requires an externally-supplied `sector_map` (e.g., from `data.ticker_info`).
