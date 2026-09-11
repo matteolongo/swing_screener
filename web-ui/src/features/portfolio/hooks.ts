@@ -34,7 +34,7 @@ import {
   UpdateTrailMethodRequest,
 } from './types';
 import { queryKeys } from '@/lib/queryKeys';
-import { invalidateDailyReviewQueries, invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
+import { invalidateDailyReviewQueries, invalidateOrderLifecycleQueries, invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
 
 const mutationIdempotencyKeys = new WeakMap<object, string>();
 
@@ -64,7 +64,7 @@ export function useCreateOrderMutation(onSuccess?: () => void) {
     mutationFn: (request: CreateOrderRequest) =>
       createOrder(request, idempotencyKeyForMutation(request)),
     onSuccess: async () => {
-      await invalidateOrderQueries(queryClient);
+      await invalidateOrderLifecycleQueries(queryClient, false);
       onSuccess?.();
     },
   });
@@ -80,10 +80,7 @@ export function useFillOrderMutation(onSuccess?: () => void) {
         idempotencyKeyForMutation(variables),
       ),
     onSuccess: async () => {
-      await Promise.all([
-        invalidateOrderQueries(queryClient),
-        invalidatePositionQueries(queryClient),
-      ]);
+      await invalidateOrderLifecycleQueries(queryClient, true);
       onSuccess?.();
     },
   });
@@ -113,10 +110,7 @@ export function useFillFromDegiroMutation(onSuccess?: () => void) {
     mutationFn: ({ orderId, degiroOrderId }: { orderId: string; degiroOrderId: string }) =>
       fillOrderFromDegiro(orderId, { degiroOrderId }),
     onSuccess: async () => {
-      await Promise.all([
-        invalidateOrderQueries(queryClient),
-        invalidatePositionQueries(queryClient),
-      ]);
+      await invalidateOrderLifecycleQueries(queryClient, true);
       onSuccess?.();
     },
   });
@@ -127,7 +121,7 @@ export function useSubmitOrderMutation() {
   return useMutation({
     mutationFn: (orderId: string) => submitOrder(orderId),
     onSuccess: async () => {
-      await invalidateOrderQueries(queryClient);
+      await invalidateOrderLifecycleQueries(queryClient, false);
     },
   });
 }
@@ -137,7 +131,7 @@ export function useCancelOrderMutation() {
   return useMutation({
     mutationFn: (orderId: string) => cancelOrder(orderId),
     onSuccess: async () => {
-      await invalidateOrderQueries(queryClient);
+      await invalidateOrderLifecycleQueries(queryClient, false);
     },
   });
 }

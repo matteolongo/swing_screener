@@ -11,6 +11,7 @@ import {
   getAllOrdersLocal,
   getAllPositionsLocal,
   isLocalPersistenceMode,
+  listWatchlistLocal,
 } from '@/features/persistence';
 import {
   DailyReview,
@@ -119,6 +120,13 @@ export async function getDailyReview(
         strategy: toStrategyApi(strategy),
         positions: positions.map(toPositionApi),
         orders: orders.map(toOrderApi),
+        watchlist: listWatchlistLocal().map((item) => ({
+          ticker: item.ticker,
+          watched_at: item.watchedAt,
+          watch_price: item.watchPrice,
+          currency: item.currency,
+          source: item.source,
+        })),
       }),
       errorMessage: 'Failed to fetch daily review',
     });
@@ -152,6 +160,21 @@ export function usePortfolioReview() {
   return useQuery({
     queryKey: queryKeys.dailyReview(0, 'portfolio'),
     queryFn: () => getDailyReview(200),
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** Read the backend-owned near-trigger slice regardless of persistence mode. */
+export async function getWatchlistNearTrigger() {
+  return (await getDailyReview(1)).watchlistNearTrigger;
+}
+
+/** Backend-filtered watchlist rows for Today's near-trigger section. */
+export function useWatchlistNearTrigger() {
+  return useQuery({
+    queryKey: queryKeys.watchlistPipeline(),
+    queryFn: getWatchlistNearTrigger,
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
