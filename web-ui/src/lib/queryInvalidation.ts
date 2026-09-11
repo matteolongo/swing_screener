@@ -45,6 +45,18 @@ export async function invalidateOrderQueries(queryClient: QueryClient): Promise<
   ]);
 }
 
+/** Invalidate every cached read model affected by an order lifecycle transition. */
+export async function invalidateOrderLifecycleQueries(
+  queryClient: QueryClient,
+  updatesPositions = false,
+): Promise<void> {
+  await Promise.all([
+    invalidateOrderQueries(queryClient),
+    invalidateDailyReviewQueries(queryClient),
+    ...(updatesPositions ? [invalidatePositionQueries(queryClient)] : []),
+  ]);
+}
+
 export async function invalidateDailyReviewQueries(queryClient: QueryClient): Promise<void> {
   await queryClient.invalidateQueries({ queryKey: ['dailyReview'] });
 }

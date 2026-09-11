@@ -9,8 +9,8 @@ import type {
   DailyReviewCandidate,
   DailyReviewPositionClose,
   DailyReviewPositionExitSignal,
-  DailyReviewPositionHold,
   DailyReviewPositionUpdate,
+  TrimSuggestion,
   PendingOrderReview,
 } from '@/features/dailyReview/types';
 import type { WatchItem } from '@/features/watchlist/types';
@@ -113,9 +113,11 @@ export interface OpenPositionItemProps {
   onClick: (ticker: string) => void;
   isFocused?: boolean;
   intelligenceSummary?: OpenPositionIntelligenceSummary;
+  trimSuggestion?: TrimSuggestion | null;
+  onTrim?: () => void;
 }
 
-export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary }: OpenPositionItemProps) {
+export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary, trimSuggestion, onTrim }: OpenPositionItemProps) {
   return (
     <button
       type="button"
@@ -135,11 +137,27 @@ export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary
         {t('todayPage.actionList.openPositionDays', { days: String(item.daysOpen) })}
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
+      {trimSuggestion && (
+        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning">
+          {t('todayPage.actionList.trim')}
+        </span>
+      )}
       <AiSignalBadge summary={intelligenceSummary} />
       <EarningsBadge ticker={item.ticker} />
       <span className={cn('text-xs tabular-nums truncate flex-1 text-right', getSignColorClass(item.pnlPercent))}>
         {item.pnlPercent >= 0 ? '+' : ''}{formatNumber(item.pnlPercent, 1)}%
       </span>
+      {trimSuggestion && onTrim && (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onTrim(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onTrim(); } }}
+          className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20 shrink-0 cursor-pointer"
+        >
+          {t('todayPage.actionList.trimAction')}
+        </span>
+      )}
     </button>
   );
 }
@@ -352,58 +370,6 @@ export function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateIt
         )}
       </button>
     </div>
-  );
-}
-
-export interface HoldItemProps {
-  item: DailyReviewPositionHold;
-  onClick: (ticker: string) => void;
-  onTrim?: () => void;
-  isFocused?: boolean;
-  intelligenceSummary?: OpenPositionIntelligenceSummary;
-}
-
-export function HoldItem({ item, onClick, onTrim, isFocused, intelligenceSummary }: HoldItemProps) {
-  return (
-    <button
-      type="button"
-      onClick={() => onClick(item.ticker)}
-      className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-border',
-        isFocused && 'ring-1 ring-primary',
-      )}
-    >
-      <span className="text-sm font-semibold text-muted min-w-[60px]">
-        {item.ticker}
-      </span>
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground/5 text-muted">
-        {t('dailyReview.table.hold.holdBadge')}
-      </span>
-      {item.trimSuggestion && (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning">
-          {t('todayPage.actionList.trim')}
-        </span>
-      )}
-      <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
-        {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
-      </span>
-      <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
-      <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
-      <AiSignalBadge summary={intelligenceSummary} />
-      <EarningsBadge ticker={item.ticker} />
-      <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
-      {item.trimSuggestion && onTrim && (
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onTrim(); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onTrim(); } }}
-          className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20 shrink-0 cursor-pointer"
-        >
-          {t('todayPage.actionList.trimAction')}
-        </span>
-      )}
-    </button>
   );
 }
 

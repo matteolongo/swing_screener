@@ -9,7 +9,7 @@ from api.models.portfolio import Position
 from api.models.recommendation import Recommendation
 from api.models.screener import SameSymbolCandidateContext, TaxonomyFilter
 from api.models.strategy import Strategy
-from api.models.watchlist import WatchlistItemView
+from api.models.watchlist import WatchItem, WatchlistItemView
 from swing_screener.recommendation.models import DecisionSummary
 
 
@@ -186,6 +186,7 @@ class DailyReviewComputeRequest(BaseModel):
     strategy: Strategy
     positions: list[Position] = Field(default_factory=list)
     orders: list = Field(default_factory=list)
+    watchlist: list[WatchItem] = Field(default_factory=list)
     top_n: int = Field(default=200, ge=1, le=200)
     universe: Optional[str] = None
     preset: Optional[str] = None

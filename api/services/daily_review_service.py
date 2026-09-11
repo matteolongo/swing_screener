@@ -20,6 +20,7 @@ from api.models.daily_review import (
 )
 from api.models.portfolio import Position, PositionUpdate
 from api.models.screener import ScreenerRequest, TaxonomyFilter
+from api.models.watchlist import WatchItem
 from api.repositories.orders_repo import OrdersRepository
 from api.services.daily_review import DailyReviewWriter
 from api.services.portfolio_service import PortfolioService
@@ -318,11 +319,17 @@ class DailyReviewService:
             )
         return result
 
-    def _watchlist_near_trigger_items(self) -> list:
+    def _watchlist_near_trigger_items(
+        self, watchlist: list[WatchItem] | None = None, strategy: dict | None = None
+    ) -> list:
         if self.watchlist is None:
             return []
         try:
-            items = self.watchlist.list_items()
+            items = (
+                self.watchlist.list_items()
+                if watchlist is None
+                else self.watchlist.enrich_items(watchlist, strategy)
+            )
         except Exception:
             logger.exception(
                 "Unable to build watchlist near-trigger section for daily review"
@@ -495,6 +502,7 @@ class DailyReviewService:
         preset: str | None = None,
         taxonomy_filter: "TaxonomyFilter | None" = None,
         include_candidates: bool = True,
+        watchlist: list[WatchItem] | None = None,
     ) -> DailyReview:
         """Compute daily review from client-provided strategy/portfolio state."""
         snapshot = PortfolioStateSnapshot(
@@ -608,8 +616,15 @@ class DailyReviewService:
         positions_close = buckets.close
         positions_exit_signal = buckets.exit_signal
 
+        screener_tickers = {candidate.ticker.upper() for candidate in candidates}
+        watchlist_near_trigger = [
+            item
+            for item in self._watchlist_near_trigger_items(watchlist or [], strategy)
+            if item.ticker.upper() not in screener_tickers
+        ]
+
         return DailyReview(
-            watchlist_near_trigger=[],
+            watchlist_near_trigger=watchlist_near_trigger,
             new_candidates=new_candidates,
             positions_add_on_candidates=add_on_candidates,
             positions_hold=positions_hold,
@@ -631,7 +646,7 @@ class DailyReviewService:
                 exit_signal=len(positions_exit_signal),
                 new_candidates=len(new_candidates),
                 add_on_candidates=len(add_on_candidates),
-                watchlist_near_trigger=0,
+                watchlist_near_trigger=len(watchlist_near_trigger),
                 evaluation_error_count=len(evaluation_errors),
                 review_date=date.today(),
             ),

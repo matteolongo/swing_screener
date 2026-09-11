@@ -1,4 +1,8 @@
 from datetime import date
+from unittest.mock import Mock
+
+import pandas as pd
+import pytest
 
 from fastapi.testclient import TestClient
 
@@ -10,6 +14,9 @@ from api.models.daily_review import (
     DailyReviewSummary,
 )
 from api.routers.daily_review import get_daily_review_service
+from api.services.daily_review_service import DailyReviewService
+from api.services.watchlist_service import WatchlistService
+from swing_screener.strategy.storage import _default_strategy_payload
 
 
 class StubDailyReviewService:
@@ -26,6 +33,7 @@ class StubDailyReviewService:
         preset=None,
         taxonomy_filter=None,
         include_candidates=True,
+        watchlist=None,
     ):
         self.received = {
             "strategy": strategy,
@@ -36,6 +44,7 @@ class StubDailyReviewService:
             "preset": preset,
             "taxonomy_filter": taxonomy_filter,
             "include_candidates": include_candidates,
+            "watchlist": watchlist,
         }
         return DailyReview(
             new_candidates=[
@@ -160,6 +169,64 @@ def test_daily_review_compute_endpoint():
         assert stub_service.received["strategy"]["id"] == active_strategy["id"]
         assert len(stub_service.received["positions"]) == 1
         assert stub_service.received["orders"][0]["order_id"] == "ORD-AAPL-ENTRY-TEST"
+    finally:
+        app.dependency_overrides.pop(get_daily_review_service, None)
+
+
+@pytest.mark.parametrize(
+    "tickers, expected", [(["NEAR", "FAR", "ABOVE"], ["NEAR"]), ([], [])]
+)
+def test_compute_enriches_only_client_watchlist_without_reading_server_state(
+    tmp_path, tickers, expected
+):
+    class Provider:
+        def fetch_ohlcv(self, symbols, start_date, end_date):
+            prices = {"NEAR": 99.0, "FAR": 90.0, "ABOVE": 101.0}
+            return pd.DataFrame(
+                [[100.0] * len(symbols)] * 69
+                + [[prices[symbol] for symbol in symbols]],
+                index=pd.date_range("2026-06-01", periods=70),
+                columns=pd.MultiIndex.from_product([["Close"], symbols]),
+            )
+
+    watchlist_repo = Mock()
+    watchlist_repo.list_items.side_effect = AssertionError("must use local watchlist")
+    strategy_repo = Mock()
+    strategy_repo.get_active_strategy.side_effect = AssertionError(
+        "must use local strategy"
+    )
+    screener = Mock()
+    service = DailyReviewService(
+        screener,
+        Mock(),
+        watchlist_service=WatchlistService(watchlist_repo, strategy_repo, Provider()),
+        data_dir=tmp_path,
+    )
+    app.dependency_overrides[get_daily_review_service] = lambda: service
+    try:
+        response = TestClient(app).post(
+            "/api/daily-review/compute",
+            json={
+                "strategy": _default_strategy_payload(),
+                "positions": [],
+                "orders": [],
+                "include_candidates": False,
+                "watchlist": [
+                    {"ticker": ticker, "watched_at": "2026-09-11", "source": "manual"}
+                    for ticker in tickers
+                ],
+            },
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert [item["ticker"] for item in body["watchlist_near_trigger"]] == expected
+        assert body["summary"]["watchlist_near_trigger"] == len(expected)
+        if expected:
+            assert body["watchlist_near_trigger"][0]["distance_to_trigger_pct"] == -1.0
+        watchlist_repo.list_items.assert_not_called()
+        strategy_repo.get_active_strategy.assert_not_called()
+        screener.run_screener.assert_not_called()
+        assert not (tmp_path / "daily_reviews").exists()
     finally:
         app.dependency_overrides.pop(get_daily_review_service, None)
 
