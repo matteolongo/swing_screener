@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Screener recommendations now fail closed when a symbol already has a pending
+  entry order or when the order ledger cannot be read, and blocked candidates
+  no longer receive entry approval tokens.
+
 - Trade-plan output now keeps a stable nullable schema for populated, blocked,
   and empty results, preserving machine-readable planning block reasons.
 

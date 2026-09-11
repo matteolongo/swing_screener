@@ -33,6 +33,46 @@ def test_risk_engine_respects_min_rr():
     assert any(r.code == "RR_TOO_LOW" for r in rec.reasons_detailed)
 
 
+@pytest.mark.parametrize(
+    ("order_state", "reason_code"),
+    [
+        ("pending_order_exists", "PENDING_ORDER_EXISTS"),
+        ("order_state_unavailable", "ORDER_STATE_UNAVAILABLE"),
+    ],
+)
+def test_risk_engine_blocks_entries_when_order_state_is_not_clear(
+    order_state, reason_code
+):
+    risk_cfg = RiskConfig(
+        account_size=100000.0,
+        risk_pct=0.01,
+        max_position_pct=0.6,
+        min_shares=1,
+        k_atr=2.0,
+        min_rr=2.0,
+        max_fee_risk_pct=0.2,
+    )
+
+    rec = evaluate_recommendation(
+        signal="breakout",
+        entry=100.0,
+        stop=98.0,
+        shares=100,
+        risk_cfg=risk_cfg,
+        rr_target=2.0,
+        target=105.0,
+        target_source="structural",
+        costs=RiskEngineConfig(
+            commission_pct=0.0, slippage_bps=0.0, fx_estimate_pct=0.0
+        ),
+        order_state=order_state,
+    )
+
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert rec.decision_gates.plan.status == "BLOCK"
+    assert any(r.code == reason_code for r in rec.reasons_detailed)
+
+
 def test_risk_engine_passes_account_to_quote_rate_to_recommendation():
     risk_cfg = RiskConfig(
         account_size=1000.0,
