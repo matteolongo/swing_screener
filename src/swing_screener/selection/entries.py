@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 import pandas as pd
-from swing_screener.utils.dataframe_helpers import get_close_matrix, sma
+
 from swing_screener.settings import get_settings_manager
+from swing_screener.utils.dataframe_helpers import get_close_matrix, sma
 
 
 def _signal_defaults() -> dict:
@@ -84,7 +85,7 @@ def _get_volume_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame | None:
 def build_signal_board(
     ohlcv: pd.DataFrame,
     tickers: Iterable[str],
-    cfg: EntrySignalConfig = EntrySignalConfig(),
+    cfg: EntrySignalConfig | None = None,
 ) -> pd.DataFrame:
     """
     Returns DataFrame indexed by ticker with:
@@ -94,6 +95,7 @@ def build_signal_board(
       - signal in {'both','breakout','pullback','none'}
       - breakout_volume_confirmation (bool, optional — present when volume data available)
     """
+    cfg = cfg or EntrySignalConfig()
     close = get_close_matrix(ohlcv)
     vol_matrix = _get_volume_matrix(ohlcv)
 

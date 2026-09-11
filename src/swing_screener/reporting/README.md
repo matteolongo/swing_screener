@@ -42,6 +42,8 @@ for w in warnings:
 
 ### `build_daily_report(ohlcv, cfg, exclude_tickers, ..., market_phase="unknown")`
 Delegates to `strategy.orchestrator.build_strategy_report()`. Returns a DataFrame indexed by ticker with columns including `signal`, `score`, `entry`, `stop`, `shares`, `realized_risk`, etc. `market_phase` participates in evaluation-cache identity so intraday rows cannot satisfy a final-close cache lookup.
+When `cfg` is omitted, a fresh `ReportConfig` is resolved at call time so
+runtime YAML overrides are not captured during module import.
 
 ### `export_report_csv(report, path="out/daily_report.csv")`
 Saves the report DataFrame to CSV. Creates parent directories automatically.

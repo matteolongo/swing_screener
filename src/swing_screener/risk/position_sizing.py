@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
-from typing import Optional, Dict, Any
-import re
-
 import math
+import re
+from dataclasses import dataclass, field, replace
+from typing import Any
+
 import pandas as pd
+
 from swing_screener.risk.currency import normalize_account_to_quote_rate
 from swing_screener.settings import get_settings_manager
 
@@ -59,7 +60,7 @@ def _empty_trade_plans() -> pd.DataFrame:
 
 @dataclass(frozen=True)
 class PositionPlanOutcome:
-    plan: Optional[Dict[str, Any]]
+    plan: dict[str, Any] | None
     status: str
     block_reason: str | None = None
 
@@ -146,7 +147,7 @@ def _normalize_currency(value: object, fallback: str = "EUR") -> str:
     return normalized or fallback.upper()
 
 
-def _normalize_quote_currency(value: object, account_currency: str) -> Optional[str]:
+def _normalize_quote_currency(value: object, account_currency: str) -> str | None:
     if value is None:
         return account_currency
     try:
@@ -164,8 +165,8 @@ def _lookup_account_to_quote_rate(
     *,
     account_currency: str,
     quote_currency: str,
-    account_to_quote_rates: Optional[Dict[str, float]],
-) -> Optional[float]:
+    account_to_quote_rates: dict[str, float] | None,
+) -> float | None:
     if quote_currency == account_currency:
         return 1.0
     if not account_to_quote_rates:
@@ -193,11 +194,11 @@ def compute_stop(entry: float, atr14: float, k_atr: float) -> float:
 def position_plan(
     entry: float,
     atr14: float,
-    cfg: RiskConfig = RiskConfig(),
+    cfg: RiskConfig | None = None,
     *,
-    quote_currency: Optional[str] = None,
-    account_to_quote_rate: Optional[float] = None,
-) -> Optional[Dict[str, Any]]:
+    quote_currency: str | None = None,
+    account_to_quote_rate: float | None = None,
+) -> dict[str, Any] | None:
     """
     Build a position plan constrained by:
       - risk budget (account_size * risk_pct)
@@ -205,6 +206,7 @@ def position_plan(
 
     Returns dict with entry/stop/shares/etc or None if not tradable.
     """
+    cfg = cfg or RiskConfig()
     entry = _finite_positive("entry", entry)
     atr14 = _finite_positive("atr14", atr14)
     account_size = _finite_positive("account_size", cfg.account_size)
@@ -286,12 +288,12 @@ def position_plan(
 def build_trade_plans(
     ranked_universe: pd.DataFrame,
     signal_board: pd.DataFrame,
-    cfg: RiskConfig = RiskConfig(),
-    atr_col: Optional[str] = None,
-    risk_multipliers: Optional[Dict[str, float]] = None,
-    max_position_multipliers: Optional[Dict[str, float]] = None,
-    account_to_quote_rates: Optional[Dict[str, float]] = None,
-    vetoes: Optional[set[str]] = None,
+    cfg: RiskConfig | None = None,
+    atr_col: str | None = None,
+    risk_multipliers: dict[str, float] | None = None,
+    max_position_multipliers: dict[str, float] | None = None,
+    account_to_quote_rates: dict[str, float] | None = None,
+    vetoes: set[str] | None = None,
 ) -> pd.DataFrame:
     """
     ranked_universe: per-ticker features (must include atr14 and last)
@@ -299,6 +301,7 @@ def build_trade_plans(
 
     Returns per-ticker trade plan for tickers with signal != 'none' and tradable sizing.
     """
+    cfg = cfg or RiskConfig()
     if ranked_universe is None or ranked_universe.empty:
         return _empty_trade_plans()
 

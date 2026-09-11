@@ -17,6 +17,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Reporting, selection, sizing, and execution APIs now resolve omitted configs
+  at call time and share one request-scoped execution config through reporting.
+
 - Sector concentration warnings now deduplicate tickers, use every unique
   candidate as the denominator, include exact-threshold matches, and sort all
   qualifying named sectors deterministically.

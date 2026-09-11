@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 import pandas as pd
 
-from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.strategy.registry import get_strategy_module
+from swing_screener.strategy.report_config import ReportConfig
 
 
 def build_strategy_report(
     ohlcv: pd.DataFrame,
-    cfg: ReportConfig = ReportConfig(),
+    cfg: ReportConfig | None = None,
     exclude_tickers: Iterable[str] | None = None,
     sector_benchmark_returns: dict[str, float] | None = None,
     account_to_quote_rates: dict[str, float] | None = None,
@@ -20,6 +20,7 @@ def build_strategy_report(
     force_refresh: bool = False,
     market_phase: str = "unknown",
 ) -> pd.DataFrame:
+    cfg = cfg or ReportConfig()
     module = get_strategy_module(cfg.strategy_module)
     return module.build_report(
         ohlcv,
