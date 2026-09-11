@@ -6,16 +6,14 @@ from datetime import date
 from pathlib import Path
 from typing import Callable, Literal, Optional
 
-from swing_screener.errors import DomainError
-
 from api.models.daily_review import (
     DailyReview,
     DailyReviewCandidate,
+    DailyReviewPositionClose,
+    DailyReviewPositionEvaluationError,
+    DailyReviewPositionExitSignal,
     DailyReviewPositionHold,
     DailyReviewPositionUpdate,
-    DailyReviewPositionClose,
-    DailyReviewPositionExitSignal,
-    DailyReviewPositionEvaluationError,
     DailyReviewSummary,
     PendingOrderReview,
     TrimSuggestion,
@@ -23,10 +21,15 @@ from api.models.daily_review import (
 from api.models.portfolio import Position, PositionUpdate
 from api.models.screener import ScreenerRequest, TaxonomyFilter
 from api.repositories.orders_repo import OrdersRepository
-from api.services.screener_service import PortfolioStateSnapshot, ScreenerService
-from api.services.portfolio_service import PortfolioService
-from api.services.watchlist_service import WatchlistService
 from api.services.daily_review import DailyReviewWriter
+from api.services.portfolio_service import PortfolioService
+from api.services.screener_service import (
+    PortfolioStateSnapshot,
+    ScreenerRunPolicy,
+    ScreenerService,
+)
+from api.services.watchlist_service import WatchlistService
+from swing_screener.errors import DomainError
 from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 
 logger = logging.getLogger(__name__)
@@ -113,7 +116,6 @@ class DailyReviewService:
         self.orders_repo = orders_repo
         self.data_dir = data_dir
         self.daily_reviews_dir = data_dir / "daily_reviews"
-        self.daily_reviews_dir.mkdir(parents=True, exist_ok=True)
         self._writer = DailyReviewWriter(self.daily_reviews_dir)
 
     def generate_daily_review(
@@ -123,6 +125,7 @@ class DailyReviewService:
         preset: str | None = None,
         taxonomy_filter: "TaxonomyFilter | None" = None,
         include_candidates: bool = True,
+        persist: bool = False,
     ) -> DailyReview:
         """
         Generate comprehensive daily review.
@@ -148,7 +151,9 @@ class DailyReviewService:
                 preset=preset or None,
                 taxonomy_filter=taxonomy_filter,
             )
-            screener_result = self.screener.run_screener(screener_request)
+            screener_result = self.screener.run_screener(
+                screener_request, run_policy=ScreenerRunPolicy.read_only()
+            )
             candidates = screener_result.candidates[:top_n]
 
         # Re-entries are fresh buy decisions (no open position), so rank them
@@ -249,10 +254,14 @@ class DailyReviewService:
             pending_orders_review=pending_orders_review,
         )
 
-        # Save to historical file (use "default" as strategy name for now)
-        self._writer.save(review, "default")
+        if persist:
+            self.save_snapshot(review, "default")
 
         return review
+
+    def save_snapshot(self, review: DailyReview, strategy_name: str) -> None:
+        """Persist a snapshot only in response to an explicit command."""
+        self._writer.save(review, strategy_name)
 
     def _build_pending_orders_review(self) -> list[PendingOrderReview]:
         """Build PendingOrderReview items for all pending entry orders."""
@@ -510,6 +519,7 @@ class DailyReviewService:
                 screener_request,
                 strategy_override=strategy,
                 state_snapshot=snapshot,
+                run_policy=ScreenerRunPolicy.read_only(),
             )
             candidates = screener_result.candidates[:top_n]
 

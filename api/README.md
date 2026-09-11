@@ -250,8 +250,9 @@ Portfolio (`/api/portfolio`):
 - `DELETE /api/portfolio/orders/{order_id}`
 
 Daily Review (`/api/daily-review`):
-- `GET /api/daily-review` — accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) for the legacy combined review. Pass `include_candidates=false` for a portfolio/watchlist-only review that does not run the screener.
-- `POST /api/daily-review/compute` — supports the same `include_candidates` switch for local-persistence mode.
+- `GET /api/daily-review` — read-only computation that accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) for the legacy combined review. Pass `include_candidates=false` for a portfolio/watchlist-only review that does not run the screener.
+- `POST /api/daily-review/compute` — read-only stateless computation from the supplied strategy, positions, and orders; supports the same `include_candidates` switch for local-persistence mode.
+- `POST /api/daily-review/snapshots` — the explicit persistence command. It validates a computed `review` plus a filesystem-safe `strategy_name`, then atomically writes one dated snapshot. Computation routes do not write snapshots, evaluation-cache entries, or review-queue artifacts.
 
 The compute endpoint treats its validated `positions` and `orders` as one
 immutable, authoritative snapshot for the entire request. Pending-order review,

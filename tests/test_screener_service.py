@@ -460,12 +460,12 @@ def _make_fx_ohlcv(ticker: str, rate: float) -> pd.DataFrame:
 
 def _make_screener_service(tmp_path):
     """Build a ScreenerService with minimal stubs and a tmp_path-backed EvalCache."""
-    from api.services.screener_service import ScreenerService
     from api.repositories.strategy_repo import StrategyRepository
     from api.services.portfolio_service import PortfolioService
-    from swing_screener.selection.eval_cache import EvalCache
-    from swing_screener.data.source_health import DataSourceHealth
+    from api.services.screener_service import ScreenerService
     from swing_screener.data.providers import MarketDataProvider
+    from swing_screener.data.source_health import DataSourceHealth
+    from swing_screener.selection.eval_cache import EvalCache
 
     mock_strategy_repo = MagicMock(spec=StrategyRepository)
     mock_strategy_repo.get_active_strategy.return_value = {}
@@ -496,7 +496,6 @@ def _make_screener_service(tmp_path):
 
 def test_run_screener_response_counts_distinct_pipeline_stages(tmp_path, monkeypatch):
     import api.services.screener_service as screener_svc_mod
-
     from api.models.screener import ScreenerRequest
 
     svc, _eval_cache, mock_provider = _make_screener_service(tmp_path)
@@ -579,7 +578,6 @@ def test_run_screener_response_counts_distinct_pipeline_stages(tmp_path, monkeyp
 
 def test_run_daily_report_passes_eurusd_rate_for_usd_quotes(tmp_path, monkeypatch):
     import api.services.screener_service as screener_svc_mod
-
     from api.models.screener import ScreenerRequest
     from api.services.screener_service import _RunContext
     from swing_screener.recommendation.priority import CombinedPriorityConfig
@@ -742,9 +740,9 @@ def test_mixed_universe_reuses_cached_symbols(tmp_path, monkeypatch):
         lambda ticker_sectors, etf_returns: {},
     )
 
-    from swing_screener.strategy.report_config import ReportConfig
-    from api.services.screener_service import _RunContext
     from api.models.screener import ScreenerRequest
+    from api.services.screener_service import _RunContext
+    from swing_screener.strategy.report_config import ReportConfig
 
     def _make_ctx(tickers, ohlcv, asof="2024-01-05"):
         req = ScreenerRequest(asof_date=asof, top=10)
@@ -878,10 +876,10 @@ def test_force_refresh_bypasses_cache(tmp_path, monkeypatch):
         lambda ticker_sectors, etf_returns: {},
     )
 
-    from swing_screener.strategy.report_config import ReportConfig
-    from swing_screener.recommendation.priority import CombinedPriorityConfig
-    from api.services.screener_service import _RunContext
     from api.models.screener import ScreenerRequest
+    from api.services.screener_service import _RunContext
+    from swing_screener.recommendation.priority import CombinedPriorityConfig
+    from swing_screener.strategy.report_config import ReportConfig
 
     def _make_ctx(tickers_list, ohlcv_df, asof="2024-01-05", force_refresh=False):
         req = ScreenerRequest(asof_date=asof, top=10, force_refresh=force_refresh)
@@ -926,17 +924,17 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
     """
     import api.services.screener_service as screener_svc_mod
     import swing_screener.strategy.modules.momentum as momentum_mod
-    from api.services.daily_review_service import DailyReviewService
-    from api.services.screener_service import ScreenerService, _RunContext
-    from api.repositories.strategy_repo import StrategyRepository
-    from api.services.portfolio_service import PortfolioService
-    from swing_screener.selection.eval_cache import EvalCache
-    from swing_screener.data.source_health import DataSourceHealth
-    from swing_screener.data.providers import MarketDataProvider
-    from swing_screener.strategy.report_config import ReportConfig
-    from swing_screener.recommendation.priority import CombinedPriorityConfig
-    from api.models.screener import ScreenerRequest
     from api.models.portfolio import PositionsResponse
+    from api.models.screener import ScreenerRequest
+    from api.repositories.strategy_repo import StrategyRepository
+    from api.services.daily_review_service import DailyReviewService
+    from api.services.portfolio_service import PortfolioService
+    from api.services.screener_service import ScreenerService, _RunContext
+    from swing_screener.data.providers import MarketDataProvider
+    from swing_screener.data.source_health import DataSourceHealth
+    from swing_screener.recommendation.priority import CombinedPriorityConfig
+    from swing_screener.selection.eval_cache import EvalCache
+    from swing_screener.strategy.report_config import ReportConfig
 
     ASOF = "2024-01-05"
     tickers = ["AAA", "BBB", "SPY"]
@@ -1075,8 +1073,10 @@ def test_daily_review_reuses_manual_screen_cache(tmp_path, monkeypatch):
     # is where the EvalCache hit/miss decision happens.
     from api.models.screener import ScreenerResponse
 
-    def _patched_run_screener(request, strategy_override=None):
+    def _patched_run_screener(request, strategy_override=None, run_policy=None):
         ctx = _make_ctx(tickers, ohlcv, asof=ASOF)
+        if run_policy is not None:
+            ctx.run_policy = run_policy
         dr_screener._run_daily_report(ctx, requested_top=10)
         return ScreenerResponse(
             candidates=[], asof_date=ASOF, total_screened=len(tickers)
@@ -1144,12 +1144,12 @@ def _pool_symbol(symbol, **kw):
 
 
 def _make_screener_service_with_pool(tmp_path, symbols, queue=None):
-    from api.services.screener_service import ScreenerService
     from api.repositories.strategy_repo import StrategyRepository
     from api.services.portfolio_service import PortfolioService
-    from swing_screener.selection.eval_cache import EvalCache
-    from swing_screener.data.source_health import DataSourceHealth
+    from api.services.screener_service import ScreenerService
     from swing_screener.data.providers import MarketDataProvider
+    from swing_screener.data.source_health import DataSourceHealth
+    from swing_screener.selection.eval_cache import EvalCache
 
     mock_strategy_repo = MagicMock(spec=StrategyRepository)
     mock_strategy_repo.get_active_strategy.return_value = {}
@@ -1177,6 +1177,7 @@ def _make_screener_service_with_pool(tmp_path, symbols, queue=None):
 def test_fetch_ohlcv_chunked_forwards_force_refresh():
     """_fetch_ohlcv_chunked must pass force_refresh through to provider.fetch_ohlcv."""
     from unittest.mock import MagicMock
+
     from api.services.screener_service import _fetch_ohlcv_chunked
     from swing_screener.data.providers import MarketDataProvider
     from swing_screener.data.providers.base import MarketDataCachePolicy
@@ -1252,8 +1253,8 @@ def test_market_data_cache_policy_only_requires_current_final_close():
 def test_stale_cache_fallback_downgrades_run_freshness():
     from api.models.screener import ScreenerRequest
     from api.services.screener_service import (
-        _RunContext,
         _apply_market_data_provenance,
+        _RunContext,
     )
 
     ctx = _RunContext(request=ScreenerRequest(), strategy={})
@@ -1270,8 +1271,8 @@ def test_stale_cache_fallback_downgrades_run_freshness():
 
 
 def test_resolve_universe_prefilters_from_pool(tmp_path):
-    from api.services.screener_service import _RunContext
     from api.models.screener import ScreenerRequest, TaxonomyFilter
+    from api.services.screener_service import _RunContext
 
     symbols = [
         _pool_symbol("AAPL", region="us"),
@@ -1288,8 +1289,8 @@ def test_resolve_universe_prefilters_from_pool(tmp_path):
 
 
 def test_resolve_universe_excludes_review_queue(tmp_path):
-    from api.services.screener_service import _RunContext
     from api.models.screener import ScreenerRequest, TaxonomyFilter
+    from api.services.screener_service import _RunContext
 
     symbols = [_pool_symbol("AAPL", region="us"), _pool_symbol("MSFT", region="us")]
     svc = _make_screener_service_with_pool(
@@ -1303,8 +1304,8 @@ def test_resolve_universe_excludes_review_queue(tmp_path):
 
 
 def test_universe_alias_maps_to_index_membership(tmp_path):
-    from api.services.screener_service import _RunContext
     from api.models.screener import ScreenerRequest
+    from api.services.screener_service import _RunContext
 
     symbols = [
         _pool_symbol("AAPL", index_memberships=["us_sp500"]),
@@ -1321,14 +1322,14 @@ def test_universe_alias_maps_to_index_membership(tmp_path):
 def test_record_fetch_health_enqueues_on_threshold(tmp_path):
     import json
 
-    from api.services.screener_service import ScreenerService, _RunContext
+    from api.models.screener import ScreenerRequest
+    from api.repositories.review_queue_repo import ReviewQueueRepository
     from api.repositories.strategy_repo import StrategyRepository
     from api.repositories.symbol_pool_repo import SymbolPoolRepository
-    from api.repositories.review_queue_repo import ReviewQueueRepository
     from api.services.portfolio_service import PortfolioService
-    from api.models.screener import ScreenerRequest
-    from swing_screener.selection.eval_cache import EvalCache
+    from api.services.screener_service import ScreenerService, _RunContext
     from swing_screener.data.providers import MarketDataProvider
+    from swing_screener.selection.eval_cache import EvalCache
 
     pool_path = tmp_path / "symbol_pool.json"
     pool_path.write_text(
@@ -1385,14 +1386,14 @@ def test_record_fetch_health_enqueues_on_threshold(tmp_path):
 def test_record_fetch_health_skips_increment_on_systemic_outage(tmp_path):
     import json
 
-    from api.services.screener_service import ScreenerService, _RunContext
+    from api.models.screener import ScreenerRequest
+    from api.repositories.review_queue_repo import ReviewQueueRepository
     from api.repositories.strategy_repo import StrategyRepository
     from api.repositories.symbol_pool_repo import SymbolPoolRepository
-    from api.repositories.review_queue_repo import ReviewQueueRepository
     from api.services.portfolio_service import PortfolioService
-    from api.models.screener import ScreenerRequest
-    from swing_screener.selection.eval_cache import EvalCache
+    from api.services.screener_service import ScreenerService, _RunContext
     from swing_screener.data.providers import MarketDataProvider
+    from swing_screener.selection.eval_cache import EvalCache
 
     pool_path = tmp_path / "symbol_pool.json"
     pool_path.write_text(
