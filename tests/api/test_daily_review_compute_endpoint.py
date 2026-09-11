@@ -3,7 +3,11 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from api.main import app
-from api.models.daily_review import DailyReview, DailyReviewSummary
+from api.models.daily_review import (
+    DailyReview,
+    DailyReviewPositionEvaluationError,
+    DailyReviewSummary,
+)
 from api.routers.daily_review import get_daily_review_service
 
 
@@ -37,12 +41,20 @@ class StubDailyReviewService:
             positions_hold=[],
             positions_update_stop=[],
             positions_close=[],
+            evaluation_errors=[
+                DailyReviewPositionEvaluationError(
+                    symbol="AAPL",
+                    code="position_evaluation_failed",
+                    message="Position evaluation could not be completed.",
+                )
+            ],
             summary=DailyReviewSummary(
                 total_positions=0,
                 no_action=0,
                 update_stop=0,
                 close_positions=0,
                 new_candidates=0,
+                evaluation_error_count=1,
                 review_date=date.today(),
             ),
         )
@@ -109,6 +121,14 @@ def test_daily_review_compute_endpoint():
         assert response.status_code == 200
         body = response.json()
         assert body["summary"]["new_candidates"] == 0
+        assert body["summary"]["evaluation_error_count"] == 1
+        assert body["evaluation_errors"] == [
+            {
+                "symbol": "AAPL",
+                "code": "position_evaluation_failed",
+                "message": "Position evaluation could not be completed.",
+            }
+        ]
 
         assert stub_service.received is not None
         assert stub_service.received["top_n"] == 7
