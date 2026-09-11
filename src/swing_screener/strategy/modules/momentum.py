@@ -8,7 +8,11 @@ from typing import Iterable
 import pandas as pd
 
 from swing_screener.strategy.report_config import ReportConfig
-from swing_screener.selection.eval_cache import strategy_signature
+from swing_screener.selection.eval_cache import (
+    build_evaluation_cache_identities,
+    resolve_benchmark_momentum_6m,
+    strategy_signature,
+)
 from swing_screener.selection.ranking import top_candidates
 from swing_screener.selection.universe import build_universe
 from swing_screener.selection.entries import build_signal_board
@@ -65,13 +69,19 @@ def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
     if report is None or report.empty:
         return pd.Series(dtype=float)
 
-    score = report["score"] if "score" in report.columns else pd.Series(0.0, index=report.index)
+    score = (
+        report["score"]
+        if "score" in report.columns
+        else pd.Series(0.0, index=report.index)
+    )
     score = score.fillna(0.0).clip(lower=0.0, upper=1.0)
 
     # Signal strength (optional - if no signal column, use 0.5 as neutral)
     if "signal" in report.columns:
         sig_map = {"both": 1.0, "breakout": 0.8, "pullback": 0.6, "none": 0.0}
-        sig_strength = report["signal"].map(sig_map).fillna(0.5).clip(lower=0.0, upper=1.0)
+        sig_strength = (
+            report["signal"].map(sig_map).fillna(0.5).clip(lower=0.0, upper=1.0)
+        )
     else:
         sig_strength = pd.Series(0.5, index=report.index)
 
@@ -185,11 +195,15 @@ def build_momentum_report(
     if exclude:
         records = records.drop(index=list(exclude), errors="ignore")
 
-    eligible = records[records["is_eligible"]] if "is_eligible" in records.columns else records
+    eligible = (
+        records[records["is_eligible"]] if "is_eligible" in records.columns else records
+    )
     if eligible.empty:
         return pd.DataFrame()
     sort_cols = [c for c in ["mom_6m", "rs_6m"] if c in eligible.columns]
-    eligible = eligible.sort_values(sort_cols, ascending=False) if sort_cols else eligible
+    eligible = (
+        eligible.sort_values(sort_cols, ascending=False) if sort_cols else eligible
+    )
 
     # Rank on the universe-feature columns only (see ``_ranking_input``). In the
     # original pipeline ranking ran on the eligible feature table *before* the
@@ -255,20 +269,42 @@ def build_momentum_report(
     # tidy columns order
     ma_col = f"ma{cfg.signals.pullback_ma}_level"
     keep = [
-        "rank", "score", "confidence",
-        "last", "currency", atr_col, "atr_pct",
-        "mom_6m", "mom_12m", "rs_6m", "sector_rs_6m",
-        "sma20_slope", "sma50_slope",
-        "trend_ok", "dist_sma50_pct", "dist_sma200_pct",
+        "rank",
+        "score",
+        "confidence",
+        "last",
+        "currency",
+        atr_col,
+        "atr_pct",
+        "mom_6m",
+        "mom_12m",
+        "rs_6m",
+        "sector_rs_6m",
+        "sma20_slope",
+        "sma50_slope",
+        "trend_ok",
+        "dist_sma50_pct",
+        "dist_sma200_pct",
         "weekly_trend",
         "signal",
-        "breakout_level", ma_col,
-        "consolidation_tightness", "close_location_in_range",
-        "above_breakout_extension", "breakout_volume_confirmation",
-        "dist_52w_high_pct", "near_52w_high",
-        "volume_ratio", "avg_daily_volume_eur",
-        "entry", "stop", "shares", "position_value", "position_value_account",
-        "realized_risk", "realized_risk_account", "account_to_quote_rate",
+        "breakout_level",
+        ma_col,
+        "consolidation_tightness",
+        "close_location_in_range",
+        "above_breakout_extension",
+        "breakout_volume_confirmation",
+        "dist_52w_high_pct",
+        "near_52w_high",
+        "volume_ratio",
+        "avg_daily_volume_eur",
+        "entry",
+        "stop",
+        "shares",
+        "position_value",
+        "position_value_account",
+        "realized_risk",
+        "realized_risk_account",
+        "account_to_quote_rate",
     ]
     keep = [c for c in keep if c in report.columns]
     report = report[keep]
@@ -280,7 +316,9 @@ def build_momentum_report(
     if "signal" in report.columns and "score" in report.columns:
         order = {"both": 0, "breakout": 1, "pullback": 2, "none": 3}
         report["signal_order"] = report["signal"].map(order).fillna(99).astype(int)
-        report = report.sort_values(["signal_order", "score"], ascending=[True, False]).drop(columns=["signal_order"])
+        report = report.sort_values(
+            ["signal_order", "score"], ascending=[True, False]
+        ).drop(columns=["signal_order"])
 
     report = add_execution_guidance(report)
     return report
@@ -299,6 +337,7 @@ class MomentumStrategyModule:
         eval_cache=None,
         asof_date: str | None = None,
         force_refresh: bool = False,
+        market_phase: str = "unknown",
         account_to_quote_rates: dict[str, float] | None = None,
         quote_to_eur_rates: dict[str, float] | None = None,
     ) -> pd.DataFrame:
@@ -318,24 +357,49 @@ class MomentumStrategyModule:
             if "Close" in set(level0)
             else []
         )
+        benchmark_mom_6m = resolve_benchmark_momentum_6m(
+            ohlcv,
+            cfg.universe.mom.benchmark,
+            cfg.universe.mom.lookback_6m,
+        )
+        identities = build_evaluation_cache_identities(
+            ohlcv,
+            all_tickers,
+            asof=asof_date,
+            market_phase=market_phase,
+            strategy_signature=sig,
+            sector_benchmark_returns=sector_benchmark_returns,
+            benchmark_momentum_6m=benchmark_mom_6m,
+        )
         if force_refresh:
             hits, misses = pd.DataFrame(), all_tickers
         else:
-            hits, misses = eval_cache.split(all_tickers, asof=asof_date, sig=sig)
+            hits, misses = eval_cache.split(all_tickers, identities=identities)
         miss_records = pd.DataFrame()
         if misses:
-            miss_ohlcv = ohlcv.loc[:, ohlcv.columns.get_level_values(1).isin(misses)]
+            benchmark_ticker = str(cfg.universe.mom.benchmark).strip().upper()
+            needed = set(misses)
+            if benchmark_ticker and benchmark_ticker in {
+                str(t).strip().upper() for t in all_tickers
+            }:
+                needed.add(benchmark_ticker)
+            level1 = ohlcv.columns.get_level_values(1)
+            mask = [str(t).strip().upper() in needed for t in level1]
+            miss_ohlcv = ohlcv.loc[:, mask]
             miss_records = compute_symbol_records(
                 miss_ohlcv,
                 cfg,
                 sector_benchmark_returns=sector_benchmark_returns,
                 quote_to_eur_rates=quote_to_eur_rates,
             )
-            eval_cache.write(miss_records, asof=asof_date, sig=sig)
+            eval_cache.write(miss_records, identities=identities)
         frames = [f for f in (hits, miss_records) if f is not None and not f.empty]
         records = pd.concat(frames) if frames else pd.DataFrame()
         if not records.empty:
             records = records[~records.index.duplicated(keep="last")]
+            records = records.reindex(
+                [ticker for ticker in all_tickers if ticker in records.index]
+            )
         return build_momentum_report(
             ohlcv,
             cfg=cfg,
