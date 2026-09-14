@@ -52,6 +52,7 @@
 | `[FE][01]` | Complete; [#467](https://github.com/matteolongo/swing_screener/pull/467) | `codex/consume-execution-eligibility` | Frontend transforms and validates the fail-closed backend capability/draft; unsigned or malformed drafts, signal fallbacks, fabricated plans, and browser position-cap policy are removed. Focused tests: 90 passed; lint/build/diff-check passed. Baseline typecheck and MSW/happy-dom runner failures are documented in the PR. |
 | `[FE][02]` | Complete; [#468](https://github.com/matteolongo/swing_screener/pull/468) | `codex/preserve-reporting-run-identity` | Source-aware workspace selections preserve pinned/last-run candidate identity, ad-hoc analysis remains local, and strategy activation invalidates actionable persisted runs. Focused assertions: 84 passed; lint/build/diff-check passed. Baseline typecheck and MSW/happy-dom runner failures are documented in the PR. |
 | `[FE][03]` | Complete; [#470](https://github.com/matteolongo/swing_screener/pull/470) | `codex/refresh-daily-review-state` | Order lifecycle transitions invalidate Daily Review (and positions after fills); Today composes independently loaded positions, backend-filtered watchlist near-trigger rows, pinned candidates, and portfolio review state. Local reviews submit the browser watchlist and strategy to stateless compute; API reviews use persisted state. Focused assertions: 37 backend and 23 frontend passed; affected Ruff/ESLint, Vite production bundle, and diff-check passed. This worktree's cross-worktree dependency junction (`msw@2.15.0` with `happy-dom@12.10.3`) still blocks both unshimmed MSW integration tests and typecheck with errors outside the FE-03 diff; clean-install CI is authoritative. |
+| `[FE][04]` | Complete; [#472](https://github.com/matteolongo/swing_screener/pull/472) | `codex/align-reporting-contracts` | Registered currencies and explicit unknown values are fail-closed at reporting boundaries; Daily Review errors, candle pressure, provenance, and setup-quality fields are preserved. Strategy validation and persisted/local portfolio analytics consume canonical backend responses. Focused backend: 40 passed. Focused frontend boundary/workspace tests: 56 passed; the linked cross-worktree MSW/happy-dom mismatch still blocks MSW-backed tests and leaves four pre-existing type errors outside this diff. |
 
 BE-19 is specified in `docs/superpowers/plans/2026-09-08-canonical-execution-eligibility.md` and is the first implementation target. Subsequent PRs must use the design's acceptance criteria and the boundaries below when their task-level plans are expanded immediately before execution.
 
@@ -111,17 +112,17 @@ BE-19 is specified in `docs/superpowers/plans/2026-09-08-canonical-execution-eli
 
 ## FE-04 contract: complete reporting contract transforms
 
-- [ ] Match backend currency validation exactly and preserve valid GBP/CHF/other ISO codes.
-- [ ] Keep missing/unknown currency explicit and non-actionable.
-- [ ] Preserve the already-landed screener mappings for `quoteCurrency`, `accountCurrency`, quote/account monetary values, rank provenance, and `dataStatus`.
-- [ ] Map Daily Review `evaluation_errors` and `summary.evaluation_error_count`, candle `bar_pressure`, remaining reporting provenance, and consumed setup-quality fields.
-- [ ] Replace zero-filled nullable Daily Review candidate fields.
-- [ ] Replace `validateStrategyLocally()` with `/api/strategy/validate` for both persistence modes.
-- [ ] Replace `computeAnalyticsStats`, tag-stat calculations, `PortfolioRiskSummary` calculations, and local portfolio metrics with backend responses.
-- [ ] Delete browser execution/portfolio policy from `features/persistence/portfolioService.ts`; retain storage adapters only.
-- [ ] Update shared MSW fixtures to complete snake_case backend shapes.
-- [ ] Map final/current, intraday/degraded, stale, and missing screener provenance to accurate workspace health.
-- [ ] Add complete boundary fixtures and parameterized freshness/currency tests.
+- [x] Match backend currency validation exactly and preserve valid GBP/CHF/other ISO codes.
+- [x] Keep missing/unknown currency explicit and non-actionable.
+- [x] Preserve the already-landed screener mappings for `quoteCurrency`, `accountCurrency`, quote/account monetary values, rank provenance, and `dataStatus`.
+- [x] Map Daily Review `evaluation_errors` and `summary.evaluation_error_count`, candle `bar_pressure`, remaining reporting provenance, and consumed setup-quality fields.
+- [x] Replace zero-filled nullable Daily Review candidate fields.
+- [x] Replace `validateStrategyLocally()` with `/api/strategy/validate` for both persistence modes.
+- [x] Replace `computeAnalyticsStats`, tag-stat calculations, `PortfolioRiskSummary` calculations, and local portfolio metrics with backend responses.
+- [x] Delete browser execution/portfolio policy from `features/persistence/portfolioService.ts`; retain storage adapters only.
+- [x] Update shared MSW fixtures to complete snake_case backend shapes.
+- [x] Map final/current, intraday/degraded, stale, and missing screener provenance to accurate workspace health.
+- [x] Add complete boundary fixtures and parameterized freshness/currency tests.
 
 ## FE-05 contract: repair reporting interactions
 

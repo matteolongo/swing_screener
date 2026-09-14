@@ -10,6 +10,7 @@ import {
   type ScreenerCandidate,
 } from '@/features/screener/types';
 import { type WatchItem, type WatchItemAPI, transformWatchItem } from '@/features/watchlist/types';
+import { normalizeReportingCurrency } from '@/types/currency';
 
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
@@ -34,6 +35,18 @@ export interface DailyReviewCandidateAPI {
   r_reward: number | null;
   name: string | null;
   sector: string | null;
+  data_status?: 'current' | 'stale' | 'intraday' | 'unknown';
+  data_asof?: string | null;
+  degraded_reasons?: string[];
+  intelligence_asof?: string | null;
+  raw_technical_rank?: number | null;
+  combined_priority_score?: number | null;
+  sma20_slope?: number | null;
+  sma50_slope?: number | null;
+  consolidation_tightness?: number | null;
+  close_location_in_range?: number | null;
+  above_breakout_extension?: number | null;
+  breakout_volume_confirmation?: boolean | null;
   volume_ratio?: number | null;
   suggested_order_type?: string | null;
   suggested_order_price?: number | null;
@@ -121,6 +134,7 @@ export interface DailyReviewSummaryAPI {
   new_candidates: number;
   add_on_candidates: number;
   watchlist_near_trigger?: number;
+  evaluation_error_count?: number;
   review_date: string;
 }
 
@@ -140,6 +154,7 @@ export interface DailyReviewAPI {
   positions_update_stop: DailyReviewPositionUpdateAPI[];
   positions_close: DailyReviewPositionCloseAPI[];
   positions_exit_signal?: DailyReviewPositionExitSignalAPI[];
+  evaluation_errors?: DailyReviewPositionEvaluationErrorAPI[];
   summary: DailyReviewSummaryAPI;
   pending_orders_review?: PendingOrderReviewAPI[];
 }
@@ -167,6 +182,18 @@ export interface DailyReviewCandidate {
   rReward: number | null;
   name: string | null;
   sector: string | null;
+  dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+  dataAsOf?: string;
+  degradedReasons?: string[];
+  intelligenceAsOf?: string;
+  rawTechnicalRank?: number;
+  combinedPriorityScore?: number;
+  sma20Slope?: number;
+  sma50Slope?: number;
+  consolidationTightness?: number;
+  closeLocationInRange?: number;
+  aboveBreakoutExtension?: number;
+  breakoutVolumeConfirmation?: boolean;
   volumeRatio?: number;
   suggestedOrderType?: string;
   suggestedOrderPrice?: number;
@@ -204,6 +231,18 @@ export function dailyReviewCandidateFromScreener(candidate: ScreenerCandidate): 
     rReward: candidate.rr ?? null,
     name: candidate.name ?? null,
     sector: candidate.sector ?? null,
+    dataStatus: candidate.dataStatus ?? 'unknown',
+    dataAsOf: candidate.dataAsOf,
+    degradedReasons: candidate.degradedReasons ?? [],
+    intelligenceAsOf: candidate.intelligenceAsOf,
+    rawTechnicalRank: candidate.rawTechnicalRank,
+    combinedPriorityScore: candidate.combinedPriorityScore,
+    sma20Slope: candidate.sma20Slope,
+    sma50Slope: candidate.sma50Slope,
+    consolidationTightness: candidate.consolidationTightness,
+    closeLocationInRange: candidate.closeLocationInRange,
+    aboveBreakoutExtension: candidate.aboveBreakoutExtension,
+    breakoutVolumeConfirmation: candidate.breakoutVolumeConfirmation,
     volumeRatio: candidate.volumeRatio,
     suggestedOrderType: candidate.suggestedOrderType,
     suggestedOrderPrice: candidate.suggestedOrderPrice,
@@ -281,6 +320,7 @@ export interface DailyReviewSummary {
   newCandidates: number;
   addOnCandidates: number;
   watchlistNearTrigger: number;
+  evaluationErrorCount: number;
   reviewDate: string;
 }
 
@@ -300,15 +340,24 @@ export interface DailyReview {
   positionsUpdateStop: DailyReviewPositionUpdate[];
   positionsClose: DailyReviewPositionClose[];
   positionsExitSignal: DailyReviewPositionExitSignal[];
+  evaluationErrors: DailyReviewPositionEvaluationError[];
   summary: DailyReviewSummary;
   pendingOrdersReview?: PendingOrderReview[];
 }
+
+export interface DailyReviewPositionEvaluationErrorAPI {
+  symbol: string;
+  code: 'position_evaluation_failed';
+  message: string;
+}
+
+export type DailyReviewPositionEvaluationError = DailyReviewPositionEvaluationErrorAPI;
 
 // Transform functions
 export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCandidate {
   return {
     ticker: api.ticker,
-    currency: api.currency === 'EUR' ? 'EUR' : 'USD',
+    currency: normalizeReportingCurrency(api.currency),
     rank: api.rank ?? undefined,
     priorityRank: api.priority_rank ?? undefined,
     confidence: api.confidence ?? undefined,
@@ -328,6 +377,18 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
     rReward: api.r_reward,
     name: api.name,
     sector: api.sector,
+    dataStatus: api.data_status ?? 'unknown',
+    dataAsOf: api.data_asof ?? undefined,
+    degradedReasons: api.degraded_reasons ?? [],
+    intelligenceAsOf: api.intelligence_asof ?? undefined,
+    rawTechnicalRank: api.raw_technical_rank ?? undefined,
+    combinedPriorityScore: api.combined_priority_score ?? undefined,
+    sma20Slope: api.sma20_slope ?? undefined,
+    sma50Slope: api.sma50_slope ?? undefined,
+    consolidationTightness: api.consolidation_tightness ?? undefined,
+    closeLocationInRange: api.close_location_in_range ?? undefined,
+    aboveBreakoutExtension: api.above_breakout_extension ?? undefined,
+    breakoutVolumeConfirmation: api.breakout_volume_confirmation ?? undefined,
     volumeRatio: api.volume_ratio ?? undefined,
     suggestedOrderType: api.suggested_order_type ?? undefined,
     suggestedOrderPrice: api.suggested_order_price ?? undefined,
@@ -463,6 +524,7 @@ export function transformSummary(api: DailyReviewSummaryAPI): DailyReviewSummary
     newCandidates: api.new_candidates,
     addOnCandidates: api.add_on_candidates,
     watchlistNearTrigger: api.watchlist_near_trigger ?? 0,
+    evaluationErrorCount: api.evaluation_error_count ?? 0,
     reviewDate: api.review_date,
   };
 }
@@ -486,6 +548,7 @@ export function transformDailyReview(api: DailyReviewAPI): DailyReview {
     positionsUpdateStop: api.positions_update_stop.map(transformPositionUpdate),
     positionsClose: api.positions_close.map(transformPositionClose),
     positionsExitSignal: (api.positions_exit_signal ?? []).map(transformPositionExitSignal),
+    evaluationErrors: api.evaluation_errors ?? [],
     summary: transformSummary(api.summary),
     pendingOrdersReview: (api.pending_orders_review ?? []).map(transformPendingOrderReview),
   };
