@@ -380,6 +380,13 @@ not reported as successful `positions_hold` actions;
 `summary.evaluation_error_count` counts them independently. Unexpected
 request-wide invariant failures still fail the request.
 
+Reporting candidate currency fields normalize against the canonical currency
+registry (`CHF`, `DKK`, `EUR`, `GBP`, `NOK`, `SEK`, `USD`). The explicit
+`UNKNOWN` sentinel is preserved for non-actionable missing metadata; any other
+unregistered code is rejected at model validation. Daily Review candidates also
+carry screener-owned data status/as-of/degradation, intelligence provenance,
+rank provenance, and setup-quality inputs without recomputing them.
+
 Daily Review candidate plan fields `entry`, `stop`, `shares`, and `r_reward`
 are required response keys but are nullable. When the screener has no validated
 plan, the mapper, JSON response, snapshot validation, and frontend boundary

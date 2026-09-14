@@ -2,6 +2,7 @@
 
 import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
 import type { TaxonomyFilterValues } from '@/features/pool/types';
+import { isSupportedCurrency, normalizeReportingCurrency } from '@/types/currency';
 
 export type SameSymbolMode = 'NEW_ENTRY' | 'ADD_ON' | 'MANAGE_ONLY' | 'RE_ENTRY' | 'SCALE_BACK';
 
@@ -35,6 +36,7 @@ export interface CandlePattern {
   keyLevel: number;
   context: 'at_breakout' | 'at_pullback' | 'extended' | 'none';
   volumeRatio?: number;
+  barPressure?: number;
   volumeConfirmed?: boolean;
 }
 
@@ -46,6 +48,7 @@ export interface CandlePatternRaw {
   key_level: number;
   context: string;
   volume_ratio?: number | null;
+  bar_pressure?: number | null;
   volume_confirmed?: boolean | null;
 }
 
@@ -76,6 +79,7 @@ export function transformCandlePattern(raw: CandlePatternRaw): CandlePattern {
     keyLevel: raw.key_level,
     context: toCandlePatternContext(raw.context),
     volumeRatio: raw.volume_ratio ?? undefined,
+    barPressure: raw.bar_pressure ?? undefined,
     volumeConfirmed: raw.volume_confirmed ?? undefined,
   };
 }
@@ -283,6 +287,7 @@ export interface ScreenerCandidate {
   fundamentalsCoverageStatus?: string;
   fundamentalsFreshnessStatus?: string;
   fundamentalsAsOf?: string;
+  intelligenceAsOf?: string;
   fundamentalsSummary?: string;
   signal?: string;
   entry?: number;
@@ -320,6 +325,12 @@ export interface ScreenerCandidate {
   decisionSummary?: DecisionSummary;
   rawTechnicalRank?: number;
   combinedPriorityScore?: number;
+  sma20Slope?: number;
+  sma50Slope?: number;
+  consolidationTightness?: number;
+  closeLocationInRange?: number;
+  aboveBreakoutExtension?: number;
+  breakoutVolumeConfirmation?: boolean;
   volumeRatio?: number;
   avgDailyVolumeEur?: number;
   dist52wHighPct?: number | null;
@@ -436,6 +447,7 @@ export interface ScreenerCandidateAPI {
   fundamentals_coverage_status?: string;
   fundamentals_freshness_status?: string;
   fundamentals_asof?: string;
+  intelligence_asof?: string;
   fundamentals_summary?: string;
   signal?: string;
   entry?: number;
@@ -484,6 +496,12 @@ export interface ScreenerCandidateAPI {
   decision_summary?: DecisionSummaryAPI;
   raw_technical_rank?: number;
   combined_priority_score?: number;
+  sma20_slope?: number | null;
+  sma50_slope?: number | null;
+  consolidation_tightness?: number | null;
+  close_location_in_range?: number | null;
+  above_breakout_extension?: number | null;
+  breakout_volume_confirmation?: boolean | null;
   volume_ratio?: number;
   avg_daily_volume_eur?: number;
   dist_52w_high_pct?: number | null;
@@ -527,7 +545,7 @@ export interface ScreenerResponse {
   benchmarkTicker?: string;
   benchmarkChangePct?: number;
   benchmarkLastBar?: string;
-  dataFreshness: 'final_close' | 'intraday';
+  dataFreshness: 'final_close' | 'intraday' | 'degraded' | 'stale' | 'missing';
   warnings?: string[];
   sameSymbolSuppressedCount?: number;
   sameSymbolAddOnCount?: number;
@@ -544,7 +562,7 @@ export interface ScreenerResponseAPI {
   benchmark_ticker?: string;
   benchmark_change_pct?: number;
   benchmark_last_bar?: string;
-  data_freshness?: 'final_close' | 'intraday';
+  data_freshness?: 'final_close' | 'intraday' | 'degraded' | 'stale' | 'missing';
   warnings?: string[];
   same_symbol_suppressed_count?: number;
   same_symbol_add_on_count?: number;
@@ -715,8 +733,7 @@ function isCanonicalOrderDraft(draft: CanonicalOrderDraft | undefined): draft is
   return Boolean(
     draft
       && (draft.orderType === 'BUY_LIMIT' || draft.orderType === 'BUY_STOP')
-      && /^[A-Z]{3}$/.test(draft.quoteCurrency)
-      && draft.quoteCurrency !== 'UNKNOWN'
+      && isSupportedCurrency(draft.quoteCurrency)
       && typeof draft.approvalToken === 'string' && draft.approvalToken.trim()
       && [draft.entry, draft.stop, draft.target, draft.rr].every((value) => Number.isFinite(value) && value > 0)
       && Number.isInteger(draft.shares) && draft.shares > 0
@@ -755,7 +772,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       approvalToken: c.approval_token ?? undefined,
       executionEligibility: transformExecutionEligibility(c.execution_eligibility),
       canonicalOrderDraft: transformCanonicalOrderDraft(c.canonical_order_draft),
-      currency: c.currency ?? 'UNKNOWN',
+      currency: normalizeReportingCurrency(c.currency),
       exchangeMic: c.exchange_mic,
       instrumentType: c.instrument_type,
       isOtc: c.is_otc ?? undefined,
@@ -783,6 +800,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       fundamentalsCoverageStatus: c.fundamentals_coverage_status,
       fundamentalsFreshnessStatus: c.fundamentals_freshness_status,
       fundamentalsAsOf: c.fundamentals_asof,
+      intelligenceAsOf: c.intelligence_asof,
       fundamentalsSummary: c.fundamentals_summary,
       signal: c.signal,
       entry: c.entry,
@@ -790,8 +808,8 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       target: c.target,
       rr: c.rr,
       shares: c.shares,
-      quoteCurrency: c.quote_currency ?? c.currency ?? 'UNKNOWN',
-      accountCurrency: c.account_currency ?? 'UNKNOWN',
+      quoteCurrency: normalizeReportingCurrency(c.quote_currency ?? c.currency),
+      accountCurrency: normalizeReportingCurrency(c.account_currency),
       entryQuote: c.entry_quote ?? undefined,
       stopQuote: c.stop_quote ?? undefined,
       targetQuote: c.target_quote ?? undefined,
@@ -831,6 +849,12 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       decisionSummary: c.decision_summary ? transformDecisionSummary(c.decision_summary) : undefined,
       rawTechnicalRank: c.raw_technical_rank ?? undefined,
       combinedPriorityScore: c.combined_priority_score ?? undefined,
+      sma20Slope: c.sma20_slope ?? undefined,
+      sma50Slope: c.sma50_slope ?? undefined,
+      consolidationTightness: c.consolidation_tightness ?? undefined,
+      closeLocationInRange: c.close_location_in_range ?? undefined,
+      aboveBreakoutExtension: c.above_breakout_extension ?? undefined,
+      breakoutVolumeConfirmation: c.breakout_volume_confirmation ?? undefined,
       volumeRatio: c.volume_ratio ?? undefined,
       avgDailyVolumeEur: c.avg_daily_volume_eur ?? undefined,
       dist52wHighPct: c.dist_52w_high_pct ?? null,

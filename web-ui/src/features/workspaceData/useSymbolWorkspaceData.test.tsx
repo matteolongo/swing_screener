@@ -270,6 +270,7 @@ describe('useSymbolWorkspaceData', () => {
         selectionVersion: 1,
         candidate: {
           ticker: 'AAPL',
+          dataStatus: 'current',
           lastBar: '2026-07-28',
           dataSourceSummary: {
             marketData: {
@@ -309,6 +310,28 @@ describe('useSymbolWorkspaceData', () => {
       provider: 'finnhub',
       fetchedAt: '2026-07-28T20:00:00Z',
     });
+  });
+
+  it.each([
+    ['current', [], 'fresh'],
+    ['intraday', [], 'partial'],
+    ['current', ['cached_market_data'], 'partial'],
+    ['stale', [], 'stale'],
+    ['unknown', [], 'partial'],
+  ] as const)('maps %s screener provenance to %s workspace health', (dataStatus, degradedReasons, phase) => {
+    const { result } = renderHook(
+      () => useSymbolWorkspaceData({
+        ticker: 'AAPL', selectionVersion: 1, position: null,
+        candidate: {
+          ticker: 'AAPL', dataStatus, degradedReasons: [...degradedReasons], lastBar: '2026-09-12',
+          dataSourceSummary: { marketData: { provider: 'polygon', status: 'ok', qualityScore: 1, warnings: [] } },
+        },
+        screenerRun: { asOf: '2026-09-12', freshness: dataStatus === 'intraday' ? 'intraday' : 'final_close' },
+      }),
+      { wrapper: wrapper(createQueryClient()) },
+    );
+
+    expect(result.current.sourceStates.find(({ id }) => id === 'screener')?.phase).toBe(phase);
   });
 
   it('keeps an empty failed evidence manifest retryable through the shared action', async () => {

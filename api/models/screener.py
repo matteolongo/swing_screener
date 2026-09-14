@@ -7,7 +7,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from api.models.recommendation import Recommendation
-from swing_screener.data.currencies import supported_currency_codes
+from swing_screener.data.currencies import get_currency_definition, supported_currency_codes
 from swing_screener.data.symbol_pool import TaxonomyFilterSpec
 from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.recommendation.models import DecisionSummary
@@ -53,7 +53,7 @@ class SameSymbolCandidateContext(BaseModel):
 class ScreenerCandidate(BaseModel):
     ticker: str
     approval_token: Optional[str] = None
-    currency: str = "USD"
+    currency: str = "UNKNOWN"
     exchange_mic: Optional[str] = None
     instrument_type: Optional[str] = None
     is_otc: Optional[bool] = None
@@ -92,11 +92,11 @@ class ScreenerCandidate(BaseModel):
     rr: Optional[float] = None
     shares: Optional[int] = None
     quote_currency: str = Field(
-        default="USD",
+        default="UNKNOWN",
         description="Currency of entry/stop/target/share-derived money fields",
     )
     account_currency: str = Field(
-        default="EUR",
+        default="UNKNOWN",
         description="Configured account base currency",
     )
     entry_quote: Optional[float] = None
@@ -149,6 +149,12 @@ class ScreenerCandidate(BaseModel):
     patterns: list[CandlePatternOut] = Field(default_factory=list)
     pattern_stop: float | None = None
     pattern_stop_reason: str | None = None
+
+    @field_validator("currency", "quote_currency", "account_currency")
+    @classmethod
+    def validate_currency(cls, value: str) -> str:
+        normalized = str(value).strip().upper()
+        return normalized if normalized == "UNKNOWN" else get_currency_definition(normalized).code
 
 
 class TaxonomyFilter(BaseModel):

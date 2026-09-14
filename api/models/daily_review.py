@@ -3,20 +3,21 @@
 from datetime import date
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
 from api.models.portfolio import OrderSnapshot, Position
 from api.models.screener import SameSymbolCandidateContext, TaxonomyFilter
 from api.models.strategy import Strategy
 from api.models.watchlist import WatchItem, WatchlistItemView
 from swing_screener.recommendation.models import DecisionSummary
+from swing_screener.data.currencies import get_currency_definition
 
 
 class DailyReviewCandidate(BaseModel):
     """A new trade candidate from the screener."""
 
     ticker: str
-    currency: str = "USD"
+    currency: str = "UNKNOWN"
     rank: int | None = None
     priority_rank: int | None = None
     confidence: float | None = None
@@ -36,12 +37,30 @@ class DailyReviewCandidate(BaseModel):
     r_reward: float = Field(..., description="Potential reward in R-multiples")
     name: str | None = None
     sector: str | None = None
+    data_status: Literal["current", "stale", "intraday", "unknown"] = "unknown"
+    data_asof: str | None = None
+    degraded_reasons: list[str] = Field(default_factory=list)
+    intelligence_asof: str | None = None
+    raw_technical_rank: int | None = None
+    combined_priority_score: float | None = None
+    sma20_slope: float | None = None
+    sma50_slope: float | None = None
+    consolidation_tightness: float | None = None
+    close_location_in_range: float | None = None
+    above_breakout_extension: float | None = None
+    breakout_volume_confirmation: bool | None = None
     suggested_order_type: Optional[str] = None
     suggested_order_price: Optional[float] = None
     execution_note: Optional[str] = None
     recommendation: Optional[Recommendation] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
     decision_summary: Optional[DecisionSummary] = None
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, value: str) -> str:
+        normalized = str(value).strip().upper()
+        return normalized if normalized == "UNKNOWN" else get_currency_definition(normalized).code
 
 
 class TrimSuggestion(BaseModel):

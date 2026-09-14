@@ -65,6 +65,38 @@ describe('transformPositionUpdate exhaustion fields', () => {
 });
 
 describe('transformDailyReview', () => {
+  it.each([
+    ['GBP', 'GBP'],
+    [' chf ', 'CHF'],
+    ['XYZ', 'UNKNOWN'],
+    [undefined, 'UNKNOWN'],
+  ])('preserves supported currency %s and fails closed otherwise', (currency, expected) => {
+    const candidate = transformCandidate({
+      ticker: 'VOD', currency, signal: 'breakout', close: 100,
+      entry: null, stop: null, shares: null, r_reward: null, name: null, sector: null,
+    });
+
+    expect(candidate.currency).toBe(expected);
+  });
+
+  it('maps evaluation failures and their summary count', () => {
+    const result = transformDailyReview({
+      new_candidates: [], positions_add_on_candidates: [], positions_hold: [],
+      positions_update_stop: [], positions_close: [],
+      evaluation_errors: [{ symbol: 'AAPL', code: 'position_evaluation_failed', message: 'Unavailable.' }],
+      summary: {
+        total_positions: 1, no_action: 0, update_stop: 0, close_positions: 0,
+        new_candidates: 0, add_on_candidates: 0, evaluation_error_count: 1,
+        review_date: '2026-09-14',
+      },
+    });
+
+    expect(result.evaluationErrors).toEqual([
+      { symbol: 'AAPL', code: 'position_evaluation_failed', message: 'Unavailable.' },
+    ]);
+    expect(result.summary.evaluationErrorCount).toBe(1);
+  });
+
   it('maps candidate close and execution guidance fields', () => {
     const apiPayload: DailyReviewAPI = {
       watchlist_near_trigger: [

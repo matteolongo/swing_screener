@@ -68,9 +68,11 @@ describe('transformCandlePattern', () => {
       key_level: 12,
       context: 'extended',
       volume_ratio: 2.1,
+      bar_pressure: 0.25,
       volume_confirmed: true,
     });
     expect(result.volumeRatio).toBe(2.1);
+    expect(result.barPressure).toBe(0.25);
     expect(result.volumeConfirmed).toBe(true);
   });
 
@@ -165,6 +167,32 @@ describe('transformScreenerResponse', () => {
     });
   });
 
+  it('preserves reporting provenance and setup-quality inputs', () => {
+    const result = transformScreenerResponse({
+      asof_date: '2026-09-14', total_screened: 1, data_freshness: 'stale',
+      candidates: [{
+        ticker: 'NOVN', currency: 'CHF', quote_currency: 'CHF', account_currency: 'GBP',
+        close: 100, sma_20: 99, sma_50: 98, sma_200: 95, atr: 2,
+        momentum_6m: 0.2, momentum_12m: 0.3, rel_strength: 1.1,
+        score: 0.8, confidence: 88, rank: 1, data_status: 'stale',
+        data_asof: '2026-09-12', degraded_reasons: ['cached_market_data'],
+        intelligence_asof: '2026-09-13T10:00:00Z', sma20_slope: 0.4,
+        sma50_slope: 0.2, consolidation_tightness: 0.8,
+        close_location_in_range: 0.7, above_breakout_extension: 0.1,
+        breakout_volume_confirmation: true,
+      }],
+    });
+
+    expect(result.dataFreshness).toBe('stale');
+    expect(result.candidates[0]).toMatchObject({
+      currency: 'CHF', quoteCurrency: 'CHF', accountCurrency: 'GBP', dataStatus: 'stale',
+      dataAsOf: '2026-09-12', degradedReasons: ['cached_market_data'],
+      intelligenceAsOf: '2026-09-13T10:00:00Z', sma20Slope: 0.4, sma50Slope: 0.2,
+      consolidationTightness: 0.8, closeLocationInRange: 0.7,
+      aboveBreakoutExtension: 0.1, breakoutVolumeConfirmation: true,
+    });
+  });
+
   it('fails closed for missing or empty canonical approval tokens', () => {
     for (const approvalToken of [undefined, '', '  ']) {
       const candidate = transformScreenerResponse(canonicalResponse({
@@ -192,6 +220,34 @@ describe('transformScreenerResponse', () => {
         shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed',
       },
     })).toBeUndefined();
+  });
+
+  it.each([
+    ['GBP', true],
+    ['CHF', true],
+    ['XYZ', false],
+    ['UNKNOWN', false],
+  ])('validates canonical draft currency %s against the backend registry', (quoteCurrency, valid) => {
+    const candidate = transformScreenerResponse(canonicalResponse({
+      order_type: 'BUY_STOP', entry: 101.2, stop: 97, target: 109.6,
+      shares: 10, rr: 2, quote_currency: quoteCurrency, approval_token: 'signed',
+    })).candidates[0];
+
+    expect(Boolean(candidate.canonicalOrderDraft)).toBe(valid);
+  });
+
+  it('keeps missing and unsupported candidate currencies explicit', () => {
+    const response = canonicalResponse({
+      order_type: 'BUY_STOP', entry: 101.2, stop: 97, target: 109.6,
+      shares: 10, rr: 2, quote_currency: 'XYZ', approval_token: 'signed',
+    });
+    response.candidates[0].currency = 'XYZ';
+    response.candidates[0].quote_currency = 'XYZ';
+    const candidate = transformScreenerResponse(response).candidates[0];
+
+    expect(candidate).toMatchObject({
+      currency: 'UNKNOWN', quoteCurrency: 'UNKNOWN', accountCurrency: 'UNKNOWN',
+    });
   });
 
   it('maps execution guidance and fundamentals fields from API to UI shape', () => {
