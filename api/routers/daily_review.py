@@ -105,6 +105,7 @@ def compute_daily_review(
         strategy=_dump_payload_item(request.strategy),
         positions=[_dump_payload_item(position) for position in request.positions],
         orders=[_dump_payload_item(order) for order in request.orders],
+        watchlist=request.watchlist,
         top_n=request.top_n,
         universe=request.universe,
         preset=request.preset,

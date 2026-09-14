@@ -83,7 +83,12 @@ class WatchlistService:
         self._provider = provider or get_market_data_provider()
 
     def list_items(self) -> list[WatchlistItemView]:
-        items = self._repo.list_items()
+        return self.enrich_items(self._repo.list_items())
+
+    def enrich_items(
+        self, items: list[WatchItem], strategy: dict | None = None
+    ) -> list[WatchlistItemView]:
+        """Enrich supplied watch items; an explicit strategy avoids stored state."""
         if not items:
             return []
 
@@ -91,7 +96,8 @@ class WatchlistService:
         enriched = {item.ticker: WatchlistItemView(**item.model_dump()) for item in items}
 
         try:
-            strategy = self._strategy_repo.get_active_strategy()
+            if strategy is None:
+                strategy = self._strategy_repo.get_active_strategy()
             signals_cfg = build_entry_config(strategy)
             # The watchlist view should still compute trigger distance for names that do
             # not yet have a full long-history candidate profile.

@@ -8,6 +8,7 @@ vi.mock('@/features/portfolio/api', () => ({
   createOrder: vi.fn(),
   fillOrder: vi.fn(),
   cancelOrder: vi.fn(),
+  submitOrder: vi.fn(),
   fetchPositions: vi.fn(),
   fetchPositionStopSuggestion: vi.fn(),
   fetchDegiroStatus: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('@/features/portfolio/api', () => ({
 
 vi.mock('@/lib/queryInvalidation', () => ({
   invalidateDailyReviewQueries: vi.fn(),
+  invalidateOrderLifecycleQueries: vi.fn(),
   invalidateOrderQueries: vi.fn(),
   invalidatePositionQueries: vi.fn(),
 }))
@@ -28,6 +30,10 @@ import * as portfolioApi from '@/features/portfolio/api'
 import * as queryInvalidation from '@/lib/queryInvalidation'
 import {
   useCreateOrderMutation,
+  useFillOrderMutation,
+  useFillFromDegiroMutation,
+  useSubmitOrderMutation,
+  useCancelOrderMutation,
   useOrders,
   usePositionStopSuggestion,
   useUpdateStopMutation,
@@ -66,12 +72,14 @@ describe('portfolio hooks', () => {
   const mockedFetchPositionStopSuggestion = vi.mocked(portfolioApi.fetchPositionStopSuggestion)
   const mockedUpdatePositionStop = vi.mocked(portfolioApi.updatePositionStop)
   const mockedInvalidateDailyReviewQueries = vi.mocked(queryInvalidation.invalidateDailyReviewQueries)
+  const mockedInvalidateOrderLifecycleQueries = vi.mocked(queryInvalidation.invalidateOrderLifecycleQueries)
   const mockedInvalidateOrderQueries = vi.mocked(queryInvalidation.invalidateOrderQueries)
   const mockedInvalidatePositionQueries = vi.mocked(queryInvalidation.invalidatePositionQueries)
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockedInvalidateDailyReviewQueries.mockResolvedValue(undefined)
+    mockedInvalidateOrderLifecycleQueries.mockResolvedValue(undefined)
     mockedInvalidateOrderQueries.mockResolvedValue(undefined)
     mockedInvalidatePositionQueries.mockResolvedValue(undefined)
   })
@@ -93,7 +101,7 @@ describe('portfolio hooks', () => {
     expect(result.current.data).toEqual(orders)
   })
 
-  it('creates orders and invalidates order queries', async () => {
+  it('creates orders and invalidates lifecycle queries', async () => {
     const queryClient = createQueryClient()
     const onSuccess = vi.fn()
     const request = {
@@ -113,8 +121,56 @@ describe('portfolio hooks', () => {
     })
 
     expect(mockedCreateOrder).toHaveBeenCalledWith(request, expect.any(String))
-    expect(mockedInvalidateOrderQueries).toHaveBeenCalledWith(queryClient)
+    expect(mockedInvalidateOrderLifecycleQueries).toHaveBeenCalledWith(queryClient, false)
     expect(onSuccess).toHaveBeenCalledTimes(1)
+  })
+
+  it('invalidates cached daily review after a submit transition', async () => {
+    const queryClient = createQueryClient()
+    vi.mocked(portfolioApi.submitOrder).mockResolvedValue(undefined)
+    const { result } = renderHook(() => useSubmitOrderMutation(), { wrapper: createWrapper(queryClient) })
+
+    await act(async () => {
+      await result.current.mutateAsync('ORD-1')
+    })
+
+    expect(mockedInvalidateOrderLifecycleQueries).toHaveBeenCalledWith(queryClient, false)
+  })
+
+  it('invalidates cached daily review after a cancel transition', async () => {
+    const queryClient = createQueryClient()
+    vi.mocked(portfolioApi.cancelOrder).mockResolvedValue(undefined)
+    const { result } = renderHook(() => useCancelOrderMutation(), { wrapper: createWrapper(queryClient) })
+
+    await act(async () => {
+      await result.current.mutateAsync('ORD-1')
+    })
+
+    expect(mockedInvalidateOrderLifecycleQueries).toHaveBeenCalledWith(queryClient, false)
+  })
+
+  it('invalidates cached daily review and positions after a fill transition', async () => {
+    const queryClient = createQueryClient()
+    vi.mocked(portfolioApi.fillOrder).mockResolvedValue(undefined)
+    const { result } = renderHook(() => useFillOrderMutation(), { wrapper: createWrapper(queryClient) })
+
+    await act(async () => {
+      await result.current.mutateAsync({ orderId: 'ORD-1', request: { filledPrice: 190, filledDate: '2026-09-11' } })
+    })
+
+    expect(mockedInvalidateOrderLifecycleQueries).toHaveBeenCalledWith(queryClient, true)
+  })
+
+  it('invalidates cached daily review and positions after a DeGiro fill transition', async () => {
+    const queryClient = createQueryClient()
+    vi.mocked(portfolioApi.fillOrderFromDegiro).mockResolvedValue({} as any)
+    const { result } = renderHook(() => useFillFromDegiroMutation(), { wrapper: createWrapper(queryClient) })
+
+    await act(async () => {
+      await result.current.mutateAsync({ orderId: 'ORD-1', degiroOrderId: 'DG-1' })
+    })
+
+    expect(mockedInvalidateOrderLifecycleQueries).toHaveBeenCalledWith(queryClient, true)
   })
 
   it('updates stop and invalidates both position and order queries', async () => {

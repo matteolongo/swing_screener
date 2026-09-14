@@ -42,6 +42,7 @@
   `BUY_LIMIT` draft. It remains distinct from `ready`, which means the observed
   entry trigger passed; the token is required and submission remains manual.
 - React Query keys live in `src/lib/queryKeys.ts`. Always use these for cache invalidation — do not construct key arrays inline.
+- Every create, submit, cancel, or fill order transition invalidates the Daily Review cache through `invalidateOrderLifecycleQueries`; fill transitions additionally invalidate positions.
 - All user-facing strings go through `src/i18n/`. No hardcoded copy in components or tests.
 
 ## State
@@ -66,6 +67,11 @@ for ID-less trades), journal tag aggregates, metric display statuses, insight
 verdict/reason codes, and portfolio heat bands also come from that projection
 (or `/api/portfolio/summary` in API mode); components localize, format, filter,
 and render them without re-deriving R, streak, sample-size, or threshold policy.
+
+Local Daily Review requests include the browser's watchlist and active strategy.
+The stateless backend enriches those symbols and returns the canonical near-trigger
+slice; the browser neither substitutes the server watchlist nor computes a second
+trigger-distance threshold.
 
 `UpdateStopRequest.marketPrice` carries the caller's ticker, price, observation
 timestamp and `current` status in local mode. It must come from an actual observed
