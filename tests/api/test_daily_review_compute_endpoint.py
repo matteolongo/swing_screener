@@ -59,6 +59,9 @@ class StubDailyReviewService:
             ),
         )
 
+    def save_snapshot(self, review, strategy_name):
+        self.saved = (review, strategy_name)
+
 
 def test_daily_review_compute_endpoint():
     stub_service = StubDailyReviewService()
@@ -137,5 +140,130 @@ def test_daily_review_compute_endpoint():
         assert stub_service.received["strategy"]["id"] == active_strategy["id"]
         assert len(stub_service.received["positions"]) == 1
         assert stub_service.received["orders"][0]["order_id"] == "ORD-AAPL-ENTRY-TEST"
+    finally:
+        app.dependency_overrides.pop(get_daily_review_service, None)
+
+
+def _compute_payload(active_strategy, orders):
+    return {
+        "top_n": 7,
+        "include_candidates": False,
+        "strategy": active_strategy,
+        "positions": [],
+        "orders": orders,
+    }
+
+
+def test_daily_review_compute_rejects_non_mapping_orders_with_422():
+    """Arbitrary JSON items must fail request validation, not the service."""
+    stub_service = StubDailyReviewService()
+    app.dependency_overrides[get_daily_review_service] = lambda: stub_service
+
+    try:
+        client = TestClient(app)
+        active_strategy = client.get("/api/strategy/active").json()
+
+        response = client.post(
+            "/api/daily-review/compute",
+            json=_compute_payload(active_strategy, ["ORD-STRING-NOT-A-MAPPING"]),
+        )
+
+        assert response.status_code == 422
+        assert stub_service.received is None
+    finally:
+        app.dependency_overrides.pop(get_daily_review_service, None)
+
+
+def test_daily_review_compute_rejects_orders_missing_required_fields_with_422():
+    """Orders without ticker/status/order_kind context fail validation."""
+    stub_service = StubDailyReviewService()
+    app.dependency_overrides[get_daily_review_service] = lambda: stub_service
+
+    try:
+        client = TestClient(app)
+        active_strategy = client.get("/api/strategy/active").json()
+
+        response = client.post(
+            "/api/daily-review/compute",
+            json=_compute_payload(active_strategy, [{"order_id": "ORD-1"}]),
+        )
+
+        assert response.status_code == 422
+        assert stub_service.received is None
+
+        response = client.post(
+            "/api/daily-review/compute",
+            json=_compute_payload(
+                active_strategy,
+                [
+                    {
+                        "order_id": "ORD-1",
+                        "ticker": "AAPL",
+                        "status": "bogus-status",
+                        "order_kind": "entry",
+                    }
+                ],
+            ),
+        )
+
+        assert response.status_code == 422
+        assert stub_service.received is None
+    finally:
+        app.dependency_overrides.pop(get_daily_review_service, None)
+
+
+def test_daily_review_compute_normalizes_snapshot_order_fields():
+    """Ticker/status/order_kind normalize consistently with order semantics."""
+    stub_service = StubDailyReviewService()
+    app.dependency_overrides[get_daily_review_service] = lambda: stub_service
+
+    try:
+        client = TestClient(app)
+        active_strategy = client.get("/api/strategy/active").json()
+
+        response = client.post(
+            "/api/daily-review/compute",
+            json=_compute_payload(
+                active_strategy,
+                [
+                    {
+                        "order_id": "ORD-NORM-1",
+                        "ticker": "aapl",
+                        "status": "PENDING",
+                        "order_kind": "ENTRY",
+                        "order_date": "2026-09-07",
+                    }
+                ],
+            ),
+        )
+
+        assert response.status_code == 200
+        assert stub_service.received is not None
+        assert stub_service.received["orders"][0]["ticker"] == "AAPL"
+        assert stub_service.received["orders"][0]["status"] == "pending"
+        assert stub_service.received["orders"][0]["order_kind"] == "entry"
+    finally:
+        app.dependency_overrides.pop(get_daily_review_service, None)
+
+
+def test_daily_review_snapshot_endpoint_is_the_explicit_write_command():
+    stub_service = StubDailyReviewService()
+    app.dependency_overrides[get_daily_review_service] = lambda: stub_service
+    review = stub_service.compute_daily_review_from_state({}, [], [])
+
+    try:
+        response = TestClient(app).post(
+            "/api/daily-review/snapshots",
+            json={
+                "review": review.model_dump(mode="json"),
+                "strategy_name": "momentum",
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json() == {"saved": True}
+        saved_review, strategy_name = stub_service.saved
+        assert saved_review == review
+        assert strategy_name == "momentum"
     finally:
         app.dependency_overrides.pop(get_daily_review_service, None)

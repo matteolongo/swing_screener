@@ -6,30 +6,40 @@ from datetime import date
 from pathlib import Path
 from typing import Callable, Literal, Optional
 
-from swing_screener.errors import DomainError
-
 from api.models.daily_review import (
     DailyReview,
     DailyReviewCandidate,
+    DailyReviewPositionClose,
+    DailyReviewPositionEvaluationError,
+    DailyReviewPositionExitSignal,
     DailyReviewPositionHold,
     DailyReviewPositionUpdate,
-    DailyReviewPositionClose,
-    DailyReviewPositionExitSignal,
-    DailyReviewPositionEvaluationError,
     DailyReviewSummary,
     PendingOrderReview,
     TrimSuggestion,
 )
-from api.models.portfolio import PositionUpdate
+from api.models.portfolio import OrderSnapshot, Position, PositionUpdate
 from api.models.screener import ScreenerRequest, TaxonomyFilter
 from api.repositories.orders_repo import OrdersRepository
-from api.services.screener_service import ScreenerService
-from api.services.portfolio_service import PortfolioService
-from api.services.watchlist_service import WatchlistService
 from api.services.daily_review import DailyReviewWriter
+from api.services.portfolio_service import PortfolioService
+from api.services.screener_service import (
+    PortfolioStateSnapshot,
+    ScreenerRunPolicy,
+    ScreenerService,
+)
+from api.services.watchlist_service import WatchlistService
+from swing_screener.errors import DomainError
 from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _review_order_field(order: object, key: str, default=None):
+    """Read an order field from either a frozen snapshot model or a raw dict."""
+    if isinstance(order, dict):
+        return order.get(key, default)
+    return getattr(order, key, default)
 
 
 def to_daily_review_candidate(c) -> DailyReviewCandidate:
@@ -113,7 +123,6 @@ class DailyReviewService:
         self.orders_repo = orders_repo
         self.data_dir = data_dir
         self.daily_reviews_dir = data_dir / "daily_reviews"
-        self.daily_reviews_dir.mkdir(parents=True, exist_ok=True)
         self._writer = DailyReviewWriter(self.daily_reviews_dir)
 
     def generate_daily_review(
@@ -123,6 +132,7 @@ class DailyReviewService:
         preset: str | None = None,
         taxonomy_filter: "TaxonomyFilter | None" = None,
         include_candidates: bool = True,
+        persist: bool = False,
     ) -> DailyReview:
         """
         Generate comprehensive daily review.
@@ -148,7 +158,9 @@ class DailyReviewService:
                 preset=preset or None,
                 taxonomy_filter=taxonomy_filter,
             )
-            screener_result = self.screener.run_screener(screener_request)
+            screener_result = self.screener.run_screener(
+                screener_request, run_policy=ScreenerRunPolicy.read_only()
+            )
             candidates = screener_result.candidates[:top_n]
 
         # Re-entries are fresh buy decisions (no open position), so rank them
@@ -249,10 +261,14 @@ class DailyReviewService:
             pending_orders_review=pending_orders_review,
         )
 
-        # Save to historical file (use "default" as strategy name for now)
-        self._writer.save(review, "default")
+        if persist:
+            self.save_snapshot(review, "default")
 
         return review
+
+    def save_snapshot(self, review: DailyReview, strategy_name: str) -> None:
+        """Persist a snapshot only in response to an explicit command."""
+        self._writer.save(review, strategy_name)
 
     def _build_pending_orders_review(self) -> list[PendingOrderReview]:
         """Build PendingOrderReview items for all pending entry orders."""
@@ -264,20 +280,38 @@ class DailyReviewService:
             logger.exception("Unable to load pending orders for daily review")
             return []
 
+        return self._pending_orders_review(orders)
+
+    @classmethod
+    def _pending_orders_review(cls, orders) -> list[PendingOrderReview]:
+        """Classify pending entry orders from an explicit state snapshot.
+
+        Mirrors the stateful ``orders_repo.list_orders(status="pending")``
+        semantics: only ``status == "pending"`` entry orders appear here.
+        ``submitted`` orders remain active for duplicate-order gates elsewhere
+        but are intentionally excluded from this section. Accepts frozen
+        ``OrderSnapshot`` models or raw dicts; non-mapping items are skipped.
+        """
+
         today = date.today()
         result: list[PendingOrderReview] = []
-        for order in orders:
-            if order.get("order_kind") != "entry":
+        items = orders if isinstance(orders, (list, tuple)) else []
+        for order in items:
+            if isinstance(order, str) or not isinstance(order, (dict, OrderSnapshot)):
                 continue
-            order_id = str(order.get("order_id", ""))
-            ticker = str(order.get("ticker", ""))
-            raw_date = order.get("order_date")
+            if _review_order_field(order, "order_kind") != "entry":
+                continue
+            if _review_order_field(order, "status") != "pending":
+                continue
+            order_id = str(_review_order_field(order, "order_id", ""))
+            ticker = str(_review_order_field(order, "ticker", ""))
+            raw_date = _review_order_field(order, "order_date")
             try:
                 order_date = date.fromisoformat(str(raw_date))
                 days_pending = max((today - order_date).days, 0)
                 category: Literal["stale", "still_valid", "no_data"] = (
                     "stale"
-                    if days_pending >= self.STALE_DAYS_THRESHOLD
+                    if days_pending >= cls.STALE_DAYS_THRESHOLD
                     else "still_valid"
                 )
             except (ValueError, TypeError):
@@ -463,16 +497,40 @@ class DailyReviewService:
     def compute_daily_review_from_state(
         self,
         strategy: dict,
-        positions: list[dict],
-        orders: list[dict],
+        positions: list,
+        orders: list,
         top_n: int = 200,
         universe: str | None = None,
         preset: str | None = None,
         taxonomy_filter: "TaxonomyFilter | None" = None,
         include_candidates: bool = True,
     ) -> DailyReview:
-        """Compute daily review from client-provided strategy/portfolio state."""
-        _ = orders  # Reserved for future order-aware categorization logic.
+        """Compute daily review from client-provided strategy/portfolio state.
+
+        ``positions``/``orders`` accept validated models or raw dicts and are
+        normalized into an immutable ``PortfolioStateSnapshot``. That snapshot
+        is the authoritative state for the whole request: pending-order review,
+        screener duplicate-order gates, and same-symbol ownership all consume
+        it, never the persisted repositories.
+        """
+        snapshot = PortfolioStateSnapshot(
+            positions=tuple(
+                (
+                    position
+                    if isinstance(position, Position)
+                    else Position.model_validate(position)
+                )
+                for position in (positions or [])
+            ),
+            orders=tuple(
+                (
+                    order
+                    if isinstance(order, OrderSnapshot)
+                    else OrderSnapshot.model_validate(order)
+                )
+                for order in (orders or [])
+            ),
+        )
 
         candidates = []
         if include_candidates:
@@ -496,7 +554,10 @@ class DailyReviewService:
                 currencies=filt_cfg.get("currencies"),
             )
             screener_result = self.screener.run_screener(
-                screener_request, strategy_override=strategy
+                screener_request,
+                strategy_override=strategy,
+                state_snapshot=snapshot,
+                run_policy=ScreenerRunPolicy.read_only(),
             )
             candidates = screener_result.candidates[:top_n]
 
@@ -524,8 +585,13 @@ class DailyReviewService:
 
         buckets = _ActionBuckets()
         evaluation_errors: list[DailyReviewPositionEvaluationError] = []
-        for pos in positions:
-            if pos.get("status") != "open":
+        for raw_pos in positions:
+            pos = (
+                raw_pos.model_dump(mode="json")
+                if isinstance(raw_pos, Position)
+                else raw_pos
+            )
+            if not isinstance(pos, dict) or pos.get("status") != "open":
                 continue
 
             position_id = str(
@@ -576,8 +642,8 @@ class DailyReviewService:
                 total_positions=len(
                     [
                         position
-                        for position in positions
-                        if position.get("status") == "open"
+                        for position in snapshot.positions
+                        if position.status == "open"
                     ]
                 ),
                 no_action=len(positions_hold),
@@ -590,4 +656,5 @@ class DailyReviewService:
                 evaluation_error_count=len(evaluation_errors),
                 review_date=date.today(),
             ),
+            pending_orders_review=self._pending_orders_review(snapshot.orders),
         )

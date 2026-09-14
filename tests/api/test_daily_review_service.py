@@ -2,17 +2,18 @@
 
 from datetime import date, timedelta
 from unittest.mock import Mock
+
 import pytest
-from swing_screener.errors import UpstreamError
 
 from api.models.daily_review import DailyReview, PendingOrderReview
+from api.models.portfolio import Position, PositionsResponse, PositionUpdate
 from api.models.screener import (
-    ScreenerResponse,
-    ScreenerCandidate,
     SameSymbolCandidateContext,
+    ScreenerCandidate,
+    ScreenerResponse,
 )
-from api.models.portfolio import Position, PositionUpdate, PositionsResponse
 from api.services.daily_review_service import DailyReviewService
+from swing_screener.errors import UpstreamError
 from swing_screener.recommendation.models import DecisionSummary
 from swing_screener.strategy.storage import _default_strategy_payload
 
@@ -573,6 +574,43 @@ def test_generate_daily_review_no_candidates(mock_portfolio_service, tmp_path):
     assert review.summary.total_positions == 3
 
 
+def test_generate_daily_review_does_not_persist_snapshot_by_default(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    data_dir = tmp_path / "missing-data-dir"
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=data_dir
+    )
+    service._writer.save = Mock(side_effect=AssertionError("forbidden write"))
+
+    review = service.generate_daily_review(top_n=10)
+
+    assert isinstance(review, DailyReview)
+    assert not data_dir.exists()
+    service._writer.save.assert_not_called()
+    run_policy = mock_screener_service.run_screener.call_args.kwargs["run_policy"]
+    assert run_policy.write_eval_cache is False
+    assert run_policy.write_review_artifacts is False
+
+
+def test_save_daily_review_snapshot_performs_one_explicit_write(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+    review = service.generate_daily_review(top_n=10)
+    service._writer.save = Mock()
+
+    service.save_snapshot(review, "momentum")
+
+    service._writer.save.assert_called_once_with(review, "momentum")
+
+
 def test_generate_daily_review_includes_watchlist_near_trigger(
     mock_screener_service,
     mock_portfolio_service,
@@ -807,6 +845,45 @@ def test_compute_daily_review_from_state_uses_client_payload(
     assert args[0].top == 5
     assert args[0].universe == "usd_all"
     assert kwargs["strategy_override"] == strategy
+    assert kwargs["run_policy"].write_eval_cache is False
+    assert kwargs["run_policy"].write_review_artifacts is False
+
+
+def test_stateless_review_uses_client_orders_for_pending_review(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    orders_repo = Mock()
+    orders_repo.list_orders.return_value = (
+        [{"order_id": "SERVER", "ticker": "MSFT", "order_kind": "entry"}],
+        "2026-09-07",
+    )
+    service = DailyReviewService(
+        mock_screener_service,
+        mock_portfolio_service,
+        orders_repo=orders_repo,
+        data_dir=tmp_path,
+    )
+    client_orders = [
+        {
+            "order_id": "CLIENT",
+            "ticker": "AAPL",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_date": "2026-09-07",
+        }
+    ]
+
+    review = service.compute_daily_review_from_state(
+        strategy=_default_strategy_payload(),
+        positions=[],
+        orders=client_orders,
+        include_candidates=False,
+    )
+
+    assert [item.order_id for item in review.pending_orders_review] == ["CLIENT"]
+    orders_repo.list_orders.assert_not_called()
 
 
 # ── Pending orders review tests ──────────────────────────────────────────────
@@ -899,3 +976,97 @@ def test_pending_orders_review_stale_for_old_order(
     item = review.pending_orders_review[0]
     assert item.category == "stale"
     assert item.days_pending == 7
+
+
+def _mixed_snapshot_orders() -> list[dict]:
+    """One snapshot holding every pending-review edge case for one symbol set."""
+    recent = (date.today() - timedelta(days=2)).isoformat()
+    return [
+        {
+            "order_id": "ORD-PENDING-AAPL",
+            "ticker": "AAPL",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_date": recent,
+        },
+        {
+            "order_id": "ORD-SUBMITTED-MSFT",
+            "ticker": "MSFT",
+            "status": "submitted",
+            "order_kind": "entry",
+            "order_date": recent,
+        },
+        {
+            "order_id": "ORD-FILLED-NVDA",
+            "ticker": "NVDA",
+            "status": "filled",
+            "order_kind": "entry",
+            "order_date": recent,
+        },
+        {
+            "order_id": "ORD-CANCELLED-TSLA",
+            "ticker": "TSLA",
+            "status": "cancelled",
+            "order_kind": "entry",
+            "order_date": recent,
+        },
+        {
+            "order_id": "ORD-PENDING-STOP-GOOGL",
+            "ticker": "GOOGL",
+            "status": "pending",
+            "order_kind": "stop",
+            "order_date": recent,
+        },
+    ]
+
+
+def test_pending_orders_review_only_includes_pending_entry_orders(tmp_path):
+    """Filled/cancelled/submitted entries and non-entry orders are excluded.
+
+    Preserves the stateful ``list_orders(status="pending")`` semantics even
+    when the full stateless snapshot is passed in unfiltered.
+    """
+    result = DailyReviewService._pending_orders_review(_mixed_snapshot_orders())
+
+    assert [item.order_id for item in result] == ["ORD-PENDING-AAPL"]
+    assert result[0].ticker == "AAPL"
+    assert result[0].category == "still_valid"
+
+
+def test_pending_orders_review_accepts_frozen_snapshot_models(tmp_path):
+    """The classifier also consumes validated ``OrderSnapshot`` models."""
+    from api.models.portfolio import OrderSnapshot
+
+    orders = [OrderSnapshot.model_validate(order) for order in _mixed_snapshot_orders()]
+
+    result = DailyReviewService._pending_orders_review(orders)
+
+    assert [item.order_id for item in result] == ["ORD-PENDING-AAPL"]
+
+
+def test_stateless_pending_review_filters_snapshot_and_never_reads_repo(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    """Stateless review filters the snapshot itself and never touches the repo."""
+    orders_repo = Mock()
+    service = DailyReviewService(
+        mock_screener_service,
+        mock_portfolio_service,
+        orders_repo=orders_repo,
+        data_dir=tmp_path,
+    )
+
+    review = service.compute_daily_review_from_state(
+        strategy=_default_strategy_payload(),
+        positions=[],
+        orders=_mixed_snapshot_orders(),
+        include_candidates=False,
+    )
+
+    assert [item.order_id for item in review.pending_orders_review] == [
+        "ORD-PENDING-AAPL"
+    ]
+    orders_repo.list_orders.assert_not_called()
+    mock_screener_service.run_screener.assert_not_called()
+    mock_portfolio_service.list_positions.assert_not_called()
+    mock_portfolio_service.suggest_position_stop.assert_not_called()
