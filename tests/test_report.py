@@ -312,6 +312,72 @@ def test_build_daily_report_keeps_weekly_trend_column():
     assert set(rep["weekly_trend"].dropna().unique()) <= {"up", "down", "neutral"}
 
 
+def test_today_actions_never_returns_blocked_plan_with_stale_shares():
+    report = pd.DataFrame(
+        {
+            "signal": ["breakout"],
+            "plan_status": ["blocked"],
+            "block_reason": ["currency_missing"],
+            "entry": [30.0],
+            "stop": [27.6],
+            "shares": [10],
+            "realized_risk": [24.0],
+        },
+        index=["AAA"],
+    )
+
+    assert "AAA" not in today_actions(report)
+    assert "Today: no trade." in today_actions(report)
+
+
+def test_today_actions_returns_ready_plan_with_shares():
+    report = pd.DataFrame(
+        {
+            "signal": ["breakout"],
+            "plan_status": ["ready"],
+            "entry": [30.0],
+            "stop": [27.6],
+            "shares": [2],
+            "realized_risk": [4.8],
+        },
+        index=["AAA"],
+    )
+
+    actions = today_actions(report)
+
+    assert "AAA" in actions
+    assert "breakout" in actions
+
+
+def test_today_actions_legacy_report_without_plan_status_unchanged():
+    report = pd.DataFrame(
+        {
+            "signal": ["breakout"],
+            "entry": [30.0],
+            "stop": [27.6],
+            "shares": [2],
+            "realized_risk": [4.8],
+        },
+        index=["AAA"],
+    )
+
+    actions = today_actions(report)
+
+    assert "AAA" in actions
+
+    empty_shares = pd.DataFrame(
+        {
+            "signal": ["breakout"],
+            "entry": [30.0],
+            "stop": [27.6],
+            "shares": [0],
+        },
+        index=["AAA"],
+    )
+
+    assert "Today: no trade." in today_actions(empty_shares)
+
+
 def test_build_daily_report_excludes_open_positions():
     ohlcv = _make_ohlcv_for_report()
 

@@ -15,6 +15,7 @@ from swing_screener.data.providers import (
     AlpacaDataProvider,
     get_market_data_provider,
 )
+from swing_screener.data.providers.polygon_provider import PolygonProvider
 from swing_screener.config import BrokerConfig
 from swing_screener.data.providers.base import MarketDataCachePolicy
 
@@ -593,6 +594,245 @@ class TestYfinanceProvider:
         # Should have replaced corrupt bytes with a readable parquet file.
         reread = pd.read_parquet(cache_files[0])
         assert not reread.empty
+
+
+def _polygon_bars(close: float) -> list[dict]:
+    """Deterministic single-bar Polygon payload with the given close."""
+    ts_ms = int(pd.Timestamp("2026-01-30", tz="UTC").timestamp() * 1000)
+    return [
+        {
+            "t": ts_ms,
+            "o": close - 1.0,
+            "h": close + 1.0,
+            "l": close - 2.0,
+            "c": close,
+            "v": 1_000_000,
+            "vw": close,
+            "n": 10,
+        }
+    ]
+
+
+class TestPolygonProvider:
+    """Test PolygonProvider cache freshness policy enforcement."""
+
+    def _make_provider(self, tmp_path) -> PolygonProvider:
+        return PolygonProvider(
+            api_key="test-key",
+            cache_dir=str(tmp_path / "polygon"),
+            rate_limit_sleep=0.0,
+            cache_ttl_days=7.0,
+        )
+
+    def test_final_close_policy_rejects_cache_written_before_close(
+        self, monkeypatch, tmp_path
+    ):
+        provider = self._make_provider(tmp_path)
+        closes = [100.0, 200.0]
+        calls: list[str] = []
+
+        def fake_bars(ticker: str, start_date: str, end_date: str) -> list[dict]:
+            calls.append(ticker)
+            return _polygon_bars(closes[min(len(calls) - 1, 1)])
+
+        monkeypatch.setattr(provider, "_fetch_bars_from_api", fake_bars)
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        assert len(calls) == 1
+
+        close = datetime(2026, 1, 31, 21, 10, tzinfo=timezone.utc)
+        before_close = close.timestamp() - 60
+        for cache_file in (tmp_path / "polygon").rglob("*.parquet"):
+            os.utime(cache_file, (before_close, before_close))
+
+        result = provider.fetch_ohlcv(
+            ["AAPL"],
+            "2026-01-01",
+            "2026-01-31",
+            cache_policy=MarketDataCachePolicy(fresh_after_utc=close),
+        )
+
+        assert len(calls) == 2
+        assert float(result[("Close", "AAPL")].iloc[-1]) == 200.0
+
+    def test_final_close_policy_reuses_cache_written_after_close(
+        self, monkeypatch, tmp_path
+    ):
+        provider = self._make_provider(tmp_path)
+        calls: list[str] = []
+
+        def fake_bars(ticker: str, start_date: str, end_date: str) -> list[dict]:
+            calls.append(ticker)
+            return _polygon_bars(100.0)
+
+        monkeypatch.setattr(provider, "_fetch_bars_from_api", fake_bars)
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        assert len(calls) == 1
+
+        close = datetime(2026, 1, 31, 21, 10, tzinfo=timezone.utc)
+        after_close = close.timestamp() + 60
+        for cache_file in (tmp_path / "polygon").rglob("*.parquet"):
+            os.utime(cache_file, (after_close, after_close))
+
+        result = provider.fetch_ohlcv(
+            ["AAPL"],
+            "2026-01-01",
+            "2026-01-31",
+            cache_policy=MarketDataCachePolicy(fresh_after_utc=close),
+        )
+
+        assert len(calls) == 1
+        assert float(result[("Close", "AAPL")].iloc[-1]) == 100.0
+
+        # Boundary is inclusive: mtime exactly at fresh_after_utc reuses cache.
+        for cache_file in (tmp_path / "polygon").rglob("*.parquet"):
+            os.utime(cache_file, (close.timestamp(), close.timestamp()))
+        result = provider.fetch_ohlcv(
+            ["AAPL"],
+            "2026-01-01",
+            "2026-01-31",
+            cache_policy=MarketDataCachePolicy(fresh_after_utc=close),
+        )
+        assert len(calls) == 1
+        assert float(result[("Close", "AAPL")].iloc[-1]) == 100.0
+
+    def test_historical_cache_reuse_and_refresh_flags_preserved(
+        self, monkeypatch, tmp_path
+    ):
+        provider = self._make_provider(tmp_path)
+        calls: list[str] = []
+
+        def fake_bars(ticker: str, start_date: str, end_date: str) -> list[dict]:
+            calls.append(ticker)
+            return _polygon_bars(100.0)
+
+        monkeypatch.setattr(provider, "_fetch_bars_from_api", fake_bars)
+
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        assert len(calls) == 1
+
+        # Default historical request reuses the cache.
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        assert len(calls) == 1
+
+        # force_refresh bypasses a fresh cache.
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31", force_refresh=True)
+        assert len(calls) == 2
+
+        # use_cache=False bypasses a fresh cache.
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31", use_cache=False)
+        assert len(calls) == 3
+
+    def test_force_refresh_bypasses_fresh_cache_with_policy(
+        self, monkeypatch, tmp_path
+    ):
+        provider = self._make_provider(tmp_path)
+        calls: list[str] = []
+
+        def fake_bars(ticker: str, start_date: str, end_date: str) -> list[dict]:
+            calls.append(ticker)
+            return _polygon_bars(100.0)
+
+        monkeypatch.setattr(provider, "_fetch_bars_from_api", fake_bars)
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        assert len(calls) == 1
+
+        # Fresh cache (mtime after fresh_after_utc) would normally be reused,
+        # but force_refresh bypasses it regardless of the policy.
+        close = datetime(2026, 1, 31, 21, 10, tzinfo=timezone.utc)
+        after_close = close.timestamp() + 60
+        for cache_file in (tmp_path / "polygon").rglob("*.parquet"):
+            os.utime(cache_file, (after_close, after_close))
+
+        provider.fetch_ohlcv(
+            ["AAPL"],
+            "2026-01-01",
+            "2026-01-31",
+            force_refresh=True,
+            cache_policy=MarketDataCachePolicy(fresh_after_utc=close),
+        )
+        assert len(calls) == 2
+
+    def test_use_cache_false_bypasses_fresh_cache_with_policy(
+        self, monkeypatch, tmp_path
+    ):
+        provider = self._make_provider(tmp_path)
+        calls: list[str] = []
+
+        def fake_bars(ticker: str, start_date: str, end_date: str) -> list[dict]:
+            calls.append(ticker)
+            return _polygon_bars(100.0)
+
+        monkeypatch.setattr(provider, "_fetch_bars_from_api", fake_bars)
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        assert len(calls) == 1
+
+        # Fresh cache (mtime after fresh_after_utc) would normally be reused,
+        # but use_cache=False bypasses it regardless of the policy.
+        close = datetime(2026, 1, 31, 21, 10, tzinfo=timezone.utc)
+        after_close = close.timestamp() + 60
+        for cache_file in (tmp_path / "polygon").rglob("*.parquet"):
+            os.utime(cache_file, (after_close, after_close))
+
+        provider.fetch_ohlcv(
+            ["AAPL"],
+            "2026-01-01",
+            "2026-01-31",
+            use_cache=False,
+            cache_policy=MarketDataCachePolicy(fresh_after_utc=close),
+        )
+        assert len(calls) == 2
+
+
+class TestMarketDataCachePolicyContract:
+    """Cache-capable providers must honor MarketDataCachePolicy."""
+
+    def test_stale_cache_forces_refetch(self, monkeypatch, tmp_path):
+        close = datetime(2026, 1, 31, 21, 10, tzinfo=timezone.utc)
+        policy = MarketDataCachePolicy(fresh_after_utc=close)
+        before_close = close.timestamp() - 60
+
+        yf_provider = YfinanceProvider(cache_dir=str(tmp_path / "contract-yf"))
+        monkeypatch.setattr(
+            yfinance_provider_module.yf,
+            "download",
+            lambda *args, **kwargs: _mock_ohlcv_frame(["AAPL"]),
+        )
+        yf_provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        for cache_file in (tmp_path / "contract-yf").rglob("*.parquet"):
+            os.utime(cache_file, (before_close, before_close))
+        yf_calls: list[bool] = []
+
+        def counting_download(*args, **kwargs):
+            yf_calls.append(True)
+            return _mock_ohlcv_frame(["AAPL"])
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", counting_download)
+        yf_provider.fetch_ohlcv(
+            ["AAPL"], "2026-01-01", "2026-01-31", cache_policy=policy
+        )
+        assert yf_calls, "YfinanceProvider must refetch stale final-close cache"
+
+        poly_provider = PolygonProvider(
+            api_key="test-key",
+            cache_dir=str(tmp_path / "contract-polygon"),
+            rate_limit_sleep=0.0,
+            cache_ttl_days=7.0,
+        )
+        poly_calls: list[str] = []
+
+        def fake_bars(ticker: str, start_date: str, end_date: str) -> list[dict]:
+            poly_calls.append(ticker)
+            return _polygon_bars(100.0)
+
+        monkeypatch.setattr(poly_provider, "_fetch_bars_from_api", fake_bars)
+        poly_provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        assert len(poly_calls) == 1
+        for cache_file in (tmp_path / "contract-polygon").rglob("*.parquet"):
+            os.utime(cache_file, (before_close, before_close))
+        poly_provider.fetch_ohlcv(
+            ["AAPL"], "2026-01-01", "2026-01-31", cache_policy=policy
+        )
+        assert len(poly_calls) == 2, "PolygonProvider must refetch stale cache"
 
 
 class TestBrokerConfig:

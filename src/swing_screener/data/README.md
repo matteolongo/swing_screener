@@ -83,7 +83,7 @@ OHLCV data is cached locally in Parquet format to avoid redundant downloads:
 - **Location**: `.cache/market_data/by_ticker/` (one `.parquet` file per ticker, plus `index.json` recording each ticker's covered date window)
 - **Reuse**: a ticker is served from cache when its covered window contains the requested window, so universe membership changes never invalidate other tickers
 - **Freshness**: windows ending today are reused within `same_day_cache_ttl_minutes` (default 480, see `data_providers.yfinance` in `config/defaults.yaml`); historical windows never expire unless a caller supplies `MarketDataCachePolicy(fresh_after_utc=...)`
-- **Final-close boundary**: current-date `final_close` screener runs require yfinance cache files written after the latest active-market close; explicitly intraday and historical runs do not apply that threshold
+- **Final-close boundary**: current-date `final_close` screener runs require yfinance and Polygon cache files written after the latest active-market close; explicitly intraday and historical runs do not apply that threshold
 - **Fallback provenance**: a download failure may still return an older covering cache, but the frame and provider health carry `stale_cache_fallback`, so the screener labels the run and candidates stale rather than final
 - **Invalidation**: pass `force_refresh=True` to bypass cache
 - **Ticker metadata**: `.cache/ticker_meta.json`, company name/sector cache in `.cache/ticker_info.json`, earnings proximity cache in `.cache/earnings_days.json`
@@ -156,5 +156,5 @@ Screener evaluation results are cached per symbol to avoid recomputing unchanged
 
 - `fetch_ohlcv()` in `market_data.py` is a backward-compatibility wrapper. New code should use `get_market_data_provider()` directly.
 - `currencies.py` owns all supported ISO codes, market timezones, and buffered close times used by data, API validation, and screening-window logic.
-- `detect_currency()` prefers instrument-master metadata, then controlled suffix inference; unknown suffixes and unregistered no-suffix symbols resolve to `UNKNOWN`, never USD.
+- `detect_currency()` prefers instrument-master metadata, then controlled suffix inference; unknown suffixes, unregistered no-suffix symbols, and instrument-master values outside the `currencies.py` registry resolve to `UNKNOWN`, never USD.
 - `BrokerConfig.from_env()` is called automatically when no config is passed to the factory.

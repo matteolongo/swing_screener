@@ -46,6 +46,11 @@ def export_report_csv(report: pd.DataFrame, path: str = "out/daily_report.csv") 
 def today_actions(report: pd.DataFrame, max_rows: int = 5) -> str:
     """
     Human-friendly summary string of tradable signals.
+
+    When ``plan_status`` is present it is authoritative: only
+    ``plan_status == "ready"`` rows are actionable, so a ``blocked`` plan can
+    never leak into the actions even if ``shares`` is populated. Reports
+    without ``plan_status`` retain the legacy signal-plus-shares behavior.
     """
     if report is None or report.empty:
         return "No candidates. Today: no trade."
@@ -54,6 +59,10 @@ def today_actions(report: pd.DataFrame, max_rows: int = 5) -> str:
         return "Report has no signal column. Today: observe only."
 
     active = report[report["signal"].isin(["both", "breakout", "pullback"])].copy()
+
+    # plan_status is authoritative when present: blocked plans are never actionable
+    if "plan_status" in active.columns:
+        active = active[active["plan_status"] == "ready"]
 
     # keep only tradable plans if shares exists
     if "shares" in active.columns:

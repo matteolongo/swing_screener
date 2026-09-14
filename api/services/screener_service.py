@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from api.models.portfolio import Position
+from api.models.portfolio import OrderSnapshot, Position
 from api.models.recommendation import Recommendation
 from api.models.screener import (
     CandlePatternOut,
@@ -183,6 +183,60 @@ def _min_days_to_earnings_default() -> int:
         return int(universe_defaults.get("min_days_to_earnings", 0))
     except (TypeError, ValueError):
         return 0
+
+
+def _manage_payload_from_strategy(strategy: dict) -> dict:
+    """Derive stateless stop-evaluation manage config from the run strategy.
+
+    Mirrors ``DailyReviewService._manage_cfg_payload_from_strategy`` so the
+    stateless same-symbol path reuses the same stop rules without reading
+    persisted strategy/portfolio state.
+    """
+    from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
+
+    manage = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
+    if not isinstance(manage, dict):
+        manage = {}
+    cfg = ManageStateConfig(
+        breakeven_at_R=float(manage.get("breakeven_at_r", 1.0)),
+        trail_sma=int(manage.get("trail_sma", 20)),
+        trail_after_R=float(manage.get("trail_after_r", 2.0)),
+        sma_buffer_pct=float(manage.get("sma_buffer_pct", 0.005)),
+        max_holding_days=int(manage.get("max_holding_days", 20)),
+        time_stop_days=int(manage.get("time_stop_days", 15)),
+        time_stop_min_r=float(manage.get("time_stop_min_r", 0.5)),
+        exit_signal_days=int(manage.get("exit_signal_days", 2)),
+    )
+    return {
+        "breakeven_at_r": cfg.breakeven_at_R,
+        "trail_after_r": cfg.trail_after_R,
+        "trail_sma": cfg.trail_sma,
+        "sma_buffer_pct": cfg.sma_buffer_pct,
+        "max_holding_days": cfg.max_holding_days,
+        "time_stop_days": cfg.time_stop_days,
+        "time_stop_min_r": cfg.time_stop_min_r,
+        "exit_signal_days": cfg.exit_signal_days,
+    }
+
+
+def _snapshot_position_payload(position: object) -> dict:
+    """Convert a snapshot position to the dict payload used by stateless stops."""
+    model_dump = getattr(position, "model_dump", None)
+    if callable(model_dump):
+        try:
+            return dict(model_dump(mode="json"))
+        except TypeError:
+            return dict(model_dump())
+    if isinstance(position, dict):
+        return dict(position)
+    return dict(getattr(position, "__dict__", {}) or {})
+
+
+def _snapshot_order_field(order: object, key: str, default=None):
+    """Read an order field from either a frozen snapshot model or a raw dict."""
+    if isinstance(order, dict):
+        return order.get(key, default)
+    return getattr(order, key, default)
 
 
 def _fetch_ohlcv_chunked(
@@ -426,10 +480,15 @@ class _RunContext:
 
 @dataclass(frozen=True)
 class PortfolioStateSnapshot:
-    """Immutable portfolio state supplied by a stateless caller."""
+    """Immutable portfolio state supplied by a stateless caller.
+
+    Orders are stored as frozen ``OrderSnapshot`` models so downstream code
+    cannot mutate the authoritative request snapshot through a shared dict.
+    Derive local mutable copies via ``model_dump()`` when mutation is needed.
+    """
 
     positions: tuple[Position, ...]
-    orders: tuple[dict, ...]
+    orders: tuple[OrderSnapshot, ...]
 
 
 @dataclass(frozen=True)
@@ -501,8 +560,12 @@ class ScreenerService:
             ctx.order_state_available = True
             return
         if self._orders_service is None:
+            logger.warning(
+                "Order state unavailable: no orders service is configured; "
+                "new entries will fail closed."
+            )
             ctx.portfolio_orders = []
-            ctx.order_state_available = True
+            ctx.order_state_available = False
             return
         try:
             ctx.portfolio_orders = list(
@@ -520,11 +583,10 @@ class ScreenerService:
             return "order_state_unavailable"
         normalized = ticker.upper()
         pending = any(
-            str(order.get("ticker") or "").upper() == normalized
-            and order.get("status") in {"pending", "submitted"}
-            and order.get("order_kind") == "entry"
+            str(_snapshot_order_field(order, "ticker") or "").upper() == normalized
+            and _snapshot_order_field(order, "status") in {"pending", "submitted"}
+            and _snapshot_order_field(order, "order_kind") == "entry"
             for order in ctx.portfolio_orders
-            if isinstance(order, dict)
         )
         return "pending_order_exists" if pending else "clear"
 
@@ -961,6 +1023,10 @@ class ScreenerService:
             ctx.ranking_cfg = replace(ctx.ranking_cfg, top_n=prefilter_pool)
 
         ctx.risk_cfg = build_risk_config(ctx.strategy)
+        ctx.risk_cfg = replace(
+            ctx.risk_cfg,
+            account_currency=ctx.account_currency,
+        )
         multiplier, regime_meta = compute_regime_risk_multiplier(
             ctx.ohlcv, ctx.benchmark, ctx.risk_cfg
         )
@@ -1114,7 +1180,7 @@ class ScreenerService:
             _apply_market_data_provenance(ctx, fx)
             rates = {pair: _last_close_for_ticker(fx, pair) for pair in required_pairs}
         except Exception as exc:
-            logger.warning("Failed to fetch EURUSD rate for screener sizing: %s", exc)
+            logger.warning("Failed to fetch FX rates for screener sizing: %s", exc)
             ctx.warnings.append(
                 "FX rates unavailable; cross-currency sizing is blocked."
             )
@@ -1479,6 +1545,19 @@ class ScreenerService:
                 for position in ctx.state_snapshot.positions
                 if position.status == "closed"
             ]
+            manage_payload = _manage_payload_from_strategy(strategy)
+
+            def _stateless_stop_action(position: object) -> str | None:
+                payload = _snapshot_position_payload(position)
+                suggestion = self._portfolio_service.compute_position_stop_suggestion(
+                    payload, manage_payload
+                )
+                return suggestion.action
+
+            same_symbol_evaluator = SameSymbolReentryEvaluator(
+                self._portfolio_service,
+                stop_action_resolver=_stateless_stop_action,
+            )
         else:
             portfolio_positions = self._portfolio_service.list_positions(
                 status="open"
@@ -1486,8 +1565,8 @@ class ScreenerService:
             portfolio_closed = self._portfolio_service.list_positions(
                 status="closed"
             ).positions
+            same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
         portfolio_orders = ctx.portfolio_orders
-        same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
         same_symbol_suppressed_count = 0
         same_symbol_add_on_count = 0
         filtered_candidates: list[ScreenerCandidate] = []
