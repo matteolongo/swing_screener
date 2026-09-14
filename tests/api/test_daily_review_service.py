@@ -29,6 +29,7 @@ def mock_screener_service():
         candidates=[
             ScreenerCandidate(
                 ticker="AAPL",
+                currency="USD",
                 signal="MOMENTUM",
                 suggested_order_type="BUY_LIMIT",
                 suggested_order_price=149.5,
@@ -66,6 +67,7 @@ def mock_screener_service():
             ),
             ScreenerCandidate(
                 ticker="MSFT",
+                currency="USD",
                 signal="BREAKOUT",
                 suggested_order_type="BUY_STOP",
                 suggested_order_price=301.5,

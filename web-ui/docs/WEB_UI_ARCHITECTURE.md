@@ -26,6 +26,12 @@
   converted portfolio amounts as `*Account`, and carry `quoteCurrency` plus
   `accountCurrency`. UI view models consume the account-currency risk field;
   deprecated `*Usd` aliases remain typed only for compatibility.
+- Reporting boundary adapters preserve all backend-registered currencies and
+  map missing or unsupported response values to explicit `UNKNOWN`; they never
+  substitute USD. Daily Review also preserves nullable plans, evaluation errors,
+  candle pressure, provenance, and setup-quality inputs. Workspace health maps
+  current/final data to fresh, intraday/degraded/missing data to partial, and
+  stale data to stale.
 
 - API payloads arrive as `snake_case`. Transform functions in `src/types/` convert to `camelCase` before use in components. Never use raw API shape inside components.
 - Candidate workflow state is server-authoritative. Components consume
