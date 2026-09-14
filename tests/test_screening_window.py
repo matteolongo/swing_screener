@@ -1,7 +1,14 @@
 """Unit tests for swing_screener.selection.screening_window pure helpers."""
 
 import datetime as dt
+from zoneinfo import ZoneInfo
 
+import pytest
+
+from swing_screener.data.currencies import (
+    get_currency_definition,
+    supported_currency_codes,
+)
 from swing_screener.selection.screening_window import (
     normalize_currency_codes,
     previous_weekday,
@@ -32,13 +39,40 @@ def test_normalize_currency_codes_filters_unsupported():
 
 
 def test_market_effective_date_uses_registry_for_every_supported_currency():
-    from swing_screener.data.currencies import supported_currency_codes
-
     now_utc = dt.datetime(2026, 2, 19, 21, 30, tzinfo=dt.timezone.utc)
     for code in supported_currency_codes():
         effective_date, is_closed = market_effective_date(code, now_utc)
         assert effective_date == now_utc.date()
         assert is_closed is True, code
+
+
+@pytest.mark.parametrize("code", list(supported_currency_codes()))
+@pytest.mark.parametrize(
+    "local_day",
+    [
+        dt.date(2026, 2, 19),  # Thursday, standard time
+        dt.date(2026, 7, 1),  # Wednesday, daylight-saving time
+    ],
+)
+def test_market_effective_date_close_boundary_from_registry(code, local_day):
+    """One minute before the buffered close the session is open; at the close it is shut."""
+    definition = get_currency_definition(code)
+    tz = ZoneInfo(definition.timezone)
+    close_local = dt.datetime.combine(
+        local_day,
+        definition.close_time,
+        tzinfo=tz,
+    )
+
+    before_utc = (close_local - dt.timedelta(minutes=1)).astimezone(dt.timezone.utc)
+    before_date, before_closed = market_effective_date(code, before_utc)
+    assert before_closed is False, code
+    assert before_date == previous_weekday(local_day), code
+
+    at_utc = close_local.astimezone(dt.timezone.utc)
+    at_date, at_closed = market_effective_date(code, at_utc)
+    assert at_closed is True, code
+    assert at_date == local_day, code
 
 
 def test_normalize_currency_codes_none_returns_empty():

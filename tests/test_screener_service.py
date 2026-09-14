@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pandas as pd
+import pytest
 
 from swing_screener.data.price_history import price_history_map
 
@@ -25,11 +26,44 @@ def test_screener_marks_existing_entry_order_as_non_actionable():
     )
 
 
+@pytest.mark.parametrize("status", ["pending", "submitted"])
+def test_order_state_blocks_pending_or_submitted_entry_orders(status):
+    from api.services.screener_service import ScreenerService
+
+    ctx = SimpleNamespace(
+        order_state_available=True,
+        portfolio_orders=[
+            {"ticker": "AAPL", "status": status, "order_kind": "entry"}
+        ],
+    )
+
+    assert ScreenerService._order_state_for_ticker(ctx, "aapl") == (
+        "pending_order_exists"
+    )
+
+
+@pytest.mark.parametrize(
+    "order",
+    [
+        {"ticker": "AAPL", "status": "filled", "order_kind": "entry"},
+        {"ticker": "AAPL", "status": "cancelled", "order_kind": "entry"},
+        {"ticker": "AAPL", "status": "pending", "order_kind": "stop"},
+        {"ticker": "AAPL", "status": "pending", "order_kind": "take_profit"},
+        {"ticker": "MSFT", "status": "pending", "order_kind": "entry"},
+    ],
+)
+def test_order_state_does_not_block_unrelated_orders(order):
+    from api.services.screener_service import ScreenerService
+
+    ctx = SimpleNamespace(order_state_available=True, portfolio_orders=[order])
+
+    assert ScreenerService._order_state_for_ticker(ctx, "AAPL") == "clear"
+
+
 def test_screener_fails_closed_when_order_repository_is_unavailable(tmp_path):
     from api.models.screener import ScreenerRequest
     from api.services.screener_service import (
         ScreenerService,
-        _approval_claims_for_candidate,
         _RunContext,
     )
 
@@ -40,12 +74,241 @@ def test_screener_fails_closed_when_order_repository_is_unavailable(tmp_path):
 
     svc._load_order_state(ctx)
 
+    assert ctx.portfolio_orders == []
+    assert ctx.order_state_available is False
     assert ScreenerService._order_state_for_ticker(ctx, "AAPL") == (
         "order_state_unavailable"
     )
-    candidate = MagicMock()
-    candidate.recommendation.verdict = "NOT_RECOMMENDED"
-    assert _approval_claims_for_candidate(candidate, "strategy", "revision") is None
+
+
+def test_screener_fails_closed_when_orders_service_is_missing(tmp_path):
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import ScreenerService, _RunContext
+
+    svc, _cache, _provider = _make_screener_service(tmp_path)
+    svc._orders_service = None
+    ctx = _RunContext(request=ScreenerRequest(), strategy={})
+
+    svc._load_order_state(ctx)
+
+    assert ctx.portfolio_orders == []
+    assert ctx.order_state_available is False
+    assert ScreenerService._order_state_for_ticker(ctx, "AAPL") == (
+        "order_state_unavailable"
+    )
+
+
+def _passing_risk_inputs(*, order_state: str):
+    from swing_screener.risk.position_sizing import RiskConfig
+
+    return {
+        "signal": "breakout",
+        "entry": 100.0,
+        "stop": 98.0,
+        "shares": 100,
+        "risk_cfg": RiskConfig(
+            account_size=100000.0,
+            risk_pct=0.01,
+            max_position_pct=0.6,
+            min_shares=1,
+            k_atr=2.0,
+            min_rr=2.0,
+            max_fee_risk_pct=0.2,
+        ),
+        "rr_target": 2.0,
+        "target": 105.0,
+        "target_source": "structural",
+        "currency": "USD",
+        "account_currency": "USD",
+        "account_to_quote_rate": 1.0,
+        "order_state": order_state,
+    }
+
+
+def _candidate_for_claims(recommendation) -> SimpleNamespace:
+    return SimpleNamespace(
+        ticker="AAPL",
+        suggested_order_type="BUY_LIMIT",
+        data_status="current",
+        data_asof="2026-07-15",
+        days_to_earnings=20,
+        recommendation=recommendation,
+    )
+
+
+@pytest.mark.parametrize(
+    ("orders", "reason_code"),
+    [
+        (
+            [{"ticker": "AAPL", "status": "pending", "order_kind": "entry"}],
+            "PENDING_ORDER_EXISTS",
+        ),
+        (
+            [{"ticker": "aapl", "status": "submitted", "order_kind": "entry"}],
+            "PENDING_ORDER_EXISTS",
+        ),
+    ],
+)
+def test_pending_entry_order_blocks_plan_gate_and_approval_claims(
+    tmp_path, orders, reason_code
+):
+    from dataclasses import asdict
+
+    from api.models.recommendation import Recommendation
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import (
+        ScreenerService,
+        _approval_claims_for_candidate,
+        _RunContext,
+    )
+    from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
+
+    svc, _cache, _provider = _make_screener_service(tmp_path)
+    svc._orders_service = MagicMock()
+    svc._orders_service.list_local_orders.return_value = {"orders": orders}
+    ctx = _RunContext(request=ScreenerRequest(), strategy={})
+    svc._load_order_state(ctx)
+
+    order_state = ScreenerService._order_state_for_ticker(ctx, "AAPL")
+    assert order_state == "pending_order_exists"
+
+    rec = evaluate_recommendation(
+        **_passing_risk_inputs(order_state=order_state),
+        costs=RiskEngineConfig(
+            commission_pct=0.0, slippage_bps=0.0, fx_estimate_pct=0.0
+        ),
+    )
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert rec.decision_gates.plan.status == "BLOCK"
+    assert any(r.code == reason_code for r in rec.reasons_detailed)
+
+    recommendation = Recommendation.model_validate(asdict(rec))
+    assert (
+        _approval_claims_for_candidate(
+            _candidate_for_claims(recommendation), "momentum-v1", "revision-1"
+        )
+        is None
+    )
+
+    # Sanity: the same setup with clear order state would be actionable.
+    clear_rec = evaluate_recommendation(
+        **_passing_risk_inputs(order_state="clear"),
+        costs=RiskEngineConfig(
+            commission_pct=0.0, slippage_bps=0.0, fx_estimate_pct=0.0
+        ),
+    )
+    assert clear_rec.verdict == "RECOMMENDED"
+    assert clear_rec.decision_gates.plan.status == "PASS"
+
+
+@pytest.mark.parametrize(
+    "make_unavailable",
+    [
+        pytest.param("exception", id="repository-exception"),
+        pytest.param("missing-service", id="missing-service"),
+    ],
+)
+def test_unavailable_order_state_blocks_plan_gate_and_approval_claims(
+    tmp_path, make_unavailable
+):
+    from dataclasses import asdict
+
+    from api.models.recommendation import Recommendation
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import (
+        ScreenerService,
+        _approval_claims_for_candidate,
+        _RunContext,
+    )
+    from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
+
+    svc, _cache, _provider = _make_screener_service(tmp_path)
+    if make_unavailable == "exception":
+        svc._orders_service = MagicMock()
+        svc._orders_service.list_local_orders.side_effect = OSError(
+            "orders unavailable"
+        )
+    else:
+        svc._orders_service = None
+    ctx = _RunContext(request=ScreenerRequest(), strategy={})
+    svc._load_order_state(ctx)
+
+    order_state = ScreenerService._order_state_for_ticker(ctx, "AAPL")
+    assert order_state == "order_state_unavailable"
+
+    rec = evaluate_recommendation(
+        **_passing_risk_inputs(order_state=order_state),
+        costs=RiskEngineConfig(
+            commission_pct=0.0, slippage_bps=0.0, fx_estimate_pct=0.0
+        ),
+    )
+    assert rec.verdict == "NOT_RECOMMENDED"
+    assert rec.decision_gates.plan.status == "BLOCK"
+    assert any(r.code == "ORDER_STATE_UNAVAILABLE" for r in rec.reasons_detailed)
+
+    recommendation = Recommendation.model_validate(asdict(rec))
+    assert (
+        _approval_claims_for_candidate(
+            _candidate_for_claims(recommendation), "momentum-v1", "revision-1"
+        )
+        is None
+    )
+
+
+def test_held_symbol_kept_for_management_when_order_state_unavailable():
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import ScreenerService, _RunContext
+    from tests.api._test_helpers import make_position
+    from tests.api.test_same_symbol_reentry import _make_candidate
+
+    portfolio_service = SimpleNamespace(
+        list_positions=lambda status=None: SimpleNamespace(
+            positions=(
+                [make_position(ticker="REP.MC", status="open")]
+                if status == "open"
+                else []
+            )
+        ),
+        suggest_position_stop=lambda position_id: SimpleNamespace(action="NO_ACTION"),
+    )
+    service = ScreenerService(
+        strategy_repo=SimpleNamespace(),
+        portfolio_service=portfolio_service,
+        provider=SimpleNamespace(),
+        orders_service=None,
+        eval_cache=SimpleNamespace(),
+    )
+    ctx = _RunContext(
+        request=ScreenerRequest(include_held=True),
+        strategy={},
+        risk_cfg=SimpleNamespace(
+            account_size=500.0,
+            risk_pct=0.02,
+            max_position_pct=0.4,
+            min_shares=1,
+            min_rr=2.0,
+            max_fee_risk_pct=0.2,
+        ),
+        portfolio_orders=[],
+        order_state_available=False,
+    )
+    candidate = _make_candidate()
+    candidate.recommendation = candidate.recommendation.model_copy(
+        update={"verdict": "NOT_RECOMMENDED"}
+    )
+
+    assert ScreenerService._order_state_for_ticker(ctx, "REP.MC") == (
+        "order_state_unavailable"
+    )
+    filtered, suppressed, add_on_count = service._apply_same_symbol_filter(
+        ctx, [candidate]
+    )
+
+    assert len(filtered) == 1
+    assert suppressed == 0
+    assert add_on_count == 0
+    assert filtered[0].same_symbol is not None
+    assert filtered[0].same_symbol.mode == "MANAGE_ONLY"
 
 
 def test_screener_uses_explicit_state_snapshot_without_reading_repositories(tmp_path):
@@ -118,6 +381,279 @@ def test_screener_uses_explicit_state_snapshot_without_reading_repositories(tmp_
     assert filtered == []
     assert suppressed == 1
     svc._portfolio_service.list_positions.assert_not_called()
+
+
+def test_portfolio_state_snapshot_orders_are_frozen_and_isolated():
+    """Snapshot orders are immutable; local copies cannot mutate the snapshot."""
+    import pytest
+    from pydantic import ValidationError
+
+    from api.models.portfolio import OrderSnapshot
+    from api.services.screener_service import PortfolioStateSnapshot
+
+    raw = {
+        "order_id": "ORD-1",
+        "ticker": "aapl",
+        "status": "pending",
+        "order_kind": "entry",
+        "order_date": "2026-09-01",
+    }
+    snapshot = PortfolioStateSnapshot(
+        positions=(),
+        orders=(OrderSnapshot.model_validate(raw),),
+    )
+
+    assert isinstance(snapshot.orders, tuple)
+    assert isinstance(snapshot.orders[0], OrderSnapshot)
+    # Normalization is applied once at the boundary.
+    assert snapshot.orders[0].ticker == "AAPL"
+
+    # The frozen model rejects attribute mutation.
+    with pytest.raises(ValidationError):
+        snapshot.orders[0].ticker = "MSFT"  # type: ignore[misc]
+
+    # A downstream mutable derivation cannot leak back into the snapshot.
+    derived = snapshot.orders[0].model_dump()
+    derived["ticker"] = "MSFT"
+    derived["status"] = "filled"
+    assert snapshot.orders[0].ticker == "AAPL"
+    assert snapshot.orders[0].status == "pending"
+
+    # Validating copies input data: later caller-side mutation is isolated.
+    raw["ticker"] = "MSFT"
+    assert snapshot.orders[0].ticker == "AAPL"
+
+
+def _stateless_recommended_candidate():
+    from api.models.recommendation import (
+        ChecklistGate,
+        DecisionGateModel,
+        DecisionGateStateModel,
+        ExecutionNextStepModel,
+        Recommendation,
+        RecommendationCosts,
+        RecommendationEducation,
+        RecommendationReason,
+        RecommendationRisk,
+    )
+    from api.models.screener import ScreenerCandidate
+
+    entry = 110.0
+    fresh_stop = 105.0
+    target = 145.0
+    shares = 20
+    risk = RecommendationRisk(
+        entry=entry,
+        stop=fresh_stop,
+        target=target,
+        desired_target=target,
+        target_source="structural",
+        rr=7.0,
+        risk_amount=(entry - fresh_stop) * shares,
+        risk_pct=0.001,
+        position_size=entry * shares,
+        shares=shares,
+        invalidation_level=fresh_stop,
+        currency="USD",
+        account_currency="USD",
+        account_to_quote_rate=1.0,
+    )
+    recommendation = Recommendation(
+        verdict="RECOMMENDED",
+        reasons_short=["Valid setup"],
+        reasons_detailed=[
+            RecommendationReason(
+                code="VALID", message="Setup is valid.", severity="info"
+            )
+        ],
+        risk=risk,
+        costs=RecommendationCosts(
+            commission_estimate=0.0,
+            fx_estimate=0.0,
+            slippage_estimate=0.0,
+            total_cost=0.0,
+            fee_to_risk_pct=0.0,
+        ),
+        checklist=[
+            ChecklistGate(gate_name="signal", passed=True, explanation="Signal active.")
+        ],
+        decision_gates=DecisionGateStateModel(
+            setup=DecisionGateModel(status="PASS", explanation="Setup qualified."),
+            trigger=DecisionGateModel(status="PASS", explanation="Trigger observed."),
+            plan=DecisionGateModel(status="PASS", explanation="Plan reconciled."),
+            portfolio=DecisionGateModel(
+                status="UNKNOWN", explanation="Checked on submit."
+            ),
+            ready_to_order=False,
+        ),
+        workflow_status="ready",
+        next_step=ExecutionNextStepModel(code="review_order"),
+        education=RecommendationEducation(
+            common_bias_warning="None",
+            what_to_learn="None",
+            what_would_make_valid=[],
+        ),
+    )
+    return ScreenerCandidate(
+        ticker="AAPL",
+        currency="USD",
+        close=110.0,
+        atr=2.0,
+        momentum_6m=0.1,
+        momentum_12m=0.2,
+        rel_strength=0.05,
+        score=0.9,
+        confidence=80.0,
+        rank=1,
+        entry=entry,
+        stop=fresh_stop,
+        target=target,
+        rr=7.0,
+        shares=shares,
+        recommendation=recommendation,
+    )
+
+
+def test_stateless_same_symbol_uses_snapshot_for_stop_evaluation(tmp_path):
+    from api.models.portfolio import Position, PositionUpdate
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import PortfolioStateSnapshot, _RunContext
+    from swing_screener.risk.position_sizing import RiskConfig
+
+    svc, _cache, _provider = _make_screener_service(tmp_path)
+    svc._orders_service = MagicMock()
+    snapshot_position = Position(
+        position_id="POS-AAPL-1",
+        ticker="AAPL",
+        status="open",
+        entry_date="2026-09-01",
+        entry_price=100.0,
+        stop_price=95.0,
+        shares=10,
+    )
+    snapshot = PortfolioStateSnapshot(
+        positions=(snapshot_position,),
+        orders=(),
+    )
+    strategy = {"manage": {"reentry_lookback_days": 30}}
+    ctx = _RunContext(
+        request=ScreenerRequest(), strategy=strategy, state_snapshot=snapshot
+    )
+    ctx.risk_cfg = RiskConfig(
+        account_size=100000.0,
+        risk_pct=0.01,
+        max_position_pct=0.6,
+        min_shares=1,
+        k_atr=2.0,
+        min_rr=0.5,
+        max_fee_risk_pct=0.2,
+    )
+
+    svc._load_order_state(ctx)
+    svc._orders_service.list_local_orders.assert_not_called()
+
+    svc._portfolio_service.list_positions.side_effect = AssertionError(
+        "stateless mode must not read positions repository"
+    )
+    svc._portfolio_service.suggest_position_stop.side_effect = AssertionError(
+        "stateless mode must not resolve stop from repository"
+    )
+    svc._portfolio_service.get_position.side_effect = AssertionError(
+        "stateless mode must not resolve position from repository"
+    )
+    svc._portfolio_service.compute_position_stop_suggestion.return_value = (
+        PositionUpdate(
+            ticker="AAPL",
+            status="open",
+            last=110.0,
+            entry=100.0,
+            stop_old=95.0,
+            stop_suggested=95.0,
+            shares=10,
+            r_now=2.0,
+            action="NO_ACTION",
+            reason="Snapshot stop evaluation",
+        )
+    )
+
+    filtered, suppressed, add_ons = svc._apply_same_symbol_filter(
+        ctx, [_stateless_recommended_candidate()]
+    )
+
+    assert svc._portfolio_service.compute_position_stop_suggestion.call_count == 1
+    payload, manage = svc._portfolio_service.compute_position_stop_suggestion.call_args[
+        0
+    ]
+    assert payload["ticker"] == "AAPL"
+    assert payload["position_id"] == "POS-AAPL-1"
+    assert payload["stop_price"] == 95.0
+    assert svc._portfolio_service.suggest_position_stop.call_count == 0
+    assert svc._portfolio_service.get_position.call_count == 0
+    assert add_ons == 1
+    assert suppressed == 0
+    assert [c.ticker for c in filtered] == ["AAPL"]
+    assert filtered[0].same_symbol is not None
+    assert filtered[0].same_symbol.mode == "ADD_ON"
+    assert filtered[0].stop == 95.0
+
+
+def test_stateful_same_symbol_uses_repository_stop_evaluation(tmp_path):
+    from api.models.portfolio import Position, PositionUpdate
+    from api.models.screener import ScreenerRequest
+    from api.services.screener_service import _RunContext
+    from swing_screener.risk.position_sizing import RiskConfig
+
+    svc, _cache, _provider = _make_screener_service(tmp_path)
+    open_position = Position(
+        position_id="POS-AAPL-1",
+        ticker="AAPL",
+        status="open",
+        entry_date="2026-09-01",
+        entry_price=100.0,
+        stop_price=95.0,
+        shares=10,
+    )
+    svc._portfolio_service.list_positions.side_effect = [
+        MagicMock(positions=[open_position]),
+        MagicMock(positions=[]),
+    ]
+    svc._portfolio_service.suggest_position_stop.return_value = PositionUpdate(
+        ticker="AAPL",
+        status="open",
+        last=110.0,
+        entry=100.0,
+        stop_old=95.0,
+        stop_suggested=95.0,
+        shares=10,
+        r_now=2.0,
+        action="NO_ACTION",
+        reason="Repository stop evaluation",
+    )
+
+    ctx = _RunContext(request=ScreenerRequest(), strategy={})
+    ctx.risk_cfg = RiskConfig(
+        account_size=100000.0,
+        risk_pct=0.01,
+        max_position_pct=0.6,
+        min_shares=1,
+        k_atr=2.0,
+        min_rr=0.5,
+        max_fee_risk_pct=0.2,
+    )
+    ctx.portfolio_orders = []
+    ctx.order_state_available = True
+
+    filtered, _suppressed, add_ons = svc._apply_same_symbol_filter(
+        ctx, [_stateless_recommended_candidate()]
+    )
+
+    assert svc._portfolio_service.suggest_position_stop.call_count == 1
+    assert svc._portfolio_service.suggest_position_stop.call_args[0][0] == (
+        "POS-AAPL-1"
+    )
+    svc._portfolio_service.compute_position_stop_suggestion.assert_not_called()
+    assert add_ons == 1
+    assert [c.ticker for c in filtered] == ["AAPL"]
 
 
 def _ohlcv():

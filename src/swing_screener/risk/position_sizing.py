@@ -149,6 +149,26 @@ def _normalize_quote_currency(value: object, account_currency: str) -> Optional[
     return normalized
 
 
+def _is_missing_row_currency(value: object) -> bool:
+    """Check the raw ``currency`` cell from ``ranked_universe`` for missing/invalid data.
+
+    Unlike :func:`_normalize_quote_currency`, which intentionally falls back to
+    ``account_currency`` for ``None`` (preserving legacy direct
+    ``position_plan(..., quote_currency=None)`` behavior), a missing row
+    currency in :func:`build_trade_plans` must block the plan with
+    ``block_reason="currency_missing"``.
+    """
+    if value is None:
+        return True
+    try:
+        if pd.isna(value):
+            return True
+    except (TypeError, ValueError):
+        pass
+    normalized = str(value).strip().upper()
+    return normalized in {"", "UNKNOWN"}
+
+
 def _lookup_account_to_quote_rate(
     *,
     account_currency: str,
@@ -272,7 +292,11 @@ def build_trade_plans(
     ranked_universe: per-ticker features (must include atr14 and last)
     signal_board: per-ticker signals (must include signal and last)
 
-    Returns per-ticker trade plan for tickers with signal != 'none' and tradable sizing.
+    Returns active signal candidates (signal != 'none') with a stable schema.
+    ``plan_status`` is ``"ready"`` for actionable plans and ``"blocked"`` plus
+    a machine-readable ``block_reason`` (e.g. ``currency_missing``,
+    ``fx_rate_missing``, ``position_size_unavailable``) when planning cannot
+    produce an actionable position. Blocked rows are retained, never dropped.
     """
     if ranked_universe is None or ranked_universe.empty:
         return _empty_trade_plans()
@@ -337,8 +361,19 @@ def build_trade_plans(
                 }
             )
             continue
+        raw_currency = ranked_universe.loc[t, "currency"]
+        if _is_missing_row_currency(raw_currency):
+            out_rows.append(
+                {
+                    "ticker": t,
+                    "signal": active.loc[t, "signal"],
+                    "plan_status": "blocked",
+                    "block_reason": "currency_missing",
+                }
+            )
+            continue
         quote_currency = _normalize_quote_currency(
-            ranked_universe.loc[t, "currency"],
+            raw_currency,
             account_currency,
         )
         if quote_currency is None:

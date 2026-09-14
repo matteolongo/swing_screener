@@ -4,9 +4,8 @@ from datetime import date
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
-
-from api.models.portfolio import Position
 from api.models.recommendation import Recommendation
+from api.models.portfolio import OrderSnapshot, Position
 from api.models.screener import SameSymbolCandidateContext, TaxonomyFilter
 from api.models.strategy import Strategy
 from api.models.watchlist import WatchlistItemView
@@ -185,7 +184,7 @@ class DailyReviewSnapshotResponse(BaseModel):
 class DailyReviewComputeRequest(BaseModel):
     strategy: Strategy
     positions: list[Position] = Field(default_factory=list)
-    orders: list = Field(default_factory=list)
+    orders: list[OrderSnapshot] = Field(default_factory=list)
     top_n: int = Field(default=200, ge=1, le=200)
     universe: Optional[str] = None
     preset: Optional[str] = None

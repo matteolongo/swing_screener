@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from swing_screener.risk.position_sizing import (
     position_plan,
@@ -234,3 +235,70 @@ def test_build_trade_plans_uses_row_currency_conversion_rates():
     assert plans.loc["AAPL", "account_currency"] == "EUR"
     assert plans.loc["AAPL", "account_to_quote_rate"] == 1.25
     assert plans.loc["AAPL", "realized_risk_account"] == 9.6
+
+
+@pytest.mark.parametrize(
+    "raw_currency",
+    [None, pd.NA, float("nan"), "", "   ", "UNKNOWN"],
+    ids=["none", "pd_na", "nan", "empty", "whitespace", "unknown"],
+)
+def test_build_trade_plans_blocks_missing_row_currencies(raw_currency):
+    ranked = pd.DataFrame(
+        {"atr14": [1.2], "last": [30.0], "currency": [raw_currency]},
+        index=["AAA"],
+    )
+    signals = pd.DataFrame(
+        {"last": [30.0], "signal": ["breakout"]},
+        index=["AAA"],
+    )
+    cfg = RiskConfig(
+        account_size=500,
+        risk_pct=0.01,
+        k_atr=2.0,
+        max_position_pct=0.60,
+        account_currency="EUR",
+    )
+
+    plans = build_trade_plans(ranked, signals, cfg)
+
+    assert plans.loc["AAA", "plan_status"] == "blocked"
+    assert plans.loc["AAA", "block_reason"] == "currency_missing"
+
+
+def test_build_trade_plans_keeps_valid_same_currency_ready():
+    ranked = pd.DataFrame(
+        {"atr14": [1.2], "last": [30.0], "currency": ["EUR"]},
+        index=["AAA"],
+    )
+    signals = pd.DataFrame(
+        {"last": [30.0], "signal": ["breakout"]},
+        index=["AAA"],
+    )
+    cfg = RiskConfig(
+        account_size=500,
+        risk_pct=0.01,
+        k_atr=2.0,
+        max_position_pct=0.60,
+        account_currency="EUR",
+    )
+
+    plans = build_trade_plans(ranked, signals, cfg)
+
+    assert plans.loc["AAA", "plan_status"] == "ready"
+    assert plans.loc["AAA", "shares"] >= 1
+
+
+def test_position_plan_legacy_none_quote_currency_falls_back_to_account():
+    cfg = RiskConfig(
+        account_size=500,
+        risk_pct=0.01,
+        k_atr=2.0,
+        max_position_pct=0.60,
+        account_currency="EUR",
+    )
+
+    plan = position_plan(entry=30.0, atr14=1.2, cfg=cfg, quote_currency=None)
+
+    assert plan is not None
+    assert plan["quote_currency"] == "EUR"
+    assert plan["shares"] >= 1
