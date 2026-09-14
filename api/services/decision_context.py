@@ -5,6 +5,7 @@ API models (``ScreenerCandidate``/``Recommendation``) and call into fundamentals
 storage and the risk engine, so they live in the API layer rather than core.
 Extracted from ``screener_service`` to keep that module a thin orchestrator.
 """
+
 from __future__ import annotations
 
 from api.models.screener import ScreenerCandidate
@@ -79,8 +80,12 @@ def apply_cached_fundamentals_context(
         enriched.append(
             candidate.model_copy(
                 update={
-                    "fundamentals_coverage_status": getattr(snapshot, "coverage_status", None),
-                    "fundamentals_freshness_status": getattr(snapshot, "freshness_status", None),
+                    "fundamentals_coverage_status": getattr(
+                        snapshot, "coverage_status", None
+                    ),
+                    "fundamentals_freshness_status": getattr(
+                        snapshot, "freshness_status", None
+                    ),
                     "fundamentals_summary": fundamentals_summary(snapshot),
                 }
             )
@@ -106,7 +111,9 @@ def apply_decision_summary_context(
     enriched: list[ScreenerCandidate] = []
     for candidate in candidates:
         fund_snap = snapshot_cache.get(candidate.ticker)
-        fund_asof = getattr(fund_snap, "asof_date", None) if fund_snap is not None else None
+        fund_asof = (
+            getattr(fund_snap, "asof_date", None) if fund_snap is not None else None
+        )
         opportunity = None
         enriched.append(
             candidate.model_copy(
@@ -118,14 +125,28 @@ def apply_decision_summary_context(
                     ),
                     "fundamentals_snapshot": fund_snap,
                     "fundamentals_asof": str(fund_asof) if fund_asof else None,
-                    "intelligence_asof": opportunity.generated_at if opportunity else None,
+                    "intelligence_asof": (
+                        opportunity.generated_at if opportunity else None
+                    ),
                 }
             )
         )
     return enriched
 
 
-def apply_decision_priority_ranking(candidates: list[ScreenerCandidate]) -> list[ScreenerCandidate]:
+def _technical_rank(candidate: ScreenerCandidate) -> int:
+    """Explicit-``None`` compatibility fallback: ``technical_rank`` wins when
+    present, otherwise legacy ``rank`` (which aliases the technical order)."""
+    return (
+        candidate.technical_rank
+        if candidate.technical_rank is not None
+        else candidate.rank
+    )
+
+
+def apply_decision_priority_ranking(
+    candidates: list[ScreenerCandidate],
+) -> list[ScreenerCandidate]:
     if not candidates:
         return candidates
 
@@ -141,7 +162,7 @@ def apply_decision_priority_ranking(candidates: list[ScreenerCandidate]) -> list
                 getattr(getattr(candidate, "decision_summary", None), "conviction", ""),
                 -1,
             ),
-            candidate.rank,
+            _technical_rank(candidate),
             -candidate.confidence,
             candidate.ticker,
         ),

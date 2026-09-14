@@ -86,6 +86,62 @@ describe('prioritizeCandidates', () => {
     expect(prioritized.map((candidate) => candidate.priorityRank)).toEqual([1, 3, 4, 5]);
     expect(prioritized.map((candidate) => candidate.rank)).toEqual([1, 3, 4, 5]);
   });
+
+  it('uses final priority rank without overwriting rank provenance', () => {
+    const technicalFirst = {
+      ...buildCandidate('TECH', { rank: 1, confidence: 70, action: 'WATCH', conviction: 'medium' }),
+      technicalRank: 1,
+      confidenceRank: 2,
+      priorityRank: 2,
+    };
+    const priorityFirst = {
+      ...buildCandidate('FINAL', { rank: 2, confidence: 90, action: 'BUY_NOW', conviction: 'high' }),
+      technicalRank: 2,
+      confidenceRank: 1,
+      priorityRank: 1,
+    };
+
+    const prioritized = prioritizeCandidates([technicalFirst, priorityFirst]);
+
+    expect(prioritized.map((candidate) => candidate.ticker)).toEqual(['FINAL', 'TECH']);
+    expect(prioritized.map((candidate) => candidate.technicalRank)).toEqual([2, 1]);
+    expect(prioritized.map((candidate) => candidate.confidenceRank)).toEqual([1, 2]);
+    expect(prioritized.map((candidate) => candidate.rank)).toEqual([2, 1]);
+  });
+
+  it('falls back through priorityRank, technicalRank, then legacy rank', () => {
+    const legacyOnly = buildCandidate('LEGACY', { rank: 1, confidence: 60, action: 'WATCH', conviction: 'medium' });
+    const technicalOnly = {
+      ...buildCandidate('TECHNICAL', { rank: 9, confidence: 60, action: 'WATCH', conviction: 'medium' }),
+      technicalRank: 2,
+    };
+    const priorityFirst = {
+      ...buildCandidate('PRIORITY', { rank: 9, confidence: 60, action: 'WATCH', conviction: 'medium' }),
+      technicalRank: 9,
+      priorityRank: 3,
+    };
+
+    const prioritized = prioritizeCandidates([priorityFirst, technicalOnly, legacyOnly]);
+
+    expect(prioritized.map((candidate) => candidate.ticker)).toEqual(['LEGACY', 'TECHNICAL', 'PRIORITY']);
+  });
+
+  it('never uses confidenceRank as the final presentation rank', () => {
+    const confidenceFirst = {
+      ...buildCandidate('CONF', { rank: 2, confidence: 60, action: 'WATCH', conviction: 'medium' }),
+      technicalRank: 2,
+      confidenceRank: 1,
+    };
+    const technicalFirst = {
+      ...buildCandidate('TECH', { rank: 1, confidence: 60, action: 'WATCH', conviction: 'medium' }),
+      technicalRank: 1,
+      confidenceRank: 2,
+    };
+
+    const prioritized = prioritizeCandidates([confidenceFirst, technicalFirst]);
+
+    expect(prioritized.map((candidate) => candidate.ticker)).toEqual(['TECH', 'CONF']);
+  });
 });
 
 describe('filterOutAddOns', () => {

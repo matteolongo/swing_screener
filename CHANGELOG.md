@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Screener candidates now preserve technical, confidence-prefilter, and final
+  priority ranks as separate fields with deterministic ticker tie-breakers;
+  legacy `rank` remains the technical-rank alias.
+
 - Daily-review computation is now read-only; snapshot persistence uses an
   explicit atomic `POST /api/daily-review/snapshots` command, while stateless
   review screens suppress evaluation-cache and review-queue writes.

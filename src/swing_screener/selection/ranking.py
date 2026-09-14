@@ -13,19 +13,44 @@ def _ranking_defaults() -> dict:
 
 @dataclass(frozen=True)
 class RankingConfig:
-    w_mom_6m: float = field(default_factory=lambda: float(_ranking_defaults().get("w_mom_6m", 0.45)))
-    w_mom_12m: float = field(default_factory=lambda: float(_ranking_defaults().get("w_mom_12m", 0.35)))
-    w_rs_6m: float = field(default_factory=lambda: float(_ranking_defaults().get("w_rs_6m", 0.20)))
-    top_n: int = field(default_factory=lambda: int(_ranking_defaults().get("top_n", 15)))
+    w_mom_6m: float = field(
+        default_factory=lambda: float(_ranking_defaults().get("w_mom_6m", 0.45))
+    )
+    w_mom_12m: float = field(
+        default_factory=lambda: float(_ranking_defaults().get("w_mom_12m", 0.35))
+    )
+    w_rs_6m: float = field(
+        default_factory=lambda: float(_ranking_defaults().get("w_rs_6m", 0.20))
+    )
+    top_n: int = field(
+        default_factory=lambda: int(_ranking_defaults().get("top_n", 15))
+    )
     # Optional setup-quality weights — default 0 = disabled (backward-compatible)
-    w_setup_quality: float = field(default_factory=lambda: float(_ranking_defaults().get("w_setup_quality", 0.0)))
-    w_sma20_slope: float = field(default_factory=lambda: float(_ranking_defaults().get("w_sma20_slope", 0.0)))
-    w_sector_rs: float = field(default_factory=lambda: float(_ranking_defaults().get("w_sector_rs", 0.0)))
-    extension_penalty_cap: float = field(default_factory=lambda: float(_ranking_defaults().get("extension_penalty_cap", 0.10)))
+    w_setup_quality: float = field(
+        default_factory=lambda: float(_ranking_defaults().get("w_setup_quality", 0.0))
+    )
+    w_sma20_slope: float = field(
+        default_factory=lambda: float(_ranking_defaults().get("w_sma20_slope", 0.0))
+    )
+    w_sector_rs: float = field(
+        default_factory=lambda: float(_ranking_defaults().get("w_sector_rs", 0.0))
+    )
+    extension_penalty_cap: float = field(
+        default_factory=lambda: float(
+            _ranking_defaults().get("extension_penalty_cap", 0.10)
+        )
+    )
 
 
 def _validate_weights(cfg: RankingConfig) -> None:
-    s = cfg.w_mom_6m + cfg.w_mom_12m + cfg.w_rs_6m + cfg.w_setup_quality + cfg.w_sma20_slope + cfg.w_sector_rs
+    s = (
+        cfg.w_mom_6m
+        + cfg.w_mom_12m
+        + cfg.w_rs_6m
+        + cfg.w_setup_quality
+        + cfg.w_sma20_slope
+        + cfg.w_sector_rs
+    )
     if s <= 0:
         raise ValueError("Sum of weights must be > 0.")
 
@@ -93,11 +118,20 @@ def compute_hot_score(
 
     # Extension penalty: subtract raw extension value, capped at extension_penalty_cap.
     if cfg.extension_penalty_cap > 0 and "above_breakout_extension" in out.columns:
-        penalty = out["above_breakout_extension"].fillna(0.0).clip(lower=0.0, upper=cfg.extension_penalty_cap)
+        penalty = (
+            out["above_breakout_extension"]
+            .fillna(0.0)
+            .clip(lower=0.0, upper=cfg.extension_penalty_cap)
+        )
         out["score"] = (out["score"] - penalty).clip(lower=0.0)
 
-    out = out.sort_values("score", ascending=False)
-    out["rank"] = range(1, len(out) + 1)
+    out = out.assign(_ticker_tie_breaker=[str(ticker) for ticker in out.index])
+    out = out.sort_values(
+        ["score", "_ticker_tie_breaker"], ascending=[False, True], kind="stable"
+    ).drop(columns="_ticker_tie_breaker")
+    out["technical_rank"] = range(1, len(out) + 1)
+    # Backward-compatible alias: `rank` always means the technical selection rank.
+    out["rank"] = out["technical_rank"]
 
     return out
 

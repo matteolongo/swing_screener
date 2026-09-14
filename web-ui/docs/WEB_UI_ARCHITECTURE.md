@@ -19,6 +19,10 @@
 
 ## Contracts
 
+- Screener candidates preserve `technicalRank`, `confidenceRank`, and final
+  `priorityRank`. List ordering reads `priorityRank`; legacy `rank` remains the
+  technical-rank alias for older API payloads.
+
 - API payloads arrive as `snake_case`. Transform functions in `src/types/` convert to `camelCase` before use in components. Never use raw API shape inside components.
 - Candidate workflow state is server-authoritative. Components consume
   transformed `workflowStatus` / `nextStep`; they do not re-derive precedence
