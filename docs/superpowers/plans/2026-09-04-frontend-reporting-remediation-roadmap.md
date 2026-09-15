@@ -46,9 +46,9 @@
 
 | Work item | Status | Branch / PR | Verification |
 |---|---|---|---|
-| `[BE][19]` | Complete; open | PR #464 | Canonical execution-eligibility contract delivered. |
-| `[BE][20]` | Complete; open | `codex/stateless-trading-transitions` / [PR #465](https://github.com/matteolongo/swing_screener/pull/465) | Portfolio/stateless regression: 92 passed; frontend full suite: 151 files and 1,000 tests passed; TypeScript typecheck, ESLint, production build, and `git diff --check` passed. The seven broader backend Windows timing/filesystem failures reproduce on the immediate BE-19 base. |
-| `[BE][21]` | Complete; open | `codex/canonical-portfolio-analytics` / [PR #466](https://github.com/matteolongo/swing_screener/pull/466) | Canonical persisted/stateless analytics now provide stable ID-less curve identities, self-sufficient journal rows, backend metric statuses, zero-safe insight config, and strategy validation in both modes; 17 focused backend tests, 17 focused frontend tests, full frontend 153 files / 993 tests, typecheck, lint, build, and diff audit passed. |
+| `[BE][19]` | Complete; merged | [PR #464](https://github.com/matteolongo/swing_screener/pull/464) + recovery [#474](https://github.com/matteolongo/swing_screener/pull/474) | Canonical execution-eligibility contract delivered; inherited eligibility commits recovered with 104 backend and 8 frontend focused tests before merge. |
+| `[BE][20]` | Complete; merged | `codex/stateless-trading-transitions` / [PR #465](https://github.com/matteolongo/swing_screener/pull/465) | Portfolio/stateless regression: 92 passed; frontend full suite: 151 files and 1,000 tests passed; TypeScript typecheck, ESLint, production build, and `git diff --check` passed. The seven broader backend Windows timing/filesystem failures reproduce on the immediate BE-19 base. |
+| `[BE][21]` | Complete; merged | `codex/canonical-portfolio-analytics` / [PR #466](https://github.com/matteolongo/swing_screener/pull/466) | Canonical persisted/stateless analytics now provide stable ID-less curve identities, self-sufficient journal rows, backend metric statuses, zero-safe insight config, and strategy validation in both modes; 17 focused backend tests, 17 focused frontend tests, full frontend 153 files / 993 tests, typecheck, lint, build, and diff audit passed. |
 | `[FE][01]` | Complete; [#467](https://github.com/matteolongo/swing_screener/pull/467) | `codex/consume-execution-eligibility` | Frontend transforms and validates the fail-closed backend capability/draft; unsigned or malformed drafts, signal fallbacks, fabricated plans, and browser position-cap policy are removed. Focused tests: 90 passed; lint/build/diff-check passed. Baseline typecheck and MSW/happy-dom runner failures are documented in the PR. |
 | `[FE][02]` | Complete; [#468](https://github.com/matteolongo/swing_screener/pull/468) | `codex/preserve-reporting-run-identity` | Source-aware workspace selections preserve pinned/last-run candidate identity, ad-hoc analysis remains local, and strategy activation invalidates actionable persisted runs. Focused assertions: 84 passed; lint/build/diff-check passed. Baseline typecheck and MSW/happy-dom runner failures are documented in the PR. |
 | `[FE][03]` | Complete; [#470](https://github.com/matteolongo/swing_screener/pull/470) | `codex/refresh-daily-review-state` | Order lifecycle transitions invalidate Daily Review (and positions after fills); Today composes independently loaded positions, backend-filtered watchlist near-trigger rows, pinned candidates, and portfolio review state. Local reviews submit the browser watchlist and strategy to stateless compute; API reviews use persisted state. Focused assertions: 37 backend and 23 frontend passed; affected Ruff/ESLint, Vite production bundle, and diff-check passed. This worktree's cross-worktree dependency junction (`msw@2.15.0` with `happy-dom@12.10.3`) still blocks both unshimmed MSW integration tests and typecheck with errors outside the FE-03 diff; clean-install CI is authoritative. |
@@ -59,28 +59,28 @@ BE-19 is specified in `docs/superpowers/plans/2026-09-08-canonical-execution-eli
 
 ## BE-19 contract: canonical execution eligibility
 
-- [ ] Add a pure backend eligibility result with `allowed`, nullable `mode`, and stable blocked `reason`.
-- [ ] Normalize `SKIP` to a non-actionable recommendation, prohibit approval claims, and expose no order draft.
-- [ ] Return one validated order draft containing order type, entry, stop, target, shares, R:R, quote currency, freshness, and approval identity.
-- [ ] Preserve the documented token-gated pending `BUY_LIMIT` pullback exception.
-- [ ] Add table-driven core/service tests for workflow, plan coherence, data freshness, same-symbol mode, and approval state.
+- [x] Add a pure backend eligibility result with `allowed`, nullable `mode`, and stable blocked `reason`.
+- [x] Normalize `SKIP` to a non-actionable recommendation, prohibit approval claims, and expose no order draft.
+- [x] Return one validated order draft containing order type, entry, stop, target, shares, R:R, quote currency, freshness, and approval identity.
+- [x] Preserve the documented token-gated pending `BUY_LIMIT` pullback exception.
+- [x] Add table-driven core/service tests for workflow, plan coherence, data freshness, same-symbol mode, and approval state.
 
 ## BE-20 contract: stateless trading transitions
 
-- [ ] Add request/response envelopes carrying strategy, positions, orders, one command, and the resulting state.
-- [ ] Route create, submit, cancel, fill, DeGiro fill, stop update, partial close, final close, and add-on blending through existing execution/portfolio services.
-- [ ] Reuse configured heat, concentration, event, fee, FX, and capital policies; remove hardcoded browser policy values.
-- [ ] Return linked protective-order changes atomically with the position/order snapshot.
-- [ ] Add parity tests proving API-persisted and browser-persisted snapshots produce the same transition result.
-- [ ] Document that local mode requires the API for computation but keeps persistence in browser storage.
+- [x] Add request/response envelopes carrying strategy, positions, orders, one command, and the resulting state.
+- [x] Route create, submit, cancel, fill, DeGiro fill, stop update, partial close, final close, and add-on blending through existing execution/portfolio services.
+- [x] Reuse configured heat, concentration, event, fee, FX, and capital policies; remove hardcoded browser policy values.
+- [x] Return linked protective-order changes atomically with the position/order snapshot.
+- [x] Add parity tests proving API-persisted and browser-persisted snapshots produce the same transition result.
+- [x] Document that local mode requires the API for computation but keeps persistence in browser storage.
 
 ## BE-21 contract: canonical portfolio analytics
 
-- [ ] Extend portfolio analytics with canonical open heat/risk, effective equity, average R, closed-trade counts, win rate, average R, profit factor, holding period, streaks, equity curve, and tag breakdown.
-- [ ] Define breakeven treatment and R units once in backend tests.
-- [ ] Source concentration warning thresholds and minimum sample sizes from configuration, not component constants.
-- [ ] Reuse the existing strategy validation endpoint for browser-persisted strategy payloads; do not add a second validator.
-- [ ] Add deterministic fixtures covering partial closes, per-share initial risk, fees, FX, scratches, and missing values.
+- [x] Extend portfolio analytics with canonical open heat/risk, effective equity, average R, closed-trade counts, win rate, average R, profit factor, holding period, streaks, equity curve, and tag breakdown.
+- [x] Define breakeven treatment and R units once in backend tests.
+- [x] Source concentration warning thresholds and minimum sample sizes from configuration, not component constants.
+- [x] Reuse the existing strategy validation endpoint for browser-persisted strategy payloads; do not add a second validator.
+- [x] Add deterministic fixtures covering partial closes, per-share initial risk, fees, FX, scratches, and missing values.
 
 ## FE-01 contract: consume execution eligibility
 
@@ -138,11 +138,13 @@ BE-19 is specified in `docs/superpowers/plans/2026-09-08-canonical-execution-eli
 
 ## Stack verification
 
-- [ ] Re-run the focused PR #462 configuration suites before creating the first implementation branch.
-- [ ] Verify the first implementation branches descend from `365a3de2` or the merged equivalent, never from the pre-stack `main` snapshot.
-- [ ] Verify no heat, concentration, earnings-window, safety-score, R-multiple, order-lifecycle, or portfolio-performance policy remains duplicated in TypeScript.
-- [ ] Verify every audit finding maps to one PR and one regression test.
-- [ ] Verify each branch uses the branch directly below it as the compare base when stacked.
-- [ ] Verify no implementation PR includes planning-only or unrelated working-tree changes.
-- [ ] Record exact test commands and results in each PR description.
-- [ ] Capture screenshots for PRs 2, 3, and 5 because they change visible Web UI behavior.
+- [x] Re-run the focused PR #462 configuration suites before creating the first implementation branch.
+- [x] Verify the first implementation branches descend from `365a3de2` or the merged equivalent, never from the pre-stack `main` snapshot.
+- [x] Verify no heat, concentration, earnings-window, safety-score, R-multiple, order-lifecycle, or portfolio-performance policy remains duplicated in TypeScript.
+- [x] Verify every audit finding maps to one PR and one regression test.
+- [x] Verify each branch uses the branch directly below it as the compare base when stacked; merge-time retargets to `main` preserved dependency order.
+- [x] Verify no implementation PR includes planning-only or unrelated working-tree changes.
+- [x] Record exact test commands and results in each PR description.
+- [x] Record the exact environment limitation in PRs #468, #470, and #473 where the linked dependency tree prevented representative screenshots.
+
+Final audit (2026-09-15): PRs #457–#468, #470, #472–#474 merged in dependency order. Clean-install GitHub checks passed on the corrected stack tips; final focused recovery checks passed (104 backend, 8 frontend), the production bundle completed with 1,935 modules, and every stacked comparison passed `git diff --check` before merge.

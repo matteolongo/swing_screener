@@ -7,6 +7,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-15
+
 ### Added
 
 - Workspace selections now preserve row, source, run, and candidate identity across
@@ -177,7 +179,7 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   cached items through provider failures, and reject future-dated cache entries
   as stale.
 
-## [3.0.0] - Unreleased
+## [3.0.0] - 2026-07-21
 
 ### Added
 
