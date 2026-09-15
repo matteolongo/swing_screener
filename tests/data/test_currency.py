@@ -1,8 +1,24 @@
-from swing_screener.data.currency import detect_currency
+import pytest
+
+import swing_screener.data.currency as currency_module
+from swing_screener.data.currency import (
+    _load_instrument_master_currencies_by_path,
+    detect_currency,
+)
 from swing_screener.data.currencies import (
     get_currency_definition,
     supported_currency_codes,
 )
+
+
+@pytest.fixture(autouse=True)
+def _clear_currency_caches():
+    """Keep detect_currency cache behavior order-independent across tests."""
+    detect_currency.cache_clear()
+    _load_instrument_master_currencies_by_path.cache_clear()
+    yield
+    detect_currency.cache_clear()
+    _load_instrument_master_currencies_by_path.cache_clear()
 
 
 def test_currency_registry_owns_every_supported_currency():
@@ -74,3 +90,59 @@ def test_detect_currency_unknown_suffix_returns_unknown():
 def test_detect_currency_no_suffix_unknown_ticker_returns_unknown():
     # Tickers not in instrument master and without suffix return UNKNOWN
     assert detect_currency("ZZZZZZZ") == "UNKNOWN"
+
+
+def test_detect_currency_accepts_supported_instrument_master_currency(monkeypatch):
+    monkeypatch.setattr(
+        currency_module,
+        "_load_instrument_master_currencies",
+        lambda: {"TST-SUP": "USD", "TST-SUP-GB": "GBP"},
+    )
+    assert detect_currency("TST-SUP") == "USD"
+    assert detect_currency("TST-SUP-GB") == "GBP"
+
+
+def test_detect_currency_normalizes_instrument_master_case_and_whitespace(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        currency_module,
+        "_load_instrument_master_currencies",
+        lambda: {"TST-NORM": " eur "},
+    )
+    assert detect_currency("TST-NORM") == "EUR"
+    assert detect_currency("tst-norm") == "EUR"
+
+
+def test_detect_currency_returns_unknown_for_unsupported_instrument_master_currency(
+    monkeypatch,
+):
+    # JPY is not in the canonical supported-currency registry: never leak it.
+    monkeypatch.setattr(
+        currency_module,
+        "_load_instrument_master_currencies",
+        lambda: {"TST-JPY": "JPY"},
+    )
+    assert detect_currency("TST-JPY") == "UNKNOWN"
+
+
+def test_detect_currency_returns_unknown_for_empty_instrument_master_currency(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        currency_module,
+        "_load_instrument_master_currencies",
+        lambda: {"TST-EMPTY": "", "TST-NULL": None},
+    )
+    assert detect_currency("TST-EMPTY") == "UNKNOWN"
+    assert detect_currency("TST-NULL") == "UNKNOWN"
+
+
+def test_detect_currency_instrument_master_takes_precedence_over_suffix(monkeypatch):
+    # Suffix ".AS" would infer EUR, but the instrument master wins.
+    monkeypatch.setattr(
+        currency_module,
+        "_load_instrument_master_currencies",
+        lambda: {"PREC.AS": "GBP"},
+    )
+    assert detect_currency("PREC.AS") == "GBP"

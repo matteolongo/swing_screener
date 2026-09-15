@@ -5,8 +5,7 @@ from __future__ import annotations
 import math
 import re
 from typing import Literal, Optional
-from pydantic import BaseModel, Field, field_validator, model_validator
-
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 PositionStatus = Literal["open", "closed"]
 ActionType = Literal[
@@ -380,6 +379,55 @@ class CreateOrderRequest(BaseModel):
                 "stop_price must be below limit_price for a long entry order"
             )
         return self
+
+
+class OrderSnapshot(BaseModel):
+    """Immutable, validated view of a persisted order for stateless flows.
+
+    Narrow contract for request-supplied order snapshots (e.g. daily-review
+    ``compute``). Mirrors the canonical order lifecycle statuses and kinds
+    from ``LegacyOrder``/``CreateOrderRequest`` without requiring full order
+    creation fields. Extra provider/order fields are allowed and preserved.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="allow")
+
+    order_id: str
+    ticker: str
+    status: Literal["pending", "submitted", "filled", "cancelled"] = "pending"
+    order_kind: Literal["entry", "stop", "take_profit"] = "entry"
+    order_date: Optional[str] = None
+    position_id: Optional[str] = None
+
+    @field_validator("order_id", mode="before")
+    @classmethod
+    def validate_order_id(cls, v: object) -> str:
+        normalized = str(v).strip() if v is not None else ""
+        if not normalized:
+            raise ValueError("order_id must not be blank")
+        return normalized
+
+    @field_validator("ticker", mode="before")
+    @classmethod
+    def normalize_ticker(cls, v: object) -> str:
+        normalized = str(v).strip().upper() if v is not None else ""
+        if not normalized:
+            raise ValueError("Ticker cannot be empty")
+        if len(normalized) > 20:
+            raise ValueError("Ticker too long")
+        return normalized
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v: object) -> object:
+        return str(v).strip().lower() if v is not None else v
+
+    @field_validator("order_kind", mode="before")
+    @classmethod
+    def normalize_order_kind(cls, v: object) -> object:
+        if v is None:
+            return v
+        return str(v).strip().lower()
 
 
 class PortfolioApprovalGate(BaseModel):

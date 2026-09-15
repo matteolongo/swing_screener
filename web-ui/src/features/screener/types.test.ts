@@ -296,4 +296,69 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].dataSourceSummary?.marketData?.delayPolicy).toBe('intraday');
     expect(result.candidates[0].dataSourceSummary?.calendar?.provider).toBe('finnhub');
   });
+
+  it('transforms legacy payloads carrying only rank', () => {
+    const apiResponse: ScreenerResponseAPI = {
+      asof_date: '2026-03-02',
+      total_screened: 1,
+      data_freshness: 'final_close',
+      candidates: [
+        {
+          ticker: 'AAPL',
+          close: 100,
+          sma_20: 99,
+          sma_50: 95,
+          sma_200: 90,
+          atr: 2,
+          momentum_6m: 0.2,
+          momentum_12m: 0.3,
+          rel_strength: 1.1,
+          score: 0.8,
+          confidence: 78,
+          rank: 2,
+        },
+      ],
+    };
+
+    const result = transformScreenerResponse(apiResponse);
+
+    expect(result.candidates[0].rank).toBe(2);
+    expect(result.candidates[0].technicalRank).toBe(2);
+    expect(result.candidates[0].confidenceRank).toBeUndefined();
+    expect(result.candidates[0].priorityRank).toBeUndefined();
+  });
+
+  it('preserves explicit rank provenance from new payloads', () => {
+    const apiResponse: ScreenerResponseAPI = {
+      asof_date: '2026-03-02',
+      total_screened: 1,
+      data_freshness: 'final_close',
+      candidates: [
+        {
+          ticker: 'AAPL',
+          close: 100,
+          sma_20: 99,
+          sma_50: 95,
+          sma_200: 90,
+          atr: 2,
+          momentum_6m: 0.2,
+          momentum_12m: 0.3,
+          rel_strength: 1.1,
+          score: 0.8,
+          confidence: 78,
+          rank: 2,
+          technical_rank: 5,
+          confidence_rank: 1,
+          priority_rank: 3,
+        },
+      ],
+    };
+
+    const result = transformScreenerResponse(apiResponse);
+
+    expect(result.candidates[0].rank).toBe(2);
+    expect(result.candidates[0].technicalRank).toBe(5);
+    expect(result.candidates[0].confidenceRank).toBe(1);
+    expect(result.candidates[0].priorityRank).toBe(3);
+  });
 });

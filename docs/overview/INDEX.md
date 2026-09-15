@@ -63,6 +63,15 @@
 
 ## Current implementation plans
 
+- [`docs/superpowers/specs/2026-09-04-reporting-pipeline-remediation-design.md`](../superpowers/specs/2026-09-04-reporting-pipeline-remediation-design.md) — approved ownership, contracts, and 18-PR delivery design for backend reporting-pipeline remediation
+- [`docs/superpowers/plans/2026-09-04-reporting-pipeline-remediation-roadmap.md`](../superpowers/plans/2026-09-04-reporting-pipeline-remediation-roadmap.md) — merge-order roadmap linking the seven subsystem implementation plans
+- [`docs/superpowers/plans/2026-09-04-risk-plan-correctness.md`](../superpowers/plans/2026-09-04-risk-plan-correctness.md) — PR plans for structural targets and executable position sizing
+- [`docs/superpowers/plans/2026-09-04-cache-freshness.md`](../superpowers/plans/2026-09-04-cache-freshness.md) — stacked PR plans for evaluation and final-close market-data freshness
+- [`docs/superpowers/plans/2026-09-04-currency-contract.md`](../superpowers/plans/2026-09-04-currency-contract.md) — stacked PR plans for currency metadata, authoritative account FX, and monetary fields
+- [`docs/superpowers/plans/2026-09-04-reporting-contract.md`](../superpowers/plans/2026-09-04-reporting-contract.md) — PR plans for stable report schemas and concentration semantics
+- [`docs/superpowers/plans/2026-09-04-order-daily-review.md`](../superpowers/plans/2026-09-04-order-daily-review.md) — PR plans for order safety, daily-review errors, stateless state, and persistence
+- [`docs/superpowers/plans/2026-09-04-ranking-data-signals.md`](../superpowers/plans/2026-09-04-ranking-data-signals.md) — PR plans for rank provenance, OHLCV normalization, and signal windows
+- [`docs/superpowers/plans/2026-09-04-configuration-cleanup.md`](../superpowers/plans/2026-09-04-configuration-cleanup.md) — stacked PR plans for runtime configuration and ownership cleanup
 - [`docs/superpowers/specs/2026-07-27-symbol-workspace-redesign-design.md`](../superpowers/specs/2026-07-27-symbol-workspace-redesign-design.md) — approved UX, data-flow, reliability, and testing design for the Today-page symbol workspace
 - [`docs/superpowers/plans/2026-07-27-symbol-workspace-redesign.md`](../superpowers/plans/2026-07-27-symbol-workspace-redesign.md) — task-by-task implementation plan for the Today-page symbol workspace redesign
 - [`docs/superpowers/specs/2026-07-22-coherent-execution-workflow-design.md`](../superpowers/specs/2026-07-22-coherent-execution-workflow-design.md) — approved design for the coherent execution workflow

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Optional
 
@@ -262,15 +263,43 @@ def _block_recommendation_for_live_stop(
 
 
 class SameSymbolReentryEvaluator:
-    def __init__(self, portfolio_service) -> None:
+    def __init__(
+        self,
+        portfolio_service,
+        *,
+        stop_action_resolver: Callable[[object], Optional[str]] | None = None,
+    ) -> None:
         self._portfolio_service = portfolio_service
-        self._stop_action_cache: dict[str, str] = {}
+        self._stop_action_resolver = stop_action_resolver
+        self._stop_action_cache: dict[str, Optional[str]] = {}
 
-    def _stop_action_for_position(self, position_id: Optional[str]) -> Optional[str]:
+    def _stop_action_for_position(self, position: object) -> Optional[str]:
+        if isinstance(position, str):
+            position_id: Optional[str] = position
+            position_obj: object | None = None
+        elif isinstance(position, dict):
+            position_id = position.get("position_id")
+            position_obj = position
+        elif position is None:
+            return None
+        else:
+            position_id = getattr(position, "position_id", None)
+            position_obj = position
+        cache_key = position_id if position_id else None
+        if cache_key is None:
+            if position_obj is None or self._stop_action_resolver is None:
+                return None
+            cache_key = f"__obj__{id(position_obj)}"
+        if cache_key in self._stop_action_cache:
+            return self._stop_action_cache[cache_key]
+        if self._stop_action_resolver is not None:
+            if position_obj is None:
+                return None
+            action = self._stop_action_resolver(position_obj)
+            self._stop_action_cache[cache_key] = action
+            return action
         if not position_id:
             return None
-        if position_id in self._stop_action_cache:
-            return self._stop_action_cache[position_id]
         suggestion = self._portfolio_service.suggest_position_stop(position_id)
         self._stop_action_cache[position_id] = suggestion.action
         return suggestion.action
@@ -376,7 +405,7 @@ class SameSymbolReentryEvaluator:
             return candidate, context
 
         try:
-            stop_action = self._stop_action_for_position(position_id)
+            stop_action = self._stop_action_for_position(matching_position)
         except Exception as exc:  # pragma: no cover - defensive service wrapper
             context.reason = f"Could not evaluate live stop action: {exc}"
             candidate.same_symbol = context
