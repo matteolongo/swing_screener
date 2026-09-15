@@ -88,6 +88,15 @@ OHLCV data is cached locally in Parquet format to avoid redundant downloads:
 - **Invalidation**: pass `force_refresh=True` to bypass cache
 - **Ticker metadata**: `.cache/ticker_meta.json`, company name/sector cache in `.cache/ticker_info.json`, earnings proximity cache in `.cache/earnings_days.json`
 
+## Canonical OHLCV ingress
+
+Public market-data and daily-report boundaries normalize non-empty frames with
+`normalize_ohlcv()`. Frames must use exactly two column levels in `(field,
+ticker)` order, include `Close`, and contain no duplicate column pair. Index
+values are converted to a `DatetimeIndex`, duplicate dates keep the last
+supplied row, and rows are stable-sorted ascending. Value-level NaNs remain
+untouched so indicator warm-up behavior is preserved.
+
 ## Universes
 
 Packaged universes are CSV files embedded in the package under `data/universes/`:
