@@ -191,6 +191,12 @@ See `data/README.md` for how to (re)build and enrich the pool.
 
 ## Notes
 
+Sector concentration reporting currently uses the validated function-level
+defaults `threshold=0.4` and `min_candidates=5`. A threshold is an inclusive
+fraction in `[0, 1]`; the minimum must be at least `1`. These values govern
+advisory screener warnings only and are distinct from the portfolio country-risk
+limit `app_config.risk.max_concentration_pct`.
+
 - New configurable behavior should be added to the existing YAML configuration surfaces in this directory instead of being hardcoded in Python, TypeScript, or prompts.
 - Choose the config file that matches the scope of the setting:
   - `defaults.yaml` for shared system defaults

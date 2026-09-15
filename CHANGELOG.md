@@ -17,6 +17,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Sector concentration warnings now deduplicate tickers, use every unique
+  candidate as the denominator, include exact-threshold matches, and sort all
+  qualifying named sectors deterministically.
+
 - Screener monetary fields now distinguish quote- and account-currency amounts;
   ambiguous USD aliases are deprecated and return `null` for non-USD quotes.
 
