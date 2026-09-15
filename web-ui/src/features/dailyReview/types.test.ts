@@ -1,14 +1,66 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dailyReviewCandidateFromScreener,
+  transformCandidate,
   transformDailyReview,
   transformPositionExitSignal,
   transformPositionHold,
   transformPositionUpdate,
+  type DailyReviewCandidateAPI,
   type DailyReviewAPI,
   type DailyReviewPositionExitSignalAPI,
   type DailyReviewPositionHoldAPI,
   type DailyReviewPositionUpdateAPI,
 } from '@/features/dailyReview/types';
+import type { ScreenerCandidate } from '@/features/screener/types';
+
+describe('Daily Review nullable candidate plans', () => {
+  it('preserves a missing saved-screener plan as explicit nulls', () => {
+    const candidate: ScreenerCandidate = {
+      ticker: 'AAPL',
+      currency: 'USD',
+      close: 150,
+      sma20: null,
+      sma50: null,
+      sma200: null,
+      atr: 2.5,
+      momentum6m: 0.15,
+      momentum12m: 0.25,
+      relStrength: 1.2,
+      score: 85,
+      confidence: 0.9,
+      rank: 1,
+    };
+
+    const result = dailyReviewCandidateFromScreener(candidate);
+
+    expect(result.entry).toBeNull();
+    expect(result.stop).toBeNull();
+    expect(result.shares).toBeNull();
+    expect(result.rReward).toBeNull();
+  });
+
+  it('preserves null API plan values in the domain model', () => {
+    const candidate: DailyReviewCandidateAPI = {
+      ticker: 'AAPL',
+      signal: 'UNKNOWN',
+      close: 150,
+      entry: null,
+      stop: null,
+      shares: null,
+      r_reward: null,
+      name: null,
+      sector: null,
+    };
+
+    const result = transformCandidate(candidate);
+
+    expect(result.entry).toBeNull();
+    expect(result.stop).toBeNull();
+    expect(result.shares).toBeNull();
+    expect(result.rReward).toBeNull();
+  });
+});
 
 describe('transformPositionHold exhaustion fields', () => {
   it('maps exhaustion_score and exhaustion_label when present', () => {

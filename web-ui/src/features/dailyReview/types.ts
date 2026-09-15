@@ -28,10 +28,10 @@ export interface DailyReviewCandidateAPI {
   momentum_6m?: number | null;
   momentum_12m?: number | null;
   rel_strength?: number | null;
-  entry: number;
-  stop: number;
-  shares: number;
-  r_reward: number;
+  entry: number | null;
+  stop: number | null;
+  shares: number | null;
+  r_reward: number | null;
   name: string | null;
   sector: string | null;
   volume_ratio?: number | null;
@@ -161,10 +161,10 @@ export interface DailyReviewCandidate {
   momentum6m?: number;
   momentum12m?: number;
   relStrength?: number;
-  entry: number;
-  stop: number;
-  shares: number;
-  rReward: number;
+  entry: number | null;
+  stop: number | null;
+  shares: number | null;
+  rReward: number | null;
   name: string | null;
   sector: string | null;
   volumeRatio?: number;
@@ -198,10 +198,10 @@ export function dailyReviewCandidateFromScreener(candidate: ScreenerCandidate): 
     momentum6m: candidate.momentum6m,
     momentum12m: candidate.momentum12m,
     relStrength: candidate.relStrength,
-    entry: candidate.entry ?? 0,
-    stop: candidate.stop ?? 0,
-    shares: candidate.shares ?? 0,
-    rReward: candidate.rr ?? 0,
+    entry: candidate.entry ?? null,
+    stop: candidate.stop ?? null,
+    shares: candidate.shares ?? null,
+    rReward: candidate.rr ?? null,
     name: candidate.name ?? null,
     sector: candidate.sector ?? null,
     volumeRatio: candidate.volumeRatio,
