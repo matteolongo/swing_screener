@@ -96,8 +96,8 @@ interface PortfolioSummaryApiResponse {
   concentration?: ConcentrationGroupApiResponse[];
   realized_pnl?: number;
   effective_account_size?: number;
-  analytics?: PortfolioAnalyticsApiResponse;
-  analytics_metadata?: PortfolioAnalyticsMetadataApiResponse;
+  analytics: PortfolioAnalyticsApiResponse;
+  analytics_metadata: PortfolioAnalyticsMetadataApiResponse;
 }
 
 interface PortfolioAnalyticsApiResponse {
@@ -737,17 +737,8 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
 }
 
 function transformPortfolioSummary(data: PortfolioSummaryApiResponse): PortfolioSummary {
-  const analytics = data.analytics ?? {
-    closed_trade_count: 0, excluded_trade_count: 0, win_count: 0, loss_count: 0, scratch_count: 0,
-    win_rate: null, win_rate_status: 'neutral' as const, average_r: null, average_max_r: null,
-    profit_factor: null, profit_factor_status: 'neutral' as const, average_holding_days: null,
-    max_win_streak: 0, max_loss_streak: 0, equity_curve: [], tag_breakdown: [], journal_tag_breakdown: [],
-    insight: { verdict: 'developing' as const, reason: 'insufficient_history' as const },
-  };
-  const analyticsMetadata = data.analytics_metadata ?? {
-    heat_status: 'normal' as const, heat_warning_pct: 0, heat_max_pct: 0,
-    concentration_warning_pct: 0, tag_min_sample_size: 0,
-  };
+  const analytics = data.analytics;
+  const analyticsMetadata = data.analytics_metadata;
   return {
     totalPositions: data.total_positions,
     totalValue: data.total_value,

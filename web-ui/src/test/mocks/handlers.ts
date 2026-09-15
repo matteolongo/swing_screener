@@ -479,6 +479,19 @@ export const mockPortfolioSummary = {
   win_rate: 100,
   realized_pnl: 125,
   effective_account_size: 625,
+  concentration: [],
+  analytics: {
+    closed_trade_count: 0, excluded_trade_count: 0, win_count: 0, loss_count: 0,
+    scratch_count: 0, win_rate: null, win_rate_status: 'neutral', average_r: null,
+    average_max_r: null, profit_factor: null, profit_factor_status: 'neutral',
+    average_holding_days: null, max_win_streak: 0, max_loss_streak: 0,
+    equity_curve: [], tag_breakdown: [], journal_tag_breakdown: [],
+    insight: { verdict: 'developing', reason: 'insufficient_history' },
+  },
+  analytics_metadata: {
+    heat_status: 'normal', heat_warning_pct: 4, heat_max_pct: 6,
+    concentration_warning_pct: 60, tag_min_sample_size: 5,
+  },
 }
 
 export const mockPositionMetrics = {
@@ -906,6 +919,9 @@ export const handlers = [
       positions_hold: [],
       positions_update_stop: [],
       positions_close: [],
+      positions_exit_signal: [],
+      evaluation_errors: [],
+      pending_orders_review: [],
       summary: {
         total_positions: 0,
         no_action: 0,
@@ -917,6 +933,7 @@ export const handlers = [
           const distance = item.distance_to_trigger_pct
           return typeof distance === 'number' && distance >= -3 && distance <= 0
         }).length,
+        evaluation_error_count: 0,
         review_date: '2026-05-04',
       },
     })
@@ -930,6 +947,9 @@ export const handlers = [
       positions_hold: [],
       positions_update_stop: [],
       positions_close: [],
+      positions_exit_signal: [],
+      evaluation_errors: [],
+      pending_orders_review: [],
       summary: {
         total_positions: 0,
         no_action: 0,
@@ -938,6 +958,7 @@ export const handlers = [
         new_candidates: 0,
         add_on_candidates: 0,
         watchlist_near_trigger: 0,
+        evaluation_error_count: 0,
         review_date: '2026-05-04',
       },
     })

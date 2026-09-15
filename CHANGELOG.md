@@ -38,6 +38,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Reporting boundaries now preserve every registered quote currency, explicit
+  unknown currency, candidate provenance and setup-quality inputs, candle
+  pressure, and per-position Daily Review evaluation failures. Portfolio
+  analytics and strategy safety remain backend-owned in both persistence modes.
+
 - Local-mode Daily Review now enriches and filters the browser watchlist using
   its supplied strategy, so near-trigger rows reflect local watch/unwatch changes.
 

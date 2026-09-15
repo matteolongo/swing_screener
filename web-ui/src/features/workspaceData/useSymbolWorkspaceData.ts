@@ -305,9 +305,14 @@ export function useSymbolWorkspaceData({
   const sourceStates: WorkspaceSourceState[] = [
     sourceState(
       'screener',
-      validCandidate && screenerRun && validCandidate.dataSourceSummary?.marketData?.provider
-        ? 'fresh'
-        : validCandidate ? 'partial' : 'idle',
+      !validCandidate ? 'idle'
+        : validCandidate.dataStatus === 'stale' ? 'stale'
+          : validCandidate.dataStatus !== 'current'
+            || (validCandidate.degradedReasons?.length ?? 0) > 0
+            || validCandidate.dataSourceSummary?.marketData?.status === 'degraded'
+            || !screenerRun
+            || !validCandidate.dataSourceSummary?.marketData?.provider
+            ? 'partial' : 'fresh',
       {
         provider: validCandidate?.dataSourceSummary?.marketData?.provider ?? null,
         dataAsOf: validCandidate?.lastBar ?? screenerRun?.asOf ?? null,

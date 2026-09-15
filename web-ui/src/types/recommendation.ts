@@ -1,3 +1,5 @@
+import { isSupportedCurrency } from '@/types/currency';
+
 export type RecommendationVerdict = 'RECOMMENDED' | 'NOT_RECOMMENDED';
 export type RecommendationSeverity = 'info' | 'warn' | 'block';
 export type DecisionGateStatus = 'PASS' | 'WAIT' | 'BLOCK' | 'UNKNOWN';
@@ -390,9 +392,7 @@ function isCoherentWorkflow(status: WorkflowStatus, nextStep: WorkflowNextStep):
   }
 }
 
-function isValidWorkflowCurrency(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && value !== 'UNKNOWN';
-}
+const isValidWorkflowCurrency = isSupportedCurrency;
 
 function transformThesis(apiThesis: any): TradeThesis {
   const apiEducation = apiThesis.education_generated;

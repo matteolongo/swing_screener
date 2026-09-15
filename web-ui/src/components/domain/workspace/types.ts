@@ -29,6 +29,7 @@ export interface SymbolAnalysisCandidate {
   fundamentalsAsOf?: string;
   lastBar?: string;
   dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
+  degradedReasons?: string[];
   atr?: number;
   sma20?: number | null;
   sma50?: number | null;
