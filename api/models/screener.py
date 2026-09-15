@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from typing import Any, Literal, Optional
+
 from pydantic import BaseModel, Field, field_validator
-from swing_screener.data.currencies import supported_currency_codes
+
 from api.models.recommendation import Recommendation
+from swing_screener.data.currencies import supported_currency_codes
 from swing_screener.data.symbol_pool import TaxonomyFilterSpec
 from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.recommendation.models import DecisionSummary
@@ -97,10 +99,24 @@ class ScreenerCandidate(BaseModel):
         default="EUR",
         description="Configured account base currency",
     )
+    entry_quote: Optional[float] = None
+    stop_quote: Optional[float] = None
+    target_quote: Optional[float] = None
+    risk_per_share_quote: Optional[float] = None
     position_size_quote: Optional[float] = None
     risk_quote: Optional[float] = None
-    position_size_usd: Optional[float] = None
-    risk_usd: Optional[float] = None
+    position_size_account: Optional[float] = None
+    risk_account: Optional[float] = None
+    position_size_usd: Optional[float] = Field(
+        default=None,
+        deprecated=True,
+        description="Deprecated USD-only alias; use position_size_quote or position_size_account",
+    )
+    risk_usd: Optional[float] = Field(
+        default=None,
+        deprecated=True,
+        description="Deprecated USD-only alias; use risk_quote or risk_account",
+    )
     risk_pct: Optional[float] = None
     recommendation: Optional[Recommendation] = None
     price_history: list[PriceHistoryPoint] = Field(default_factory=list)

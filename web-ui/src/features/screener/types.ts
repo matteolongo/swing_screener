@@ -260,7 +260,19 @@ export interface ScreenerCandidate {
   target?: number;
   rr?: number;
   shares?: number;
+  quoteCurrency?: string;
+  accountCurrency?: string;
+  entryQuote?: number;
+  stopQuote?: number;
+  targetQuote?: number;
+  riskPerShareQuote?: number;
+  positionSizeQuote?: number;
+  riskQuote?: number;
+  positionSizeAccount?: number;
+  riskAccount?: number;
+  /** @deprecated Use positionSizeQuote or positionSizeAccount. */
   positionSizeUsd?: number;
+  /** @deprecated Use riskQuote or riskAccount. */
   riskUsd?: number;
   riskPct?: number;
   recommendation?: Recommendation;
@@ -386,7 +398,19 @@ export interface ScreenerCandidateAPI {
   target?: number;
   rr?: number;
   shares?: number;
+  quote_currency?: string;
+  account_currency?: string;
+  entry_quote?: number | null;
+  stop_quote?: number | null;
+  target_quote?: number | null;
+  risk_per_share_quote?: number | null;
+  position_size_quote?: number | null;
+  risk_quote?: number | null;
+  position_size_account?: number | null;
+  risk_account?: number | null;
+  /** @deprecated Use explicit quote/account fields. */
   position_size_usd?: number;
+  /** @deprecated Use explicit quote/account fields. */
   risk_usd?: number;
   risk_pct?: number;
   recommendation?: RecommendationAPI;
@@ -660,6 +684,16 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       target: c.target,
       rr: c.rr,
       shares: c.shares,
+      quoteCurrency: c.quote_currency ?? c.currency ?? 'UNKNOWN',
+      accountCurrency: c.account_currency ?? 'UNKNOWN',
+      entryQuote: c.entry_quote ?? undefined,
+      stopQuote: c.stop_quote ?? undefined,
+      targetQuote: c.target_quote ?? undefined,
+      riskPerShareQuote: c.risk_per_share_quote ?? undefined,
+      positionSizeQuote: c.position_size_quote ?? undefined,
+      riskQuote: c.risk_quote ?? undefined,
+      positionSizeAccount: c.position_size_account ?? undefined,
+      riskAccount: c.risk_account ?? undefined,
       positionSizeUsd: c.position_size_usd,
       riskUsd: c.risk_usd,
       riskPct: c.risk_pct,

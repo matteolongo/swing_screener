@@ -189,6 +189,15 @@ confidence-prefilter order, and `priority_rank` records the final
 recommendation order. The legacy `rank` field aliases `technical_rank`; clients
 must use `priority_rank` when displaying the final server ordering.
 
+Candidate monetary fields name their unit explicitly. `entry_quote`,
+`stop_quote`, `target_quote`, `risk_per_share_quote`, `position_size_quote`, and
+`risk_quote` use `quote_currency`; `position_size_account` and `risk_account`
+use `account_currency` and are present only when FX conversion succeeded. The
+legacy `position_size_usd` and `risk_usd` fields are deprecated compatibility
+aliases: they are populated only when `quote_currency` is genuinely `USD`, are
+`null` for other quote currencies, and will be removed in the next major
+release.
+
 A `waiting_trigger` / `wait_pullback` candidate may expose manual order review
 only with its pending `BUY_LIMIT` approval token. This does not make the
 candidate `ready`: `ready` remains reserved for an observed trigger pass.
@@ -220,7 +229,7 @@ Symbol pool (`/api/pool`):
 
 Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
 
-Candle data (screener candidates and watchlist items): `PriceHistoryPoint` now carries optional `open`/`high`/`low`/`volume` alongside `close` (absent fields omitted; backward-compatible). Candidates and watchlist items also expose `patterns` (list of `{bar_index, date, name, direction, key_level, context, volume_ratio, bar_pressure, volume_confirmed}`). The last three are optional volume-pressure annotations: `volume_ratio` (bar volume ÷ trailing 20-bar average), `bar_pressure` (intrabar close-location 0–1), and `volume_confirmed` (true when the pattern fired on elevated, direction-aligned volume; null for neutral patterns or when volume data is insufficient). Screener candidates additionally expose `pattern_stop` / `pattern_stop_reason` — a structural stop derived from a bullish candlestick pattern on the latest bar. When present it becomes the candidate's entry `stop` (and `target`/`rr`/`risk_usd` are recomputed from it; `shares` unchanged); it does not affect ranking.
+Candle data (screener candidates and watchlist items): `PriceHistoryPoint` now carries optional `open`/`high`/`low`/`volume` alongside `close` (absent fields omitted; backward-compatible). Candidates and watchlist items also expose `patterns` (list of `{bar_index, date, name, direction, key_level, context, volume_ratio, bar_pressure, volume_confirmed}`). The last three are optional volume-pressure annotations: `volume_ratio` (bar volume ÷ trailing 20-bar average), `bar_pressure` (intrabar close-location 0–1), and `volume_confirmed` (true when the pattern fired on elevated, direction-aligned volume; null for neutral patterns or when volume data is insufficient). Screener candidates additionally expose `pattern_stop` / `pattern_stop_reason` — a structural stop derived from a bullish candlestick pattern on the latest bar. When present it becomes the candidate's entry `stop` (and `target`/`rr`/explicit risk fields are recomputed from it; `shares` unchanged); it does not affect ranking.
 
 Backtest (`/api/backtest`):
 - `POST /api/backtest/event-study` (sync locally, async job launch on dyno by default) — replay the live signal/stop/exit path over history for the requested tickers and return per-trade R outcomes plus an R-distribution summary. The baseline config is built from the **active strategy** (its `signals`/`risk`/`manage` blocks), so results mirror live behaviour; `pattern_stop_enabled` is a global execution flag (not per-strategy). Optional `config` overrides (e.g. `pattern_stop_enabled`, `breakeven_at_r`, `k_atr`) layer on top to test a variant; an A/B is two requests differing in one field. Defaults to today's-snapshot data from `2022-01-01`. Event study only (no portfolio/equity curve), zero-cost fills; see `src/swing_screener/backtest/README.md` for scope and known limitations.

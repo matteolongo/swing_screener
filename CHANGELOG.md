@@ -17,6 +17,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Screener monetary fields now distinguish quote- and account-currency amounts;
+  ambiguous USD aliases are deprecated and return `null` for non-USD quotes.
+
 - Position sizing now rejects non-finite or non-positive scalar inputs and uses
   the same cent-normalized entry and stop for share count, position value, and
   reported R-risk.
