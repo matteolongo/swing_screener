@@ -1,7 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { closePosition, createOrder, fetchOrders, fillOrder, partialClosePosition } from '@/features/portfolio/api';
+import { closePosition, createOrder, fetchOrders, fetchPositions, fetchPositionMetrics, fetchPortfolioSummary, fillOrder, partialClosePosition } from '@/features/portfolio/api';
+import { resetTradingStore, mutateTradingStore, readTradingStore } from '@/features/persistence';
 
 describe('portfolio api', () => {
+  it('uses the stateless projection for local metrics without recalculating or saving it', async () => {
+    vi.stubEnv('VITE_PERSISTENCE_MODE', 'local');
+    vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'true');
+    resetTradingStore();
+    mutateTradingStore(store => { store.positions = [{ ticker: 'AAPL', status: 'open', positionId: 'POS-1', entryDate: '2026-09-08', entryPrice: 100, stopPrice: 95, shares: 10 }]; });
+    const before = readTradingStore();
+    const position = { ticker: 'AAPL', status: 'open', position_id: 'POS-1', entry_date: '2026-09-08', entry_price: 100, stop_price: 95, shares: 10, current_price: 110, pnl: 91.23, pnl_percent: 9.123, r_now: 1.8246, r_fx_adjusted: 1.77, entry_value: 1000, current_value: 1100, per_share_risk: 5, total_risk: 50, fees_eur: 7.8 };
+    const summary = { total_positions: 1, total_value: 989.43, total_cost_basis: 899.12, total_pnl: 81.02, total_pnl_percent: 9.01, open_risk: 44.96, open_risk_percent: 0.44, account_size: 10000, available_capital: 9011.12, largest_position_value: 989.43, largest_position_ticker: 'AAPL', best_performer_ticker: 'AAPL', best_performer_pnl_pct: 9.123, worst_performer_ticker: 'AAPL', worst_performer_pnl_pct: 9.123, avg_r_now: 1.8246, positions_profitable: 1, positions_losing: 0, win_rate: 100, concentration: [], realized_pnl: 0.55, effective_account_size: 10000.55 };
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ positions: [position], summary }), { status: 200 })));
+    vi.stubGlobal('fetch', fetchMock);
+    expect((await fetchPositions('open'))[0]).toMatchObject({ pnl: 91.23, rNow: 1.8246, feesEur: 7.8 });
+    expect(await fetchPositionMetrics('POS-1')).toMatchObject({ rNow: 1.8246, rFxAdjusted: 1.77 });
+    expect(await fetchPortfolioSummary()).toMatchObject({ totalValue: 989.43, availableCapital: 9011.12 });
+    expect(fetchMock.mock.calls.every(([url]) => String(url).endsWith('/api/portfolio/state/metrics'))).toBe(true);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ revision: 0, positions: [{ position_id: 'POS-1' }] });
+    expect(readTradingStore()).toEqual(before);
+  });
   beforeEach(() => {
     vi.stubEnv('VITE_PERSISTENCE_MODE', 'api');
     vi.unstubAllGlobals();
