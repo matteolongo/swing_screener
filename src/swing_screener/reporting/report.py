@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import pandas as pd
 
@@ -11,7 +11,7 @@ from swing_screener.utils.dataframe_helpers import normalize_ohlcv
 
 def build_daily_report(
     ohlcv: pd.DataFrame,
-    cfg: ReportConfig = ReportConfig(),
+    cfg: ReportConfig | None = None,
     exclude_tickers: Iterable[str] | None = None,
     sector_benchmark_returns: dict[str, float] | None = None,
     account_to_quote_rates: dict[str, float] | None = None,
@@ -23,6 +23,7 @@ def build_daily_report(
 ) -> pd.DataFrame:
     from swing_screener.strategy.orchestrator import build_strategy_report
 
+    cfg = cfg or ReportConfig()
     return build_strategy_report(
         ohlcv=normalize_ohlcv(ohlcv),
         cfg=cfg,

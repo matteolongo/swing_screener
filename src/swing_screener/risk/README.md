@@ -90,6 +90,9 @@ before calculating `1R`, share count, position value, and realized risk. If that
 normalization makes the stop non-positive or no longer strictly below entry, the
 plan is rejected rather than reporting geometry that cannot be executed.
 
+When callers omit `RiskConfig`, sizing functions resolve a fresh default at
+call time. Caller-supplied frozen configs are passed through without mutation.
+
 ## Files
 
 | File | Purpose |
