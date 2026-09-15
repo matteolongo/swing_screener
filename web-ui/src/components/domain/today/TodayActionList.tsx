@@ -120,15 +120,16 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
 
   const flatItems = useMemo(
     () => [
-      ...watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}` })),
-      ...(review?.positionsClose.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
-      ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
-      ...(review?.positionsExitSignal.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
+      ...openPositions.map((i) => ({ ticker: i.ticker, id: `position-${i.positionId ?? i.ticker}` })),
+      ...(review?.positionsClose.map((i) => ({ ticker: i.ticker, id: `close-${i.positionId}` })) ?? []),
+      ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: `stop-${i.positionId}` })) ?? []),
+      ...(review?.positionsExitSignal.map((i) => ({ ticker: i.ticker, id: `exit-${i.positionId}` })) ?? []),
       ...(review?.pendingOrdersReview?.map((i) => ({ ticker: i.ticker, id: `pending-${i.orderId}` })) ?? []),
-      ...sourceOpportunities.newCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })),
-      ...sourceOpportunities.addOnCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })),
+      ...watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}-${i.watchedAt}` })),
+      ...sourceOpportunities.newCandidates.map((i) => ({ ticker: i.ticker, id: `candidate-${i.ticker}-${i.priorityRank ?? i.rank ?? 'unranked'}` })),
+      ...sourceOpportunities.addOnCandidates.map((i) => ({ ticker: i.ticker, id: `addon-${i.ticker}-${i.priorityRank ?? i.rank ?? 'unranked'}` })),
     ],
-    [review, sourceOpportunities, watchlistNearTrigger],
+    [openPositions, review, sourceOpportunities, watchlistNearTrigger],
   );
 
   const {
@@ -144,7 +145,8 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
     setCloseTarget,
     trimTarget,
     setTrimTarget,
-    focusedIndex,
+    focusedId,
+    handleListKeyDown,
     handleAcceptStop,
     handleUpdateStop,
     handleClosePosition,
@@ -338,7 +340,7 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
       </div>
 
       {/* Action list */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
+      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3" onKeyDown={handleListKeyDown}>
         {error && (
           <div className="flex items-center gap-2 px-2 text-sm text-danger">
             {t('dailyReview.header.error', { message: error instanceof Error ? error.message : t('dailyReview.header.unknownError') })}
@@ -385,7 +387,8 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
                 <OpenPositionItem
                   key={position.positionId}
                   item={position}
-                  onClick={handleItemClick}
+                  onClick={(ticker) => handleItemClick(ticker, `position-${position.positionId ?? ticker}`)}
+                  isFocused={focusedId === `position-${position.positionId ?? position.ticker}`}
                   intelligenceSummary={intelligenceByTicker.get(position.ticker)}
                   trimSuggestion={trimSuggestionByPositionId.get(position.positionId ?? '')}
                   onTrim={() => setTrimTarget(position)}
@@ -403,27 +406,25 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
             <div className="space-y-0.5">
               {review?.positionsClose.map((item) => {
                 const position = positionById.get(item.positionId);
-                const idx = flatItems.findIndex((fi) => fi.ticker === item.ticker);
                 return (
                   <CloseItem
                     key={item.positionId}
                     item={item}
-                    onClick={handleItemClick}
+                    onClick={(ticker) => handleItemClick(ticker, `close-${item.positionId}`)}
                     onAction={position ? () => setCloseTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
-                    isFocused={focusedIndex === idx}
+                    isFocused={focusedId === `close-${item.positionId}`}
                     intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                   />
                 );
               })}
               {review?.positionsUpdateStop.map((item) => {
                 const position = positionById.get(item.positionId);
-                const idx = flatItems.findIndex((fi) => fi.ticker === item.ticker);
                 return (
                   <UpdateStopItem
                     key={item.positionId}
                     item={item}
-                    onClick={handleItemClick}
+                    onClick={(ticker) => handleItemClick(ticker, `stop-${item.positionId}`)}
                     onAction={position ? () => setUpdateStopTarget(position) : undefined}
                     onAccept={(positionId, stopSuggested, reason) =>
                       handleAcceptStop(positionId, stopSuggested, reason)
@@ -433,7 +434,7 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
                       acceptStopMutation.isPending &&
                       acceptStopMutation.variables?.positionId === item.positionId
                     }
-                    isFocused={focusedIndex === idx}
+                    isFocused={focusedId === `stop-${item.positionId}`}
                   />
                 );
               })}
@@ -448,13 +449,12 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
             </div>
             <div className="space-y-0.5">
               {review?.positionsExitSignal.map((item) => {
-                const idx = flatItems.findIndex((fi) => fi.id === item.positionId);
                 return (
                   <ExitSignalItem
                     key={item.positionId}
                     item={item}
-                    onClick={handleItemClick}
-                    isFocused={focusedIndex === idx}
+                    onClick={(ticker) => handleItemClick(ticker, `exit-${item.positionId}`)}
+                    isFocused={focusedId === `exit-${item.positionId}`}
                     intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                   />
                 );
@@ -470,13 +470,12 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
             </div>
             <div className="space-y-0.5">
               {review!.pendingOrdersReview!.map((item) => {
-                const idx = flatItems.findIndex((fi) => fi.id === `pending-${item.orderId}`);
                 return (
                   <PendingOrderItem
                     key={item.orderId}
                     item={item}
-                    onClick={handleItemClick}
-                    isFocused={focusedIndex === idx}
+                    onClick={(ticker) => handleItemClick(ticker, `pending-${item.orderId}`)}
+                    isFocused={focusedId === `pending-${item.orderId}`}
                   />
                 );
               })}
@@ -494,13 +493,12 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
             </p>
             <div className="space-y-0.5">
               {watchlistNearTrigger.map((item) => {
-                const idx = flatItems.findIndex((fi) => fi.id === `watch-${item.ticker}`);
                 return (
                   <WatchlistNearTriggerItem
-                    key={item.ticker}
+                    key={`watch-${item.ticker}-${item.watchedAt}`}
                     item={item}
-                    onClick={onTickerSelect}
-                    isFocused={focusedIndex === idx}
+                    onClick={(ticker) => handleItemClick(ticker, `watch-${item.ticker}-${item.watchedAt}`)}
+                    isFocused={focusedId === `watch-${item.ticker}-${item.watchedAt}`}
                   />
                 );
               })}
@@ -515,25 +513,23 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
             </div>
             <div className="space-y-0.5">
               {sourceOpportunities.newCandidates.map((item) => {
-                const idx = flatItems.findIndex((fi) => fi.id === item.ticker);
                 return (
                   <CandidateItem
-                    key={item.ticker}
+                    key={`candidate-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
                     item={item}
-                    onClick={handleItemClick}
-                    isFocused={focusedIndex === idx}
+                    onClick={(ticker) => handleItemClick(ticker, `candidate-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`)}
+                    isFocused={focusedId === `candidate-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
                   />
                 );
               })}
               {sourceOpportunities.addOnCandidates.map((item) => {
-                const idx = flatItems.findIndex((fi) => fi.id === item.ticker + '-addon');
                 return (
                   <CandidateItem
-                    key={item.ticker}
+                    key={`addon-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
                     item={item}
                     isAddOn
-                    onClick={handleItemClick}
-                    isFocused={focusedIndex === idx}
+                    onClick={(ticker) => handleItemClick(ticker, `addon-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`)}
+                    isFocused={focusedId === `addon-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
                   />
                 );
               })}

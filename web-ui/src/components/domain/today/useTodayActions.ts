@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   useUpdateStopMutation,
   useClosePositionMutation,
@@ -17,8 +17,8 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
   const [updateStopTarget, setUpdateStopTarget] = useState<Position | null>(null);
   const [closeTarget, setCloseTarget] = useState<Position | null>(null);
   const [trimTarget, setTrimTarget] = useState<Position | null>(null);
-  const [focusedIndex, setFocusedIndex] = useState(-1);
-  const focusedIndexRef = useRef(focusedIndex);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const focusedIdRef = useRef(focusedId);
 
   const acceptStopMutation = useUpdateStopMutation();
   const updateStopMutation = useUpdateStopMutation();
@@ -76,41 +76,52 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
   );
 
   const handleItemClick = useCallback(
-    (ticker: string) => {
-      const idx = flatItems.findIndex((fi) => fi.ticker === ticker);
-      if (idx !== -1) {
-        focusedIndexRef.current = idx;
-        setFocusedIndex(idx);
-      }
+    (ticker: string, id: string) => {
+      focusedIdRef.current = id;
+      setFocusedId(id);
       onTickerSelect(ticker);
     },
-    [flatItems, onTickerSelect],
+    [onTickerSelect],
   );
 
   useEffect(() => {
-    focusedIndexRef.current = focusedIndex;
-  }, [focusedIndex]);
+    focusedIdRef.current = focusedId;
+  }, [focusedId]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) return;
+    if (focusedId && !flatItems.some((item) => item.id === focusedId)) {
+      focusedIdRef.current = null;
+      setFocusedId(null);
+    }
+  }, [flatItems, focusedId]);
+
+  const handleListKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLElement>) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"]')) return;
+      const currentIndex = flatItems.findIndex((item) => item.id === focusedIdRef.current);
       if (e.key === 'j' || e.key === 'ArrowDown') {
         e.preventDefault();
-        const next = Math.min(focusedIndexRef.current + 1, flatItems.length - 1);
-        focusedIndexRef.current = next;
-        setFocusedIndex(next);
-        if (flatItems[next]) onTickerSelect(flatItems[next].ticker);
+        const next = Math.min(currentIndex + 1, flatItems.length - 1);
+        const item = flatItems[next];
+        if (item) {
+          focusedIdRef.current = item.id;
+          setFocusedId(item.id);
+          onTickerSelect(item.ticker);
+        }
       } else if (e.key === 'k' || e.key === 'ArrowUp') {
         e.preventDefault();
-        const prev = Math.max(focusedIndexRef.current - 1, 0);
-        focusedIndexRef.current = prev;
-        setFocusedIndex(prev);
-        if (flatItems[prev]) onTickerSelect(flatItems[prev].ticker);
+        const prev = Math.max(currentIndex === -1 ? 0 : currentIndex - 1, 0);
+        const item = flatItems[prev];
+        if (item) {
+          focusedIdRef.current = item.id;
+          setFocusedId(item.id);
+          onTickerSelect(item.ticker);
+        }
       }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [flatItems, onTickerSelect]);
+    },
+    [flatItems, onTickerSelect],
+  );
 
   return {
     doneIds,
@@ -125,7 +136,8 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
     setCloseTarget,
     trimTarget,
     setTrimTarget,
-    focusedIndex,
+    focusedId,
+    handleListKeyDown,
     handleAcceptStop,
     handleUpdateStop,
     handleClosePosition,

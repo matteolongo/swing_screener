@@ -39,10 +39,6 @@ interface ScreenerStore {
   /** A strategy change makes persisted recommendations historical, not actionable. */
   invalidateActionableRuns: () => void;
   clearLastResult: () => void;
-  patchCandidate: (
-    ticker: string,
-    updater: (candidate: ScreenerResponse['candidates'][number]) => ScreenerResponse['candidates'][number]
-  ) => void;
 }
 
 export const useScreenerStore = create<ScreenerStore>()(
@@ -104,22 +100,6 @@ export const useScreenerStore = create<ScreenerStore>()(
         todayRunInitialized: true,
       }),
       clearLastResult: () => set({ lastResult: null }),
-      patchCandidate: (ticker, updater) =>
-        set((state) => {
-          if (!state.lastResult) {
-            return state;
-          }
-          const target = ticker.trim().toUpperCase();
-          const nextCandidates = state.lastResult.candidates.map((candidate) =>
-            candidate.ticker.toUpperCase() === target ? updater(candidate) : candidate
-          );
-          return {
-            lastResult: {
-              ...state.lastResult,
-              candidates: prioritizeCandidates(nextCandidates),
-            },
-          };
-        }),
     }),
     {
       name: 'swing-screener-last-result',

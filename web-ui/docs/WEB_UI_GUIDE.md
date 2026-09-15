@@ -69,7 +69,7 @@ Not every control fits a primitive: checkboxes, radios, range sliders, search bo
 ## Typical Workflow
 
 1. Start API and web UI.
-2. **Today** — check all open positions and pending orders, then review candidates from the explicitly pinned screener run. Use the Last Run checkbox to update Today's source, or clear it to explore another universe without changing the review. Last Run uses the server-authoritative workflow state: resolve candidates in the ordered **Pronti per revisione ordine**, **In attesa del trigger**, **Richiede verifica**, and collapsed **Interessanti, nessun setup** groups. Follow the localized concrete next action shown for each candidate; only **Pronti per revisione ordine** exposes the manual **Rivedi ordine** action. Track the Watchlist and trigger symbol analysis as needed.
+2. **Today** — check all open positions and pending orders, then review candidates from the explicitly pinned screener run. Use the Last Run checkbox to update Today's source, or clear it to explore another universe without changing the review. Last Run uses the server-authoritative workflow state: resolve candidates in the ordered **Pronti per revisione ordine**, **In attesa del trigger**, **Richiede verifica**, and collapsed **Interessanti, nessun setup** groups. Follow the localized concrete next action shown for each candidate. **Pronti per revisione ordine** exposes manual **Rivedi ordine**; **In attesa del trigger** exposes it only for the backend-authorized, token-gated pending `BUY_LIMIT` pullback exception. Track the Watchlist and trigger symbol analysis as needed.
 3. Create orders via **Book**.
 4. Next trading day: fill orders and update stops in **Book**.
 

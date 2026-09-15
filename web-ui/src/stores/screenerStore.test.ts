@@ -48,28 +48,6 @@ describe('useScreenerStore', () => {
     expect(result.current.lastResult).toBeNull();
   });
 
-  it('patchCandidate updates only the matching ticker (case-insensitive)', () => {
-    const { result } = renderHook(() => useScreenerStore());
-
-    act(() => result.current.setLastResult(response([candidate('AAA', 1), candidate('BBB', 2)])));
-    act(() =>
-      result.current.patchCandidate('aaa', (c) => ({ ...c, confidence: 99 }))
-    );
-
-    const patched = result.current.lastResult?.candidates.find((c) => c.ticker === 'AAA');
-    const untouched = result.current.lastResult?.candidates.find((c) => c.ticker === 'BBB');
-    expect(patched?.confidence).toBe(99);
-    expect(untouched?.confidence).toBe(50);
-  });
-
-  it('patchCandidate is a no-op when there is no result', () => {
-    const { result } = renderHook(() => useScreenerStore());
-
-    act(() => result.current.patchCandidate('AAA', (c) => c));
-
-    expect(result.current.lastResult).toBeNull();
-  });
-
   it('keeps full price history in memory and does not use localStorage', () => {
     const { result } = renderHook(() => useScreenerStore());
     const withHistory = {
