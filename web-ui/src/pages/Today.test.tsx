@@ -78,7 +78,7 @@ describe('Today page — keyboard navigation syncs with click', () => {
 
     // Pressing j should advance from NVDA (index 1) → MSFT (index 2)
     // Without the fix, j moves from focusedIndex -1 → 0 (AMAT), not NVDA → MSFT
-    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(nvdaButton, { key: 'j' });
 
     expect(useWorkspaceStore.getState().selectedTicker).toBe('MSFT');
     expect(
@@ -91,6 +91,20 @@ describe('Today page — keyboard navigation syncs with click', () => {
       ),
     ).toBe(false);
     consoleErrorSpy.mockRestore();
+  });
+
+  it('does not navigate when the shortcut originates outside the Today list', async () => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () => HttpResponse.json({ orders: [], asof: '2026-05-16' })),
+      http.get('*/api/daily-review', () => HttpResponse.json(threeCloseItemReview)),
+    );
+    renderWithProviders(<Today />);
+    await screen.findByRole('button', { name: /NVDA/i });
+    useWorkspaceStore.getState().clearSelectedTicker();
+
+    fireEvent.keyDown(document.body, { key: 'j' });
+
+    expect(useWorkspaceStore.getState().selectedTicker).toBeNull();
   });
 });
 
@@ -617,31 +631,16 @@ describe('Today page — pending orders review section', () => {
     );
   });
 
-  it('renders a pending orders section when pendingOrdersReview has items', async () => {
+  it('renders pending rows and their distinct statuses', async () => {
     renderWithProviders(<Today />);
     expect(
       await screen.findByText(new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i'))
     ).toBeInTheDocument();
-  });
-
-  it('renders one row per pending order', async () => {
-    renderWithProviders(<Today />);
-    await screen.findByText(new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i'));
     expect(screen.getByText('TSLA')).toBeInTheDocument();
     expect(screen.getByText('AMD')).toBeInTheDocument();
-  });
-
-  it('shows stale badge for a stale order', async () => {
-    renderWithProviders(<Today />);
-    await screen.findByText(new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i'));
     expect(
       screen.getByText(t('todayPage.actionList.pendingOrdersCategory.stale'))
     ).toBeInTheDocument();
-  });
-
-  it('shows active badge for a still_valid order', async () => {
-    renderWithProviders(<Today />);
-    await screen.findByText(new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i'));
     expect(
       screen.getByText(t('todayPage.actionList.pendingOrdersCategory.still_valid'))
     ).toBeInTheDocument();

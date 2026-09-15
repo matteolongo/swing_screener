@@ -2,12 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
-import type { CandidateViewModel } from '@/features/screener/viewModel';
 import type { ScreenerCandidate } from '@/features/screener/types';
 import { t } from '@/i18n/t';
 
-function makeVm(volumeRatio: number | null): CandidateViewModel {
-  const original: ScreenerCandidate = {
+function makeVm(volumeRatio: number | null): ScreenerCandidate {
+  return {
     ticker: 'TEST',
     currency: 'USD',
     close: 100,
@@ -21,42 +20,15 @@ function makeVm(volumeRatio: number | null): CandidateViewModel {
     score: 0.8,
     confidence: 0.75,
     rank: 1,
-    volumeRatio: volumeRatio ?? undefined,
-  };
-  return {
-    ticker: 'TEST',
-    currency: 'USD',
     name: 'Test Corp',
     sector: 'Technology',
     lastBar: '2026-05-05T00:00:00',
-    close: 100,
-    confidence: 0.75,
-    rank: 1,
     priorityRank: 1,
-    rawRank: 1,
-    verdict: 'UNKNOWN',
-    entry: null,
-    stop: null,
-    rr: null,
-    riskAccount: null,
-    score: 0.8,
-    atr: 2,
-    momentum6m: 0.1,
-    momentum12m: 0.15,
-    relStrength: 0.05,
-    fundamentalsCoverageStatus: null,
-    fundamentalsFreshnessStatus: null,
-    fundamentalsSummary: null,
-    fixes: [],
-    sameSymbol: null,
-    volumeRatio,
-    avgDailyVolumeEur: null,
-    weeklyTrend: null,
-    original,
+    volumeRatio: volumeRatio ?? undefined,
   };
 }
 
-function renderDetailsRow(candidate: CandidateViewModel) {
+function renderDetailsRow(candidate: ScreenerCandidate) {
   return renderWithProviders(
     <table>
       <tbody>

@@ -38,6 +38,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Today reporting rows now expose semantic sibling actions and list-scoped,
+  stable keyboard navigation; remaining reporting labels are localized and
+  obsolete selection/view-model state has been removed.
+
 - Reporting boundaries now preserve every registered quote currency, explicit
   unknown currency, candidate provenance and setup-quality inputs, candle
   pressure, and per-position Daily Review evaluation failures. Portfolio

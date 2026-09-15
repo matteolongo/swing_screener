@@ -1,11 +1,11 @@
-import { CandidateViewModel } from '@/features/screener/viewModel';
+import type { ScreenerCandidate } from '@/features/screener/types';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import WeeklyTrendBadge from './WeeklyTrendBadge';
 import { formatPercent, formatScreenerScore } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
 interface ScreenerCandidateDetailsRowProps {
-  candidate: CandidateViewModel;
+  candidate: ScreenerCandidate;
 }
 
 function volumeLabel(ratio: number): string {

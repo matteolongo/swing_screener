@@ -4,7 +4,6 @@ import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
 import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import { getCanonicalOrderDraft, type ScreenerCandidate } from '@/features/screener/types';
-import { toCandidateViewModel } from '@/features/screener/viewModel';
 import { useScreenerRecurrence } from '@/features/screener/recurrenceHooks';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
@@ -100,7 +99,6 @@ export default function ScreenerCandidatesTable({
           </th>
           </tr>}>
       {groupCandidates.map((candidate) => {
-        const vm = toCandidateViewModel(candidate);
         const isExpanded = expandedRows.has(candidate.ticker);
         const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
         const workflowStatus = candidate.recommendation?.workflowStatus ?? 'needs_review';
@@ -133,13 +131,13 @@ export default function ScreenerCandidatesTable({
             >
               {/* Rank */}
               <td className="py-1.5 px-3 text-xs text-foreground font-medium whitespace-nowrap">
-                #{vm.priorityRank}
+                #{candidate.priorityRank ?? candidate.rank}
               </td>
 
               {/* Symbol */}
               <td className="py-1.5 px-3">
                 <ScreenerCandidateIdentityCell
-                  candidate={vm}
+                  candidate={candidate}
                   onSymbolClick={onSymbolClick}
                   streak={recurrenceByTicker.get(candidate.ticker.toUpperCase())}
                 />
@@ -156,14 +154,14 @@ export default function ScreenerCandidatesTable({
                         : t('screener.table.setupType.breakout')}
                     </span>
                   ) : null}
-                  {vm.volumeRatio != null && vm.volumeRatio >= 1.5 && (
+                  {candidate.volumeRatio != null && candidate.volumeRatio >= 1.5 && (
                     <span
                       className="inline-block w-2 h-2 rounded-full bg-success flex-shrink-0"
                       title={t('screener.details.volumeRatio.dotStrongTitle')}
                       aria-label={t('screener.details.volumeRatio.dotStrongTitle')}
                     />
                   )}
-                  {vm.volumeRatio != null && vm.volumeRatio < 0.9 && (
+                  {candidate.volumeRatio != null && candidate.volumeRatio < 0.9 && (
                     <span
                       className="inline-block w-2 h-2 rounded-full bg-warning flex-shrink-0"
                       title={t('screener.details.volumeRatio.dotWeakTitle')}
@@ -191,8 +189,8 @@ export default function ScreenerCandidatesTable({
 
               {/* R:R */}
               <td className="py-1.5 px-3 text-xs text-right font-mono whitespace-nowrap">
-                {vm.rr != null && vm.rr > 0 ? (
-                  <span className="text-foreground">{vm.rr.toFixed(1)}</span>
+                {candidate.rr != null && candidate.rr > 0 ? (
+                  <span className="text-foreground">{candidate.rr.toFixed(1)}</span>
                 ) : (
                   <span className="text-muted">—</span>
                 )}
@@ -254,7 +252,7 @@ export default function ScreenerCandidatesTable({
             </tr>
 
             {isExpanded && (
-              <ScreenerCandidateDetailsRow candidate={vm} />
+              <ScreenerCandidateDetailsRow candidate={candidate} />
             )}
           </React.Fragment>
         );
