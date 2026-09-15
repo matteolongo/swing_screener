@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CandidateItem } from './TodayActionItems';
+import { OpenPositionItem, CandidateItem } from './TodayActionItems';
 import { renderWithProviders, screen } from '@/test/utils';
 import { t } from '@/i18n/t';
 import type { DailyReviewCandidate } from '@/features/dailyReview/types';
@@ -44,6 +44,23 @@ describe('CandidateItem badges', () => {
     renderWithProviders(<CandidateItem item={item} onClick={() => {}} />);
 
     expect(screen.getByText(t('recommendation.workflow.nextStep.observe'))).toBeInTheDocument();
-    expect(screen.queryByText('Buy on Pullback')).not.toBeInTheDocument();
+    expect(screen.queryByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback'))).not.toBeInTheDocument();
+  });
+});
+
+describe('row actions', () => {
+  it('renders selection and trim as sibling native buttons in a semantic group', () => {
+    renderWithProviders(
+      <OpenPositionItem
+        item={{ ticker: 'LRCX', positionId: 'POS-1', rNow: 2.1, daysOpen: 4, pnlPercent: 8 } as never}
+        trimSuggestion={{ rThreshold: 2, rNow: 2.1 }}
+        onClick={() => {}}
+        onTrim={() => {}}
+      />,
+    );
+
+    const group = screen.getByRole('group', { name: 'LRCX' });
+    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(group.querySelector('button button')).toBeNull();
   });
 });

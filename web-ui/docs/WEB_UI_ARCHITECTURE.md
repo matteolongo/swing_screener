@@ -50,6 +50,7 @@
 - React Query keys live in `src/lib/queryKeys.ts`. Always use these for cache invalidation — do not construct key arrays inline.
 - Every create, submit, cancel, or fill order transition invalidates the Daily Review cache through `invalidateOrderLifecycleQueries`; fill transitions additionally invalidate positions.
 - All user-facing strings go through `src/i18n/`. No hardcoded copy in components or tests.
+- Today row actions are sibling native buttons in a labelled group. Its `j`/`k` and arrow navigation is scoped to the visible list, tracks source-specific row IDs, and is suspended for editable controls and dialogs.
 
 ## State
 

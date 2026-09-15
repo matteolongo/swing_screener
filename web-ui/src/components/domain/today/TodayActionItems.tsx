@@ -44,7 +44,7 @@ export function EarningsBadge({ ticker }: { ticker: string }) {
   return (
     <span
       className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning shrink-0"
-      title={`Earnings in ${data.daysUntil} day${data.daysUntil === 1 ? '' : 's'}`}
+      title={t('todayPage.actionList.earningsTitle', { days: String(data.daysUntil) })}
     >
       {t('todayPage.actionList.earningsBadge', { days: String(data.daysUntil) })}
     </span>
@@ -63,7 +63,7 @@ export function ExhaustionBadge({ score, label }: { score: number | null; label:
   return (
     <span
       className={`text-xs font-medium tabular-nums shrink-0 ${colorClass}`}
-      title={`Exhaustion: ${score.toFixed(1)}/10`}
+      title={t('todayPage.actionList.exhaustionTitle', { score: score.toFixed(1) })}
     >
       {emoji} {score.toFixed(1)}
     </span>
@@ -79,10 +79,9 @@ export function AiSignalBadge({ summary }: { summary: OpenPositionIntelligenceSu
       : posSignal.action === 'TRIM'
       ? 'bg-warning/10 text-warning'
       : 'bg-success/10 text-success';
-  const labelMap: Record<string, string> = { HOLD: 'Hold', TRIM: 'Trim', EXIT: 'Exit' };
   return (
     <span className={`text-xs font-medium px-1.5 py-0.5 rounded shrink-0 ${colorClass}`}>
-      {labelMap[posSignal.action] ?? posSignal.action}
+      {t(`todayPage.actionList.aiSignal.${posSignal.action}`)}
     </span>
   );
 }
@@ -93,7 +92,7 @@ export function VolumeDot({ ratio }: { ratio: number | undefined }) {
     return (
       <span
         className="inline-block w-2 h-2 rounded-full bg-success shrink-0"
-        title={`Volume ${ratio.toFixed(1)}× avg (strong)`}
+        title={t('todayPage.actionList.volumeStrongTitle', { ratio: ratio.toFixed(1) })}
       />
     );
   }
@@ -101,7 +100,7 @@ export function VolumeDot({ ratio }: { ratio: number | undefined }) {
     return (
       <span
         className="inline-block w-2 h-2 rounded-full bg-foreground/10 shrink-0"
-        title={`Volume ${ratio.toFixed(1)}× avg (weak)`}
+        title={t('todayPage.actionList.volumeWeakTitle', { ratio: ratio.toFixed(1) })}
       />
     );
   }
@@ -119,14 +118,15 @@ export interface OpenPositionItemProps {
 
 export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary, trimSuggestion, onTrim }: OpenPositionItemProps) {
   return (
-    <button
-      type="button"
-      onClick={() => onClick(item.ticker)}
+    <div
+      role="group"
+      aria-label={item.ticker}
       className={cn(
         'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-primary/40',
         isFocused && 'ring-1 ring-primary',
       )}
     >
+      <button type="button" onClick={() => onClick(item.ticker)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -147,18 +147,17 @@ export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary
       <span className={cn('text-xs tabular-nums truncate flex-1 text-right', getSignColorClass(item.pnlPercent))}>
         {item.pnlPercent >= 0 ? '+' : ''}{formatNumber(item.pnlPercent, 1)}%
       </span>
+      </button>
       {trimSuggestion && onTrim && (
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onTrim(); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onTrim(); } }}
+        <button
+          type="button"
+          onClick={onTrim}
           className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20 shrink-0 cursor-pointer"
         >
           {t('todayPage.actionList.trimAction')}
-        </span>
+        </button>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -173,15 +172,16 @@ export interface CloseItemProps {
 
 export function CloseItem({ item, onClick, onAction, isDone, isFocused, intelligenceSummary }: CloseItemProps) {
   return (
-    <button
-      type="button"
-      onClick={() => onClick(item.ticker)}
+    <div
+      role="group"
+      aria-label={item.ticker}
       className={cn(
         'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-danger/40',
         isDone && 'opacity-50',
         isFocused && 'ring-1 ring-primary',
       )}
     >
+      <button type="button" onClick={() => onClick(item.ticker)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -197,18 +197,16 @@ export function CloseItem({ item, onClick, onAction, isDone, isFocused, intellig
       <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
       {isDone ? (
         <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-      ) : onAction ? (
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onAction(); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAction(); } }}
+      ) : null}
+      </button>
+      {!isDone && onAction ? (
+        <button type="button" onClick={onAction}
           className="text-xs px-2 py-0.5 rounded bg-danger/10 text-danger hover:bg-danger/20 shrink-0 cursor-pointer"
         >
           {t('todayPage.actionList.closeAction')}
-        </span>
+        </button>
       ) : null}
-    </button>
+    </div>
   );
 }
 
@@ -224,15 +222,16 @@ export interface UpdateStopItemProps {
 
 export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting, isFocused }: UpdateStopItemProps) {
   return (
-    <button
-      type="button"
-      onClick={() => onClick(item.ticker)}
+    <div
+      role="group"
+      aria-label={item.ticker}
       className={cn(
         'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-warning/40',
         isDone && 'opacity-50',
         isFocused && 'ring-1 ring-primary',
       )}
     >
+      <button type="button" onClick={() => onClick(item.ticker)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -250,20 +249,11 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
         <span className="text-xs font-medium text-success shrink-0">
           {t('todayPage.actionList.acceptStopDone')}
         </span>
-      ) : onAccept ? (
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation();
-            onAccept(item.positionId, item.stopSuggested, item.reason);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.stopPropagation();
-              onAccept(item.positionId, item.stopSuggested, item.reason);
-            }
-          }}
+      ) : null}
+      </button>
+      {!isDone && onAccept ? (
+        <button type="button" disabled={isAccepting}
+          onClick={() => onAccept(item.positionId, item.stopSuggested, item.reason)}
           className={cn(
             'text-xs px-2 py-0.5 rounded shrink-0 cursor-pointer',
             'bg-warning/10 text-warning',
@@ -272,19 +262,15 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
           )}
         >
           {isAccepting ? '…' : t('todayPage.actionList.acceptStop')}
-        </span>
-      ) : onAction ? (
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onAction(); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAction(); } }}
+        </button>
+      ) : !isDone && onAction ? (
+        <button type="button" onClick={onAction}
           className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20 shrink-0 cursor-pointer"
         >
           {t('todayPage.actionList.updateAction')}
-        </span>
+        </button>
       ) : null}
-    </button>
+    </div>
   );
 }
 
@@ -357,7 +343,7 @@ export function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateIt
         {candidateActionBadge(item)}
         {candidateModeFlag(item, isAddOn)}
         <span className="text-xs text-muted tabular-nums">
-          r/r: {formatNumber(item.rReward, 2)}R
+          {t('todayPage.actionList.riskReward', { value: formatNumber(item.rReward, 2) })}
         </span>
         {item.confidence != null && (
           <span className="text-xs text-muted tabular-nums shrink-0">

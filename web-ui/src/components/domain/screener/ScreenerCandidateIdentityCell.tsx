@@ -1,9 +1,9 @@
 import { ExternalLink } from 'lucide-react';
-import { CandidateViewModel } from '@/features/screener/viewModel';
+import type { ScreenerCandidate } from '@/features/screener/types';
 import { t } from '@/i18n/t';
 
 interface ScreenerCandidateIdentityCellProps {
-  candidate: CandidateViewModel;
+  candidate: ScreenerCandidate;
   onSymbolClick?: (ticker: string) => void;
   streak?: number;
 }
