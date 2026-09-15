@@ -283,10 +283,8 @@ def _market_data_cache_policy(
     now_utc: dt.datetime,
     currencies: list[str],
 ) -> MarketDataCachePolicy:
-    """Require a post-close cache only for a current-date final-close run."""
+    """Require a post-close cache for every final-close run."""
 
-    if asof_date != now_utc.date().isoformat():
-        return MarketDataCachePolicy()
     if resolve_data_freshness(asof_date, now_utc, currencies) != "final_close":
         return MarketDataCachePolicy()
     return MarketDataCachePolicy(

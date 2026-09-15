@@ -7,6 +7,8 @@ from datetime import timedelta
 import pandas as pd
 
 from api.models.portfolio import (
+    ClosePositionRequest,
+    PartialCloseRequest,
     TradingMarketPrice,
     TradingStateCommandRequest,
     TradingStateCommandResponse,
@@ -122,9 +124,63 @@ class StatelessTradingService:
             orders.cancel_order(command.payload.order_id)
             affected_orders.append(command.payload.order_id)
         elif command.operation == "fill_order":
-            result = orders.fill_order(command.payload.order_id, command.payload)
-            affected_orders.append(result.order_id)
-            affected_positions.append(result.position.position_id)
+            order = state.orders_repo.get_order(command.payload.order_id)
+            if order is not None and order.get("order_kind") != "entry":
+                if order.get("status") not in ("pending", "submitted"):
+                    raise ConflictError(
+                        f"Order {command.payload.order_id} is already {order.get('status')}"
+                    )
+                position_id = order.get("position_id")
+                position = state.positions_repo.get_position(position_id)
+                if position is None:
+                    raise UnprocessableError("Exit order must reference an open position")
+                if order.get("ticker") != position.get("ticker"):
+                    raise UnprocessableError("Exit order ticker must match the position")
+                quantity = int(order["quantity"])
+                shares = int(position["shares"])
+                if quantity > shares:
+                    raise UnprocessableError("Exit order quantity exceeds position shares")
+                portfolio = PortfolioService(
+                    positions_repo=state.positions_repo,
+                    config_repo=self._config_repo,
+                    provider=_CommandPriceProvider(context.market_price),
+                    business_date=lambda: command.payload.filled_date,
+                )
+                if quantity == shares:
+                    portfolio.close_position(
+                        position_id,
+                        ClosePositionRequest(
+                            exit_price=command.payload.filled_price,
+                            fee_eur=command.payload.fee_eur,
+                            exit_fx_rate=command.payload.fill_fx_rate,
+                        ),
+                    )
+                else:
+                    portfolio.partial_close_position(
+                        position_id,
+                        PartialCloseRequest(
+                            shares_closed=quantity,
+                            price=command.payload.filled_price,
+                            fee_eur=command.payload.fee_eur,
+                            fx_rate=command.payload.fill_fx_rate,
+                        ),
+                    )
+                state.orders_repo.update_order(
+                    command.payload.order_id,
+                    {
+                        "status": "filled",
+                        "entry_price": command.payload.filled_price,
+                        "filled_date": command.payload.filled_date,
+                        "fee_eur": command.payload.fee_eur,
+                        "fill_fx_rate": command.payload.fill_fx_rate,
+                    },
+                )
+                affected_orders.append(command.payload.order_id)
+                affected_positions.append(position_id)
+            else:
+                result = orders.fill_order(command.payload.order_id, command.payload)
+                affected_orders.append(result.order_id)
+                affected_positions.append(result.position.position_id)
         else:
             portfolio = PortfolioService(
                 positions_repo=state.positions_repo,

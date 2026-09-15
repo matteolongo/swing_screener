@@ -7,6 +7,14 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Browser-owned sell-order fills now close or reduce their linked position instead
+  of entering the add-on path, and local stop updates obtain a timestamped candle
+  observation before applying canonical validation.
+- Final-close screens keep enforcing the selected session's post-close cache
+  boundary when they run after midnight.
+
 ## [3.1.0] - 2026-09-15
 
 ### Added

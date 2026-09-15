@@ -24,8 +24,8 @@ other, and `data_as_of` is null when the provider returns no bars.
 `MarketDataCachePolicy`. When `fresh_after_utc` is set, each cache-capable
 provider (yfinance, Polygon) accepts a covering Parquet file only when its
 modification time is at or after that instant. The screener supplies the
-latest relevant market close only for a current-date `final_close` run;
-historical and explicitly intraday runs use the normal cache policy.
+selected session's latest relevant market close for every `final_close` run;
+explicitly intraday runs use the normal cache policy.
 
 If the required refresh fails, yfinance may return the older covering cache.
 That result is marked with `stale_cache_fallback` in both DataFrame provenance
