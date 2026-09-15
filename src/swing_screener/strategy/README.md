@@ -132,6 +132,12 @@ Convenience builders that construct typed config dataclasses from a raw strategy
 - `build_manage_config(strategy_dict)` → `ManageConfig`
 - `build_report_config(strategy_dict)` → `ReportConfig`
 
+`build_report_config()` is the sole report-config assembly path, including API
+request and regime overrides. Its optional typed overrides preserve all other
+configured fields. `ReportConfig.confidence` is loaded from
+`low_level.reporting.confidence` and participates in report generation and
+evaluation-cache identity.
+
 ## Adding a Custom Strategy Module
 
 ```python

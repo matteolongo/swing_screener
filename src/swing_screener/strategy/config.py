@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import fields
-from typing import Optional
+from dataclasses import fields, replace
 
-from swing_screener.selection.universe import UniverseConfig, UniverseFilterConfig
+from swing_screener.indicators.momentum import MomentumConfig
 from swing_screener.indicators.trend import TrendConfig
 from swing_screener.indicators.volatility import VolatilityConfig
-from swing_screener.indicators.momentum import MomentumConfig
-from swing_screener.selection.ranking import RankingConfig
-from swing_screener.selection.entries import EntrySignalConfig
-from swing_screener.risk.position_sizing import RiskConfig
-from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.portfolio.state import ManageConfig
+from swing_screener.risk.position_sizing import RiskConfig
+from swing_screener.selection.entries import EntrySignalConfig
+from swing_screener.selection.ranking import RankingConfig
+from swing_screener.selection.universe import UniverseConfig, UniverseFilterConfig
+from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.utils import get_nested_dict
-
 
 _RISK_CONFIG_FIELDS = {field.name for field in fields(RiskConfig)}
 # Persisted/API strategies carry this for portfolio summary sizing mode; it is
@@ -61,20 +59,25 @@ def build_manage_config(strategy: dict) -> ManageConfig:
     )
 
 
-def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -> ReportConfig:
-    universe = build_universe_config(strategy)
-    ranking = build_ranking_config(strategy)
-    signals = build_entry_config(strategy)
-    risk = build_risk_config(strategy)
-    strategy_module = strategy.get("module", "momentum") if isinstance(strategy, dict) else "momentum"
+def build_report_config(
+    strategy: dict,
+    *,
+    top_override: int | None = None,
+    universe_override: UniverseConfig | None = None,
+    ranking_override: RankingConfig | None = None,
+    signals_override: EntrySignalConfig | None = None,
+    risk_override: RiskConfig | None = None,
+) -> ReportConfig:
+    universe = universe_override or build_universe_config(strategy)
+    ranking = ranking_override or build_ranking_config(strategy)
+    signals = signals_override or build_entry_config(strategy)
+    risk = risk_override or build_risk_config(strategy)
+    strategy_module = (
+        strategy.get("module", "momentum") if isinstance(strategy, dict) else "momentum"
+    )
 
     if top_override is not None:
-        ranking = RankingConfig(
-            w_mom_6m=ranking.w_mom_6m,
-            w_mom_12m=ranking.w_mom_12m,
-            w_rs_6m=ranking.w_rs_6m,
-            top_n=max(ranking.top_n, int(top_override)),
-        )
+        ranking = replace(ranking, top_n=max(ranking.top_n, int(top_override)))
 
     return ReportConfig(
         universe=universe,
