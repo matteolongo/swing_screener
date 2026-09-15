@@ -5,7 +5,6 @@ import type {
   GeneratedEducationView,
   InvalidationRule,
   Recommendation,
-  RecommendationRisk,
   TradeThesis,
 } from '@/types/recommendation';
 import { t } from '@/i18n/t';
@@ -24,14 +23,12 @@ interface OrderReviewSummaryProps {
   currency: string;
   suggestedEntry: number;
   suggestedStop: number;
+  suggestedTarget: number;
   suggestedShares: number;
-  recRisk?: RecommendationRisk;
-  contextShares?: number;
-  contextRReward?: number;
+  suggestedRr: number;
   thesis?: TradeThesis;
   thesisEducation?: GeneratedEducationView;
   guidance: ReturnType<typeof getSetupExecutionGuidance>;
-  warnings: string[];
   invalidationRules: InvalidationRule[];
   hardInvalidations: InvalidationRule[];
   softInvalidations: InvalidationRule[];
@@ -47,14 +44,12 @@ export default function OrderReviewSummary({
   currency,
   suggestedEntry,
   suggestedStop,
+  suggestedTarget,
   suggestedShares,
-  recRisk,
-  contextShares,
-  contextRReward,
+  suggestedRr,
   thesis,
   thesisEducation,
   guidance,
-  warnings,
   invalidationRules,
   hardInvalidations,
   softInvalidations,
@@ -176,22 +171,18 @@ export default function OrderReviewSummary({
                 <MetricTile
                   label={t('recommendation.labels.target')}
                   value={
-                    recRisk?.target != null ? formatCurrency(recRisk.target, currency) : t('common.placeholders.emDash')
+                    formatCurrency(suggestedTarget, currency)
                   }
                 />
                 <MetricTile
                   label={t('order.candidateModal.labels.rr')}
                   value={
-                    contextRReward != null
-                      ? formatNumber(contextRReward, 1)
-                      : recRisk?.rr != null
-                        ? formatNumber(recRisk.rr, 1)
-                        : t('common.placeholders.emDash')
+                    formatNumber(suggestedRr, 1)
                   }
                 />
                 <MetricTile
                   label={t('recommendation.labels.shares')}
-                  value={String(recRisk?.shares ?? contextShares ?? suggestedShares)}
+                  value={String(suggestedShares)}
                 />
                 <MetricTile
                     label={t('tradeThesis.setupType')}
@@ -207,18 +198,6 @@ export default function OrderReviewSummary({
                 />
               </div>
 
-              {warnings.length ? (
-                <div className="space-y-2">
-                  {warnings.map((warning) => (
-                    <div
-                      key={warning}
-                      className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
-                    >
-                      {warning}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
             </div>
           </div>
 

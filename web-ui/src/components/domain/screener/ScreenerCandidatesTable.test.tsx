@@ -103,7 +103,13 @@ describe('ScreenerCandidatesTable', () => {
     renderWithProviders(
       <ScreenerCandidatesTable
         candidates={[
-          candidate({ ticker: 'READY', signal: 'breakout', recommendation: { ...candidate().recommendation!, ...workflows.ready } }),
+          candidate({
+            ticker: 'READY',
+            signal: 'breakout',
+            recommendation: { ...candidate().recommendation!, ...workflows.ready },
+            executionEligibility: { allowed: true, mode: 'ready', reason: null },
+            canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 375.06, stop: 367.7, target: 397.16, shares: 10, rr: 3, quoteCurrency: 'USD', approvalToken: 'signed' },
+          }),
           candidate({ ticker: 'WAIT', signal: 'pullback', recommendation: { ...candidate().recommendation!, ...workflows.waiting } }),
           candidate({ ticker: 'REVIEW', recommendation: { ...candidate().recommendation!, ...workflows.review } }),
           candidate({

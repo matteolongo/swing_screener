@@ -15,7 +15,7 @@ import {
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { formatCurrency } from '@/utils/formatters';
-import { canReviewPendingPullbackOrder } from '@/components/domain/recommendation/workflowPresentation';
+import { getCanonicalOrderDraft } from '@/features/screener/types';
 
 interface ManagePositionPanelProps {
   position: PositionWithMetrics;
@@ -37,7 +37,7 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
   const setActiveTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const canAdd = Boolean(
     (candidate?.sameSymbol?.mode === 'ADD_ON' || candidate?.sameSymbol?.mode === 'SCALE_BACK')
-      && (candidate.recommendation?.workflowStatus === 'ready' || canReviewPendingPullbackOrder(candidate)),
+      && getCanonicalOrderDraft(candidate),
   );
 
   const displayedR = checkLive && stopPreview.data ? stopPreview.data.rNow : position.rNow;

@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
 import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
-import type { ScreenerCandidate } from '@/features/screener/types';
+import { getCanonicalOrderDraft, type ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import { useScreenerRecurrence } from '@/features/screener/recurrenceHooks';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
@@ -12,7 +12,7 @@ import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
 import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
-import { canReviewPendingPullbackOrder, formatWorkflowNextStep, groupCandidatesByWorkflow } from '@/components/domain/recommendation/workflowPresentation';
+import { formatWorkflowNextStep, groupCandidatesByWorkflow } from '@/components/domain/recommendation/workflowPresentation';
 import ScreenerWorkflowGroup from './ScreenerWorkflowGroup';
 
 interface ScreenerCandidatesTableProps {
@@ -104,7 +104,7 @@ export default function ScreenerCandidatesTable({
         const isExpanded = expandedRows.has(candidate.ticker);
         const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
         const workflowStatus = candidate.recommendation?.workflowStatus ?? 'needs_review';
-        const canReviewOrder = workflowStatus === 'ready' || canReviewPendingPullbackOrder(candidate);
+        const canReviewOrder = Boolean(getCanonicalOrderDraft(candidate));
         const isWatched = watchedTickers.has(candidate.ticker.toUpperCase());
         const isWatchPending =
           (watchSymbolMutation.isPending &&
