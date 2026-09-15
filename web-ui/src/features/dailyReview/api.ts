@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
 import { queryKeys } from '@/lib/queryKeys';
-import { type TaxonomyFilterValues } from '@/features/pool/types';
 import {
   getActiveStrategyLocal,
   getAllOrdersLocal,
@@ -73,38 +72,14 @@ function toOrderApi(order: ReturnType<typeof getAllOrdersLocal>[number]) {
 }
 
 /**
- * Daily-review selection mirroring the screener's taxonomy filter / preset.
- */
-export interface DailyReviewSelection {
-  presetId?: string | null;
-  taxonomyFilter?: TaxonomyFilterValues | null;
-}
-
-function hasTaxonomyValues(filter?: TaxonomyFilterValues | null): boolean {
-  return Boolean(filter && Object.values(filter).some((v) => v && v.length));
-}
-
-/** Stable cache-key fragment for a daily-review selection. */
-export function dailyReviewSelectionKey(selection?: DailyReviewSelection): string {
-  if (!selection) return '';
-  const preset = selection.presetId ?? '';
-  const filter = hasTaxonomyValues(selection.taxonomyFilter)
-    ? JSON.stringify(selection.taxonomyFilter)
-    : '';
-  return `${preset}|${filter}`;
-}
-
-/**
  * Fetch daily review from API
  */
 export async function getDailyReview(
   topN: number = 200,
-  selection?: DailyReviewSelection,
 ): Promise<DailyReview> {
   // Today deliberately requests a portfolio-only review. Discovery candidates
   // come from the pinned screener snapshot in the client, not from a second
   // backend screener run with a potentially different filter set.
-  void selection;
 
   if (isLocalPersistenceMode()) {
     const strategy = getActiveStrategyLocal();
@@ -141,18 +116,6 @@ export async function getDailyReview(
     { errorMessage: 'Failed to fetch daily review' },
   );
   return transformDailyReview(data);
-}
-
-/**
- * React Query hook for daily review
- */
-export function useDailyReview(topN: number = 200, selection?: DailyReviewSelection) {
-  return useQuery({
-    queryKey: queryKeys.dailyReview(topN, dailyReviewSelectionKey(selection)),
-    queryFn: () => getDailyReview(topN, selection),
-    staleTime: 1000 * 60 * 5, // 5 minutes - review data is relatively stable
-    refetchOnWindowFocus: false, // Don't refetch on window focus - user is reviewing
-  });
 }
 
 /** Portfolio/watchlist review with no implicit candidate-discovery run. */

@@ -53,6 +53,7 @@
 | `[FE][02]` | Complete; [#468](https://github.com/matteolongo/swing_screener/pull/468) | `codex/preserve-reporting-run-identity` | Source-aware workspace selections preserve pinned/last-run candidate identity, ad-hoc analysis remains local, and strategy activation invalidates actionable persisted runs. Focused assertions: 84 passed; lint/build/diff-check passed. Baseline typecheck and MSW/happy-dom runner failures are documented in the PR. |
 | `[FE][03]` | Complete; [#470](https://github.com/matteolongo/swing_screener/pull/470) | `codex/refresh-daily-review-state` | Order lifecycle transitions invalidate Daily Review (and positions after fills); Today composes independently loaded positions, backend-filtered watchlist near-trigger rows, pinned candidates, and portfolio review state. Local reviews submit the browser watchlist and strategy to stateless compute; API reviews use persisted state. Focused assertions: 37 backend and 23 frontend passed; affected Ruff/ESLint, Vite production bundle, and diff-check passed. This worktree's cross-worktree dependency junction (`msw@2.15.0` with `happy-dom@12.10.3`) still blocks both unshimmed MSW integration tests and typecheck with errors outside the FE-03 diff; clean-install CI is authoritative. |
 | `[FE][04]` | Complete; [#472](https://github.com/matteolongo/swing_screener/pull/472) | `codex/align-reporting-contracts` | Registered currencies and explicit unknown values are fail-closed at reporting boundaries; Daily Review errors, candle pressure, provenance, and setup-quality fields are preserved. Strategy validation and persisted/local portfolio analytics consume canonical backend responses. Focused backend: 40 passed. Focused frontend boundary/workspace tests: 56 passed; the linked cross-worktree MSW/happy-dom mismatch still blocks MSW-backed tests and leaves four pre-existing type errors outside this diff. |
+| `[FE][05]` | Complete; [#473](https://github.com/matteolongo/swing_screener/pull/473) | `codex/repair-reporting-interactions` | Semantic sibling row actions, list-scoped stable keyboard navigation, reporting i18n, and dead test/state cleanup delivered. Focused non-network tests: 32 passed; full ESLint and the Vite production bundle passed. The linked cross-worktree dependency junction (`msw@2.15.0` with `happy-dom@12.10.3`) blocks MSW-backed Today, full-suite, and coverage runs with unhandled `defaultPrevented` errors. Typecheck and the combined production build retain four dependency/type errors outside this diff. A UI screenshot could not be captured because the same broken dependency junction prevents the Today page data layer from rendering a representative state locally. |
 
 BE-19 is specified in `docs/superpowers/plans/2026-09-08-canonical-execution-eligibility.md` and is the first implementation target. Subsequent PRs must use the design's acceptance criteria and the boundaries below when their task-level plans are expanded immediately before execution.
 
@@ -126,14 +127,14 @@ BE-19 is specified in `docs/superpowers/plans/2026-09-08-canonical-execution-eli
 
 ## FE-05 contract: repair reporting interactions
 
-- [ ] Replace nested row actions with sibling native buttons in a semantic group.
-- [ ] Scope Today keyboard navigation to the list and suspend it in inputs, contenteditable regions, textboxes, and dialogs.
-- [ ] Use stable visible-row IDs across filtering, reordering, shrinking, and duplicate tickers.
-- [ ] Move remaining reporting copy and assertions to i18n.
-- [ ] Remove dead `dailyReviewSelectionKey`, view-model helper, and `patchCandidate` tests after their production surfaces are removed.
-- [ ] Merge redundant Today and pending-order tests while retaining distinct behavior coverage.
-- [ ] Reconcile the Web UI guide with the pending `BUY_LIMIT` pullback exception.
-- [ ] Run accessibility, focused, full frontend, lint, typecheck, build, and coverage checks.
+- [x] Replace nested row actions with sibling native buttons in a semantic group.
+- [x] Scope Today keyboard navigation to the list and suspend it in inputs, contenteditable regions, textboxes, and dialogs.
+- [x] Use stable visible-row IDs across filtering, reordering, shrinking, and duplicate tickers.
+- [x] Move remaining reporting copy and assertions to i18n.
+- [x] Remove dead `dailyReviewSelectionKey`, view-model helper, and `patchCandidate` tests after their production surfaces are removed.
+- [x] Merge redundant Today and pending-order tests while retaining distinct behavior coverage.
+- [x] Reconcile the Web UI guide with the pending `BUY_LIMIT` pullback exception.
+- [x] Run accessibility, focused, full frontend, lint, typecheck, build, and coverage checks.
 
 ## Stack verification
 
