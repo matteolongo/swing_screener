@@ -9,6 +9,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Workspace selections now preserve row, source, run, and candidate identity across
+  Today, Last Run, watchlist, and portfolio navigation; ad-hoc symbol analysis no
+  longer rewrites reporting runs.
+
 - Canonical portfolio analytics now serve persisted and browser-supplied
   snapshots with initial-risk R performance, scratch treatment, streaks,
   partial-close-aware self-sufficient journal rows/aggregates, localized
@@ -33,6 +37,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reporting.
 
 ### Changed
+
+- Local-mode Daily Review now enriches and filters the browser watchlist using
+  its supplied strategy, so near-trigger rows reflect local watch/unwatch changes.
 
 - Order review now consumes the backend execution capability and canonical draft
   directly, so blocked, incomplete, or `SKIP` candidates cannot receive a
@@ -121,6 +128,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Zones while preserving the existing Backtest workflow.
 
 ### Fixed
+
+- Today now composes independently loaded positions, pinned opportunities, backend-filtered watchlist near-trigger rows, and portfolio review rows without hiding available work behind a failed refresh; order lifecycle transitions invalidate the cached Daily Review.
 
 - `SKIP` execution guidance now always produces a non-actionable recommendation
   with no approval token or order draft, while token-gated pending `BUY_LIMIT`

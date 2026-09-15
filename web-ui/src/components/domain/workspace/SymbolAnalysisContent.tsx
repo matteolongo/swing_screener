@@ -21,13 +21,11 @@ import SymbolIntelligenceTab from '@/components/domain/workspace/SymbolIntellige
 import SymbolOverviewTab from '@/components/domain/workspace/SymbolOverviewTab';
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
-import type { ScreenerResponse } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
-import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
@@ -38,7 +36,7 @@ interface SymbolAnalysisContentProps {
   position?: PositionWithMetrics | null;
   activeTab: WorkspaceAnalysisTab;
   onTabChange: (tab: WorkspaceAnalysisTab) => void;
-  orderPanel?: ReactNode;
+  orderPanel?: ReactNode | ((candidate: SymbolAnalysisCandidate | null) => ReactNode);
   intelligenceOutdated?: boolean;
   selectionVersion?: number;
   intelligenceWorkflow?: {
@@ -60,7 +58,7 @@ interface SymbolAnalysisContentProps {
 
 export default function SymbolAnalysisContent({
   ticker,
-  candidate,
+  candidate: incomingCandidate = null,
   position = null,
   activeTab,
   onTabChange,
@@ -79,26 +77,18 @@ export default function SymbolAnalysisContent({
     onRefresh: () => undefined,
   },
 }: SymbolAnalysisContentProps) {
+  const [adHocAnalyses, setAdHocAnalyses] = useState<Record<string, SymbolAnalysisCandidate>>({});
+  const currentSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
+  const candidate = adHocAnalyses[currentSession] ?? incomingCandidate;
   const watchlistQuery = useWatchlist();
   const watchSymbolMutation = useWatchSymbolMutation();
   const unwatchSymbolMutation = useUnwatchSymbolMutation();
-  const computeAnalysisMutation = useRunScreenerMutation((result) => {
+  const computeAnalysisMutation = useRunScreenerMutation((result, request) => {
     const newCandidate = result.candidates[0];
-    if (!newCandidate) return;
-    const current = useScreenerStore.getState().lastResult;
-    const target = newCandidate.ticker.toUpperCase();
-    if (!current) {
-      useScreenerStore.getState().setLastResult(result);
-      return;
-    }
-    const exists = current.candidates.some((c) => c.ticker.toUpperCase() === target);
-    const merged: ScreenerResponse = {
-      ...current,
-      candidates: exists
-        ? current.candidates.map((c) => (c.ticker.toUpperCase() === target ? newCandidate : c))
-        : [...current.candidates, newCandidate],
-    };
-    useScreenerStore.getState().setLastResult(merged);
+    const requestTicker = request.tickers?.[0]?.trim().toUpperCase();
+    const requestSession = requestTicker ? `${requestTicker}:${selectionVersion}` : null;
+    if (!newCandidate || !requestSession || !requestMatchesLiveSession(requestSession, newCandidate.ticker)) return;
+    setAdHocAnalyses((current) => ({ ...current, [requestSession]: newCandidate }));
   });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
@@ -110,7 +100,7 @@ export default function SymbolAnalysisContent({
   const [lastAttemptForce, setLastAttemptForce] = useState(false);
   const [refreshedEvidence, setRefreshedEvidence] =
     useState<EvidenceRefreshResponse | null>(null);
-  const currentSessionRef = useRef(`${ticker.trim().toUpperCase()}:${selectionVersion}`);
+  const currentSessionRef = useRef(currentSession);
   const mountedRef = useRef(true);
   const tabsId = useId();
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
@@ -131,8 +121,8 @@ export default function SymbolAnalysisContent({
   const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
 
   useEffect(() => {
-    currentSessionRef.current = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
-  }, [ticker, selectionVersion]);
+    currentSessionRef.current = currentSession;
+  }, [currentSession]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -281,12 +271,12 @@ export default function SymbolAnalysisContent({
   const autoComputedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!position || candidate) return;
-    const key = ticker.trim().toUpperCase();
+    const key = currentSession;
     if (autoComputedRef.current.has(key)) return;
     if (computeAnalysisMutation.isPending) return;
     autoComputedRef.current.add(key);
     computeAnalysisMutation.mutate({ tickers: [ticker], top: 1, includeHeld: true });
-  }, [ticker, position, candidate, computeAnalysisMutation]);
+  }, [ticker, position, candidate, computeAnalysisMutation, currentSession]);
 
   const heldMode = Boolean(position);
   const canAddOn = Boolean(
@@ -445,7 +435,7 @@ export default function SymbolAnalysisContent({
           </>
         )}
 
-        {activeTab === 'order' ? orderPanel : null}
+        {activeTab === 'order' ? (typeof orderPanel === 'function' ? orderPanel(candidate) : orderPanel) : null}
 
         {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
 

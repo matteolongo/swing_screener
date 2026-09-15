@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
+import PartialCloseModalForm from '@/components/domain/positions/PartialCloseModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
-import { usePortfolioReview } from '@/features/dailyReview/api';
+import { usePortfolioReview, useWatchlistNearTrigger } from '@/features/dailyReview/api';
 import { dailyReviewCandidateFromScreener } from '@/features/dailyReview/types';
 import { filterCandidates, prioritizeCandidates } from '@/features/screener/prioritization';
 import {
@@ -33,11 +34,14 @@ interface TodayActionListProps {
 
 export default function TodayActionList({ onTickerSelect, compact = false }: TodayActionListProps) {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
+  const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
   const {
     todayRun,
+    todayRunInitialized,
     setTodayRunDisplayFilters,
   } = useScreenerStore();
   const { data: review, isLoading, error, refetch, isFetching } = usePortfolioReview();
+  const watchlistQuery = useWatchlistNearTrigger();
 
   const sourceOpportunities = useMemo(() => {
     const sourceCandidates = todayRun
@@ -51,21 +55,28 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
     const isAddOn = (mode?: string) => mode === 'ADD_ON' || mode === 'SCALE_BACK';
 
     return {
+      candidates: visibleCandidates,
       newCandidates: visibleCandidates
         .filter((candidate) => isNewOpportunity(candidate.sameSymbol?.mode))
         .map(dailyReviewCandidateFromScreener),
       addOnCandidates: visibleCandidates
         .filter((candidate) => isAddOn(candidate.sameSymbol?.mode))
         .map(dailyReviewCandidateFromScreener),
-      sourceTickers: new Set(sourceCandidates.map((candidate) => candidate.ticker.toUpperCase())),
     };
   }, [todayRun]);
 
+  const composedCandidateTickers = useMemo(
+    () => new Set([
+      ...sourceOpportunities.newCandidates,
+      ...sourceOpportunities.addOnCandidates,
+    ].map((candidate) => candidate.ticker.toUpperCase())),
+    [sourceOpportunities],
+  );
   const watchlistNearTrigger = useMemo(
-    () => (review?.watchlistNearTrigger ?? []).filter(
-      (item) => !sourceOpportunities.sourceTickers.has(item.ticker.toUpperCase()),
+    () => (watchlistQuery.data ?? []).filter(
+      (item) => !composedCandidateTickers.has(item.ticker.toUpperCase()),
     ),
-    [review?.watchlistNearTrigger, sourceOpportunities.sourceTickers],
+    [composedCandidateTickers, watchlistQuery.data],
   );
 
   const { data: intelligenceSummaries } = useOpenPositionsIntelligence();
@@ -80,6 +91,32 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
     () => new Map(openPositionsQuery.data?.map((p) => [p.positionId, p]) ?? []),
     [openPositionsQuery.data],
   );
+  const trimSuggestionByPositionId = useMemo(
+    () => new Map(review?.positionsHold.map((item) => [item.positionId, item.trimSuggestion]) ?? []),
+    [review?.positionsHold],
+  );
+
+  const selectTodayTicker = useCallback((ticker: string) => {
+    const normalized = ticker.trim().toUpperCase();
+    const candidate = sourceOpportunities.candidates
+      .find((item) => item.ticker.toUpperCase() === normalized);
+    const position = openPositions.find((item) => item.ticker.toUpperCase() === normalized);
+    const source = candidate
+      ? 'today_run'
+      : watchlistNearTrigger.some((item) => item.ticker.toUpperCase() === normalized)
+        ? 'today_watchlist'
+        : 'today_position';
+    setWorkspaceSelection({
+      ticker: normalized,
+      source,
+      runId: candidate ? todayRun?.completedAt : undefined,
+      candidate,
+      rowId: candidate
+        ? `today:${todayRun?.completedAt ?? 'run'}:${normalized}`
+        : position?.positionId ?? `${source}:${normalized}`,
+    });
+    onTickerSelect(normalized);
+  }, [onTickerSelect, openPositions, setWorkspaceSelection, sourceOpportunities.candidates, todayRun?.completedAt, watchlistNearTrigger]);
 
   const flatItems = useMemo(
     () => [
@@ -100,22 +137,28 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
     acceptStopMutation,
     updateStopMutation,
     closePositionMutation,
+    partialCloseMutation,
     updateStopTarget,
     setUpdateStopTarget,
     closeTarget,
     setCloseTarget,
+    trimTarget,
+    setTrimTarget,
     focusedIndex,
     handleAcceptStop,
     handleUpdateStop,
     handleClosePosition,
+    handlePartialClose,
     handleItemClick,
-  } = useTodayActions(flatItems, onTickerSelect);
+  } = useTodayActions(flatItems, selectTodayTicker);
 
-  const requiresActionCount =
-    (review?.positionsClose.length ?? 0) + (review?.positionsUpdateStop.length ?? 0);
+  const positionsCloseCount = review?.positionsClose.length ?? 0;
+  const updateStopCount = review?.positionsUpdateStop.length ?? 0;
+  const requiresActionCount = positionsCloseCount + updateStopCount;
   const exitSignalCount = review?.positionsExitSignal.length ?? 0;
   const watchlistNearTriggerCount = watchlistNearTrigger.length;
   const opportunitiesCount = sourceOpportunities.newCandidates.length + sourceOpportunities.addOnCandidates.length;
+  const pendingOrderCount = review?.pendingOrdersReview?.length ?? 0;
   const compactRows = useMemo(() => {
     const rows: Array<{ ticker: string; status: string; context: string | null }> = [];
     const seen = new Set<string>();
@@ -167,23 +210,8 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
     return rows;
   }, [openPositions, review, sourceOpportunities, watchlistNearTrigger]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-24 text-sm text-muted">
-        {t('todayPage.actionList.loading')}
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-3 text-sm text-danger">
-        {t('dailyReview.header.error', { message: error instanceof Error ? error.message : t('dailyReview.header.unknownError') })}
-      </div>
-    );
-  }
-
-  const isEmpty = openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0;
+  const isLoadingSources = !todayRunInitialized || isLoading || openPositionsQuery.isLoading || watchlistQuery.isLoading;
+  const isEmpty = !isLoadingSources && openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && pendingOrderCount === 0;
 
   const compactRail = compact ? (
       <div
@@ -197,7 +225,7 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
             status={row.status}
             context={row.context}
             selected={selectedTicker?.toUpperCase() === row.ticker.toUpperCase()}
-            onSelect={onTickerSelect}
+            onSelect={selectTodayTicker}
           />
         ))}
         {isEmpty ? (
@@ -239,25 +267,28 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
       </div>
 
       {/* Summary chips */}
-      {review && (
-        <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-border shrink-0">
-          {review.summary.newCandidates > 0 && (
+      <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-border shrink-0">
+          {sourceOpportunities.newCandidates.length > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-              {t('dailyReviewBanner.newCandidates', { n: String(review.summary.newCandidates) })}
+              {t('dailyReviewBanner.newCandidates', { n: String(sourceOpportunities.newCandidates.length) })}
             </span>
           )}
-          {review.summary.updateStop > 0 && (
+          {updateStopCount > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning font-medium">
-              {t('dailyReviewBanner.stopsToUpdate', { n: String(review.summary.updateStop) })}
+              {t('dailyReviewBanner.stopsToUpdate', { n: String(review?.positionsUpdateStop.length ?? 0) })}
             </span>
           )}
-          {review.summary.closePositions > 0 && (
+          {positionsCloseCount > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-danger/10 text-danger font-medium">
-              {t('dailyReviewBanner.positionsToClose', { n: String(review.summary.closePositions) })}
+              {t('dailyReviewBanner.positionsToClose', { n: String(review?.positionsClose.length ?? 0) })}
             </span>
           )}
-        </div>
-      )}
+          {pendingOrderCount > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning font-medium">
+              {t('todayPage.actionList.pendingOrdersSection')} · {pendingOrderCount}
+            </span>
+          )}
+      </div>
 
       <div className="mx-2 mt-2 rounded border border-border bg-surface/60 px-3 py-2 text-xs">
         {todayRun ? (
@@ -308,6 +339,36 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
 
       {/* Action list */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
+        {error && (
+          <div className="flex items-center gap-2 px-2 text-sm text-danger">
+            {t('dailyReview.header.error', { message: error instanceof Error ? error.message : t('dailyReview.header.unknownError') })}
+            <button type="button" onClick={() => refetch()} className="underline">{t('todayPage.actionList.retryReview')}</button>
+          </div>
+        )}
+        {openPositionsQuery.error && (
+          <div className="flex items-center gap-2 px-2 text-sm text-danger">
+            {t('dailyReview.header.error', { message: openPositionsQuery.error instanceof Error ? openPositionsQuery.error.message : t('dailyReview.header.unknownError') })}
+            <button type="button" onClick={() => openPositionsQuery.refetch()} className="underline">{t('todayPage.actionList.retryPositions')}</button>
+          </div>
+        )}
+        {watchlistQuery.error && (
+          <div className="flex items-center gap-2 px-2 text-sm text-danger">
+            {t('dailyReview.header.error', { message: watchlistQuery.error instanceof Error ? watchlistQuery.error.message : t('dailyReview.header.unknownError') })}
+            <button type="button" onClick={() => watchlistQuery.refetch()} className="underline">{t('todayPage.actionList.retryWatchlist')}</button>
+          </div>
+        )}
+        {!todayRunInitialized && (
+          <p className="px-2 text-sm text-muted">{t('todayPage.actionList.loadingPinnedCandidates')}</p>
+        )}
+        {isLoading && (
+          <p className="px-2 text-sm text-muted">{t('todayPage.actionList.loadingReview')}</p>
+        )}
+        {openPositionsQuery.isLoading && (
+          <p className="px-2 text-sm text-muted">{t('todayPage.actionList.loadingPositions')}</p>
+        )}
+        {watchlistQuery.isLoading && (
+          <p className="px-2 text-sm text-muted">{t('todayPage.actionList.loadingWatchlist')}</p>
+        )}
         {isEmpty && (
           <p className="text-sm text-muted px-2 py-4 text-center">
             {t('todayPage.actionList.empty')}
@@ -326,6 +387,8 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
                   item={position}
                   onClick={handleItemClick}
                   intelligenceSummary={intelligenceByTicker.get(position.ticker)}
+                  trimSuggestion={trimSuggestionByPositionId.get(position.positionId ?? '')}
+                  onTrim={() => setTrimTarget(position)}
                 />
               ))}
             </div>
@@ -495,6 +558,15 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
           error={closePositionMutation.error instanceof Error ? closePositionMutation.error.message : undefined}
           onClose={() => setCloseTarget(null)}
           onSubmit={(req) => handleClosePosition(closeTarget, req)}
+        />
+      )}
+      {trimTarget && (
+        <PartialCloseModalForm
+          position={trimTarget}
+          isLoading={partialCloseMutation.isPending}
+          error={partialCloseMutation.error instanceof Error ? partialCloseMutation.error.message : undefined}
+          onClose={() => setTrimTarget(null)}
+          onSubmit={(req) => handlePartialClose(trimTarget, req)}
         />
       )}
       </div>

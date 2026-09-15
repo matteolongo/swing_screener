@@ -146,6 +146,12 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
   });
 }
 
+function renderPanel(source?: Parameters<typeof ActionPanel>[0]['source']) {
+  return renderWithProviders(
+    <ActionPanel ticker="AAPL" source={source} candidate={useScreenerStore.getState().lastResult?.candidates[0] ?? null} />,
+  );
+}
+
 describe('ActionPanel', () => {
   beforeEach(() => {
     mutateMock.mockReset();
@@ -179,7 +185,7 @@ describe('ActionPanel', () => {
       missingInputs: [],
       error: null,
     } : undefined;
-    renderWithProviders(<ActionPanel ticker="AAPL" source={source} />);
+    renderPanel(source);
     expect(screen.getByText(expected)).toBeVisible();
   });
 
@@ -188,7 +194,7 @@ describe('ActionPanel', () => {
       suggestedOrderType: 'BUY_STOP',
       suggestedOrderPrice: 101.2,
     });
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Order ticket')).toBeInTheDocument();
@@ -207,7 +213,7 @@ describe('ActionPanel', () => {
         orderType: 'BUY_LIMIT', entry: 99.4, stop: 97, target: 104.2, shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed-candidate-token',
       },
     });
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_LIMIT');
     expect(screen.getAllByText(t('order.setupGuidance.signals.breakout.label')).length).toBeGreaterThan(0);
@@ -221,7 +227,7 @@ describe('ActionPanel', () => {
       signal: undefined,
       decisionSummary: { action: 'BUY_NOW' } as unknown as DecisionSummary,
     });
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.queryAllByText(t('order.setupGuidance.signals.breakout.label'))).toHaveLength(0);
   });
@@ -251,7 +257,7 @@ describe('ActionPanel', () => {
       suggestedOrderType: 'BUY_STOP',
       suggestedOrderPrice: 101.2,
     });
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.getByRole('combobox')).toBeDisabled();
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
@@ -263,7 +269,7 @@ describe('ActionPanel', () => {
       canonicalOrderDraft: undefined,
     });
 
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
   });
@@ -274,7 +280,7 @@ describe('ActionPanel', () => {
       executionEligibility: { allowed: false, mode: null, reason: 'skip_guidance' },
       canonicalOrderDraft: undefined,
     });
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.queryByRole('button', { name: 'Create Order' })).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
@@ -282,7 +288,7 @@ describe('ActionPanel', () => {
 
   it('keeps form values while switching review sections', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     const quantityInput = screen.getByLabelText('Quantity');
     await user.clear(quantityInput);
@@ -303,7 +309,7 @@ describe('ActionPanel', () => {
       },
     });
 
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
     expect(screen.getByText(formatWorkflowNextStep({ code: 'define_target' }))).toBeVisible();
@@ -312,7 +318,7 @@ describe('ActionPanel', () => {
   it('preserves order values after a failed submit', async () => {
     const user = userEvent.setup();
     mutateMock.mockRejectedValueOnce(new Error('Order service unavailable'));
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     const quantityInput = screen.getByLabelText(t('order.candidateModal.quantity'));
     await user.clear(quantityInput);
@@ -326,7 +332,7 @@ describe('ActionPanel', () => {
   });
 
   it('keeps the action block below the review carousel', () => {
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     const tablist = screen.getByRole('tablist', { name: 'Order review sections' });
     const formTitle = screen.getByText('Order ticket');
@@ -335,7 +341,7 @@ describe('ActionPanel', () => {
   });
 
   it('includes screener score and confidence in the default notes', () => {
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.getByLabelText('Notes')).toHaveValue(
       'From screener: Score 80.0, Confidence 88.0%, Rank #1'
@@ -351,7 +357,7 @@ describe('ActionPanel', () => {
         orderType: 'BUY_STOP', entry: 100, stop: 97, target: 106, shares: 10, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed-candidate-token',
       },
     });
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.queryByText(/Buy Stop trigger must be above current price/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create Order' })).toBeEnabled();
@@ -380,7 +386,7 @@ describe('ActionPanel', () => {
     ]);
     setCandidate({ sameSymbol });
 
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.queryByRole('button', { name: t('order.candidateModal.createAction') })).not.toBeInTheDocument();
     expect(screen.getByText(t('workspacePage.panels.analysis.orderUnavailable.title'))).toBeVisible();
@@ -414,7 +420,7 @@ describe('ActionPanel', () => {
     });
     mutateMock.mockResolvedValue(undefined);
 
-    renderWithProviders(<ActionPanel ticker="AAPL" />);
+    renderPanel();
 
     expect(screen.getByLabelText('Notes')).toHaveValue(
       'Same-symbol add-on: Score 80.0, Confidence 88.0%, Rank #1, Live stop $90.00, Fresh setup stop $97.00'
