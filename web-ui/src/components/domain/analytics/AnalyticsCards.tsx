@@ -1,6 +1,7 @@
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
-import { pickEdgeInsight, type EdgeVerdict } from '@/features/analytics/edgeInsight';
+import { formatNumber } from '@/utils/formatters';
+import type { PortfolioAnalytics } from '@/features/portfolio/api';
 
 interface StatCardProps {
   label: string;
@@ -19,7 +20,7 @@ export function StatCard({ label, value, colorClass, hint }: StatCardProps) {
   );
 }
 
-const VERDICT_STYLES: Record<EdgeVerdict, { border: string; bg: string; label: string; labelClass: string }> = {
+const VERDICT_STYLES: Record<PortfolioAnalytics['insight']['verdict'], { border: string; bg: string; label: string; labelClass: string }> = {
   positive: {
     border: 'border-success/40',
     bg: 'bg-success/10',
@@ -41,14 +42,46 @@ const VERDICT_STYLES: Record<EdgeVerdict, { border: string; bg: string; label: s
 };
 
 interface EdgeInsightCardProps {
+  insight: PortfolioAnalytics['insight'];
   totalTrades: number;
-  avgR: number | null;
+  averageR: number | null;
   profitFactor: number | null;
   winRate: number | null;
 }
 
-export function EdgeInsightCard({ totalTrades, avgR, profitFactor, winRate }: EdgeInsightCardProps) {
-  const insight = pickEdgeInsight({ totalTrades, avgR, profitFactor, winRate });
+function displayR(value: number | null): string {
+  return value == null
+    ? t('common.placeholders.emDash')
+    : `${value >= 0 ? '+' : ''}${formatNumber(value, 2)}R`;
+}
+
+function insightMessage({ insight, totalTrades, averageR, profitFactor, winRate }: EdgeInsightCardProps): string {
+  const formattedProfitFactor = profitFactor == null
+    ? t('common.placeholders.emDash')
+    : formatNumber(profitFactor, 2);
+  switch (insight.reason) {
+    case 'positive_edge':
+      return t('analyticsPage.insight.message.positiveEdge', {
+        averageR: displayR(averageR), profitFactor: formattedProfitFactor,
+      });
+    case 'positive_average_r':
+      return t('analyticsPage.insight.message.positiveAverageR', {
+        averageR: displayR(averageR), profitFactor: formattedProfitFactor,
+      });
+    case 'low_win_rate':
+      return t('analyticsPage.insight.message.lowWinRate', {
+        averageR: displayR(averageR),
+        winRate: winRate == null ? t('common.placeholders.emDash') : `${formatNumber(winRate, 1)}%`,
+      });
+    case 'negative_average_r':
+      return t('analyticsPage.insight.message.negativeAverageR', { averageR: displayR(averageR) });
+    case 'insufficient_history':
+      return t('analyticsPage.insight.message.insufficientHistory', { totalTrades });
+  }
+}
+
+export function EdgeInsightCard(props: EdgeInsightCardProps) {
+  const { insight } = props;
   const styles = VERDICT_STYLES[insight.verdict];
   return (
     <div className={cn('rounded-lg border px-4 py-3', styles.border, styles.bg)}>
@@ -60,7 +93,7 @@ export function EdgeInsightCard({ totalTrades, avgR, profitFactor, winRate }: Ed
           {styles.label}
         </span>
       </div>
-      <p className="text-sm text-muted">{insight.message}</p>
+      <p className="text-sm text-muted">{insightMessage(props)}</p>
     </div>
   );
 }
@@ -69,32 +102,32 @@ export function HowToReadBox() {
   return (
     <details open className="rounded-lg border border-border bg-foreground/5 px-4 py-3 text-sm">
       <summary className="cursor-pointer font-medium text-muted select-none">
-        How to read this page
+        {t('analyticsPage.howToRead.summary')}
       </summary>
       <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
         <div>
-          <dt className="font-semibold text-foreground">R (Risk unit)</dt>
-          <dd className="mt-0.5 text-muted">1R = your initial risk per trade (entry − stop × shares). Every result is expressed as a multiple: +2R means you made 2× your risk, −1R means you lost your full planned risk.</dd>
+          <dt className="font-semibold text-foreground">{t('analyticsPage.howToRead.r.term')}</dt>
+          <dd className="mt-0.5 text-muted">{t('analyticsPage.howToRead.r.definition')}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-foreground">Avg R</dt>
-          <dd className="mt-0.5 text-muted">Average R across all closed trades. Must stay above 0R over time to grow the account. Negative avg R means every trade costs you money on average.</dd>
+          <dt className="font-semibold text-foreground">{t('analyticsPage.howToRead.avgR.term')}</dt>
+          <dd className="mt-0.5 text-muted">{t('analyticsPage.howToRead.avgR.definition')}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-foreground">Profit Factor</dt>
-          <dd className="mt-0.5 text-muted">Total gains ÷ total losses (in R). 1.0 = break even, &gt; 1.0 = profitable. A value of 0.20 means for every 1R gained, 5R is lost in aggregate.</dd>
+          <dt className="font-semibold text-foreground">{t('analyticsPage.howToRead.profitFactor.term')}</dt>
+          <dd className="mt-0.5 text-muted">{t('analyticsPage.howToRead.profitFactor.definition')}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-foreground">Max R</dt>
-          <dd className="mt-0.5 text-muted">The best paper gain reached during the trade before exit (based on highest price). Useful to understand how much you left on the table vs. how much you captured.</dd>
+          <dt className="font-semibold text-foreground">{t('analyticsPage.howToRead.maxR.term')}</dt>
+          <dd className="mt-0.5 text-muted">{t('analyticsPage.howToRead.maxR.definition')}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-foreground">Equity Curve</dt>
-          <dd className="mt-0.5 text-muted">Cumulative R over time — each dot is one closed trade. Hover a dot to see the individual result. A flat or rising curve above 0 is the goal.</dd>
+          <dt className="font-semibold text-foreground">{t('analyticsPage.howToRead.equityCurve.term')}</dt>
+          <dd className="mt-0.5 text-muted">{t('analyticsPage.howToRead.equityCurve.definition')}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-foreground">R Distribution</dt>
-          <dd className="mt-0.5 text-muted">How many trades landed in each R outcome bucket. Red bars = losses, green = wins. Empty buckets appear as thin marks. Ideal shape: taller bars on the right than the left.</dd>
+          <dt className="font-semibold text-foreground">{t('analyticsPage.howToRead.rDistribution.term')}</dt>
+          <dd className="mt-0.5 text-muted">{t('analyticsPage.howToRead.rDistribution.definition')}</dd>
         </div>
       </dl>
     </details>

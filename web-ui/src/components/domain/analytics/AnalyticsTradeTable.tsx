@@ -1,11 +1,10 @@
-import type { Position } from '@/types/position';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
-import { formatNumber, formatCurrency } from '@/utils/formatters';
+import { formatCurrency } from '@/utils/formatters';
 import RChip from '@/components/common/RChip';
-import { finalR, holdingDays, maxR } from './analyticsStats';
+import type { PortfolioAnalytics } from '@/features/portfolio/api';
 
-export default function AnalyticsTradeTable({ positions }: { positions: Position[] }) {
+export default function AnalyticsTradeTable({ curve }: { curve: PortfolioAnalytics['equityCurve'] }) {
   return (
     <div className="rounded-lg border border-border overflow-x-auto">
       <table className="w-full text-sm">
@@ -28,7 +27,9 @@ export default function AnalyticsTradeTable({ positions }: { positions: Position
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
               {t('analyticsPage.table.maxR')}
-              <span className="ml-1 font-normal normal-case opacity-60" title="Best paper gain reached before exit">↑peak</span>
+              <span className="ml-1 font-normal normal-case opacity-60" title={t('analyticsPage.table.maxRPeakTitle')}>
+                {t('analyticsPage.table.maxRPeak')}
+              </span>
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
               {t('analyticsPage.table.holdDays')}
@@ -36,10 +37,10 @@ export default function AnalyticsTradeTable({ positions }: { positions: Position
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {positions.map((p) => {
-            const fr = finalR(p);
-            const mr = maxR(p);
-            const hd = holdingDays(p);
+          {curve.map((analytics) => {
+            const fr = analytics.r;
+            const mr = analytics.maxR;
+            const hd = analytics.holdingDays;
             const resultLabel = fr == null ? null : fr > 0 ? 'W' : fr < 0 ? 'L' : 'BE';
             const resultClass = fr == null ? '' : fr > 0
               ? 'bg-success/10 text-success'
@@ -47,8 +48,8 @@ export default function AnalyticsTradeTable({ positions }: { positions: Position
                 ? 'bg-danger/10 text-danger'
                 : 'bg-foreground/5 text-muted';
             return (
-              <tr key={p.positionId ?? `${p.ticker}-${p.exitDate}`} className="hover:bg-foreground/5">
-                <td className="px-4 py-3 text-muted whitespace-nowrap">{p.exitDate ?? '—'}</td>
+              <tr key={analytics.positionId} className="hover:bg-foreground/5">
+                <td className="px-4 py-3 text-muted whitespace-nowrap">{analytics.date}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     {resultLabel && (
@@ -56,20 +57,18 @@ export default function AnalyticsTradeTable({ positions }: { positions: Position
                         {resultLabel}
                       </span>
                     )}
-                    <span className="font-semibold text-foreground">{p.ticker}</span>
+                    <span className="font-semibold text-foreground">{analytics.ticker}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(p.entryPrice, 'EUR')}</td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {p.exitPrice != null ? formatCurrency(p.exitPrice, 'EUR') : '—'}
-                </td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(analytics.entryPrice, 'EUR')}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(analytics.exitPrice, 'EUR')}</td>
                 <td className="px-4 py-3 text-right tabular-nums font-semibold">
                   {fr != null ? <RChip value={fr} /> : '—'}
                 </td>
                 <td className={cn('px-4 py-3 text-right tabular-nums',
                   mr != null && mr > 0 ? 'text-primary' : 'text-muted'
                 )}>
-                  {mr != null ? `${mr > 0 ? '+' : ''}${formatNumber(mr, 2)}R` : '—'}
+                  {mr != null ? `${mr > 0 ? '+' : ''}${mr.toFixed(2)}R` : '—'}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-muted">
                   {hd != null ? String(hd) : '—'}

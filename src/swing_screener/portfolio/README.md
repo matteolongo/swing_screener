@@ -46,6 +46,7 @@ Positions are persisted to `data/positions.json` — this is the single source o
 |------|---------|
 | `state.py` | `Position`, `ManageConfig`, `PositionUpdate`, load/save, management logic |
 | `metrics.py` | P&L, R-multiple, position value calculations |
+| `analytics.py` | Canonical closed-trade R analytics, curve, streak, and tag aggregates |
 | `migrate.py` | Data migration: link orders to positions, backfill stop prices |
 | `__init__.py` | Package exports |
 
@@ -91,6 +92,16 @@ Returned by management functions — describes what action (if any) should be ta
 - `CLOSE_TIME_EXIT` — max holding trading bars exceeded
 
 ## Metrics
+
+`calculate_portfolio_analytics()` is the single closed-trade calculator for
+persisted and browser-supplied snapshots. It uses immutable initial per-share
+risk. A `0R` scratch enters average/cumulative R, is excluded from win rate, and
+breaks streaks; fees and FX remain currency-cash accounting values. Its curve
+rows contain a collision-safe response identity plus the canonical closed-trade
+display fields, tags, partial-close-aware final R, max R, and holding days.
+Win-rate/profit-factor display statuses, unthresholded journal tag aggregates,
+and a presentation-neutral configured insight verdict are returned alongside
+the sampled edge breakdown.
 
 ```python
 from swing_screener.portfolio.metrics import (

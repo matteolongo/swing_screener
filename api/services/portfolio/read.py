@@ -5,10 +5,28 @@ import datetime as dt
 import logging
 from typing import Optional
 
-from swing_screener.errors import NotFoundError
+from api.models.portfolio import (
+    ConcentrationGroup,
+    PartialCloseEvent,
+    PortfolioAnalytics,
+    PortfolioAnalyticsCurvePoint,
+    PortfolioAnalyticsInsight,
+    PortfolioAnalyticsJournalTag,
+    PortfolioAnalyticsMetadata,
+    PortfolioAnalyticsTag,
+    PortfolioSummary,
+    Position,
+    PositionMetrics,
+    PositionsWithMetricsResponse,
+    PositionWithMetrics,
+)
+from api.repositories.config_repo import ConfigRepository
+from api.repositories.positions_repo import PositionsRepository
+from api.services.portfolio._helpers import to_state_position
+from api.services.portfolio.pricing import PositionPricingService
 from swing_screener.data.currency import detect_currency
-from swing_screener.risk.currency import convert_via_eurusd
-from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
+from swing_screener.errors import NotFoundError
+from swing_screener.portfolio.analytics import calculate_portfolio_analytics
 from swing_screener.portfolio.metrics import (
     calculate_current_position_value,
     calculate_per_share_risk,
@@ -16,22 +34,106 @@ from swing_screener.portfolio.metrics import (
     calculate_r_now,
     calculate_total_position_value,
 )
-
-from api.models.portfolio import (
-    ConcentrationGroup,
-    PartialCloseEvent,
-    Position,
-    PositionMetrics,
-    PositionWithMetrics,
-    PositionsWithMetricsResponse,
-    PortfolioSummary,
-)
-from api.repositories.config_repo import ConfigRepository
-from api.repositories.positions_repo import PositionsRepository
-from api.services.portfolio._helpers import to_state_position
-from api.services.portfolio.pricing import PositionPricingService
+from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
+from swing_screener.risk.currency import convert_via_eurusd
 
 logger = logging.getLogger(__name__)
+
+
+def _analytics_response(positions: list[dict], config: object) -> PortfolioAnalytics:
+    analytics = calculate_portfolio_analytics(
+        positions,
+        min_tag_sample_size=int(getattr(config, "portfolio_analytics_min_sample_size", 5)),
+        insight_min_trade_count=int(
+            getattr(config, "portfolio_analytics_insight_min_trade_count", 5)
+        ),
+        insight_min_profit_factor=float(
+            getattr(config, "portfolio_analytics_insight_min_profit_factor", 1.0)
+        ),
+        insight_low_win_rate_pct=float(
+            getattr(config, "portfolio_analytics_insight_low_win_rate_pct", 40.0)
+        ),
+    )
+    return PortfolioAnalytics(
+        closed_trade_count=analytics.closed_trade_count,
+        excluded_trade_count=analytics.excluded_trade_count,
+        win_count=analytics.win_count,
+        loss_count=analytics.loss_count,
+        scratch_count=analytics.scratch_count,
+        win_rate=analytics.win_rate,
+        win_rate_status=analytics.win_rate_status,
+        average_r=analytics.average_r,
+        average_max_r=analytics.average_max_r,
+        profit_factor=analytics.profit_factor,
+        profit_factor_status=analytics.profit_factor_status,
+        average_holding_days=analytics.average_holding_days,
+        max_win_streak=analytics.max_win_streak,
+        max_loss_streak=analytics.max_loss_streak,
+        equity_curve=[
+            PortfolioAnalyticsCurvePoint(
+                position_id=point.position_id,
+                ticker=point.ticker,
+                date=point.date,
+                r=point.r,
+                max_r=point.max_r,
+                holding_days=point.holding_days,
+                cumulative_r=point.cumulative_r,
+                tags=list(point.tags),
+                entry_price=point.entry_price,
+                exit_price=point.exit_price,
+                shares=point.shares,
+                initial_risk=point.initial_risk,
+                thesis=point.thesis,
+                notes=point.notes,
+                lesson=point.lesson,
+            )
+            for point in analytics.equity_curve
+        ],
+        tag_breakdown=[
+            PortfolioAnalyticsTag(
+                tag=row.tag,
+                trade_count=row.trade_count,
+                win_count=row.win_count,
+                loss_count=row.loss_count,
+                scratch_count=row.scratch_count,
+                win_rate=row.win_rate,
+                average_r=row.average_r,
+                expectancy=row.expectancy,
+            )
+            for row in analytics.tag_breakdown
+        ],
+        journal_tag_breakdown=[
+            PortfolioAnalyticsJournalTag(
+                tag=row.tag,
+                trade_count=row.trade_count,
+                win_count=row.win_count,
+                loss_count=row.loss_count,
+                scratch_count=row.scratch_count,
+                average_r=row.average_r,
+                average_max_r=row.average_max_r,
+            )
+            for row in analytics.journal_tag_breakdown
+        ],
+        insight=PortfolioAnalyticsInsight(
+            verdict=analytics.insight.verdict,
+            reason=analytics.insight.reason,
+        ),
+    )
+
+
+def _analytics_metadata(
+    config: object, open_risk_percent: float
+) -> PortfolioAnalyticsMetadata:
+    risk = config.risk
+    warning = float(getattr(risk, "portfolio_heat_warning_pct", 0.04)) * 100
+    maximum = float(getattr(risk, "max_portfolio_heat_pct", 0.06)) * 100
+    return PortfolioAnalyticsMetadata(
+        heat_status=("danger" if open_risk_percent >= maximum else "warning" if open_risk_percent >= warning else "normal"),
+        heat_warning_pct=warning,
+        heat_max_pct=maximum,
+        concentration_warning_pct=float(getattr(risk, "max_concentration_pct", 60.0)),
+        tag_min_sample_size=int(getattr(config, "portfolio_analytics_min_sample_size", 5)),
+    )
 
 
 def _country_from_ticker(ticker: str) -> str:
@@ -541,8 +643,13 @@ class PortfolioReadService:
         return realized_pnl
 
     def get_portfolio_summary(self, account_size: float, account_size_mode: str = "equity") -> PortfolioSummary:
-        account_currency = str(getattr(self._config_repo.get().risk, "account_currency", "EUR")).upper()
+        config = self._config_repo.get()
+        account_currency = str(getattr(config.risk, "account_currency", "EUR")).upper()
         all_positions, _ = self._positions_repo.list_positions(status=None)
+        analytics = _analytics_response(
+            all_positions,
+            config,
+        )
         needs_eurusd = any(
             _needs_eurusd_rate(
                 detect_currency(str(position.get("ticker", "")).upper()),
@@ -589,6 +696,8 @@ class PortfolioReadService:
                 concentration=[],
                 realized_pnl=realized_pnl,
                 effective_account_size=effective_account_size,
+                analytics=analytics,
+                analytics_metadata=_analytics_metadata(config, 0.0),
             )
 
         total_value = 0.0
@@ -696,6 +805,8 @@ class PortfolioReadService:
             concentration=concentration,
             realized_pnl=realized_pnl,
             effective_account_size=effective_account_size,
+            analytics=analytics,
+            analytics_metadata=_analytics_metadata(config, open_risk_percent),
         )
 
     def _concentration_groups(
