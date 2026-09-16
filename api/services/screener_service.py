@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 import pandas as pd
+from pydantic import BaseModel
 
 from api.models.portfolio import OrderSnapshot, Position, PositionSnapshot
 from api.models.recommendation import Recommendation
@@ -513,6 +514,22 @@ class PortfolioStateSnapshot:
                     )
                 )
                 for item in (self.positions or ())
+            ),
+        )
+        object.__setattr__(
+            self,
+            "orders",
+            tuple(
+                (
+                    item
+                    if isinstance(item, OrderSnapshot)
+                    else OrderSnapshot.model_validate(
+                        item.model_dump(mode="json")
+                        if isinstance(item, BaseModel)
+                        else item
+                    )
+                )
+                for item in (self.orders or ())
             ),
         )
 

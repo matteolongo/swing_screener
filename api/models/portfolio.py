@@ -88,11 +88,17 @@ class PositionSnapshot(Position):
     """Immutable position record for request-scoped state snapshots.
 
     Same fields and validation as ``Position``; attribute mutation is
-    rejected so a snapshot cannot be altered through a shared reference.
-    Derive local mutable copies via ``model_dump()`` when mutation is needed.
+    rejected, mutable collections are stored as tuples, and nested
+    partial-close legs are frozen, so a snapshot cannot be altered through
+    a shared reference. Derive local mutable copies via ``model_dump()``
+    when mutation is needed.
     """
 
     model_config = ConfigDict(frozen=True)
+
+    tags: tuple[str, ...] = ()
+    partial_closes: tuple[PartialCloseEventSnapshot, ...] = ()
+    exit_order_ids: tuple[str, ...] | None = None
 
 
 class PositionUpdate(BaseModel):
@@ -163,6 +169,12 @@ class PartialCloseEvent(BaseModel):
         if not math.isfinite(v):
             raise ValueError("FX rate must be finite")
         return v
+
+
+class PartialCloseEventSnapshot(PartialCloseEvent):
+    """Immutable partial-close leg for request-scoped state snapshots."""
+
+    model_config = ConfigDict(frozen=True)
 
 
 class PartialCloseRequest(BaseModel):

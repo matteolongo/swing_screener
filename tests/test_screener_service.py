@@ -513,6 +513,66 @@ def test_portfolio_state_snapshot_positions_are_frozen_and_isolated():
     owned.stop_price = 1.0
     assert owned_snapshot.positions[0].stop_price == 190.0
 
+    # Nested collections are tuples: append-style mutation is impossible.
+    tagged = {
+        "position_id": "POS-TAGS",
+        "ticker": "AAPL",
+        "status": "open",
+        "entry_date": "2026-09-01",
+        "entry_price": 100.0,
+        "stop_price": 95.0,
+        "shares": 10,
+        "tags": ["breakout"],
+        "partial_closes": [
+            {
+                "date": "2026-09-05",
+                "shares_closed": 2,
+                "price": 110.0,
+                "r_at_close": 1.5,
+            }
+        ],
+        "exit_order_ids": ["ORD-STOP-POS-TAGS"],
+    }
+    tagged_snapshot = PortfolioStateSnapshot(positions=(tagged,), orders=())
+    frozen_position = tagged_snapshot.positions[0]
+    assert frozen_position.tags == ("breakout",)
+    assert frozen_position.exit_order_ids == ("ORD-STOP-POS-TAGS",)
+    with pytest.raises(AttributeError):
+        frozen_position.tags.append("mutated")  # type: ignore[attr-defined]
+    with pytest.raises(AttributeError):
+        frozen_position.partial_closes.append({})  # type: ignore[attr-defined]
+    with pytest.raises(ValidationError):
+        frozen_position.partial_closes[0].price = 1.0  # type: ignore[misc]
+
+
+def test_portfolio_state_snapshot_orders_are_normalized_and_isolated():
+    """Raw-dict orders are validated into detached models at the boundary."""
+    from api.models.portfolio import OrderSnapshot
+    from api.services.screener_service import PortfolioStateSnapshot
+
+    raw_order = {
+        "order_id": "1",
+        "ticker": "aapl",
+        "status": "pending",
+        "order_kind": "entry",
+        "order_date": "2026-09-01",
+    }
+    snapshot = PortfolioStateSnapshot(
+        positions=(),
+        orders=(raw_order,),
+    )
+
+    assert isinstance(snapshot.orders, tuple)
+    assert isinstance(snapshot.orders[0], OrderSnapshot)
+    # Normalization is applied once at the boundary.
+    assert snapshot.orders[0].ticker == "AAPL"
+
+    # Later caller-side mutation cannot change the snapshot.
+    raw_order["ticker"] = "MSFT"
+    raw_order["status"] = "filled"
+    assert snapshot.orders[0].ticker == "AAPL"
+    assert snapshot.orders[0].status == "pending"
+
 
 def _stateless_recommended_candidate():
     from api.models.recommendation import (

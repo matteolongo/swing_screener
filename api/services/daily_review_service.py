@@ -535,14 +535,7 @@ class DailyReviewService:
         """
         snapshot = PortfolioStateSnapshot(
             positions=tuple(positions or ()),
-            orders=tuple(
-                (
-                    order
-                    if isinstance(order, OrderSnapshot)
-                    else OrderSnapshot.model_validate(order)
-                )
-                for order in (orders or [])
-            ),
+            orders=tuple(orders or ()),
         )
 
         candidates = []
