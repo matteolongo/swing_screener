@@ -2,9 +2,9 @@ import pandas as pd
 import pytest
 
 from swing_screener.risk.position_sizing import (
-    position_plan,
     RiskConfig,
     build_trade_plans,
+    position_plan,
 )
 
 
@@ -177,6 +177,24 @@ def test_build_trade_plans_filters_none_and_requires_signal():
     assert plans.loc["BBB", "plan_status"] == "blocked"
     assert plans.loc["BBB", "block_reason"] == "position_size_unavailable"
     assert plans.loc["AAA", "shares"] >= 1
+
+
+def test_build_trade_plans_blocks_only_candidate_with_invalid_execution_geometry():
+    ranked = pd.DataFrame(
+        {"atr14": [1.0, 0.003], "last": [30.0, 10.004], "currency": ["EUR", "EUR"]},
+        index=["GOOD", "TIGHT"],
+    )
+    signals = pd.DataFrame(
+        {"last": [30.0, 10.004], "signal": ["breakout", "breakout"]},
+        index=["GOOD", "TIGHT"],
+    )
+    cfg = RiskConfig(account_size=10_000, risk_pct=0.01, k_atr=1.0, max_position_pct=1.0)
+
+    plans = build_trade_plans(ranked, signals, cfg)
+
+    assert plans.loc["GOOD", "plan_status"] == "ready"
+    assert plans.loc["TIGHT", "plan_status"] == "blocked"
+    assert plans.loc["TIGHT", "block_reason"] == "invalid_execution_geometry"
 
 
 def test_build_trade_plans_skips_missing_quote_currency():

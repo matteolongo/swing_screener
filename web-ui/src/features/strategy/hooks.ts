@@ -12,6 +12,13 @@ import type { Strategy, StrategyUpdateRequestAPI } from '@/features/strategy/typ
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateStrategyDependentQueries, invalidateStrategyQueries } from '@/lib/queryInvalidation';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+
+async function invalidateActiveStrategyState(queryClient: ReturnType<typeof useQueryClient>) {
+  useScreenerStore.getState().invalidateActionableRuns();
+  useWorkspaceStore.getState().clearSelectedTicker();
+  await invalidateStrategyDependentQueries(queryClient);
+}
 
 export function useStrategiesQuery() {
   return useQuery({
@@ -32,8 +39,7 @@ export function useSetActiveStrategyMutation() {
   return useMutation({
     mutationFn: (strategyId: string) => setActiveStrategy(strategyId),
     onSuccess: async () => {
-      useScreenerStore.getState().invalidateActionableRuns();
-      await invalidateStrategyDependentQueries(queryClient);
+      await invalidateActiveStrategyState(queryClient);
     },
   });
 }
@@ -45,7 +51,7 @@ export function useUpdateStrategyMutation(onSuccess?: (updated: Strategy) => voi
     onSuccess: async (updated) => {
       const active = queryClient.getQueryData<Strategy>(queryKeys.strategyActive());
       if (!active || active.id === updated.id) {
-        await invalidateStrategyDependentQueries(queryClient);
+        await invalidateActiveStrategyState(queryClient);
       } else {
         await invalidateStrategyQueries(queryClient);
       }
@@ -80,7 +86,7 @@ export function useDeleteStrategyMutation(onSuccess?: () => void) {
     onSuccess: async (_result, strategyId) => {
       const active = queryClient.getQueryData<Strategy>(queryKeys.strategyActive());
       if (!active || active.id === strategyId) {
-        await invalidateStrategyDependentQueries(queryClient);
+        await invalidateActiveStrategyState(queryClient);
       } else {
         await invalidateStrategyQueries(queryClient);
       }

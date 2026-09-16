@@ -9,6 +9,7 @@ import ModalShell from '@/components/common/ModalShell';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
 import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
+import type { ScreenerCandidate } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import {
   useCancelOrderMutation,
@@ -35,7 +36,7 @@ function PortfolioSymbolModal({ ticker, position, onBack }: { ticker: string; po
         position={position}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        orderPanel={<ActionPanel ticker={ticker} candidate={null} />}
+        orderPanel={(candidate) => <ActionPanel ticker={ticker} candidate={candidate && typeof candidate.currency === 'string' ? candidate as ScreenerCandidate : null} />}
       />
     </ModalShell>
   );
