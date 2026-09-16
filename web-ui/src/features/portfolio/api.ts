@@ -516,7 +516,10 @@ export async function updatePositionStop(
       const candles = await fetchTickerCandles(position.ticker);
       const latest = candles.priceHistory[candles.priceHistory.length - 1];
       if (!latest) throw new Error('A current timestamped market price observation is required to update the stop.');
-      marketPrice = { ticker: position.ticker, price: latest.close, observedAt: `${latest.date}T00:00:00Z`, dataStatus: 'current' };
+      // A daily candle represents its completed session (US close ≈ 20:00 UTC),
+      // not a midnight observation. Stamp session close so weekend commands
+      // still see Friday's bar as the latest completed session.
+      marketPrice = { ticker: position.ticker, price: latest.close, observedAt: `${latest.date}T20:00:00Z`, dataStatus: 'current' };
     }
     await updatePositionStopLocal(positionId, { ...request, marketPrice }, resolveIdempotencyKey(idempotencyKey));
     return;

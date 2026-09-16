@@ -249,6 +249,30 @@ def test_stop_observation_requires_valid_matching_fresh_price(
     assert response.status_code == 422, response.text
 
 
+def test_stop_update_accepts_friday_session_candle_on_weekend(
+    command_api, market_price
+):
+    # Friday 2026-09-11 is the latest completed US session on Sat/Sun 2026-09-12/13.
+    # A Friday session-close observation must satisfy the default 1-day limit.
+    for effective_at in ("2026-09-12T12:00:00Z", "2026-09-13T12:00:00Z"):
+        context = _context()
+        context["effective_at"] = effective_at
+        context["market_price"]["observed_at"] = "2026-09-11T20:00:00Z"
+        response = command_api.client.post(
+            "/api/portfolio/state/commands",
+            json={
+                "snapshot": _snapshot().model_dump(mode="json"),
+                "expected_revision": 4,
+                "command": {
+                    "operation": "update_stop",
+                    "payload": {"position_id": "POS-AAPL-001", "new_stop": 200},
+                },
+                "context": context,
+            },
+        )
+        assert response.status_code == 200, (effective_at, response.text)
+
+
 def test_new_fill_identity_cannot_overwrite_an_existing_position(command_api):
     context = _context()
     context["new_position_id"] = "POS-AAPL-001"

@@ -22,6 +22,26 @@ from api.services.portfolio_service import PortfolioService
 from swing_screener.errors import ConflictError, UnprocessableError
 
 
+def _session_adjusted_age(effective_at, observed_at) -> timedelta:
+    """Age of a daily-candle observation measured in completed sessions.
+
+    US equities trade no daily session on Saturday/Sunday, so a weekend
+    command still sees Friday's bar as the latest completed session. Map a
+    weekend effective time back to Friday end-of-day before differencing;
+    weekdays (and holidays, which have no calendar here) keep raw age.
+    """
+    reference = effective_at
+    if reference.weekday() == 5:  # Saturday
+        reference = (reference - timedelta(days=1)).replace(
+            hour=23, minute=59, second=59, microsecond=0
+        )
+    elif reference.weekday() == 6:  # Sunday
+        reference = (reference - timedelta(days=2)).replace(
+            hour=23, minute=59, second=59, microsecond=0
+        )
+    return reference - observed_at
+
+
 class _CommandPriceProvider:
     """Adapt one validated observation to the canonical stop service's provider."""
 
@@ -75,7 +95,7 @@ class StatelessTradingService:
             position = state.positions_repo.get_position(command.payload.position_id)
             if position is not None and observation.ticker != position["ticker"]:
                 raise UnprocessableError("market_price ticker must match the position")
-            age = context.effective_at - observation.observed_at
+            age = _session_adjusted_age(context.effective_at, observation.observed_at)
             maximum_age = timedelta(
                 days=self._config_repo.get().portfolio_snapshot_stale_after_days
             )
