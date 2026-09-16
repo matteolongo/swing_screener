@@ -98,7 +98,7 @@ describe('local trading command transport', () => {
     await expect(closePosition('POS-1', { exitPrice: 111 }, 'same-key')).rejects.toThrow(/different|reused/i);
   });
 
-  it('loads a timestamped market price before a local stop update', async () => {
+  it('stamps a backfilled stop observation at the completed session close', async () => {
     let sent: any;
     server.use(
       http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () => HttpResponse.json({
@@ -114,7 +114,7 @@ describe('local trading command transport', () => {
     await updatePositionStop('POS-1', { newStop: 98 });
 
     expect(sent.context.market_price).toEqual({
-      ticker: 'AAPL', price: 110, observed_at: '2026-09-09T00:00:00Z', data_status: 'current',
+      ticker: 'AAPL', price: 110, observed_at: '2026-09-09T20:00:00Z', data_status: 'current',
     });
   });
 

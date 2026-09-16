@@ -60,6 +60,16 @@ describe('ScreenerRunningPanel', () => {
 });
 
 describe('ScreenerInboxPanel', () => {
+  beforeEach(() => {
+    useWorkspaceStore.getState().clearSelectedTicker();
+    useScreenerStore.setState({ lastResult: null });
+  });
+
+  afterEach(() => {
+    useWorkspaceStore.getState().clearSelectedTicker();
+    useScreenerStore.setState({ lastResult: null });
+  });
+
   it('defaults to the collapsed beginner run summary instead of the full advanced filter form', async () => {
     renderWithProviders(<ScreenerInboxPanel />);
 
@@ -102,5 +112,35 @@ describe('ScreenerInboxPanel', () => {
     expect(mountedFormToggle.closest('[hidden]')).toHaveClass('h-full', 'min-h-0');
     rerender(<ScreenerInboxPanel compact={false} />);
     expect(screen.getByRole('button', { name: 'Advanced filters' })).toBe(mountedFormToggle);
+  });
+
+  it('keeps a today_position selection absent from screener candidates', async () => {
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'VALE',
+      source: 'today_position',
+      rowId: 'position:VALE',
+    });
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-07-29',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [{
+          ticker: 'AAPL',
+          close: 200,
+          recommendation: {
+            workflowStatus: 'ready',
+            nextStep: { code: 'review_order' },
+          },
+          decisionSummary: { action: 'BUY_NOW' },
+        }],
+      } as never,
+    });
+
+    renderWithProviders(<ScreenerInboxPanel />);
+
+    await screen.findByText(/AAPL/i);
+    expect(useWorkspaceStore.getState().selection?.ticker).toBe('VALE');
+    expect(useWorkspaceStore.getState().selection?.source).toBe('today_position');
   });
 });

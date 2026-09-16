@@ -73,10 +73,10 @@ export function EquityCurveChart({ data }: { data: PortfolioAnalytics['equityCur
 
       {/* trade dots with tooltips */}
       {data.map((d, i) => (
-        <circle key={i} cx={xScale(i)} cy={yScale(d.cumulativeR)} r={3.5} fill={d.r > 0 ? '#16a34a' : d.r < 0 ? '#dc2626' : '#9ca3af'} opacity={0.8}>
+        <circle key={i} cx={xScale(i)} cy={yScale(d.cumulativeR)} r={3.5} fill={d.r == null ? '#9ca3af' : d.r > 0 ? '#16a34a' : d.r < 0 ? '#dc2626' : '#9ca3af'} opacity={0.8}>
           <title>{t('analyticsPage.charts.equityCurveTooltip', {
             date: d.date,
-            r: `${d.r >= 0 ? '+' : ''}${formatNumber(d.r, 2)}`,
+            r: d.r == null ? t('common.placeholders.emDash') : `${d.r >= 0 ? '+' : ''}${formatNumber(d.r, 2)}`,
             cumulativeLabel: t('analyticsPage.labels.cumulative'),
             cumulativeR: `${d.cumulativeR >= 0 ? '+' : ''}${formatNumber(d.cumulativeR, 2)}`,
           })}</title>

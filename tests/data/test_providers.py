@@ -48,6 +48,34 @@ def _mock_ohlcv_frame(tickers: list[str]) -> pd.DataFrame:
     return df
 
 
+def _mock_ohlcv_frame_ending(
+    tickers: list[str], end: str, periods: int = 5
+) -> pd.DataFrame:
+    """Deterministic OHLCV frame whose last bar is the given ISO date."""
+    idx = pd.date_range(end=end, periods=periods, freq="D")
+    data: dict[tuple[str, str], pd.Series] = {}
+    for i, ticker in enumerate(tickers):
+        base = 100.0 + i * 10
+        data[("Open", ticker)] = pd.Series(
+            [base + j for j in range(periods)], index=idx, dtype=float
+        )
+        data[("High", ticker)] = pd.Series(
+            [base + 1 + j for j in range(periods)], index=idx, dtype=float
+        )
+        data[("Low", ticker)] = pd.Series(
+            [base - 1 + j for j in range(periods)], index=idx, dtype=float
+        )
+        data[("Close", ticker)] = pd.Series(
+            [base + 0.5 + j for j in range(periods)], index=idx, dtype=float
+        )
+        data[("Volume", ticker)] = pd.Series(
+            [1_000_000 + j for j in range(periods)], index=idx, dtype=float
+        )
+    df = pd.DataFrame(data, index=idx)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    return df
+
+
 class TestYfinanceProvider:
     """Test YfinanceProvider implementation."""
 
@@ -350,6 +378,60 @@ class TestYfinanceProvider:
         provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
 
         assert len(download_calls) > first_count
+
+    def test_backfill_of_older_window_preserves_head_freshness(
+        self, monkeypatch, tmp_path
+    ):
+        """An unrelated older-window refresh must not recertify the file's mtime."""
+
+        cache_dir = tmp_path / "cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        def fake_download(*args, **kwargs):
+            start = str(kwargs.get("start", ""))
+            if start.startswith("2020"):
+                return _mock_ohlcv_frame_ending(["AAPL"], "2020-02-01")
+            return _mock_ohlcv_frame_ending(["AAPL"], today)
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+        (cache_file,) = list(cache_dir.rglob("*.parquet"))
+        mtime_before_ns = cache_file.stat().st_mtime_ns
+
+        provider.fetch_ohlcv(["AAPL"], "2020-01-01", "2020-02-01")
+
+        assert cache_file.stat().st_mtime_ns == mtime_before_ns
+        merged = provider._read_cached_ohlcv(cache_file, ["AAPL"])
+        assert merged is not None
+        assert merged.index.max().date().isoformat() == today
+
+    def test_head_reaching_download_renews_cache_freshness(
+        self, monkeypatch, tmp_path
+    ):
+        """A download that verifies the head advances the file's mtime."""
+        import os
+        import time
+
+        cache_dir = tmp_path / "cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+        today = datetime.now().strftime("%Y-%m-%d")
+        monkeypatch.setattr(
+            yfinance_provider_module.yf,
+            "download",
+            lambda *args, **kwargs: _mock_ohlcv_frame_ending(["AAPL"], today),
+        )
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+        (cache_file,) = list(cache_dir.rglob("*.parquet"))
+
+        aged = time.time() - (provider.same_day_cache_ttl_minutes * 60 + 60)
+        os.utime(cache_file, (aged, aged))
+
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+
+        assert cache_file.stat().st_mtime > aged
 
     def test_final_close_policy_rejects_cache_written_before_close(
         self, monkeypatch, tmp_path

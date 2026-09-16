@@ -72,6 +72,10 @@ def position_plan_outcome(*args, **kwargs) -> PositionPlanOutcome:
         if str(exc) not in {
             "stop must be positive at execution precision",
             "stop must be below entry at execution precision",
+            # _finite_positive rejects non-positive execution geometry with a
+            # field-specific message; a bad row must block, never abort the batch.
+            "stop must be finite and > 0",
+            "entry must be finite and > 0",
         }:
             raise
         return PositionPlanOutcome(None, "blocked", "invalid_execution_geometry")

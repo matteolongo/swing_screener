@@ -267,7 +267,13 @@ export default function ScreenerInboxPanel({ compact = false }: ScreenerInboxPan
   );
 
   useEffect(() => {
-    if (!displayCandidates.length || !selectedTicker || selection?.source === 'portfolio') {
+    if (!displayCandidates.length || !selectedTicker) {
+      return;
+    }
+    // Only selections owned by this screener run may be reselected here.
+    // Position, watchlist, and ad-hoc selections belong to other surfaces;
+    // replacing them with the first candidate hijacks the workspace.
+    if (selection?.source !== 'today_run' && selection?.source !== 'last_run') {
       return;
     }
     const stillPresent = displayCandidates.some((candidate) => candidate.ticker.toUpperCase() === selectedTicker.toUpperCase());

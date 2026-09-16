@@ -55,9 +55,9 @@ function JournalRow({ trade }: JournalRowProps) {
           <span className="ml-1">{trade.date}</span>
         </td>
         <td className="px-4 py-3 text-sm font-semibold text-foreground">{trade.ticker}</td>
-        <td className="px-4 py-3 text-sm text-right tabular-nums">{formatCurrency(trade.entryPrice)}</td>
-        <td className="px-4 py-3 text-sm text-right tabular-nums">{formatCurrency(trade.exitPrice)}</td>
-        <td className="px-4 py-3 text-sm text-right tabular-nums">{trade.shares}</td>
+        <td className="px-4 py-3 text-sm text-right tabular-nums">{trade.entryPrice != null ? formatCurrency(trade.entryPrice) : <span className="text-muted">{t('common.placeholders.emDash')}</span>}</td>
+        <td className="px-4 py-3 text-sm text-right tabular-nums">{trade.exitPrice != null ? formatCurrency(trade.exitPrice) : <span className="text-muted">{t('common.placeholders.emDash')}</span>}</td>
+        <td className="px-4 py-3 text-sm text-right tabular-nums">{trade.shares != null ? trade.shares : <span className="text-muted">{t('common.placeholders.emDash')}</span>}</td>
         <td className="px-4 py-3 text-sm">
           {trade.tags.length > 0 ? (
             <div className="flex flex-wrap gap-1">
@@ -75,7 +75,7 @@ function JournalRow({ trade }: JournalRowProps) {
           )}
         </td>
         <td className="px-4 py-3 text-sm text-right tabular-nums">
-          {formatCurrency(trade.initialRisk)}
+          {trade.initialRisk != null ? formatCurrency(trade.initialRisk) : <span className="text-muted">{t('common.placeholders.emDash')}</span>}
         </td>
         <td className="px-4 py-3 text-sm text-right tabular-nums"><RBadge value={trade.r} /></td>
         <td className="px-4 py-3 text-sm text-right tabular-nums"><RBadge value={trade.maxR} /></td>

@@ -60,8 +60,8 @@ export default function AnalyticsTradeTable({ curve }: { curve: PortfolioAnalyti
                     <span className="font-semibold text-foreground">{analytics.ticker}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(analytics.entryPrice, 'EUR')}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(analytics.exitPrice, 'EUR')}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{analytics.entryPrice != null ? formatCurrency(analytics.entryPrice, 'EUR') : '—'}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{analytics.exitPrice != null ? formatCurrency(analytics.exitPrice, 'EUR') : '—'}</td>
                 <td className="px-4 py-3 text-right tabular-nums font-semibold">
                   {fr != null ? <RChip value={fr} /> : '—'}
                 </td>

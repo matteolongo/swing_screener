@@ -941,15 +941,15 @@ class PortfolioAnalyticsCurvePoint(BaseModel):
     position_id: str
     ticker: str
     date: str
-    r: float
+    r: float | None = None
     max_r: float | None = None
     holding_days: int | None = None
     cumulative_r: float
     tags: list[str] = Field(default_factory=list)
-    entry_price: float
-    exit_price: float
-    shares: int
-    initial_risk: float
+    entry_price: float | None = None
+    exit_price: float | None = None
+    shares: int | None = None
+    initial_risk: float | None = None
     thesis: str | None = None
     notes: str = ""
     lesson: str | None = None

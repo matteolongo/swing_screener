@@ -116,7 +116,7 @@ interface PortfolioAnalyticsApiResponse {
   average_holding_days: number | null;
   max_win_streak: number;
   max_loss_streak: number;
-  equity_curve: Array<{ position_id: string; ticker: string; date: string; r: number; max_r: number | null; holding_days: number | null; cumulative_r: number; tags: string[]; entry_price: number; exit_price: number; shares: number; initial_risk: number; thesis: string | null; notes: string; lesson: string | null }>;
+  equity_curve: Array<{ position_id: string; ticker: string; date: string; r: number | null; max_r: number | null; holding_days: number | null; cumulative_r: number; tags: string[]; entry_price: number | null; exit_price: number | null; shares: number | null; initial_risk: number | null; thesis: string | null; notes: string; lesson: string | null }>;
   tag_breakdown: Array<{ tag: string; trade_count: number; win_count: number; loss_count: number; scratch_count: number; win_rate: number | null; average_r: number; expectancy: number }>;
   journal_tag_breakdown: Array<{ tag: string; trade_count: number; win_count: number; loss_count: number; scratch_count: number; average_r: number | null; average_max_r: number | null }>;
   insight: { verdict: 'positive' | 'developing' | 'negative'; reason: 'insufficient_history' | 'positive_edge' | 'positive_average_r' | 'low_win_rate' | 'negative_average_r' };
@@ -208,7 +208,7 @@ export interface PortfolioAnalytics {
   averageHoldingDays: number | null;
   maxWinStreak: number;
   maxLossStreak: number;
-  equityCurve: Array<{ positionId: string; ticker: string; date: string; r: number; maxR: number | null; holdingDays: number | null; cumulativeR: number; tags: string[]; entryPrice: number; exitPrice: number; shares: number; initialRisk: number; thesis: string | null; notes: string; lesson: string | null }>;
+  equityCurve: Array<{ positionId: string; ticker: string; date: string; r: number | null; maxR: number | null; holdingDays: number | null; cumulativeR: number; tags: string[]; entryPrice: number | null; exitPrice: number | null; shares: number | null; initialRisk: number | null; thesis: string | null; notes: string; lesson: string | null }>;
   tagBreakdown: Array<{ tag: string; tradeCount: number; winCount: number; lossCount: number; scratchCount: number; winRate: number | null; averageR: number; expectancy: number }>;
   journalTagBreakdown: Array<{ tag: string; tradeCount: number; winCount: number; lossCount: number; scratchCount: number; averageR: number | null; averageMaxR: number | null }>;
   insight: { verdict: 'positive' | 'developing' | 'negative'; reason: 'insufficient_history' | 'positive_edge' | 'positive_average_r' | 'low_win_rate' | 'negative_average_r' };
@@ -516,7 +516,10 @@ export async function updatePositionStop(
       const candles = await fetchTickerCandles(position.ticker);
       const latest = candles.priceHistory[candles.priceHistory.length - 1];
       if (!latest) throw new Error('A current timestamped market price observation is required to update the stop.');
-      marketPrice = { ticker: position.ticker, price: latest.close, observedAt: `${latest.date}T00:00:00Z`, dataStatus: 'current' };
+      // A daily candle represents its completed session (US close ≈ 20:00 UTC),
+      // not a midnight observation. Stamp session close so weekend commands
+      // still see Friday's bar as the latest completed session.
+      marketPrice = { ticker: position.ticker, price: latest.close, observedAt: `${latest.date}T20:00:00Z`, dataStatus: 'current' };
     }
     await updatePositionStopLocal(positionId, { ...request, marketPrice }, resolveIdempotencyKey(idempotencyKey));
     return;
