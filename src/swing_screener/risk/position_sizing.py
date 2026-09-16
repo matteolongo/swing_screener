@@ -66,7 +66,15 @@ class PositionPlanOutcome:
 
 
 def position_plan_outcome(*args, **kwargs) -> PositionPlanOutcome:
-    plan = position_plan(*args, **kwargs)
+    try:
+        plan = position_plan(*args, **kwargs)
+    except ValueError as exc:
+        if str(exc) not in {
+            "stop must be positive at execution precision",
+            "stop must be below entry at execution precision",
+        }:
+            raise
+        return PositionPlanOutcome(None, "blocked", "invalid_execution_geometry")
     if plan is None:
         return PositionPlanOutcome(None, "blocked", "position_size_unavailable")
     return PositionPlanOutcome(plan, "ready")

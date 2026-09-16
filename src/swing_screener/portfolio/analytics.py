@@ -179,10 +179,15 @@ def _trade_r(position: Mapping[str, Any]) -> float | None:
         if not isinstance(event, Mapping):
             continue
         shares = _finite_number(event.get("shares_closed"))
-        price = _finite_number(event.get("price"))
-        if shares is None or shares <= 0 or price is None:
+        if shares is None or shares <= 0:
             continue
-        legs.append((shares, (price - entry) / initial_risk))
+        leg_r = _finite_number(event.get("r_at_close"))
+        if leg_r is None:
+            price = _finite_number(event.get("price"))
+            if price is None:
+                continue
+            leg_r = (price - entry) / initial_risk
+        legs.append((shares, leg_r))
 
     total_shares = sum(shares for shares, _ in legs)
     return (

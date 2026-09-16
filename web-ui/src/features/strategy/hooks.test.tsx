@@ -18,6 +18,7 @@ import { useSetActiveStrategyMutation, useUpdateStrategyMutation } from '@/featu
 import type { Strategy } from '@/features/strategy/types';
 import { queryKeys } from '@/lib/queryKeys';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 function createQueryClient() {
   return new QueryClient({
@@ -41,6 +42,9 @@ describe('strategy mutation cache invalidation', () => {
       lastRunContext: null,
       todayRun: { request: {}, displayFilters: { recommendedOnly: false, actionFilter: 'all' }, completedAt: '2026-09-10T20:00:00Z', result: { candidates: [] } } as never,
       todayRunInitialized: true,
+    });
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'AAPL', source: 'last_run', rowId: 'last:AAPL', candidate: { ticker: 'AAPL' } as never,
     });
   });
 
@@ -66,6 +70,7 @@ describe('strategy mutation cache invalidation', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['intelligence'] });
     expect(useScreenerStore.getState().lastResult).toBeNull();
     expect(useScreenerStore.getState().todayRun).toBeNull();
+    expect(useWorkspaceStore.getState().selection).toBeNull();
   });
 
   it('uses broad invalidation when the active strategy is updated', async () => {
@@ -81,6 +86,7 @@ describe('strategy mutation cache invalidation', () => {
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.positions() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['regime-breakdown'] });
+    expect(useWorkspaceStore.getState().selection).toBeNull();
   });
 
   it('keeps non-active strategy updates on the narrow strategy invalidation path', async () => {

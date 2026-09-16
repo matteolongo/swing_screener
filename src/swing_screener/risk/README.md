@@ -88,7 +88,9 @@ and any FX conversion rate. Invalid values raise a field-specific `ValueError`.
 Entry and the derived stop are normalized once to two-decimal executable prices
 before calculating `1R`, share count, position value, and realized risk. If that
 normalization makes the stop non-positive or no longer strictly below entry, the
-plan is rejected rather than reporting geometry that cannot be executed.
+direct plan is rejected rather than reporting geometry that cannot be executed.
+Batch planning retains that candidate as blocked with
+`invalid_execution_geometry` so one bad row cannot abort the screen.
 
 When callers omit `RiskConfig`, sizing functions resolve a fresh default at
 call time. Caller-supplied frozen configs are passed through without mutation.

@@ -71,6 +71,9 @@ date through the command's required market-price observation.
 Local position metrics and summaries use the read-only `/api/portfolio/state/metrics`
 projection; these read models never replace the stored snapshot. Browser ledger
 freshness stays unknown rather than inheriting server-database freshness.
+Activating or editing the active strategy clears the current workspace selection
+alongside strategy-derived query and screener state so an old candidate draft
+cannot survive under new policy.
 Closed-trade performance, self-sufficient curve rows (including stable identity
 for ID-less trades), journal tag aggregates, metric display statuses, insight
 verdict/reason codes, and portfolio heat bands also come from that projection

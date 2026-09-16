@@ -152,7 +152,9 @@ function JournalTab() {
   const wins = selectedTagAnalytics?.winCount ?? analytics?.winCount ?? 0;
   const losses = selectedTagAnalytics?.lossCount ?? analytics?.lossCount ?? 0;
   const avgFinalR = selectedTagAnalytics?.averageR ?? analytics?.averageR ?? null;
-  const avgMaxR = selectedTagAnalytics?.averageMaxR ?? analytics?.averageMaxR ?? null;
+  const avgMaxR = activeTagFilter
+    ? selectedTagAnalytics?.averageMaxR ?? null
+    : analytics?.averageMaxR ?? null;
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-6">

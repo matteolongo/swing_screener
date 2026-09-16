@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
@@ -89,5 +90,33 @@ describe('Book page route state', () => {
 
     expect(await screen.findByText('+1.50R')).toBeInTheDocument();
     expect(screen.getByText('+3.00R')).toBeInTheDocument();
+  });
+
+  it('keeps a selected tag average max R empty when the tag has no observations', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/portfolio/summary`, () => HttpResponse.json({
+        ...mockPortfolioSummary,
+        analytics: {
+          ...mockPortfolioSummary.analytics,
+          average_max_r: 3,
+          equity_curve: [{
+            position_id: 'one', ticker: 'ONE', date: '2026-01-03', r: 1, max_r: null,
+            holding_days: 2, cumulative_r: 1, tags: ['breakout'], entry_price: 100,
+            exit_price: 110, shares: 1, initial_risk: 10, thesis: null, notes: '', lesson: null,
+          }],
+          journal_tag_breakdown: [{
+            tag: 'breakout', trade_count: 1, win_count: 1, loss_count: 0,
+            scratch_count: 0, average_r: 1, average_max_r: null,
+          }],
+        },
+      })),
+    );
+    renderBookWithRouteState({ tab: 'journal' });
+
+    await userEvent.click(await screen.findByRole('button', { name: t('tradeTags.breakout') }));
+
+    const stat = screen.getByText(t('journalPage.stats.avgMaxR')).parentElement;
+    expect(stat).toHaveTextContent('—');
+    expect(stat).not.toHaveTextContent('3.00R');
   });
 });

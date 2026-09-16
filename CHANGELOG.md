@@ -9,6 +9,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Invalid executable geometry now blocks only the affected sizing candidate;
+  recorded partial-close R remains stable after add-ons change blended entry.
+- Strategy changes clear stale workspace drafts, portfolio symbol analysis passes
+  computed candidates into order review, and tag-filtered journal metrics preserve
+  missing values instead of falling back to portfolio-wide values.
 - Browser-owned sell-order fills now close or reduce their linked position instead
   of entering the add-on path, and local stop updates obtain a timestamped candle
   observation before applying canonical validation.

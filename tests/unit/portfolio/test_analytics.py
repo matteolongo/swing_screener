@@ -170,6 +170,30 @@ def test_canonical_analytics_exposes_journal_rows_filtered_aggregates_and_insigh
     assert result.insight.reason == "positive_edge"
 
 
+def test_partial_close_uses_recorded_r_after_later_add_on_changes_entry() -> None:
+    result = calculate_portfolio_analytics(
+        [{
+            "position_id": "scaled",
+            "ticker": "SCALE",
+            "status": "closed",
+            "entry_date": "2026-01-01",
+            "exit_date": "2026-01-10",
+            "entry_price": 110.0,
+            "exit_price": 130.0,
+            "initial_risk": 20.0,
+            "shares": 10,
+            "partial_closes": [{
+                "date": "2026-01-05",
+                "shares_closed": 5,
+                "price": 120.0,
+                "r_at_close": 2.0,
+            }],
+        }]
+    )
+
+    assert result.equity_curve[0].r == pytest.approx(4 / 3)
+
+
 def test_idless_rows_and_zero_insight_thresholds_remain_canonical() -> None:
     """Response row identities and configured zeroes must not be fabricated in UI."""
     result = calculate_portfolio_analytics(

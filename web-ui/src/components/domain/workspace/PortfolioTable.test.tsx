@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import PortfolioTable from '@/components/domain/workspace/PortfolioTable';
 import { t } from '@/i18n/t';
@@ -8,6 +9,18 @@ import type { PositionWithMetrics } from '@/features/portfolio/api';
 
 const { positionsMock } = vi.hoisted(() => ({
   positionsMock: vi.fn(),
+}));
+
+vi.mock('@/components/domain/workspace/SymbolAnalysisContent', () => ({
+  default: ({ orderPanel }: { orderPanel: React.ReactNode | ((candidate: unknown) => React.ReactNode) }) => (
+    <>{typeof orderPanel === 'function' ? orderPanel({ ticker: 'TEST', currency: 'USD' }) : orderPanel}</>
+  ),
+}));
+
+vi.mock('@/components/domain/workspace/ActionPanel', () => ({
+  default: ({ candidate }: { candidate: { ticker: string } | null }) => (
+    <div data-testid="modal-order-candidate">{candidate?.ticker ?? 'none'}</div>
+  ),
 }));
 
 vi.mock('@/features/portfolio/hooks', () => ({
@@ -112,5 +125,16 @@ describe('PortfolioTable R column', () => {
 
     expect(screen.getByText('-0.50R')).toBeInTheDocument();
     expect(screen.getByTitle(t('positions.rFxAdjustedTooltip'))).toBeInTheDocument();
+  });
+});
+
+describe('PortfolioTable symbol analysis', () => {
+  it('passes the computed candidate to the modal order panel', async () => {
+    positionsMock.mockReturnValue([makePosition()]);
+    renderWithProviders(<PortfolioTable />);
+
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
+
+    expect(screen.getByTestId('modal-order-candidate')).toHaveTextContent('TEST');
   });
 });
