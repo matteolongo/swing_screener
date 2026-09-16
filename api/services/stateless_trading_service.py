@@ -17,7 +17,7 @@ from api.repositories.config_repo import ConfigRepository
 from api.repositories.in_memory_trading_state import InMemoryTradingState
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.order_approval_token import OrderApprovalTokenSigner
-from api.services.orders_service import OrdersService
+from api.services.orders_service import OrdersService, linked_stop_order_id
 from api.services.portfolio_service import PortfolioService
 from swing_screener.errors import ConflictError, UnprocessableError
 
@@ -201,6 +201,12 @@ class StatelessTradingService:
                 result = orders.fill_order(command.payload.order_id, command.payload)
                 affected_orders.append(result.order_id)
                 affected_positions.append(result.position.position_id)
+                linked_id = linked_stop_order_id(result.position.position_id)
+                if (
+                    linked_id not in affected_orders
+                    and state.orders_repo.get_order(linked_id) is not None
+                ):
+                    affected_orders.append(linked_id)
         else:
             portfolio = PortfolioService(
                 positions_repo=state.positions_repo,
@@ -209,9 +215,42 @@ class StatelessTradingService:
                 business_date=business_date,
             )
             if command.operation == "update_stop":
-                portfolio.update_position_stop(
-                    command.payload.position_id, command.payload
+                position_id = command.payload.position_id
+                old_position = state.positions_repo.get_position(position_id)
+                old_stop = old_position.get("stop_price") if old_position else None
+                portfolio.update_position_stop(position_id, command.payload)
+                updated = state.positions_repo.get_position(position_id)
+                assert updated is not None
+                linked = orders.sync_linked_stop_order(
+                    position_id=position_id,
+                    ticker=str(updated.get("ticker")),
+                    shares=int(updated.get("shares")),
+                    stop_price=float(updated.get("stop_price")),
+                    business_date=business_date(),
+                    parent_order_id=updated.get("source_order_id"),
+                    notes=(
+                        "Auto-created from position stop update (was "
+                        f"{old_stop})"
+                    ),
+                    quote_currency=updated.get("quote_currency"),
+                    account_currency=updated.get("account_currency"),
                 )
+                linked_id = str(linked.get("order_id"))
+
+                def _link_exit_order(data: dict) -> dict:
+                    for entry in data.get("positions", []):
+                        if entry.get("position_id") == position_id:
+                            ids = [
+                                order_id
+                                for order_id in (entry.get("exit_order_ids") or [])
+                                if order_id != linked_id
+                            ]
+                            ids.append(linked_id)
+                            entry["exit_order_ids"] = ids
+                    return data
+
+                state.positions_repo.update(_link_exit_order)
+                affected_orders.append(linked_id)
             elif command.operation == "partial_close":
                 portfolio.partial_close_position(
                     command.payload.position_id, command.payload

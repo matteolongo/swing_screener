@@ -445,9 +445,104 @@ def test_entry_fill_creates_position_with_canonical_risk_and_broker_metadata(
     assert position["entry_fx_rate"] == (1.1 if fx is None else 1.12)
     assert position["source_order_id"] == "ORD-MSFT-001"
     assert position["entry_date"] == "2026-09-09"
-    assert result["affected_order_ids"] == ["ORD-MSFT-001"]
+    assert position["exit_order_ids"] == ["ORD-STOP-POS-STABLE-001"]
+    assert result["affected_order_ids"] == ["ORD-MSFT-001", "ORD-STOP-POS-STABLE-001"]
     assert result["affected_position_ids"] == [position["position_id"]]
     assert snapshot.model_dump() == before
+
+
+def test_entry_fill_creates_linked_stop_order(command_api):
+    response = _post_command(
+        command_api,
+        _snapshot(),
+        "fill_order",
+        {
+            "order_id": "ORD-MSFT-001",
+            "filled_price": 402,
+            "filled_date": "2026-09-09",
+        },
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    position_id = result["affected_position_ids"][0]
+    linked_id = f"ORD-STOP-{position_id}"
+    linked = next(
+        order for order in result["orders"] if order["order_id"] == linked_id
+    )
+    assert linked["order_kind"] == "stop"
+    assert linked["order_type"] == "SELL_STOP"
+    assert linked["status"] == "pending"
+    assert linked["ticker"] == "MSFT"
+    assert linked["quantity"] == 10
+    assert linked["stop_price"] == 390
+    assert linked["position_id"] == position_id
+    assert linked["order_date"] == "2026-09-09"
+    position = next(
+        position
+        for position in result["positions"]
+        if position["position_id"] == position_id
+    )
+    assert linked_id in (position["exit_order_ids"] or [])
+    assert linked_id in result["affected_order_ids"]
+
+
+def test_stop_update_replaces_linked_stop_price(command_api, market_price):
+    from api.models.portfolio import TradingOrderSnapshot
+
+    snapshot = _snapshot()
+    snapshot.orders.append(
+        TradingOrderSnapshot.model_validate(
+            {
+                "order_id": "ORD-STOP-POS-AAPL-001",
+                "ticker": "AAPL",
+                "status": "pending",
+                "order_type": "SELL_STOP",
+                "order_kind": "stop",
+                "quantity": 10,
+                "stop_price": 190.0,
+                "order_date": "2026-09-08",
+                "position_id": "POS-AAPL-001",
+            }
+        )
+    )
+    response = _post_command(
+        command_api,
+        snapshot,
+        "update_stop",
+        {"position_id": "POS-AAPL-001", "new_stop": 200},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    linked = next(
+        order
+        for order in result["orders"]
+        if order["order_id"] == "ORD-STOP-POS-AAPL-001"
+    )
+    assert linked["status"] == "pending"
+    assert linked["stop_price"] == 200
+    assert linked["quantity"] == 10
+    assert result["positions"][0]["stop_price"] == 200
+    assert "ORD-STOP-POS-AAPL-001" in result["affected_order_ids"]
+
+
+def test_stop_update_creates_missing_linked_stop(command_api, market_price):
+    response = _post_command(
+        command_api,
+        _snapshot(),
+        "update_stop",
+        {"position_id": "POS-AAPL-001", "new_stop": 200},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    linked = next(
+        order
+        for order in result["orders"]
+        if order["order_id"] == "ORD-STOP-POS-AAPL-001"
+    )
+    assert linked["order_kind"] == "stop"
+    assert linked["status"] == "pending"
+    assert linked["stop_price"] == 200
+    assert linked["quantity"] == 10
 
 
 def _add_on_snapshot():
@@ -488,6 +583,16 @@ def test_add_on_fill_blends_entry_fx_and_fees_while_retaining_live_stop(command_
     assert position["entry_fee_eur"] == 5
     assert position["entry_fx_rate"] == pytest.approx(1.150207468879668)
     assert result["affected_position_ids"] == ["POS-AAPL-001"]
+    linked = next(
+        order
+        for order in result["orders"]
+        if order["order_id"] == "ORD-STOP-POS-AAPL-001"
+    )
+    assert linked["order_kind"] == "stop"
+    assert linked["status"] == "pending"
+    assert linked["stop_price"] == 190
+    assert linked["quantity"] == 20
+    assert "ORD-STOP-POS-AAPL-001" in result["affected_order_ids"]
 
 
 @pytest.mark.parametrize(
@@ -597,9 +702,17 @@ def test_stop_update_preserves_initial_risk_and_appends_reason(
     assert position["stop_price"] == 200.13
     assert position["initial_risk"] == 10
     assert "Protect profit" in position["notes"]
-    assert result["orders"] == snapshot.model_dump(mode="json")["orders"]
+    linked = next(
+        order
+        for order in result["orders"]
+        if order["order_id"] == "ORD-STOP-POS-AAPL-001"
+    )
+    assert linked["order_kind"] == "stop"
+    assert linked["status"] == "pending"
+    assert linked["stop_price"] == 200.13
+    assert linked["quantity"] == 10
+    assert result["affected_order_ids"] == ["ORD-STOP-POS-AAPL-001"]
     assert result["affected_position_ids"] == ["POS-AAPL-001"]
-    assert result["affected_order_ids"] == []
 
 
 @pytest.mark.parametrize("new_stop", [189, 211])
