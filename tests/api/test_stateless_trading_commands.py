@@ -466,6 +466,41 @@ def test_add_on_fill_blends_entry_fx_and_fees_while_retaining_live_stop(command_
     assert result["affected_position_ids"] == ["POS-AAPL-001"]
 
 
+@pytest.mark.parametrize(
+    ("quantity", "expected_status", "expected_shares"),
+    [(4, "open", 6), (10, "closed", 10)],
+)
+def test_sell_fill_reduces_or_closes_linked_position_without_increasing_shares(
+    command_api, quantity, expected_status, expected_shares
+):
+    snapshot = _snapshot()
+    order = snapshot.orders[0]
+    order.ticker = "AAPL"
+    order.order_type = "SELL_LIMIT"
+    order.order_kind = "take_profit"
+    order.position_id = "POS-AAPL-001"
+    order.quantity = quantity
+
+    response = _post_command(
+        command_api,
+        snapshot,
+        "fill_order",
+        {
+            "order_id": "ORD-MSFT-001",
+            "filled_price": 220,
+            "filled_date": "2026-09-09",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["orders"][0]["status"] == "filled"
+    assert result["positions"][0]["status"] == expected_status
+    assert result["positions"][0]["shares"] == expected_shares
+    if expected_status == "closed":
+        assert result["positions"][0]["exit_price"] == 220
+
+
 def test_failed_add_on_fill_keeps_input_snapshot_and_service_reusable(command_api):
     from api.services.stateless_trading_service import StatelessTradingService
     from swing_screener.errors import UnprocessableError

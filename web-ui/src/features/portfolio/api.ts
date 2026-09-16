@@ -5,6 +5,7 @@ import type { OrderApiResponse } from '@/types/order';
 import type { PositionUpdateApiResponse } from '@/types/position';
 import type { OpenPositionIntelligenceSummaryAPI, OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
 import { transformOpenPositionIntelligence } from '@/features/intelligence/types';
+import { fetchTickerCandles } from '@/features/screener/api';
 import {
   cancelOrderLocal,
   closePositionLocal,
@@ -508,7 +509,16 @@ export async function updatePositionStop(
   idempotencyKey?: string,
 ): Promise<void> {
   if (isLocalPersistenceMode()) {
-    await updatePositionStopLocal(positionId, request, resolveIdempotencyKey(idempotencyKey));
+    const position = getPositionByIdLocal(positionId);
+    if (!position) throw new Error(`Position not found: ${positionId}`);
+    let marketPrice = request.marketPrice;
+    if (!marketPrice) {
+      const candles = await fetchTickerCandles(position.ticker);
+      const latest = candles.priceHistory[candles.priceHistory.length - 1];
+      if (!latest) throw new Error('A current timestamped market price observation is required to update the stop.');
+      marketPrice = { ticker: position.ticker, price: latest.close, observedAt: `${latest.date}T00:00:00Z`, dataStatus: 'current' };
+    }
+    await updatePositionStopLocal(positionId, { ...request, marketPrice }, resolveIdempotencyKey(idempotencyKey));
     return;
   }
   await fetchJson<void>(API_ENDPOINTS.positionStop(positionId), {

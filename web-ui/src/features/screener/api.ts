@@ -8,8 +8,20 @@ import {
   ScreenerRunStatusResponseAPI,
   ScreenerResponse,
   ScreenerResponseAPI,
+  TickerCandles,
+  TickerCandlesAPIResponse,
+  transformTickerCandles,
   transformScreenerResponse,
 } from './types';
+
+export async function fetchTickerCandles(ticker: string): Promise<TickerCandles> {
+  const normalized = ticker.trim().toUpperCase();
+  const raw = await fetchJson<TickerCandlesAPIResponse>(
+    API_ENDPOINTS.marketDataCandles(normalized),
+    { errorMessage: `Failed to fetch candles for ${ticker}` },
+  );
+  return transformTickerCandles(raw, normalized);
+}
 
 export function toScreenerRequestPayload(request: ScreenerRequest): Record<string, unknown> {
   const tf = request.taxonomyFilter;

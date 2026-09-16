@@ -66,6 +66,8 @@ across tabs, and the adapter compares the stored state before accepting the
 response. Revision, idempotency receipts, orders, positions and returned active
 strategy are persisted together only on success. Retried requests retain their
 explicit effective time and new-position identity. Missing Web Locks fails closed.
+Local stop updates load the latest candle first and pass its close plus candle
+date through the command's required market-price observation.
 Local position metrics and summaries use the read-only `/api/portfolio/state/metrics`
 projection; these read models never replace the stored snapshot. Browser ledger
 freshness stays unknown rather than inheriting server-database freshness.

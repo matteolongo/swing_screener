@@ -1675,7 +1675,7 @@ def test_fetch_ohlcv_chunked_preserves_stale_fallback_provenance():
     assert result.attrs["stale_cache_fallback"] is True
 
 
-def test_market_data_cache_policy_only_requires_current_final_close():
+def test_market_data_cache_policy_requires_selected_final_close_across_midnight():
     import datetime as dt
 
     from api.services.screener_service import _market_data_cache_policy
@@ -1691,9 +1691,11 @@ def test_market_data_cache_policy_only_requires_current_final_close():
         _market_data_cache_policy("2026-07-01", before_close, ["USD"]).fresh_after_utc
         is None
     )
-    assert (
-        _market_data_cache_policy("2026-06-30", after_close, ["USD"]).fresh_after_utc
-        is None
+    next_morning = dt.datetime(2026, 7, 2, 8, 0, tzinfo=dt.timezone.utc)
+    assert _market_data_cache_policy(
+        "2026-07-01", next_morning, ["USD"]
+    ).fresh_after_utc == dt.datetime(
+        2026, 7, 1, 20, 10, tzinfo=dt.timezone.utc
     )
 
 

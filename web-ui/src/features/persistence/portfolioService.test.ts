@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
+import { API_BASE_URL } from '@/lib/api';
 import { cancelOrder, closePosition, createOrder, fillOrder, partialClosePosition, submitOrder, updatePositionStop } from '@/features/portfolio/api';
 import { getAllPositionsLocal, mutateTradingStore, readTradingStore, resetTradingStore, TRADING_STORE_STORAGE_KEY } from '@/features/persistence';
 import { tradingSnapshotLocal } from './portfolioService';
@@ -97,9 +98,24 @@ describe('local trading command transport', () => {
     await expect(closePosition('POS-1', { exitPrice: 111 }, 'same-key')).rejects.toThrow(/different|reused/i);
   });
 
-  it('fails closed for stop updates without a timestamped price observation', async () => {
-    await expect(updatePositionStop('POS-1', { newStop: 98 })).rejects.toThrow(/observation/i);
-    expect(getAllPositionsLocal()[0].stopPrice).toBe(95);
+  it('loads a timestamped market price before a local stop update', async () => {
+    let sent: any;
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/candles`, () => HttpResponse.json({
+        ticker: 'AAPL', provider: 'test', interval: '1d', data_as_of: '2026-09-09',
+        fetched_at: '2026-09-09T19:00:00Z', price_history: [{ date: '2026-09-09', close: 110 }], patterns: [],
+      })),
+      http.post('*/api/portfolio/state/commands', async ({ request }) => {
+        sent = await request.json();
+        return HttpResponse.json({ ...sent.snapshot, revision: 1 });
+      }),
+    );
+
+    await updatePositionStop('POS-1', { newStop: 98 });
+
+    expect(sent.context.market_price).toEqual({
+      ticker: 'AAPL', price: 110, observed_at: '2026-09-09T00:00:00Z', data_status: 'current',
+    });
   });
 
   it('transports the caller price observation without replacing its timestamp', async () => {

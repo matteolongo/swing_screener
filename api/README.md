@@ -290,6 +290,9 @@ Portfolio (`/api/portfolio`):
   `context.new_position_id` that does not already exist in the snapshot.
   Add-on fills retain the referenced position ID, while new order IDs use the
   canonical deterministic allocator over the supplied order ledger.
+  Linked `stop` and `take_profit` sell fills reduce the referenced open position
+  or close it when the order quantity equals the remaining shares; they never
+  enter the add-on path.
   Stop commands require `context.market_price: {ticker, price, observed_at,
   data_status: "current"}`. The finite positive price must match the position
   ticker; `observed_at` must include a timezone, must not be after `effective_at`,
