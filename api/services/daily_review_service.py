@@ -18,7 +18,7 @@ from api.models.daily_review import (
     PendingOrderReview,
     TrimSuggestion,
 )
-from api.models.portfolio import OrderSnapshot, Position, PositionUpdate
+from api.models.portfolio import OrderSnapshot, PositionUpdate
 from api.models.screener import ScreenerRequest, TaxonomyFilter
 from api.models.watchlist import WatchItem
 from api.repositories.orders_repo import OrdersRepository
@@ -534,14 +534,7 @@ class DailyReviewService:
         it, never the persisted repositories.
         """
         snapshot = PortfolioStateSnapshot(
-            positions=tuple(
-                (
-                    position
-                    if isinstance(position, Position)
-                    else Position.model_validate(position)
-                )
-                for position in (positions or [])
-            ),
+            positions=tuple(positions or ()),
             orders=tuple(
                 (
                     order
@@ -605,13 +598,11 @@ class DailyReviewService:
 
         buckets = _ActionBuckets()
         evaluation_errors: list[DailyReviewPositionEvaluationError] = []
-        for raw_pos in positions:
-            pos = (
-                raw_pos.model_dump(mode="json")
-                if isinstance(raw_pos, Position)
-                else raw_pos
-            )
-            if not isinstance(pos, dict) or pos.get("status") != "open":
+        for snapshot_pos in snapshot.positions:
+            # Detached validated copy: downstream mutation cannot leak back
+            # into the authoritative snapshot or the caller's input.
+            pos = snapshot_pos.model_dump(mode="json")
+            if pos.get("status") != "open":
                 continue
 
             position_id = str(

@@ -84,6 +84,17 @@ class Position(BaseModel):
     )
 
 
+class PositionSnapshot(Position):
+    """Immutable position record for request-scoped state snapshots.
+
+    Same fields and validation as ``Position``; attribute mutation is
+    rejected so a snapshot cannot be altered through a shared reference.
+    Derive local mutable copies via ``model_dump()`` when mutation is needed.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+
 class PositionUpdate(BaseModel):
     ticker: str
     status: PositionStatus
