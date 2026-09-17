@@ -3076,6 +3076,15 @@ export const messagesEn = {
       details: 'Details',
       searchPlaceholder: 'Search ticker…',
     },
+    detail: {
+      action: 'Action',
+      chart: 'Chart',
+      ai: 'AI summary',
+      approve: 'Deep dive',
+      close: 'Close',
+      manualNote: 'Manual execution on DeGiro',
+      aiStale: 'AI may be outdated',
+    },
   },
   todayPage: {
     tabs: {
