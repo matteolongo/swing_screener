@@ -1096,3 +1096,59 @@ def test_stateless_pending_review_filters_snapshot_and_never_reads_repo(
     mock_screener_service.run_screener.assert_not_called()
     mock_portfolio_service.list_positions.assert_not_called()
     mock_portfolio_service.suggest_position_stop.assert_not_called()
+
+
+def test_stateless_stop_evaluation_consumes_normalized_snapshot_copy(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    """Stop evaluation sees validated snapshot payloads, never caller input.
+
+    Raw string numerics are coerced once at the snapshot boundary, the payload
+    handed to evaluation is a detached copy, and later caller-side mutation
+    cannot change what was evaluated.
+    """
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+    mock_portfolio_service.compute_position_stop_suggestion.return_value = (
+        PositionUpdate(
+            ticker="AAPL",
+            status="open",
+            last=104.0,
+            entry=100.0,
+            stop_old=95.0,
+            stop_suggested=100.0,
+            shares=10,
+            r_now=0.8,
+            action="MOVE_STOP_UP",
+            reason="Breakeven: R=1.00 >= 1.0",
+        )
+    )
+    raw = {
+        "position_id": "local-pos-1",
+        "ticker": "AAPL",
+        "entry_price": 100.0,
+        "stop_price": "95.0",
+        "shares": "10",
+        "status": "open",
+        "entry_date": "2026-02-01",
+        "current_price": 104.0,
+    }
+    before = dict(raw)
+
+    review = service.compute_daily_review_from_state(
+        strategy=_default_strategy_payload(),
+        positions=[raw],
+        orders=[],
+        include_candidates=False,
+    )
+
+    payload = mock_portfolio_service.compute_position_stop_suggestion.call_args[0][0]
+    assert payload["stop_price"] == 95.0
+    assert isinstance(payload["stop_price"], float)
+    assert payload["shares"] == 10
+    assert isinstance(payload["shares"], int)
+    assert payload is not raw
+    assert raw == before
+    assert len(review.positions_update_stop) == 1
+    assert review.positions_update_stop[0].position_id == "local-pos-1"

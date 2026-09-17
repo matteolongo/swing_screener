@@ -129,4 +129,32 @@ describe('Book page route state', () => {
     expect(stat).toHaveTextContent('—');
     expect(stat).not.toHaveTextContent('3.00R');
   });
+
+  it('keeps a closed trade without valid risk visible with unavailable R', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/portfolio/summary`, () => HttpResponse.json({
+        ...mockPortfolioSummary,
+        analytics: {
+          closed_trade_count: 0, excluded_trade_count: 1, win_count: 0, loss_count: 0, scratch_count: 0,
+          win_rate: null, win_rate_status: 'neutral', average_r: null, average_max_r: null, profit_factor: null, profit_factor_status: 'neutral',
+          average_holding_days: null, max_win_streak: 0, max_loss_streak: 0,
+          equity_curve: [{
+            position_id: 'norisk', ticker: 'NORISK', date: '2026-01-11', r: null, max_r: null,
+            holding_days: 9, cumulative_r: 0, tags: [], entry_price: 50, exit_price: 60, shares: 5,
+            initial_risk: null, thesis: 'Breakout retest', notes: 'Exited early', lesson: 'Size smaller',
+          }],
+          tag_breakdown: [],
+          journal_tag_breakdown: [],
+          insight: { verdict: 'developing', reason: 'insufficient_history' },
+        },
+      })),
+    );
+    renderBookWithRouteState({ tab: 'journal' });
+
+    expect(await screen.findByText('NORISK')).toBeInTheDocument();
+    await userEvent.click(screen.getByText('NORISK'));
+    expect(await screen.findByText('Breakout retest')).toBeInTheDocument();
+    expect(screen.getByText('Exited early')).toBeInTheDocument();
+    expect(screen.getByText('Size smaller')).toBeInTheDocument();
+  });
 });

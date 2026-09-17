@@ -11,8 +11,9 @@ from datetime import datetime
 from typing import Any, Optional
 
 import pandas as pd
+from pydantic import BaseModel
 
-from api.models.portfolio import OrderSnapshot, Position
+from api.models.portfolio import OrderSnapshot, Position, PositionSnapshot
 from api.models.recommendation import Recommendation
 from api.models.screener import (
     CandlePatternOut,
@@ -489,13 +490,48 @@ class _RunContext:
 class PortfolioStateSnapshot:
     """Immutable portfolio state supplied by a stateless caller.
 
-    Orders are stored as frozen ``OrderSnapshot`` models so downstream code
-    cannot mutate the authoritative request snapshot through a shared dict.
+    Orders are stored as frozen ``OrderSnapshot`` models and positions as
+    frozen ``PositionSnapshot`` models so downstream code cannot mutate the
+    authoritative request snapshot through a shared dict or model reference.
     Derive local mutable copies via ``model_dump()`` when mutation is needed.
     """
 
-    positions: tuple[Position, ...]
+    positions: tuple[PositionSnapshot, ...]
     orders: tuple[OrderSnapshot, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "positions",
+            tuple(
+                (
+                    item
+                    if isinstance(item, PositionSnapshot)
+                    else PositionSnapshot.model_validate(
+                        item.model_dump(mode="json")
+                        if isinstance(item, Position)
+                        else item
+                    )
+                )
+                for item in (self.positions or ())
+            ),
+        )
+        object.__setattr__(
+            self,
+            "orders",
+            tuple(
+                (
+                    item
+                    if isinstance(item, OrderSnapshot)
+                    else OrderSnapshot.model_validate(
+                        item.model_dump(mode="json")
+                        if isinstance(item, BaseModel)
+                        else item
+                    )
+                )
+                for item in (self.orders or ())
+            ),
+        )
 
 
 @dataclass(frozen=True)

@@ -91,10 +91,71 @@ def test_initial_risk_and_scratch_semantics() -> None:
         ("loss", -1.0, -1.0),
         ("win", pytest.approx(8 / 3), pytest.approx(5 / 3)),
         ("scratch", 0.0, pytest.approx(5 / 3)),
+        ("invalid", None, pytest.approx(5 / 3)),
     ]
+    assert result.excluded_trade_count == 1
     assert result.tag_breakdown[0].tag == "breakout"
     assert result.tag_breakdown[0].trade_count == 3
     assert result.tag_breakdown[0].average_r == pytest.approx(5 / 9)
+
+
+def test_excluded_trade_stays_visible_in_curve_with_unavailable_r() -> None:
+    """A closed trade without valid initial risk keeps its journal row.
+
+    Its notes/thesis/lesson stay visible with an unavailable R while every
+    performance aggregate still excludes it.
+    """
+    result = calculate_portfolio_analytics(
+        [
+            {
+                "position_id": "good",
+                "ticker": "GOOD",
+                "status": "closed",
+                "entry_date": "2026-01-01",
+                "exit_date": "2026-01-10",
+                "entry_price": 100.0,
+                "exit_price": 120.0,
+                "initial_risk": 10.0,
+                "shares": 2,
+                "tags": ["breakout"],
+            },
+            {
+                "position_id": "norisk",
+                "ticker": "NORISK",
+                "status": "closed",
+                "entry_date": "2026-01-02",
+                "exit_date": "2026-01-11",
+                "entry_price": 50.0,
+                "exit_price": 60.0,
+                "initial_risk": 0,
+                "shares": 5,
+                "tags": ["breakout"],
+                "thesis": "Breakout retest",
+                "notes": "Exited early on news",
+                "lesson": "Size pullbacks smaller",
+            },
+        ],
+        min_tag_sample_size=1,
+    )
+
+    assert result.closed_trade_count == 1
+    assert result.excluded_trade_count == 1
+    assert result.win_count == 1
+    assert result.average_r == pytest.approx(2.0)
+    assert [point.position_id for point in result.equity_curve] == [
+        "good",
+        "norisk",
+    ]
+    excluded = result.equity_curve[1]
+    assert excluded.r is None
+    assert excluded.cumulative_r == pytest.approx(2.0)
+    assert excluded.entry_price == pytest.approx(50.0)
+    assert excluded.exit_price == pytest.approx(60.0)
+    assert excluded.shares == 5
+    assert excluded.thesis == "Breakout retest"
+    assert excluded.notes == "Exited early on news"
+    assert excluded.lesson == "Size pullbacks smaller"
+    assert result.tag_breakdown[0].trade_count == 1
 
 
 def test_curve_exposes_backend_computed_trade_detail() -> None:

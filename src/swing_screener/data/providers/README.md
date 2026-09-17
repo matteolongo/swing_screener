@@ -32,6 +32,12 @@ That result is marked with `stale_cache_fallback` in both DataFrame provenance
 and provider health. Consumers must retain the stale/intraday label and must not
 promote the result to `final_close` from wall-clock time alone.
 
+Per-ticker Parquet files use their modification time as the head-verification
+recency clock. A backfill whose window ends before the cached head merges its
+bars but preserves the previous modification time, so an unrelated older-window
+refresh never recertifies head freshness it did not verify. Only a download
+reaching (or extending) the head advances recency.
+
 ## How to add a data source
 
 A source appears on the Data Sources page when it implements the diagnostics

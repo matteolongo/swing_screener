@@ -84,6 +84,23 @@ class Position(BaseModel):
     )
 
 
+class PositionSnapshot(Position):
+    """Immutable position record for request-scoped state snapshots.
+
+    Same fields and validation as ``Position``; attribute mutation is
+    rejected, mutable collections are stored as tuples, and nested
+    partial-close legs are frozen, so a snapshot cannot be altered through
+    a shared reference. Derive local mutable copies via ``model_dump()``
+    when mutation is needed.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    tags: tuple[str, ...] = ()
+    partial_closes: tuple[PartialCloseEventSnapshot, ...] = ()
+    exit_order_ids: tuple[str, ...] | None = None
+
+
 class PositionUpdate(BaseModel):
     ticker: str
     status: PositionStatus
@@ -152,6 +169,12 @@ class PartialCloseEvent(BaseModel):
         if not math.isfinite(v):
             raise ValueError("FX rate must be finite")
         return v
+
+
+class PartialCloseEventSnapshot(PartialCloseEvent):
+    """Immutable partial-close leg for request-scoped state snapshots."""
+
+    model_config = ConfigDict(frozen=True)
 
 
 class PartialCloseRequest(BaseModel):
@@ -941,15 +964,15 @@ class PortfolioAnalyticsCurvePoint(BaseModel):
     position_id: str
     ticker: str
     date: str
-    r: float
+    r: float | None = None
     max_r: float | None = None
     holding_days: int | None = None
     cumulative_r: float
     tags: list[str] = Field(default_factory=list)
-    entry_price: float
-    exit_price: float
-    shares: int
-    initial_risk: float
+    entry_price: float | None = None
+    exit_price: float | None = None
+    shares: int | None = None
+    initial_risk: float | None = None
     thesis: str | None = None
     notes: str = ""
     lesson: str | None = None

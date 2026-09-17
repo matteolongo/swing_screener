@@ -457,6 +457,123 @@ def test_portfolio_state_snapshot_orders_are_frozen_and_isolated():
     assert snapshot.orders[0].ticker == "AAPL"
 
 
+def test_portfolio_state_snapshot_positions_are_frozen_and_isolated():
+    """Snapshot positions are immutable; local copies cannot mutate the snapshot."""
+    import pytest
+    from pydantic import ValidationError
+
+    from api.models.portfolio import Position, PositionSnapshot
+    from api.services.screener_service import PortfolioStateSnapshot
+
+    raw = {
+        "position_id": "POS-1",
+        "ticker": "AAPL",
+        "status": "open",
+        "entry_date": "2026-09-01",
+        "entry_price": 100.0,
+        "stop_price": 95.0,
+        "shares": "10",
+    }
+    snapshot = PortfolioStateSnapshot(
+        positions=(raw,),
+        orders=(),
+    )
+
+    assert isinstance(snapshot.positions, tuple)
+    assert isinstance(snapshot.positions[0], PositionSnapshot)
+    assert isinstance(snapshot.positions[0], Position)
+    # Normalization is applied once at the boundary.
+    assert snapshot.positions[0].shares == 10
+
+    # The frozen model rejects attribute mutation.
+    with pytest.raises(ValidationError):
+        snapshot.positions[0].stop_price = 1.0  # type: ignore[misc]
+
+    # A downstream mutable derivation cannot leak back into the snapshot.
+    derived = snapshot.positions[0].model_dump()
+    derived["stop_price"] = 1.0
+    derived["status"] = "closed"
+    assert snapshot.positions[0].stop_price == 95.0
+    assert snapshot.positions[0].status == "open"
+
+    # Validating copies input data: later caller-side mutation is isolated.
+    raw["stop_price"] = 1.0
+    assert snapshot.positions[0].stop_price == 95.0
+
+    # Caller-owned models are detached, not aliased.
+    owned = Position(
+        ticker="MSFT",
+        status="open",
+        entry_date="2026-09-01",
+        entry_price=200.0,
+        stop_price=190.0,
+        shares=5,
+    )
+    owned_snapshot = PortfolioStateSnapshot(positions=(owned,), orders=())
+    owned.stop_price = 1.0
+    assert owned_snapshot.positions[0].stop_price == 190.0
+
+    # Nested collections are tuples: append-style mutation is impossible.
+    tagged = {
+        "position_id": "POS-TAGS",
+        "ticker": "AAPL",
+        "status": "open",
+        "entry_date": "2026-09-01",
+        "entry_price": 100.0,
+        "stop_price": 95.0,
+        "shares": 10,
+        "tags": ["breakout"],
+        "partial_closes": [
+            {
+                "date": "2026-09-05",
+                "shares_closed": 2,
+                "price": 110.0,
+                "r_at_close": 1.5,
+            }
+        ],
+        "exit_order_ids": ["ORD-STOP-POS-TAGS"],
+    }
+    tagged_snapshot = PortfolioStateSnapshot(positions=(tagged,), orders=())
+    frozen_position = tagged_snapshot.positions[0]
+    assert frozen_position.tags == ("breakout",)
+    assert frozen_position.exit_order_ids == ("ORD-STOP-POS-TAGS",)
+    with pytest.raises(AttributeError):
+        frozen_position.tags.append("mutated")  # type: ignore[attr-defined]
+    with pytest.raises(AttributeError):
+        frozen_position.partial_closes.append({})  # type: ignore[attr-defined]
+    with pytest.raises(ValidationError):
+        frozen_position.partial_closes[0].price = 1.0  # type: ignore[misc]
+
+
+def test_portfolio_state_snapshot_orders_are_normalized_and_isolated():
+    """Raw-dict orders are validated into detached models at the boundary."""
+    from api.models.portfolio import OrderSnapshot
+    from api.services.screener_service import PortfolioStateSnapshot
+
+    raw_order = {
+        "order_id": "1",
+        "ticker": "aapl",
+        "status": "pending",
+        "order_kind": "entry",
+        "order_date": "2026-09-01",
+    }
+    snapshot = PortfolioStateSnapshot(
+        positions=(),
+        orders=(raw_order,),
+    )
+
+    assert isinstance(snapshot.orders, tuple)
+    assert isinstance(snapshot.orders[0], OrderSnapshot)
+    # Normalization is applied once at the boundary.
+    assert snapshot.orders[0].ticker == "AAPL"
+
+    # Later caller-side mutation cannot change the snapshot.
+    raw_order["ticker"] = "MSFT"
+    raw_order["status"] = "filled"
+    assert snapshot.orders[0].ticker == "AAPL"
+    assert snapshot.orders[0].status == "pending"
+
+
 def _stateless_recommended_candidate():
     from api.models.recommendation import (
         ChecklistGate,

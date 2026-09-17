@@ -5,6 +5,7 @@ from swing_screener.risk.position_sizing import (
     RiskConfig,
     build_trade_plans,
     position_plan,
+    position_plan_outcome,
 )
 
 
@@ -195,6 +196,35 @@ def test_build_trade_plans_blocks_only_candidate_with_invalid_execution_geometry
     assert plans.loc["GOOD", "plan_status"] == "ready"
     assert plans.loc["TIGHT", "plan_status"] == "blocked"
     assert plans.loc["TIGHT", "block_reason"] == "invalid_execution_geometry"
+
+
+def test_position_plan_outcome_blocks_non_positive_execution_stop():
+    cfg = RiskConfig(account_size=10_000, risk_pct=0.01, k_atr=1.0, max_position_pct=1.0)
+    # Huge ATR drives the execution stop to zero/negative, which must be a
+    # blocked outcome — never an escaping ValueError.
+    outcome = position_plan_outcome(0.01, 100.0, cfg)
+
+    assert outcome.status == "blocked"
+    assert outcome.block_reason == "invalid_execution_geometry"
+    assert outcome.plan is None
+
+
+def test_build_trade_plans_keeps_valid_row_beside_non_positive_stop_row():
+    ranked = pd.DataFrame(
+        {"atr14": [1.0, 100.0], "last": [30.0, 0.01], "currency": ["EUR", "EUR"]},
+        index=["GOOD", "ZEROSTOP"],
+    )
+    signals = pd.DataFrame(
+        {"last": [30.0, 0.01], "signal": ["breakout", "breakout"]},
+        index=["GOOD", "ZEROSTOP"],
+    )
+    cfg = RiskConfig(account_size=10_000, risk_pct=0.01, k_atr=1.0, max_position_pct=1.0)
+
+    plans = build_trade_plans(ranked, signals, cfg)
+
+    assert plans.loc["GOOD", "plan_status"] == "ready"
+    assert plans.loc["ZEROSTOP", "plan_status"] == "blocked"
+    assert plans.loc["ZEROSTOP", "block_reason"] == "invalid_execution_geometry"
 
 
 def test_build_trade_plans_skips_missing_quote_currency():

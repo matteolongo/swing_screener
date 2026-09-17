@@ -8,6 +8,7 @@ from typing import Iterator, Optional
 import hashlib
 import json
 import logging
+import os
 import re
 import uuid
 import pandas as pd
@@ -145,12 +146,22 @@ class YfinanceProvider(MarketDataProvider):
         interval: str = "1d",
     ) -> None:
         """Persist each downloaded ticker's columns to its own parquet and
-        extend the coverage window recorded in the index."""
+        extend the coverage window recorded in the index.
+
+        A backfill whose window ends before the cached head leaves the head
+        untouched, so the file keeps its previous modification time instead
+        of recertifying head freshness it did not verify. Only a download
+        reaching (or extending) the head advances file recency.
+        """
         if df is None or df.empty or not isinstance(df.columns, pd.MultiIndex):
             return
         self._ticker_cache_dir().mkdir(parents=True, exist_ok=True)
         index = self._load_ticker_index()
         present = set(map(str, df.columns.get_level_values(1)))
+        # Exclusive coverage end -> inclusive downloaded window end.
+        download_end = (
+            date.fromisoformat(end_for_coverage) - timedelta(days=1)
+        ).isoformat()
         dirty = False
         for ticker in tickers:
             if ticker not in present:
@@ -159,15 +170,30 @@ class YfinanceProvider(MarketDataProvider):
             if sub.dropna(how="all").empty:
                 continue
             path = self._ticker_cache_path(ticker, interval)
+            preserve_ns: tuple[int, int] | None = None
             if path.exists():
                 existing = self._read_cached_ohlcv(path, [ticker])
                 if existing is not None and not existing.empty:
+                    try:
+                        old_head = pd.Timestamp(existing.index.max()).date()
+                    except (TypeError, ValueError):
+                        old_head = None
+                    if old_head is not None and download_end < old_head.isoformat():
+                        stat = path.stat()
+                        preserve_ns = (stat.st_atime_ns, stat.st_mtime_ns)
                     merged = pd.concat([existing, sub])
                     merged = merged.loc[
                         ~merged.index.duplicated(keep="last")
                     ].sort_index()
                     sub = merged
             self._write_cached_ohlcv(path, sub)
+            if preserve_ns is not None:
+                try:
+                    os.utime(path, ns=preserve_ns)
+                except OSError as exc:
+                    logger.debug(
+                        "Failed to preserve cache mtime %s: %s", path, exc
+                    )
             key = self._index_key(ticker, interval)
             entry = index.get(key) if isinstance(index.get(key), dict) else {}
             old_start = str(entry.get("start")) if entry.get("start") else None

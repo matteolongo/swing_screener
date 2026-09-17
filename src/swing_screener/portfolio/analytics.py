@@ -21,15 +21,15 @@ class EquityCurvePoint:
     position_id: str
     ticker: str
     date: str
-    r: float
+    r: float | None
     max_r: float | None
     holding_days: int | None
     cumulative_r: float
     tags: tuple[str, ...]
-    entry_price: float
-    exit_price: float
-    shares: int
-    initial_risk: float
+    entry_price: float | None
+    exit_price: float | None
+    shares: int | None
+    initial_risk: float | None
     thesis: str | None
     notes: str
     lesson: str | None
@@ -95,14 +95,14 @@ class _ClosedTrade:
     position_id: str
     ticker: str
     exit_date: str
-    r: float
+    r: float | None
     max_r: float | None
     holding_days: int | None
     tags: tuple[str, ...]
-    entry_price: float
-    exit_price: float
-    shares: int
-    initial_risk: float
+    entry_price: float | None
+    exit_price: float | None
+    shares: int | None
+    initial_risk: float | None
     thesis: str | None
     notes: str
     lesson: str | None
@@ -209,6 +209,8 @@ def _max_r(position: Mapping[str, Any]) -> float | None:
 def _streaks(trades: Iterable[_ClosedTrade]) -> tuple[int, int]:
     max_wins = max_losses = wins = losses = 0
     for trade in trades:
+        if trade.r is None:
+            continue
         if trade.r > 0:
             wins += 1
             losses = 0
@@ -237,7 +239,7 @@ def _tag_breakdown(
     for tag, tagged in by_tag.items():
         if len(tagged) < min_sample_size:
             continue
-        r_values = [trade.r for trade in tagged]
+        r_values = [trade.r for trade in tagged if trade.r is not None]
         wins = sum(value > 0 for value in r_values)
         losses = sum(value < 0 for value in r_values)
         scratches = len(r_values) - wins - losses
@@ -245,13 +247,13 @@ def _tag_breakdown(
         rows.append(
             TagAnalytics(
                 tag=tag,
-                trade_count=len(tagged),
+                trade_count=len(r_values),
                 win_count=wins,
                 loss_count=losses,
                 scratch_count=scratches,
                 win_rate=(wins / denominator * 100) if denominator else None,
-                average_r=sum(r_values) / len(r_values),
-                expectancy=sum(r_values) / len(r_values),
+                average_r=sum(r_values) / len(r_values) if r_values else 0.0,
+                expectancy=sum(r_values) / len(r_values) if r_values else 0.0,
             )
         )
     return tuple(sorted(rows, key=lambda row: (-row.expectancy, row.tag)))
@@ -267,12 +269,12 @@ def _journal_tag_breakdown(
 
     rows: list[JournalTagAnalytics] = []
     for tag, tagged in by_tag.items():
-        r_values = [trade.r for trade in tagged]
+        r_values = [trade.r for trade in tagged if trade.r is not None]
         max_r_values = [trade.max_r for trade in tagged if trade.max_r is not None]
         rows.append(
             JournalTagAnalytics(
                 tag=tag,
-                trade_count=len(tagged),
+                trade_count=len(r_values),
                 win_count=sum(value > 0 for value in r_values),
                 loss_count=sum(value < 0 for value in r_values),
                 scratch_count=sum(value == 0 for value in r_values),
@@ -322,19 +324,22 @@ def calculate_portfolio_analytics(
     """Calculate closed-trade analytics from persisted or supplied snapshots.
 
     Only positions with a complete valid original-risk and final-exit record
-    participate.  A scratch is exactly ``0R``: it is included in average R and
-    the equity curve, excluded from win rate, and breaks either streak.
+    participate in performance aggregates.  A scratch is exactly ``0R``: it is
+    included in average R and the equity curve, excluded from win rate, and
+    breaks either streak.
+
+    Closed trades without a computable R stay visible in the equity curve
+    (with an unavailable R and no cumulative contribution) so their journal
+    thesis, notes, and lessons are never hidden by an analytics exclusion.
     """
     eligible: list[_ClosedTrade] = []
+    rows: list[_ClosedTrade] = []
     excluded = 0
     anonymous_occurrences: dict[str, int] = {}
     for position in positions:
         if position.get("status") != "closed" or not position.get("exit_date"):
             continue
         r = _trade_r(position)
-        if r is None:
-            excluded += 1
-            continue
         raw_tags = position.get("tags") or []
         tags = (
             tuple(sorted({str(tag) for tag in raw_tags if str(tag).strip()}))
@@ -345,6 +350,31 @@ def calculate_portfolio_analytics(
         exit_price = _finite_number(position.get("exit_price"))
         shares = _finite_number(position.get("shares"))
         initial_risk = _finite_number(position.get("initial_risk"))
+        if r is None:
+            excluded += 1
+            rows.append(
+                _ClosedTrade(
+                    position_id=str(position["position_id"])
+                    if position.get("position_id")
+                    else _anonymous_trade_id(position, anonymous_occurrences),
+                    ticker=str(position.get("ticker") or "").upper(),
+                    exit_date=str(position["exit_date"]),
+                    r=None,
+                    max_r=_max_r(position),
+                    holding_days=_holding_days(
+                        position.get("entry_date"), position.get("exit_date")
+                    ),
+                    tags=tags,
+                    entry_price=entry_price,
+                    exit_price=exit_price,
+                    shares=int(shares) if shares is not None else None,
+                    initial_risk=initial_risk,
+                    thesis=str(position["thesis"]) if position.get("thesis") else None,
+                    notes=str(position.get("notes") or ""),
+                    lesson=str(position["lesson"]) if position.get("lesson") else None,
+                )
+            )
+            continue
         if (
             entry_price is None
             or exit_price is None
@@ -376,9 +406,10 @@ def calculate_portfolio_analytics(
                 lesson=str(position["lesson"]) if position.get("lesson") else None,
             )
         )
+        rows.append(eligible[-1])
 
     trades = sorted(eligible, key=lambda trade: (trade.exit_date, trade.position_id))
-    r_values = [trade.r for trade in trades]
+    r_values = [trade.r for trade in trades if trade.r is not None]
     wins = sum(value > 0 for value in r_values)
     losses = sum(value < 0 for value in r_values)
     scratches = len(r_values) - wins - losses
@@ -392,8 +423,9 @@ def calculate_portfolio_analytics(
 
     cumulative_r = 0.0
     curve: list[EquityCurvePoint] = []
-    for trade in trades:
-        cumulative_r += trade.r
+    for trade in sorted(rows, key=lambda row: (row.exit_date, row.position_id)):
+        if trade.r is not None:
+            cumulative_r += trade.r
         curve.append(
             EquityCurvePoint(
                 trade.position_id,
