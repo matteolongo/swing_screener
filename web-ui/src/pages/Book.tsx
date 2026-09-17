@@ -358,15 +358,13 @@ function WeeklyReviewTab() {
 // ─── Book page ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'book.activeTab';
-type BookTab = 'positions' | 'orders' | 'journal' | 'performance' | 'review';
+type BookTab = 'positions' | 'orders' | 'journal';
 
 function isBookTab(value: unknown): value is BookTab {
   return (
     value === 'positions' ||
     value === 'orders' ||
-    value === 'journal' ||
-    value === 'performance' ||
-    value === 'review'
+    value === 'journal'
   );
 }
 
@@ -375,7 +373,25 @@ function getRouteStateTab(state: unknown): BookTab | null {
     return null;
   }
   const tab = (state as { tab?: unknown }).tab;
-  return isBookTab(tab) ? tab : null;
+  if (isBookTab(tab)) {
+    return tab;
+  }
+  // Preserve Today nudges + legacy tabs: 'review' → journal, 'performance' → journal.
+  if (tab === 'review' || tab === 'performance') {
+    return 'journal';
+  }
+  return null;
+}
+
+function getStoredTab(): BookTab | null {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (isBookTab(stored)) {
+    return stored;
+  }
+  if (stored === 'review' || stored === 'performance') {
+    return 'journal';
+  }
+  return null;
 }
 
 export default function Book() {
@@ -386,8 +402,8 @@ export default function Book() {
     if (routeTab) {
       return routeTab;
     }
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (isBookTab(stored)) {
+    const stored = getStoredTab();
+    if (stored) {
       return stored;
     }
     return 'positions';
@@ -408,8 +424,6 @@ export default function Book() {
     { key: 'positions', label: t('bookPage.tabs.positions') },
     { key: 'orders', label: t('bookPage.tabs.orders') },
     { key: 'journal', label: t('bookPage.tabs.journal') },
-    { key: 'performance', label: t('bookPage.tabs.performance') },
-    { key: 'review', label: t('bookPage.tabs.review') },
   ];
 
   return (
@@ -425,11 +439,13 @@ export default function Book() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6" role="tablist">
         {tabs.map(({ key, label }) => (
           <button
             key={key}
             type="button"
+            role="tab"
+            aria-selected={activeTab === key}
             onClick={() => setActiveTab(key)}
             className={cn(
               'px-4 py-2 rounded-full text-sm font-medium transition-colors',
@@ -447,9 +463,13 @@ export default function Book() {
       <div>
         {activeTab === 'positions' && <PositionsTab />}
         {activeTab === 'orders' && <PendingOrdersTab />}
-        {activeTab === 'journal' && <JournalTab />}
-        {activeTab === 'performance' && <AnalyticsPage />}
-        {activeTab === 'review' && <WeeklyReviewTab />}
+        {activeTab === 'journal' && (
+          <div className="space-y-8">
+            <JournalTab />
+            <AnalyticsPage />
+            <WeeklyReviewTab />
+          </div>
+        )}
       </div>
     </div>
   );

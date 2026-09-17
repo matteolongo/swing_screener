@@ -5,7 +5,10 @@ import { renderWithProviders } from '@/test/utils';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
 import { messagesEn } from '@/i18n/messages.en';
+import { t } from '@/i18n/t';
 import { AuthProvider } from '@/features/auth/AuthProvider';
+import { useScreenerStore } from '@/stores/screenerStore';
+import type { ScreenerResponse } from '@/features/screener/types';
 import Header from './Header';
 
 describe('Header', () => {
@@ -41,6 +44,22 @@ describe('Header', () => {
     expect(
       screen.queryByRole('button', { name: messagesEn.reviewQueue.badgeLabel })
     ).not.toBeInTheDocument();
+  });
+
+  it('shows the final_close pill for the last run', () => {
+    useScreenerStore.setState({
+      todayRun: null,
+      lastRunContext: null,
+      todayRunInitialized: true,
+      lastResult: {
+        asofDate: '2026-07-10',
+        candidates: [],
+        totalScreened: 0,
+        dataFreshness: 'final_close',
+      } as unknown as ScreenerResponse,
+    });
+    renderHeader();
+    expect(screen.getByText(t('cockpit.strip.finalClose'))).toBeInTheDocument();
   });
 
   it('shows the review-queue badge with count and opens the drawer', async () => {
