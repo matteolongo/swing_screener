@@ -297,7 +297,10 @@ Portfolio (`/api/portfolio`):
   data_status: "current"}`. The finite positive price must match the position
   ticker; `observed_at` must include a timezone, must not be after `effective_at`,
   and must be within the configured `portfolio_snapshot_stale_after_days`
-  elapsed-day interval. Missing or invalid context fails closed with `422`.
+  elapsed-day interval. A weekend `effective_at` is measured back to Friday
+  end-of-day, so Friday's completed session still satisfies the default
+  one-day limit on Saturday/Sunday. Missing or invalid context fails closed
+  with `422`.
   The supplied observation feeds canonical stop-price validation without live
   provider I/O. It is caller-provided local-state context, not a server-attested
   market quotation. Business dates and new-position identity enter the existing
@@ -332,7 +335,9 @@ Portfolio (`/api/portfolio`):
   immutable initial per-share risk; `0R` scratches are excluded from win rates
   and break streaks. Curve rows carry backend-computed final/max R, holding
   days, tags, stable response identity (including ID-less trades), and closed
-  trade display fields. The response also includes backend-computed win-rate/
+  trade display fields. Closed trades without a computable R stay in the curve
+  with an unavailable (`null`) R and no cumulative contribution so journal
+  thesis/notes/lessons remain visible; aggregates exclude them. The response also includes backend-computed win-rate/
   profit-factor statuses, journal tag aggregates, and a verdict/reason code for
   localized insight copy; clients do not recreate R, threshold, sample-size,
   or insight policy.
@@ -341,7 +346,10 @@ Portfolio (`/api/portfolio`):
   `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
 - `GET /api/portfolio/positions/{position_id}`
 - `GET /api/portfolio/positions/{position_id}/metrics`
-- `PUT /api/portfolio/positions/{position_id}/stop`
+- `PUT /api/portfolio/positions/{position_id}/stop` — also replaces the
+  position's pending linked stop order (`ORD-STOP-{position_id}`) at the new
+  stop so the ledger and the position stay on the same stop. Ledger
+  bookkeeping only; broker execution stays manual.
 - `GET /api/portfolio/positions/{position_id}/stop-suggestion`
 - `GET /api/portfolio/positions/{position_id}/stop-preview` (read-only current-price preview; does not persist a stop change)
 - `PATCH /api/portfolio/positions/{position_id}/trail-method`
@@ -355,7 +363,10 @@ Portfolio (`/api/portfolio`):
 - `POST /api/portfolio/orders`
 - `GET /api/portfolio/orders/local` — includes the same freshness metadata for
   the persisted order ledger.
-- `POST /api/portfolio/orders/{order_id}/fill`
+- `POST /api/portfolio/orders/{order_id}/fill` — filling an entry order also
+  creates (or, for add-ons, refreshes) the position's pending linked stop order
+  (`ORD-STOP-{position_id}`, `SELL_STOP`, ledger only; broker execution stays
+  manual) and records it in the position's `exit_order_ids`.
 - `DELETE /api/portfolio/orders/{order_id}`
 
 Daily Review (`/api/daily-review`):

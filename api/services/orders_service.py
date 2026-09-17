@@ -57,6 +57,11 @@ def _resolve_isin(ticker: str) -> Optional[str]:
     return None
 
 
+def linked_stop_order_id(position_id: str) -> str:
+    """Deterministic ledger id for a position's auto-linked stop order."""
+    return f"ORD-STOP-{position_id}"
+
+
 class OrdersService:
     def __init__(
         self,
@@ -641,6 +646,81 @@ class OrdersService:
         )
         return response
 
+    def sync_linked_stop_order(
+        self,
+        *,
+        position_id: str,
+        ticker: str,
+        shares: int,
+        stop_price: float,
+        business_date: str,
+        parent_order_id: str | None = None,
+        notes: str | None = None,
+        quote_currency: str | None = None,
+        account_currency: str | None = None,
+    ) -> dict:
+        """Create or replace the pending linked stop order for a position.
+
+        Ledger bookkeeping only — broker execution stays manual. An existing
+        pending/submitted linked stop is repriced in place; otherwise a
+        deterministic ``ORD-STOP-{position_id}`` ``SELL_STOP`` order is appended.
+        Returns the linked order dict.
+        """
+        stop_order_id = linked_stop_order_id(position_id)
+        orders, _ = self._orders_repo.list_orders()
+        existing = next(
+            (
+                order
+                for order in orders
+                if order.get("order_id") == stop_order_id
+                and order.get("status") in ("pending", "submitted")
+            ),
+            None,
+        )
+        if existing is not None:
+            updated = self._orders_repo.update_order(
+                stop_order_id,
+                {
+                    "stop_price": stop_price,
+                    "quantity": shares,
+                    "notes": (
+                        notes
+                        or f"Auto-created from position stop update (was {existing.get('stop_price')})"
+                    ),
+                },
+            )
+            assert updated is not None
+            return updated
+        order = {
+            "order_id": stop_order_id,
+            "ticker": ticker.upper(),
+            "status": "pending",
+            "order_type": "SELL_STOP",
+            "quantity": shares,
+            "limit_price": None,
+            "stop_price": stop_price,
+            "target_price": None,
+            "order_date": business_date,
+            "filled_date": None,
+            "entry_price": None,
+            "notes": notes or "auto-linked stop",
+            "order_kind": "stop",
+            "parent_order_id": parent_order_id,
+            "position_id": position_id,
+            "tif": "GTC",
+            "fee_eur": None,
+            "fill_fx_rate": None,
+            "isin": None,
+            "thesis": None,
+            "quote_currency": quote_currency,
+            "account_currency": account_currency,
+            "approval_fx_rate": None,
+            "decision_context": None,
+            "portfolio_approval": None,
+        }
+        self._orders_repo.append_order(order)
+        return order
+
     def _fill_order_impl(
         self, order_id: str, request: FillOrderRequest
     ) -> FillOrderResponse:
@@ -762,6 +842,17 @@ class OrdersService:
                 for position in updated_positions["positions"]
                 if position.get("position_id") == target_position_id
             )
+            self.sync_linked_stop_order(
+                position_id=target_position_id,
+                ticker=ticker,
+                shares=int(updated_position.get("shares", 0)),
+                stop_price=float(updated_position.get("stop_price")),
+                business_date=request.filled_date,
+                parent_order_id=order_id,
+                notes="auto-linked stop (scale-in)",
+                quote_currency=order.get("quote_currency"),
+                account_currency=order.get("account_currency"),
+            )
             return FillOrderResponse(
                 order_id=order_id, position=Position(**updated_position)
             )
@@ -788,6 +879,7 @@ class OrdersService:
             "entry_fx_rate": request.fill_fx_rate or order.get("approval_fx_rate"),
             "quote_currency": order.get("quote_currency"),
             "account_currency": order.get("account_currency"),
+            "exit_order_ids": [linked_stop_order_id(position_id)],
         }
 
         def _append(data: dict) -> dict:
@@ -799,5 +891,16 @@ class OrdersService:
 
         self._positions_repo.update(_append)
         self._orders_repo.update_order(order_id, updates)
+        self.sync_linked_stop_order(
+            position_id=position_id,
+            ticker=ticker,
+            shares=add_shares,
+            stop_price=stop_price,
+            business_date=request.filled_date,
+            parent_order_id=order_id,
+            notes="auto-linked stop",
+            quote_currency=order.get("quote_currency"),
+            account_currency=order.get("account_currency"),
+        )
 
         return FillOrderResponse(order_id=order_id, position=Position(**new_position))

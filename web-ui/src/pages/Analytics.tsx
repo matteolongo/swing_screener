@@ -128,7 +128,7 @@ export default function Analytics() {
                 </h2>
                 <span className="text-[11px] text-muted">{t('analyticsPage.charts.rDistributionHint')}</span>
               </div>
-              <RDistributionChart values={stats!.equityCurve.map(point => point.r)} />
+              <RDistributionChart values={stats!.equityCurve.map(point => point.r).filter((r): r is number => r != null)} />
             </div>
           </div>
 

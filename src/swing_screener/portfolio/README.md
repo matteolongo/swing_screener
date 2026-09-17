@@ -99,8 +99,12 @@ risk. A `0R` scratch enters average/cumulative R, is excluded from win rate, and
 breaks streaks; fees and FX remain currency-cash accounting values. Its curve
 rows contain a collision-safe response identity plus the canonical closed-trade
 display fields, tags, partial-close-aware final R, max R, and holding days.
-Finite recorded partial-close `r_at_close` values remain authoritative when a
-later add-on changes the position's blended entry and risk; older events without
+Closed trades without a computable R (missing or non-positive initial risk)
+stay visible in the curve with an unavailable (`null`) R and no cumulative
+contribution, so their thesis, notes, and lessons are never hidden; every
+performance aggregate still excludes them. Finite recorded partial-close
+`r_at_close` values remain authoritative when a later add-on changes the
+position's blended entry and risk; older events without
 that field use the compatible price-based calculation.
 Win-rate/profit-factor display statuses, unthresholded journal tag aggregates,
 and a presentation-neutral configured insight verdict are returned alongside

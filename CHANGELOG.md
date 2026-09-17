@@ -9,6 +9,21 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Entry fills now create the position's linked stop order and stop updates
+  replace it, so the order ledger and the position stay on the same stop in
+  both local and persisted portfolios; broker execution stays manual.
+- Weekend stop updates accept the latest completed session candle: a weekend
+  command measures observation age back to Friday end-of-day, and backfilled
+  local observations are stamped at the candle's session close instead of
+  midnight.
+- Older-window cache backfills no longer recertify head freshness: a download
+  that does not reach the cached head preserves the file's modification time.
+- Non-positive execution stops block only their sizing candidate instead of
+  aborting the batch.
+- Screener auto-reselect no longer hijacks held, watchlist, or ad-hoc
+  workspace selections that are absent from the candidate list.
+- Closed trades without a computable R stay visible in the journal with an
+  unavailable R while performance aggregates still exclude them.
 - Invalid executable geometry now blocks only the affected sizing candidate;
   recorded partial-close R remains stable after add-ons change blended entry.
 - Strategy changes clear stale workspace drafts, portfolio symbol analysis passes
