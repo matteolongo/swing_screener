@@ -377,11 +377,13 @@ Daily Review (`/api/daily-review`):
 The compute endpoint treats its validated `positions` and `orders` as one
 immutable, authoritative snapshot for the entire request. `orders` are validated
 as `OrderSnapshot` models (ticker normalized to uppercase, `status`/`order_kind`
-normalized to lowercase, extra order fields preserved); malformed items fail
+normalized to lowercase, extra order fields preserved); `positions` are validated
+as frozen `PositionSnapshot` models; malformed items fail
 request validation with `422` instead of reaching the service. The snapshot
-stores frozen order models, so downstream code derives local mutable copies and
+stores frozen order and position models, so downstream code derives local mutable copies and
 cannot mutate the authoritative state. Pending-order review,
-screener duplicate-order checks, and same-symbol position ownership all consume
+screener duplicate-order checks, same-symbol position ownership, and stop-action
+evaluation all consume
 that snapshot and never fall back to repository state for missing symbols.
 `pending_orders_review` lists only `status == "pending"` entry orders, mirroring
 the stateful `list_orders(status="pending")` semantics (`submitted` entries stay

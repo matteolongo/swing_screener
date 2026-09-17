@@ -34,6 +34,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   observation before applying canonical validation.
 - Final-close screens keep enforcing the selected session's post-close cache
   boundary when they run after midnight.
+- Stateless daily-review stop evaluation now consumes the frozen position
+  snapshot instead of the caller's raw input, so normalization or mutation of
+  the request payload cannot change evaluation after the snapshot is created.
 
 ## [3.1.0] - 2026-09-15
 
