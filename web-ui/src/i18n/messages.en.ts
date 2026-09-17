@@ -3010,6 +3010,7 @@ export const messagesEn = {
       positions: 'Positions',
       orders: 'Orders',
       journal: 'Journal',
+      journalPerformance: 'Journal & Performance',
       performance: 'Performance',
       review: 'Weekly Review',
     },

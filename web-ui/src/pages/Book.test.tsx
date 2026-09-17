@@ -39,12 +39,12 @@ function renderBookWithRouteState(state: unknown) {
 }
 
 describe('Book page route state', () => {
-  it('shows Posizioni, Ordini and Diario tabs', () => {
+  it('shows Positions, Orders and Journal & Performance tabs', () => {
     renderBookWithRouteState({ tab: 'positions' });
 
     expect(screen.getByRole('tab', { name: t('bookPage.tabs.positions') })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: t('bookPage.tabs.orders') })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: t('bookPage.tabs.journal') })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: t('bookPage.tabs.journalPerformance') })).toBeInTheDocument();
   });
 
   it('opens the journal tab when navigation state requests review', async () => {
@@ -60,7 +60,7 @@ describe('Book page route state', () => {
     renderBookWithRouteState({ tab: 'review' });
 
     const journalTab = await screen.findByRole('tab', {
-      name: t('bookPage.tabs.journal'),
+      name: t('bookPage.tabs.journalPerformance'),
     });
 
     expect(journalTab).toHaveAttribute('aria-selected', 'true');

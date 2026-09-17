@@ -423,7 +423,7 @@ export default function Book() {
   const tabs: { key: BookTab; label: string }[] = [
     { key: 'positions', label: t('bookPage.tabs.positions') },
     { key: 'orders', label: t('bookPage.tabs.orders') },
-    { key: 'journal', label: t('bookPage.tabs.journal') },
+    { key: 'journal', label: t('bookPage.tabs.journalPerformance') },
   ];
 
   return (
