@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Badge from '@/components/common/Badge';
 import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCandleChart';
 import { getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
@@ -13,7 +13,19 @@ import SymbolIntelligenceTab from '@/components/domain/workspace/SymbolIntellige
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useFundamentalSnapshotQuery } from '@/features/fundamentals/hooks';
-import { useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
+import {
+  findRunByAttemptId,
+  resolveRunId,
+  useEvidenceRefreshMutation,
+  useIntelligenceAnalysisMutation,
+  useIntelligenceLatestQuery,
+  useRunTrace,
+  useTickerRuns,
+} from '@/features/intelligence/hooks';
+import type {
+  EvidenceRefreshResponse,
+  SymbolIntelligence,
+} from '@/features/intelligence/types';
 import { useOpenPositions } from '@/features/portfolio/hooks';
 import { getCanonicalOrderDraft } from '@/features/screener/types';
 import {
@@ -21,6 +33,7 @@ import {
   useWatchlist,
   useWatchSymbolMutation,
 } from '@/features/watchlist/hooks';
+import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorkspaceData';
 import { t } from '@/i18n/t';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
@@ -66,6 +79,196 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
   const intelligenceQuery = useIntelligenceLatestQuery(normalized, Boolean(normalized));
   const intelligence = intelligenceQuery.data ?? null;
 
+  // Live intelligence workflow: the same mutation/query/trace wiring
+  // SymbolAnalysisContent owns for its intelligence tab (no stubbed props).
+  // Evidence sources come from the same useSymbolWorkspaceData hook the
+  // workspace canvas (AnalysisCanvasPanel) feeds into SymbolAnalysisContent.
+  const [evidenceRefresh, setEvidenceRefresh] = useState<EvidenceRefreshResponse | null>(null);
+  const evidenceRefreshActionRef = useRef<(() => void) | null>(null);
+  const workspaceData = useSymbolWorkspaceData({
+    ticker: normalized,
+    selectionVersion,
+    candidate,
+    position,
+    screenerRun: candidate?.lastBar
+      ? { asOf: candidate.lastBar, freshness: candidate.dataStatus === 'intraday' ? 'intraday' : 'final_close' }
+      : null,
+    evidenceRefresh,
+    refreshEvidence: () => evidenceRefreshActionRef.current?.(),
+  });
+
+  const intelligenceMutation = useIntelligenceAnalysisMutation();
+  const evidenceRefreshMutation = useEvidenceRefreshMutation();
+  const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
+  const [attemptedRunId, setAttemptedRunId] = useState<string | null>(null);
+  const [lastAttemptForce, setLastAttemptForce] = useState(false);
+  const [refreshedEvidence, setRefreshedEvidence] =
+    useState<EvidenceRefreshResponse | null>(null);
+  const currentSession = `${normalized}:${selectionVersion}`;
+  const currentSessionRef = useRef(currentSession);
+  const mountedRef = useRef(true);
+  const displayedIntelligence = intelligenceResult ?? intelligence ?? null;
+  const tickerRuns = useTickerRuns(normalized, secondaryTab === 'intelligence');
+  const traceRunId = resolveRunId(
+    tickerRuns.data,
+    attemptedRunId,
+    displayedIntelligence?.runId,
+    intelligenceMutation.isError,
+  );
+  const persistedAttemptForce = tickerRuns.data?.find(
+    (run) => run.runId === traceRunId,
+  )?.attemptForce;
+  const runTrace = useRunTrace(
+    traceRunId,
+    secondaryTab === 'intelligence' && Boolean(traceRunId),
+  );
+  const isIntelligenceLoading = !intelligenceResult && intelligenceQuery.isLoading;
+
+  useEffect(() => {
+    currentSessionRef.current = currentSession;
+  }, [currentSession]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const requestMatchesLiveSession = (
+    requestedSession: string,
+    responseTicker?: string | null,
+  ) => {
+    const workspace = useWorkspaceStore.getState();
+    const workspaceMatches = selectionVersion === 0
+      || (
+        workspace.selectedTicker === normalized
+        && workspace.selectionVersion === selectionVersion
+      );
+    return mountedRef.current
+      && requestedSession === currentSessionRef.current
+      && workspaceMatches
+      && (responseTicker == null || responseTicker.trim().toUpperCase() === normalized);
+  };
+
+  const handleAnalyzeWithAi = (force = false) => {
+    const requestedSession = `${normalized}:${selectionVersion}`;
+    const attemptId = globalThis.crypto.randomUUID();
+    const requestId = globalThis.crypto.randomUUID();
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker: normalized,
+      selectionVersion,
+      sourceId: 'intelligence',
+      phase: 'active',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: force ? 'regenerate-analysis' : 'generate-analysis',
+      announced: false,
+    });
+    setAttemptedRunId(null);
+    setLastAttemptForce(force);
+    intelligenceMutation.mutate(
+      { ticker: normalized, candidate, position, force, attemptId },
+      {
+        onSuccess: (result) => {
+          if (requestMatchesLiveSession(requestedSession, result.symbol)) {
+            setIntelligenceResult(result);
+          }
+        },
+        onSettled: async (result, error) => {
+          const refreshedRuns = await tickerRuns.refetch();
+          const sessionChanged = !requestMatchesLiveSession(
+            requestedSession,
+            result?.symbol,
+          );
+          useWorkspaceStore.getState().settleActivity(requestId, {
+            phase: sessionChanged ? 'discarded' : error ? 'failed' : 'completed',
+            finishedAt: new Date().toISOString(),
+            message: sessionChanged
+              ? t('workspacePage.data.activitySelectionChanged')
+              : error?.message ?? null,
+            retryable: !sessionChanged && Boolean(error),
+          });
+          if (sessionChanged || !mountedRef.current) return;
+          const attemptedRun = findRunByAttemptId(
+            refreshedRuns.data ?? [],
+            normalized,
+            attemptId,
+          );
+          setAttemptedRunId(attemptedRun?.runId ?? null);
+        },
+      }
+    );
+  };
+
+  const handleRefreshEvidence = () => {
+    const requestedSession = `${normalized}:${selectionVersion}`;
+    const requestId = globalThis.crypto.randomUUID();
+    useWorkspaceStore.getState().beginActivity({
+      requestId,
+      ticker: normalized,
+      selectionVersion,
+      sourceId: 'evidence',
+      phase: 'active',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      provider: null,
+      message: null,
+      retryable: false,
+      pipelineStep: 'refresh-evidence',
+      announced: false,
+    });
+    setRefreshedEvidence(null);
+    evidenceRefreshMutation.mutate(normalized, {
+      onSuccess: (result) => {
+        if (requestMatchesLiveSession(requestedSession, result.ticker)) {
+          setRefreshedEvidence(result);
+          setEvidenceRefresh(result);
+        }
+      },
+      onSettled: (result, error) => {
+        const sessionChanged = !requestMatchesLiveSession(
+          requestedSession,
+          result?.ticker,
+        );
+        const responseFailed = result?.status === 'failed';
+        const responsePartial = result?.status === 'partial';
+        useWorkspaceStore.getState().settleActivity(requestId, {
+          phase: sessionChanged
+            ? 'discarded'
+            : error || responseFailed ? 'failed'
+              : result?.status === 'partial' ? 'partial' : 'completed',
+          finishedAt: new Date().toISOString(),
+          provider: result?.sources.map(({ provider }) => provider).join(', ') || null,
+          message: sessionChanged
+            ? t('workspacePage.data.activitySelectionChanged')
+            : error?.message
+              ?? result?.sources.find(({ status }) => status === 'failed')?.message
+              ?? null,
+          retryable: !sessionChanged && Boolean(error || responseFailed || responsePartial),
+        });
+      },
+    });
+  };
+  evidenceRefreshActionRef.current = handleRefreshEvidence;
+
+  useEffect(() => {
+    setEvidenceRefresh(null);
+  }, [normalized, selectionVersion]);
+
+  useEffect(() => {
+    setIntelligenceResult(null);
+    setAttemptedRunId(null);
+    setLastAttemptForce(false);
+    setRefreshedEvidence(null);
+    intelligenceMutation.reset();
+    evidenceRefreshMutation.reset();
+  }, [normalized, selectionVersion]);
+
   const watchlistQuery = useWatchlist();
   const watchSymbolMutation = useWatchSymbolMutation();
   const unwatchSymbolMutation = useUnwatchSymbolMutation();
@@ -85,12 +288,18 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
   const workflowPresentation = getWorkflowPresentation(candidate?.recommendation);
   const company = candidate?.name ?? fundamentals?.companyName ?? null;
 
+  // Stale check: the fundamentals snapshot fetch timestamp (updatedAt, same
+  // field useSymbolWorkspaceData feeds into isIntelligenceOutdated) newer than
+  // the cached analysis generation timestamp (generatedAt) means the snapshot
+  // postdates the analysis. asofDate is the market-data date, not the snapshot
+  // freshness, so it is the wrong field here. Read-only compare; never
+  // triggers regeneration.
   const aiStale =
     fundamentals != null &&
-    intelligence != null &&
+    displayedIntelligence != null &&
     Number.isFinite(Date.parse(fundamentals.updatedAt)) &&
-    Number.isFinite(Date.parse(intelligence.generatedAt)) &&
-    Date.parse(fundamentals.updatedAt) > Date.parse(intelligence.generatedAt);
+    Number.isFinite(Date.parse(displayedIntelligence.generatedAt)) &&
+    Date.parse(fundamentals.updatedAt) > Date.parse(displayedIntelligence.generatedAt);
 
   return (
     <div
@@ -167,9 +376,9 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
             <Badge variant="warning">{t('cockpit.detail.aiStale')}</Badge>
           </div>
         ) : null}
-        {intelligence ? (
+        {displayedIntelligence ? (
           <NarrativeAnalysisCard
-            intelligence={intelligence}
+            intelligence={displayedIntelligence}
             candidate={candidate}
             isPosition={Boolean(position)}
           />
@@ -215,25 +424,36 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
               selectionVersion,
               candidate,
               position,
-              analysis: intelligence,
+              analysis: displayedIntelligence,
               intelligenceOutdated: aiStale,
-              sources: [],
-              trace: null,
-              isLoadingAnalysis: intelligenceQuery.isLoading,
-              isCachedAnalysis: false,
-              isGenerating: false,
-              isRefreshingEvidence: false,
-              generationError: null,
-              failedGenerationForce: false,
-              refreshError: null,
-              refreshedEvidence: null,
-              onRefreshEvidence: () => undefined,
-              onGenerate: () => undefined,
+              sources: workspaceData.sourceStates,
+              trace:
+                runTrace.data?.ticker.trim().toUpperCase() === normalized
+                  ? runTrace.data
+                  : null,
+              isLoadingAnalysis: isIntelligenceLoading,
+              isCachedAnalysis:
+                !intelligenceResult && intelligenceQuery.isFetchedAfterMount === false,
+              isGenerating: intelligenceMutation.isPending,
+              isRefreshingEvidence: evidenceRefreshMutation.isPending,
+              generationError: intelligenceMutation.error,
+              failedGenerationForce: persistedAttemptForce ?? lastAttemptForce,
+              refreshError: evidenceRefreshMutation.error,
+              refreshedEvidence,
+              onRefreshEvidence: handleRefreshEvidence,
+              onGenerate: handleAnalyzeWithAi,
             }}
           />
         ) : null}
         {secondaryTab === 'backtest' ? <SymbolBacktestTab ticker={normalized} /> : null}
-        {secondaryTab === 'volumeZones' ? <VolumeZonesTab ticker={normalized} /> : null}
+        {secondaryTab === 'volumeZones' ? (
+          <VolumeZonesTab
+            ticker={normalized}
+            sources={workspaceData.sourceStates.filter(
+              ({ id }) => id === 'prices' || id === 'screener',
+            )}
+          />
+        ) : null}
       </div>
     </div>
   );

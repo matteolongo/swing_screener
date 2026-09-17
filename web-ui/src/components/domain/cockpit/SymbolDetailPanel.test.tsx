@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/test/mocks/server';
+import { API_BASE_URL } from '@/lib/api';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import SymbolDetailPanel from './SymbolDetailPanel';
@@ -137,5 +140,98 @@ describe('SymbolDetailPanel', () => {
     const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={onClose} />);
     await user.click(screen.getByRole('button', { name: t('cockpit.detail.close') }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+function adyenIntelligenceApi(generatedAt: string, summaryLine: string) {
+  return {
+    symbol: 'ADYEN',
+    generated_at: generatedAt,
+    run_id: null,
+    action: 'WATCH',
+    conviction: 'medium',
+    catalyst_urgency: 'low',
+    summary_line: summaryLine,
+    narrative: 'Narrative body for ADYEN.',
+    upcoming_events: [],
+    position_signal: null,
+    sources: ['mock'],
+  };
+}
+
+function adyenFundamentalsApi(updatedAt: string) {
+  return {
+    symbol: 'ADYEN',
+    asof_date: '2026-09-16',
+    provider: 'sec_edgar',
+    updated_at: updatedAt,
+    instrument_type: 'equity',
+    supported: true,
+    coverage_status: 'supported',
+    freshness_status: 'current',
+    company_name: 'Adyen N.V.',
+  };
+}
+
+describe('SymbolDetailPanel Approfondisci live wiring', () => {
+  it('generates analysis from the Approfondisci tab through the live intelligence endpoint', async () => {
+    let postCount = 0;
+    server.use(
+      http.get(`${API_BASE_URL}/api/intelligence/ADYEN/runs`, () =>
+        HttpResponse.json({ entries: [] }),
+      ),
+      http.get(`${API_BASE_URL}/api/intelligence/ADYEN/chat`, () =>
+        HttpResponse.json({
+          ticker: 'ADYEN',
+          chat_date: '2026-09-17',
+          analysis_generated_at: '2026-09-17T10:00:00Z',
+          messages: [],
+        }),
+      ),
+      http.post(`${API_BASE_URL}/api/intelligence/ADYEN`, () => {
+        postCount += 1;
+        return HttpResponse.json(
+          adyenIntelligenceApi('2026-09-17T10:00:00Z', 'Freshly generated ADYEN analysis.'),
+        );
+      }),
+    );
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    await user.click(
+      screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.intelligence') }),
+    );
+    await user.click(
+      screen.getByRole('button', { name: t('workspacePage.intelligence.generate') }),
+    );
+    expect(await screen.findAllByText('Freshly generated ADYEN analysis.')).not.toHaveLength(0);
+    expect(postCount).toBe(1);
+  });
+});
+
+describe('SymbolDetailPanel AI stale badge', () => {
+  it('shows the stale badge when the fundamentals snapshot is newer than the cached analysis', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/fundamentals/snapshot/ADYEN`, () =>
+        HttpResponse.json(adyenFundamentalsApi('2026-09-17T10:00:00Z')),
+      ),
+      http.get(`${API_BASE_URL}/api/intelligence/ADYEN/latest`, () =>
+        HttpResponse.json(adyenIntelligenceApi('2026-09-16T10:00:00Z', 'Cached ADYEN summary.')),
+      ),
+    );
+    renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    expect(await screen.findByText(t('cockpit.detail.aiStale'))).toBeInTheDocument();
+  });
+
+  it('hides the stale badge when the cached analysis is newer than the fundamentals snapshot', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/fundamentals/snapshot/ADYEN`, () =>
+        HttpResponse.json(adyenFundamentalsApi('2026-09-15T10:00:00Z')),
+      ),
+      http.get(`${API_BASE_URL}/api/intelligence/ADYEN/latest`, () =>
+        HttpResponse.json(adyenIntelligenceApi('2026-09-16T10:00:00Z', 'Cached ADYEN summary.')),
+      ),
+    );
+    renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    expect(await screen.findAllByText('Cached ADYEN summary.')).not.toHaveLength(0);
+    expect(screen.queryByText(t('cockpit.detail.aiStale'))).not.toBeInTheDocument();
   });
 });
