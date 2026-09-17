@@ -82,7 +82,7 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
   // Live intelligence workflow: the same mutation/query/trace wiring
   // SymbolAnalysisContent owns for its intelligence tab (no stubbed props).
   // Evidence sources come from the same useSymbolWorkspaceData hook the
-  // workspace canvas (AnalysisCanvasPanel) feeds into SymbolAnalysisContent.
+  // full symbol views feed into SymbolAnalysisContent.
   const [evidenceRefresh, setEvidenceRefresh] = useState<EvidenceRefreshResponse | null>(null);
   const evidenceRefreshActionRef = useRef<(() => void) | null>(null);
   const workspaceData = useSymbolWorkspaceData({
