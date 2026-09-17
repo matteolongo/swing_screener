@@ -635,6 +635,7 @@ export const messagesEn = {
       universes: 'Universes',
       settings: 'Settings',
       datasources: 'Data Sources',
+      advanced: 'Advanced',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
