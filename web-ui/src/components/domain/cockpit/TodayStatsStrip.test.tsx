@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import TodayStatsStrip from './TodayStatsStrip';
@@ -70,5 +70,17 @@ describe('TodayStatsStrip', () => {
     expect(screen.getByText(t('cockpit.strip.pendingOrders'))).toBeInTheDocument();
     expect(screen.getByText(t('cockpit.strip.ready'))).toBeInTheDocument();
     expect(screen.getByText(t('cockpit.strip.finalClose'))).toBeInTheDocument();
+  });
+
+  it('counts only open positions, excluding closed ones', async () => {
+    renderWithProviders(<TodayStatsStrip />);
+    const positionsLabel = await screen.findByText(t('cockpit.strip.positions'));
+    const cell = positionsLabel.parentElement;
+    expect(cell).not.toBeNull();
+    // The default MSW handlers seed one open (VALE) and one closed (INTC) position.
+    await waitFor(() => {
+      expect(cell).toHaveTextContent('1');
+    });
+    expect(cell).not.toHaveTextContent('2');
   });
 });

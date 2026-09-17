@@ -6,7 +6,7 @@ import { cn } from '@/utils/cn';
 
 export default function TodayStatsStrip() {
   const ordersQuery = useOrders('pending');
-  const positionsQuery = usePositions('all');
+  const positionsQuery = usePositions('open');
   const todayRunResult = useScreenerStore((s) => s.todayRun?.result);
   const lastResultFallback = useScreenerStore((s) => s.lastResult);
   const reviewSource = todayRunResult ?? lastResultFallback;

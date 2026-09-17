@@ -2877,6 +2877,10 @@ export const messagesEn = {
         nextAction: 'Next action',
       },
     },
+    screenerRun: {
+      title: 'Screener run',
+      description: "Run a full-universe scan with the shared screener settings. Completed scans feed Today; keep 'Use this run for Today's review' selected to pin the result as Today's source.",
+    },
   },
   strategyCapitalRisk: {
     fallbackStrategy: 'Strategy',

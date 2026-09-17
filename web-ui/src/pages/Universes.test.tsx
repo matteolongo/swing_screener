@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 
 import Universes from './Universes'
 import { renderWithProviders } from '@/test/utils'
 import { t } from '@/i18n/t'
+import { useScreenerStore } from '@/stores/screenerStore'
 
 describe('Universes page', () => {
   it('runs live symbol discovery and shows taxonomy plus candidates', async () => {
@@ -43,5 +44,30 @@ describe('Universes page', () => {
 
     expect(await screen.findByText('AAPL Details')).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).not.toBeInTheDocument()
+  })
+
+  it('exposes the screener run form and feeds todayRun/lastResult on completion', async () => {
+    useScreenerStore.setState({
+      lastResult: null,
+      lastRunContext: null,
+      todayRun: null,
+      todayRunInitialized: true,
+    })
+    const { user } = renderWithProviders(<Universes />)
+
+    const section = screen.getByTestId('screener-run-section')
+    expect(section).toHaveTextContent(t('universesPage.screenerRun.title'))
+    const runButton = await within(section).findByRole('button', { name: t('screener.controls.run') })
+    expect(runButton).toBeInTheDocument()
+
+    await user.click(runButton)
+
+    await waitFor(() => {
+      expect(useScreenerStore.getState().lastResult).not.toBeNull()
+    })
+    const todayRun = useScreenerStore.getState().todayRun
+    expect(todayRun).not.toBeNull()
+    expect(todayRun?.result.candidates).toHaveLength(1)
+    expect(todayRun?.result.candidates[0].ticker).toBe('AAPL')
   })
 })
