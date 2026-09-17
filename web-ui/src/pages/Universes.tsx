@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import ModalShell from '@/components/common/ModalShell';
+import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
 import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -10,6 +11,8 @@ import UniverseConstituentsTab from '@/components/domain/universes/UniverseConst
 import UniverseDiscoveryTab from '@/components/domain/universes/UniverseDiscoveryTab';
 import UniverseScreenerTab from '@/components/domain/universes/UniverseScreenerTab';
 import PoolTab from '@/components/domain/universes/PoolTab';
+import ScreenerForm from '@/components/domain/screener/ScreenerForm';
+import { currencyFilterToRequest, ScreenerRunningPanel } from '@/components/domain/workspace/ScreenerInboxPanel';
 import {
   CURRENCY_PRESETS,
   DETAIL_TABS,
@@ -22,6 +25,12 @@ import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCata
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
 import type { ScreenerCandidate } from '@/features/screener/types';
+import type { DecisionActionFilter } from '@/features/screener/prioritization';
+import type { TaxonomyFilterValues } from '@/features/pool/types';
+import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import { useConfigDefaultsQuery } from '@/features/config/hooks';
+import { useScreenerStore } from '@/stores/screenerStore';
+import { useLocalStorage } from '@/hooks';
 import { useOpenPositions } from '@/features/portfolio/hooks';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
@@ -44,6 +53,241 @@ function UniverseSymbolModal({ candidate, onBack }: { candidate: ScreenerCandida
         orderPanel={<ActionPanel ticker={ticker} candidate={candidate} />}
       />
     </ModalShell>
+  );
+}
+
+type CurrencyFilter = 'all' | 'usd' | 'eur';
+type ExchangeFilter = 'all' | 'us_primary' | 'europe_primary' | 'xams' | 'xetr' | 'xpar' | 'xmil' | 'xmad';
+
+const TOP_N_MAX = 200;
+const DECISION_ACTION_FILTERS: DecisionActionFilter[] = [
+  'all',
+  'BUY_NOW',
+  'BUY_ON_PULLBACK',
+  'WAIT_FOR_BREAKOUT',
+  'WATCH',
+  'TACTICAL_ONLY',
+  'AVOID',
+  'MANAGE_ONLY',
+];
+
+const exchangeFilterToRequest = (value: ExchangeFilter): string[] | undefined => {
+  switch (value) {
+    case 'us_primary':
+      return ['XNYS', 'XNAS', 'ARCX'];
+    case 'europe_primary':
+      return ['XAMS', 'XETR', 'XPAR', 'XMIL', 'XMAD'];
+    case 'xams':
+      return ['XAMS'];
+    case 'xetr':
+      return ['XETR'];
+    case 'xpar':
+      return ['XPAR'];
+    case 'xmil':
+      return ['XMIL'];
+    case 'xmad':
+      return ['XMAD'];
+    default:
+      return undefined;
+  }
+};
+
+// Home of the full-universe screener run flow: the shared run form plus the
+// running indicator. Completing a run feeds the pinned/last-run store that
+// powers Today, so Today itself needs no run entry point. Candidate tables and
+// symbol selection stay where they are (discovery/screener tabs, Today queue).
+function ScreenerRunSection() {
+  const recordScreenerRun = useScreenerStore((state) => state.recordScreenerRun);
+  const setTodayRunFromLastRun = useScreenerStore((state) => state.setTodayRunFromLastRun);
+  const todayRun = useScreenerStore((state) => state.todayRun);
+  const lastRunContext = useScreenerStore((state) => state.lastRunContext);
+  const activeStrategyQuery = useActiveStrategyQuery();
+  const configDefaultsQuery = useConfigDefaultsQuery();
+  const activeStrategy = activeStrategyQuery.data;
+  const strategySignals = activeStrategy?.signals;
+  const defaultIndicators = configDefaultsQuery.data?.indicators;
+
+  const riskConfig = activeStrategy?.risk ?? configDefaultsQuery.data?.risk;
+
+  const [taxonomyFilter, setTaxonomyFilter] = useLocalStorage<TaxonomyFilterValues>(
+    'screener.taxonomyFilter',
+    {},
+    (value: unknown) => (value && typeof value === 'object' ? (value as TaxonomyFilterValues) : {})
+  );
+  const [presetId, setPresetId] = useLocalStorage<string | null>(
+    'screener.presetId',
+    'broad_market',
+    (value: unknown) => (typeof value === 'string' ? value : null)
+  );
+  const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {
+    const parsed = typeof val === 'number' ? val : parseInt(String(val), 10);
+    if (Number.isNaN(parsed)) return 20;
+    return Math.min(Math.max(parsed, 1), TOP_N_MAX);
+  });
+  const [minPrice, setMinPrice] = useLocalStorage('screener.minPrice', 5);
+  const [maxPrice, setMaxPrice] = useLocalStorage('screener.maxPrice', 500);
+  const [currencyFilter, setCurrencyFilter] = useLocalStorage<CurrencyFilter>(
+    'screener.currencyFilter',
+    'all',
+    (val: unknown) => {
+      if (val === 'usd' || val === 'eur' || val === 'all') return val;
+      return 'all';
+    }
+  );
+  const [exchangeFilter, setExchangeFilter] = useLocalStorage<ExchangeFilter>(
+    'screener.exchangeFilter',
+    'all',
+    (val: unknown) => {
+      if (val === 'all' || val === 'us_primary' || val === 'europe_primary' || val === 'xams' || val === 'xetr' || val === 'xpar' || val === 'xmil' || val === 'xmad') {
+        return val;
+      }
+      return 'all';
+    }
+  );
+  const [includeOtc, setIncludeOtc] = useLocalStorage('screener.includeOtc', false);
+  const [recommendedOnly, setRecommendedOnly] = useLocalStorage('screener.recommendedOnly', false);
+  const [requireWeeklyUptrend, setRequireWeeklyUptrend] = useLocalStorage('screener.requireWeeklyUptrend', false);
+  const [actionFilter, setActionFilter] = useLocalStorage<DecisionActionFilter>(
+    'screener.actionFilter',
+    'all',
+    (val: unknown) => {
+      if (typeof val === 'string' && DECISION_ACTION_FILTERS.includes(val as DecisionActionFilter)) {
+        return val as DecisionActionFilter;
+      }
+      return 'all';
+    }
+  );
+  const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', true);
+  const [forceRefresh, setForceRefresh] = useState(false);
+  const [useForToday, setUseForToday] = useLocalStorage('screener.useForToday', true);
+
+  const screenerMutation = useRunScreenerMutation((data, request) => {
+    recordScreenerRun(
+      data,
+      {
+        request,
+        displayFilters: { recommendedOnly, actionFilter },
+      },
+      useForToday,
+    );
+    setIsFormCollapsed(true);
+    setForceRefresh(false);
+  });
+
+  const handleRunScreener = useCallback(() => {
+    const request = {
+      taxonomyFilter,
+      preset: presetId ?? undefined,
+      top: topN,
+      minPrice,
+      maxPrice,
+      currencies: currencyFilterToRequest(currencyFilter),
+      exchangeMics: exchangeFilterToRequest(exchangeFilter),
+      includeOtc,
+      requireWeeklyUptrend: requireWeeklyUptrend || undefined,
+      breakoutLookback: strategySignals?.breakoutLookback ?? defaultIndicators?.breakoutLookback ?? 50,
+      pullbackMa: strategySignals?.pullbackMa ?? defaultIndicators?.pullbackMa ?? 20,
+      minHistory: strategySignals?.minHistory ?? defaultIndicators?.minHistory ?? 260,
+      forceRefresh: forceRefresh || undefined,
+    };
+    screenerMutation.mutate(request);
+  }, [
+    defaultIndicators?.breakoutLookback,
+    defaultIndicators?.minHistory,
+    defaultIndicators?.pullbackMa,
+    screenerMutation.mutate,
+    taxonomyFilter,
+    presetId,
+    topN,
+    minPrice,
+    maxPrice,
+    currencyFilter,
+    exchangeFilter,
+    includeOtc,
+    requireWeeklyUptrend,
+    forceRefresh,
+    strategySignals?.breakoutLookback,
+    strategySignals?.pullbackMa,
+    strategySignals?.minHistory,
+  ]);
+
+  const isLastRunTodaySource = Boolean(
+    todayRun &&
+      lastRunContext &&
+      todayRun.completedAt === lastRunContext.completedAt,
+  );
+
+  return (
+    <Card variant="bordered" className="p-4">
+      <section aria-label={t('universesPage.screenerRun.title')} data-testid="screener-run-section" className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">{t('universesPage.screenerRun.title')}</h2>
+          <p className="mt-1 text-sm text-muted">{t('universesPage.screenerRun.description')}</p>
+        </div>
+        {riskConfig ? (
+          <ScreenerForm
+            taxonomyFilter={taxonomyFilter}
+            setTaxonomyFilter={setTaxonomyFilter}
+            presetId={presetId}
+            setPresetId={setPresetId}
+            topN={topN}
+            setTopN={setTopN}
+            minPrice={minPrice}
+            setMinPrice={setMinPrice}
+            maxPrice={maxPrice}
+            setMaxPrice={setMaxPrice}
+            currencyFilter={currencyFilter}
+            setCurrencyFilter={setCurrencyFilter}
+            exchangeFilter={exchangeFilter}
+            setExchangeFilter={setExchangeFilter}
+            includeOtc={includeOtc}
+            setIncludeOtc={setIncludeOtc}
+            recommendedOnly={recommendedOnly}
+            setRecommendedOnly={setRecommendedOnly}
+            requireWeeklyUptrend={requireWeeklyUptrend}
+            setRequireWeeklyUptrend={setRequireWeeklyUptrend}
+            actionFilter={actionFilter}
+            setActionFilter={setActionFilter}
+            isLoading={screenerMutation.isPending}
+            onRun={handleRunScreener}
+            isCollapsed={isFormCollapsed}
+            onToggleCollapsed={() => setIsFormCollapsed(!isFormCollapsed)}
+            forceRefresh={forceRefresh}
+            setForceRefresh={setForceRefresh}
+            useForToday={useForToday}
+            setUseForToday={setUseForToday}
+          />
+        ) : (
+          <div className="text-sm text-muted">{t('common.table.loading')}</div>
+        )}
+
+        {screenerMutation.isPending && <ScreenerRunningPanel />}
+
+        {screenerMutation.isError ? (
+          <div className="p-3 bg-danger/10 border border-danger/40 rounded-lg">
+            <p className="text-xs md:text-sm text-danger">
+              {t('screener.error.prefix')}:{' '}
+              {screenerMutation.error instanceof Error
+                ? screenerMutation.error.message
+                : t('screener.error.unknown')}
+            </p>
+          </div>
+        ) : null}
+
+        {!isLastRunTodaySource && lastRunContext ? (
+          <div className="flex items-center justify-between gap-3 rounded border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+            <span>{t('screener.summary.notTodaySource')}</span>
+            <button
+              type="button"
+              onClick={setTodayRunFromLastRun}
+              className="shrink-0 font-medium underline underline-offset-2 hover:text-foreground"
+            >
+              {t('screener.summary.useForToday')}
+            </button>
+          </div>
+        ) : null}
+      </section>
+    </Card>
   );
 }
 
@@ -159,6 +403,10 @@ export default function Universes() {
         <p className="mt-1 text-sm text-muted">
           {t('universesPage.subtitle')}
         </p>
+      </div>
+
+      <div className="mb-4">
+        <ScreenerRunSection />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
