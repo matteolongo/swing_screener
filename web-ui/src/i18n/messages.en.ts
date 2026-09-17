@@ -3065,6 +3065,17 @@ export const messagesEn = {
       finalClose: 'Final close',
       intradayPreview: 'Intraday preview',
     },
+    queue: {
+      ready: 'Ready',
+      waiting: 'Waiting',
+      needsReview: 'Needs review',
+      noSetup: 'No setup',
+      showNoSetup: 'Show no-setup',
+      hideNoSetup: 'Hide no-setup',
+      reviewOrder: 'Review order',
+      details: 'Details',
+      searchPlaceholder: 'Search ticker…',
+    },
   },
   todayPage: {
     tabs: {
