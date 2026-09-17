@@ -3056,6 +3056,16 @@ export const messagesEn = {
     successToast: 'Position created for {{ticker}}',
     errorFetch: 'Failed to load DeGiro orders.',
   },
+  cockpit: {
+    strip: {
+      positions: 'Positions',
+      pendingOrders: 'Pending orders',
+      ready: 'Ready',
+      openR: 'Open R',
+      finalClose: 'Final close',
+      intradayPreview: 'Intraday preview',
+    },
+  },
   todayPage: {
     tabs: {
       ariaLabel: 'Today views',
