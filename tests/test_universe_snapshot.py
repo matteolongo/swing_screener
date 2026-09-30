@@ -323,8 +323,16 @@ def test_asian_index_universes_registered():
     ],
 )
 def test_asian_universe_loads_real_constituents(uid, probe, min_count):
-    from swing_screener.data.universe import load_universe_from_package
+    snapshot = _load_snapshot(uid)
+    reviewed_at = datetime.date.fromisoformat(snapshot["last_reviewed_at"])
 
-    tickers = load_universe_from_package(uid)
+    # This test validates the checked-in membership snapshot.  Freshness is
+    # time-dependent runtime behavior and is covered separately above.
+    with patch(
+        "swing_screener.data.universe.datetime.date", wraps=datetime.date
+    ) as mocked_date:
+        mocked_date.today.return_value = reviewed_at
+        tickers = load_universe_from_package(uid)
+
     assert len(tickers) >= min_count
     assert probe in tickers
