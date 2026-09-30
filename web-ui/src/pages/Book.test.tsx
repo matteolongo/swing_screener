@@ -39,7 +39,15 @@ function renderBookWithRouteState(state: unknown) {
 }
 
 describe('Book page route state', () => {
-  it('opens the review tab when navigation state requests review', async () => {
+  it('shows Positions, Orders and Journal & Performance tabs', () => {
+    renderBookWithRouteState({ tab: 'positions' });
+
+    expect(screen.getByRole('tab', { name: t('bookPage.tabs.positions') })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: t('bookPage.tabs.orders') })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: t('bookPage.tabs.journalPerformance') })).toBeInTheDocument();
+  });
+
+  it('opens the journal tab when navigation state requests review', async () => {
     server.use(
       http.get(`${API_BASE_URL}/api/weekly-reviews/:weekId`, () =>
         HttpResponse.json({ review: null }),
@@ -51,11 +59,11 @@ describe('Book page route state', () => {
 
     renderBookWithRouteState({ tab: 'review' });
 
-    const reviewTab = await screen.findByRole('button', {
-      name: t('bookPage.tabs.review'),
+    const journalTab = await screen.findByRole('tab', {
+      name: t('bookPage.tabs.journalPerformance'),
     });
 
-    expect(reviewTab).toHaveClass('bg-primary/10');
+    expect(journalTab).toHaveAttribute('aria-selected', 'true');
   });
 
   it('renders the canonical partial-close R in the journal instead of recomputing it', async () => {
@@ -88,8 +96,10 @@ describe('Book page route state', () => {
 
     renderBookWithRouteState({ tab: 'journal' });
 
-    expect(await screen.findByText('+1.50R')).toBeInTheDocument();
-    expect(screen.getByText('+3.00R')).toBeInTheDocument();
+    // The regrouped journal tab stacks JournalTab + AnalyticsPage, both rendering
+    // the same canonical R values — assert presence, not uniqueness.
+    expect((await screen.findAllByText('+1.50R')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('+3.00R').length).toBeGreaterThan(0);
   });
 
   it('keeps a selected tag average max R empty when the tag has no observations', async () => {

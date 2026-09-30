@@ -11,6 +11,8 @@ import {
   useSetActiveStrategyMutation,
   useStrategiesQuery,
 } from '@/features/strategy/hooks';
+import { useScreenerStore } from '@/stores/screenerStore';
+import { formatDate } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -30,6 +32,16 @@ export default function Header() {
   const strategies = strategiesQuery.data ?? [];
   const activeId = activeStrategyQuery.data?.id ?? '';
   const isLoading = strategiesQuery.isLoading || activeStrategyQuery.isLoading;
+
+  const todayRunResult = useScreenerStore((s) => s.todayRun?.result);
+  const lastResultFallback = useScreenerStore((s) => s.lastResult);
+  const reviewSource = todayRunResult ?? lastResultFallback;
+  const isFinal = (reviewSource?.dataFreshness ?? 'intraday') === 'final_close';
+  const hasQueryError =
+    reviewQueueQuery.isError ||
+    portfolioSummaryQuery.isError ||
+    strategiesQuery.isError ||
+    activeStrategyQuery.isError;
 
   const dateStr = now.toLocaleDateString(locale, {
     weekday: 'short',
@@ -67,6 +79,30 @@ export default function Header() {
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </Select>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <span
+          data-testid="data-health-dot"
+          aria-hidden="true"
+          className={cn(
+            'h-[9px] w-[9px] rounded-full',
+            hasQueryError ? 'bg-danger' : isFinal ? 'bg-success' : 'bg-warning',
+          )}
+        />
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-medium',
+            isFinal
+              ? 'border-success/40 bg-success/10 text-success'
+              : 'border-warning/40 bg-warning/10 text-warning',
+          )}
+        >
+          <span>{isFinal ? t('cockpit.strip.finalClose') : t('cockpit.strip.intradayPreview')}</span>
+          {reviewSource ? (
+            <span className="font-normal text-muted">{formatDate(reviewSource.asofDate)}</span>
+          ) : null}
+        </span>
       </div>
 
       <div className="flex items-center gap-3 shrink-0">

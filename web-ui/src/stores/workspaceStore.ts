@@ -29,6 +29,10 @@ interface WorkspaceStore {
   selection: WorkspaceSelection | null;
   analysisTab: WorkspaceAnalysisTab;
   runScreenerTrigger: number;
+  // NOTE(cockpit-followup): workspaceMode/collapseWorkspace and the activity-drawer
+  // history are still consumed by Today (compact list) and the workspace-data
+  // writers (useSymbolWorkspaceData, SymbolAnalysisContent, SymbolDetailPanel);
+  // revisit in a later plan once the last readers move to the cockpit.
   workspaceMode: WorkspaceMode;
   selectionVersion: number;
   activityDrawerOpen: boolean;

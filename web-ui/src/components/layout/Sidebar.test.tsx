@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
+import { t } from '@/i18n/t';
 import Sidebar from './Sidebar';
+
+function renderSidebar() {
+  return renderWithProviders(<Sidebar />);
+}
 
 
 describe('Sidebar', () => {
@@ -34,5 +39,14 @@ describe('Sidebar', () => {
 
     expect(screen.queryByText('Active Strategy')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('groups secondary pages under a collapsed Avanzate section', () => {
+    renderSidebar();
+    expect(screen.getByRole('link', { name: t('sidebar.nav.today') })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t('sidebar.nav.book') })).toBeInTheDocument();
+    const advanced = screen.getByText(t('sidebar.nav.advanced'));
+    expect(advanced).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t('sidebar.nav.universes') })).toBeInTheDocument();
   });
 });

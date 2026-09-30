@@ -17,11 +17,14 @@ type NavigationItem = {
   labelKey: MessageKey;
 };
 
-const primaryNav: NavigationItem[] = [
+const cockpitNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.today', href: '/today', icon: CalendarCheck },
-  { labelKey: 'sidebar.nav.calendar', href: '/calendar', icon: CalendarDays },
   { labelKey: 'sidebar.nav.book', href: '/book', icon: BookMarked },
+];
+
+const advancedNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.universes', href: '/universes', icon: Database },
+  { labelKey: 'sidebar.nav.calendar', href: '/calendar', icon: CalendarDays },
   { labelKey: 'sidebar.nav.datasources', href: '/datasources', icon: Activity },
 ];
 
@@ -63,6 +66,25 @@ function BrandMark({ size = 6 }: { size?: number }) {
 }
 
 export default function Sidebar({ className, onNavigate }: SidebarProps) {
+  const renderNavItem = (item: NavigationItem) => (
+    <NavLink
+      key={item.labelKey}
+      to={item.href}
+      onClick={() => onNavigate?.()}
+      className={({ isActive }) =>
+        cn(
+          'flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors',
+          isActive
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted hover:bg-foreground/5 hover:text-foreground'
+        )
+      }
+    >
+      <item.icon className="w-4 h-4 shrink-0" />
+      {t(item.labelKey)}
+    </NavLink>
+  );
+
   return (
     <aside className={cn('h-full flex flex-col bg-surface border-r border-border', className)}>
       {/* Brand */}
@@ -78,24 +100,15 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
         className="flex-1 py-2 px-2 space-y-px overflow-y-auto"
         aria-label="Primary navigation"
       >
-        {primaryNav.map((item) => (
-          <NavLink
-            key={item.labelKey}
-            to={item.href}
-            onClick={() => onNavigate?.()}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted hover:bg-foreground/5 hover:text-foreground'
-              )
-            }
-          >
-            <item.icon className="w-4 h-4 shrink-0" />
-            {t(item.labelKey)}
-          </NavLink>
-        ))}
+        {cockpitNav.map(renderNavItem)}
+        <details>
+          <summary className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors text-muted hover:bg-foreground/5 hover:text-foreground cursor-pointer">
+            {t('sidebar.nav.advanced')}
+          </summary>
+          <div className="space-y-px">
+            {advancedNav.map(renderNavItem)}
+          </div>
+        </details>
       </nav>
 
       {/* Footer */}
