@@ -63,6 +63,8 @@
 
 ## Current implementation plans
 
+- [`docs/superpowers/plans/2026-09-30-cockpit-review-fixes.md`](../superpowers/plans/2026-09-30-cockpit-review-fixes.md) — PR #481 fixes, validation, merge, and frontend audit scope
+
 - [`docs/superpowers/plans/2026-09-16-p1-p2-fixes.md`](../superpowers/plans/2026-09-16-p1-p2-fixes.md) — task-by-task TDD plan for the six P1/P2 review fixes (cache head freshness, linked-stop lifecycle, sizing batch abort, weekend stop validation, workspace auto-reselect, journal visibility)
 - [`docs/superpowers/specs/2026-09-04-reporting-pipeline-remediation-design.md`](../superpowers/specs/2026-09-04-reporting-pipeline-remediation-design.md) — approved ownership, contracts, and 18-PR delivery design for backend reporting-pipeline remediation
 - [`docs/superpowers/plans/2026-09-04-reporting-pipeline-remediation-roadmap.md`](../superpowers/plans/2026-09-04-reporting-pipeline-remediation-roadmap.md) — merge-order roadmap linking the seven subsystem implementation plans

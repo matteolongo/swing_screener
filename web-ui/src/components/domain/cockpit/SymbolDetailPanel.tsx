@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Badge from '@/components/common/Badge';
+import ModalShell from '@/components/common/ModalShell';
+import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCandleChart';
 import { getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 import type { WorkflowTone } from '@/components/domain/recommendation/workflowPresentation';
@@ -11,7 +13,6 @@ import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalys
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import SymbolIntelligenceTab from '@/components/domain/workspace/SymbolIntelligenceTab';
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
-import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useFundamentalSnapshotQuery } from '@/features/fundamentals/hooks';
 import {
   findRunByAttemptId,
@@ -34,6 +35,7 @@ import {
   useWatchSymbolMutation,
 } from '@/features/watchlist/hooks';
 import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorkspaceData';
+import { isIntelligenceOutdated } from '@/features/workspaceData/health';
 import { t } from '@/i18n/t';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
@@ -62,12 +64,13 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
   const selection = useWorkspaceStore((s) => s.selection);
   const selectionVersion = useWorkspaceStore((s) => s.selectionVersion);
   const setAnalysisTab = useWorkspaceStore((s) => s.setAnalysisTab);
+  const analysisTab = useWorkspaceStore((s) => s.analysisTab);
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab | null>(null);
 
   // WorkspaceSelection envelope: the already-selected candidate snapshot travels
   // with the selection (CandidateQueue writes it). Never look the ticker back up
   // in the screener Last Run store here.
-  const candidate: SymbolAnalysisCandidate | null =
+  const candidate =
     selection?.ticker === normalized ? (selection.candidate ?? null) : null;
 
   const openPositionsQuery = useOpenPositions();
@@ -288,18 +291,11 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
   const workflowPresentation = getWorkflowPresentation(candidate?.recommendation);
   const company = candidate?.name ?? fundamentals?.companyName ?? null;
 
-  // Stale check: the fundamentals snapshot fetch timestamp (updatedAt, same
-  // field useSymbolWorkspaceData feeds into isIntelligenceOutdated) newer than
-  // the cached analysis generation timestamp (generatedAt) means the snapshot
-  // postdates the analysis. asofDate is the market-data date, not the snapshot
-  // freshness, so it is the wrong field here. Read-only compare; never
-  // triggers regeneration.
-  const aiStale =
-    fundamentals != null &&
-    displayedIntelligence != null &&
-    Number.isFinite(Date.parse(fundamentals.updatedAt)) &&
-    Number.isFinite(Date.parse(displayedIntelligence.generatedAt)) &&
-    Date.parse(fundamentals.updatedAt) > Date.parse(displayedIntelligence.generatedAt);
+  const aiStale = Boolean(displayedIntelligence) && isIntelligenceOutdated(displayedIntelligence?.generatedAt ?? null, [
+    candidate?.lastBar ?? null,
+    fundamentals?.updatedAt ?? null,
+    workspaceData.prices.data?.dataAsOf ?? candidate?.priceHistory?.slice(-1)[0]?.date ?? null,
+  ]);
 
   return (
     <div
@@ -361,6 +357,22 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
         {position ? <ManagePositionPanel position={position} candidate={candidate} /> : null}
         <p className="text-xs text-muted">{t('cockpit.detail.manualNote')}</p>
       </section>
+
+      {analysisTab === 'order' && canReviewOrder ? (
+        <ModalShell
+          key={`${normalized}:${selectionVersion}`}
+          title={t('analysis.prepareOrder')}
+          onClose={() => setAnalysisTab('overview')}
+          className="max-w-3xl"
+          closeOnBackdrop={false}
+        >
+          <ActionPanel
+            ticker={normalized}
+            candidate={candidate}
+            source={workspaceData.sourceStates.find(({ id }) => id === 'positionOrders')}
+          />
+        </ModalShell>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-foreground">{t('cockpit.detail.chart')}</h2>

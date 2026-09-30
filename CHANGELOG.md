@@ -9,6 +9,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Cockpit order-review buttons open the signed-draft ticket, unpinned screener
+  results remain available in Universes, and newer daily prices mark cached AI
+  analysis outdated.
+
 - Entry fills now create the position's linked stop order and stop updates
   replace it, so the order ledger and the position stay on the same stop in
   both local and persisted portfolios; broker execution stays manual.

@@ -12,6 +12,8 @@ import UniverseDiscoveryTab from '@/components/domain/universes/UniverseDiscover
 import UniverseScreenerTab from '@/components/domain/universes/UniverseScreenerTab';
 import PoolTab from '@/components/domain/universes/PoolTab';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
+import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
+import { filterCandidates, prioritizeCandidates } from '@/features/screener/prioritization';
 import { currencyFilterToRequest, ScreenerRunningPanel } from '@/components/domain/workspace/ScreenerInboxPanel';
 import {
   CURRENCY_PRESETS,
@@ -35,8 +37,8 @@ import { useOpenPositions } from '@/features/portfolio/hooks';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
-function UniverseSymbolModal({ candidate, onBack }: { candidate: ScreenerCandidate; onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
+function UniverseSymbolModal({ candidate, onBack, initialTab = 'overview' }: { candidate: ScreenerCandidate; onBack: () => void; initialTab?: WorkspaceAnalysisTab }) {
+  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>(initialTab);
   const ticker = candidate.ticker;
   const openPositionsQuery = useOpenPositions();
   const openPosition =
@@ -101,6 +103,8 @@ function ScreenerRunSection() {
   const setTodayRunFromLastRun = useScreenerStore((state) => state.setTodayRunFromLastRun);
   const todayRun = useScreenerStore((state) => state.todayRun);
   const lastRunContext = useScreenerStore((state) => state.lastRunContext);
+  const lastResult = useScreenerStore((state) => state.lastResult);
+  const [detail, setDetail] = useState<{ candidate: ScreenerCandidate; tab: WorkspaceAnalysisTab } | null>(null);
   const activeStrategyQuery = useActiveStrategyQuery();
   const configDefaultsQuery = useConfigDefaultsQuery();
   const activeStrategy = activeStrategyQuery.data;
@@ -286,6 +290,22 @@ function ScreenerRunSection() {
             </button>
           </div>
         ) : null}
+        {lastResult ? (
+          <section aria-label={t('universesPage.discovery.screenerResults')} className="overflow-x-auto">
+            <h3 className="text-sm font-semibold">{t('universesPage.discovery.screenerResults')}</h3>
+            <p className="text-xs text-muted">{lastResult.asofDate}</p>
+            {lastResult.warnings?.map((warning) => (
+              <p key={warning} className="text-sm text-warning">{warning}</p>
+            ))}
+            <ScreenerCandidatesTable
+              candidates={filterCandidates(prioritizeCandidates(lastResult.candidates), lastRunContext?.displayFilters ?? { recommendedOnly: false, actionFilter: 'all' })}
+              onRowClick={(candidate) => setDetail({ candidate, tab: 'overview' })}
+              onRecommendationDetails={(candidate) => setDetail({ candidate, tab: 'overview' })}
+              onCreateOrder={(candidate) => setDetail({ candidate, tab: 'order' })}
+            />
+          </section>
+        ) : null}
+        {detail ? <UniverseSymbolModal candidate={detail.candidate} initialTab={detail.tab} onBack={() => setDetail(null)} /> : null}
       </section>
     </Card>
   );

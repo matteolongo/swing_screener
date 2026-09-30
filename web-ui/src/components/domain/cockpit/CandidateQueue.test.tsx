@@ -162,6 +162,14 @@ describe('CandidateQueue', () => {
     expect(screen.queryByRole('button', { name: `${t('cockpit.queue.reviewOrder')} STM` })).not.toBeInTheDocument();
   });
 
+  it('requests order review instead of ordinary details from the review button', async () => {
+    useWorkspaceStore.setState({ analysisTab: 'overview' });
+    const { user } = renderWithProviders(<CandidateQueue onSelectTicker={() => {}} />);
+    await user.click(screen.getByRole('button', { name: `${t('cockpit.queue.reviewOrder')} ADYEN` }));
+    expect(useWorkspaceStore.getState().analysisTab).toBe('order');
+    expect(useWorkspaceStore.getState().selection?.candidate?.canonicalOrderDraft?.approvalToken).toBe('tok-adyen-1');
+  });
+
   it('exposes the candidate-queue hook and emits normalized uppercase tickers', async () => {
     const seen: string[] = [];
     const { user } = renderWithProviders(

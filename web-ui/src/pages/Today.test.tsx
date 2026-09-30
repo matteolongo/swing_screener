@@ -548,6 +548,12 @@ function eligibleCockpitCandidate() {
     },
     recommendation: {
       verdict: 'RECOMMENDED',
+      reasonsShort: [],
+      reasonsDetailed: [],
+      risk: { entry: 1400, stop: 1330, target: 1540, shares: 2, riskAmount: 140, riskPct: 0.01, positionSize: 2800 },
+      costs: { commissionEstimate: 0, fxEstimate: 0, slippageEstimate: 0, totalCost: 0 },
+      checklist: [],
+      education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
       workflowStatus: 'ready',
       nextStep: { code: 'review_order' },
     },
@@ -578,6 +584,7 @@ describe('Today page — cockpit composition', () => {
     expect(screen.getByTestId('candidate-queue')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: `${t('cockpit.queue.reviewOrder')} ADYEN` }));
     expect(screen.getByTestId('symbol-detail-panel')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: t('order.review.formTitle') })).toBeInTheDocument();
     expect(screen.getByTestId('candidate-queue')).toBeInTheDocument();
   });
 });

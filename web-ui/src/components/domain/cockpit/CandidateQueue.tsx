@@ -41,6 +41,7 @@ export default function CandidateQueue({ onSelectTicker }: CandidateQueueProps) 
   const lastRunCompletedAt = useScreenerStore((s) => s.lastRunContext?.completedAt);
   const todayRunInitialized = useScreenerStore((s) => s.todayRunInitialized);
   const setWorkspaceSelection = useWorkspaceStore((s) => s.setWorkspaceSelection);
+  const setAnalysisTab = useWorkspaceStore((s) => s.setAnalysisTab);
   const [query, setQuery] = useState('');
   const [showNoSetup, setShowNoSetup] = useState(false);
 
@@ -72,7 +73,7 @@ export default function CandidateQueue({ onSelectTicker }: CandidateQueueProps) 
     [filtered, showNoSetup],
   );
 
-  const handleSelect = (candidate: ScreenerCandidate) => {
+  const handleSelect = (candidate: ScreenerCandidate, reviewOrder = false) => {
     const normalized = candidate.ticker.trim().toUpperCase();
     const source = fromToday ? 'today_run' : 'last_run';
     const runId = fromToday ? todayCompletedAt : lastRunCompletedAt;
@@ -83,6 +84,7 @@ export default function CandidateQueue({ onSelectTicker }: CandidateQueueProps) 
       candidate,
       rowId: `${source}:${runId ?? result?.asofDate ?? 'run'}:${normalized}`,
     });
+    setAnalysisTab(reviewOrder ? 'order' : 'overview');
     onSelectTicker(normalized);
   };
 
@@ -147,7 +149,7 @@ export default function CandidateQueue({ onSelectTicker }: CandidateQueueProps) 
                   {canReviewOrder ? (
                     <button
                       type="button"
-                      onClick={() => handleSelect(candidate)}
+                      onClick={() => handleSelect(candidate, true)}
                       aria-label={`${t('cockpit.queue.reviewOrder')} ${ticker}`}
                       className="shrink-0 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
                     >

@@ -44,6 +44,12 @@ function eligibleAdyenCandidate(name = 'Adyen N.V.') {
     },
     recommendation: {
       verdict: 'RECOMMENDED',
+      reasonsShort: [],
+      reasonsDetailed: [],
+      risk: { entry: 1400, stop: 1330, target: 1540, shares: 2, riskAmount: 140, riskPct: 0.01, positionSize: 2800 },
+      costs: { commissionEstimate: 0, fxEstimate: 0, slippageEstimate: 0, totalCost: 0 },
+      checklist: [],
+      education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
       workflowStatus: 'ready',
       nextStep: { code: 'review_order' },
     },
@@ -88,6 +94,7 @@ function seedSelectionPinnedFirst(candidateName: string, lastResultName: string 
     selectedTicker: null,
     selectedTickerSource: null,
     selectionVersion: 0,
+    analysisTab: 'overview',
   });
   useWorkspaceStore.getState().setWorkspaceSelection({
     ticker: 'ADYEN',
@@ -126,6 +133,12 @@ describe('SymbolDetailPanel', () => {
       screen.getByRole('button', { name: t('analysis.prepareOrder') }),
     ).toBeInTheDocument();
     expect(screen.getByText(t('cockpit.detail.manualNote'))).toBeInTheDocument();
+  });
+
+  it('opens the signed order review when prepare order is clicked', async () => {
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    await user.click(screen.getByRole('button', { name: t('analysis.prepareOrder') }));
+    expect(await screen.findByRole('heading', { name: t('order.review.formTitle') })).toBeInTheDocument();
   });
 
   it('uses the workspace selection snapshot instead of re-querying Last Run by ticker', () => {
@@ -208,6 +221,35 @@ describe('SymbolDetailPanel Approfondisci live wiring', () => {
 });
 
 describe('SymbolDetailPanel AI stale badge', () => {
+  beforeEach(() => seedSelectionPinnedFirst('Adyen N.V.', null));
+  it('does not label a missing analysis as outdated', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/fundamentals/snapshot/ADYEN`, () =>
+        HttpResponse.json(adyenFundamentalsApi('2026-09-17T10:00:00Z'))),
+      http.get(`${API_BASE_URL}/api/intelligence/ADYEN/latest`, () =>
+        HttpResponse.json(null)),
+    );
+    renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    expect(await screen.findByText(t('workspacePage.intelligence.empty'))).toBeInTheDocument();
+    expect(screen.queryByText(t('cockpit.detail.aiStale'))).not.toBeInTheDocument();
+  });
+  it('marks cached analysis outdated when the selected daily bar is newer', async () => {
+    seedSelectionPinnedFirst('Adyen N.V.', null);
+    const selection = useWorkspaceStore.getState().selection!;
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ...selection,
+      candidate: { ...selection.candidate!, lastBar: '2026-09-18' },
+    });
+    server.use(
+      http.get(`${API_BASE_URL}/api/fundamentals/snapshot/ADYEN`, () =>
+        HttpResponse.json(adyenFundamentalsApi('2026-09-15T10:00:00Z'))),
+      http.get(`${API_BASE_URL}/api/intelligence/ADYEN/latest`, () =>
+        HttpResponse.json(adyenIntelligenceApi('2026-09-16T10:00:00Z', 'Cached ADYEN summary.'))),
+    );
+    renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    expect(await screen.findByText(t('cockpit.detail.aiStale'))).toBeInTheDocument();
+  });
+
   it('shows the stale badge when the fundamentals snapshot is newer than the cached analysis', async () => {
     server.use(
       http.get(`${API_BASE_URL}/api/fundamentals/snapshot/ADYEN`, () =>

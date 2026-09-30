@@ -7,6 +7,22 @@
 
 Daily trading workflow through the Swing Screener web interface.
 
+### Cockpit review and exploration
+
+The queue's **Review order** button and the detail panel's **Prepare order**
+button open the existing signed-draft order ticket in a modal. Closing the ticket
+preserves the selected symbol; submission remains manual and retains the existing
+backend eligibility checks and error feedback.
+
+The Universes **Screener run** section also renders the latest scan's candidate
+table, with its saved display filters. Rows open the selected candidate snapshot
+in the symbol modal. Unpinned scans can therefore be inspected without replacing
+Today's pinned review source. The separate discovery screener remains independent.
+
+The AI stale badge compares the displayed analysis generation time with newer
+fundamentals, the selected daily bar, and the workspace's fetched price data.
+Fresh analysis clears the badge only when it postdates those dependencies.
+
 ## Pages
 
 | Page | Route | Purpose |

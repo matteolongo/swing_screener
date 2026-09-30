@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 
 import Universes from './Universes'
@@ -7,6 +7,27 @@ import { t } from '@/i18n/t'
 import { useScreenerStore } from '@/stores/screenerStore'
 
 describe('Universes page', () => {
+  beforeEach(() => useScreenerStore.setState({
+    lastResult: null, lastRunContext: null, todayRun: null, todayRunInitialized: true,
+  }));
+  it('shows unpinned scan results without replacing the pinned run', async () => {
+    const store = useScreenerStore.getState();
+    store.recordScreenerRun({ asofDate: '2026-09-15', candidates: [], totalScreened: 0 } as never,
+      { request: {}, displayFilters: { recommendedOnly: false, actionFilter: 'all' }, completedAt: 'pinned' }, true);
+    const pinned = useScreenerStore.getState().todayRun;
+    localStorage.setItem('screener.useForToday', 'false');
+    const { user } = renderWithProviders(<Universes />);
+    const section = screen.getByTestId('screener-run-section');
+    await user.click(await within(section).findByRole('button', { name: t('screener.controls.run') }));
+    const symbol = await within(section).findByText('AAPL');
+    expect(useScreenerStore.getState().todayRun).toEqual(pinned);
+    await user.click(symbol);
+    expect(await screen.findByRole('dialog', {
+      name: t('workspacePage.symbolDetails.title', { ticker: 'AAPL' }),
+    })).toBeInTheDocument();
+    expect(useScreenerStore.getState().todayRun).toEqual(pinned);
+  });
+
   it('runs live symbol discovery and shows taxonomy plus candidates', async () => {
     const { user } = renderWithProviders(<Universes />)
 
