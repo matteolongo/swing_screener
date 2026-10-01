@@ -4,7 +4,7 @@ import { fetchJson } from '@/lib/fetchJson';
 import { getActiveStrategyLocal, getAllOrdersLocal, getAllPositionsLocal, isLocalPersistenceMode, listWatchlistLocal } from '@/features/persistence';
 import defaultStrategy from '@/features/persistence/defaultStrategyFixture.json';
 import { transformStrategy, type StrategyAPI } from '@/features/strategy/types';
-import { getWatchlistNearTrigger } from './api';
+import { getDailyReview, getWatchlistNearTrigger } from './api';
 
 vi.mock('@/lib/fetchJson', () => ({ fetchJson: vi.fn() }));
 vi.mock('@/features/persistence', () => ({
@@ -71,5 +71,17 @@ describe('getWatchlistNearTrigger', () => {
     ]);
     expect(fetchJson).toHaveBeenCalledWith(`${API_ENDPOINTS.dailyReview}?top_n=1&include_candidates=false`, expect.any(Object));
     expect(listWatchlistLocal).not.toHaveBeenCalled();
+  });
+
+  it('sends a manual trailing policy for local positions', async () => {
+    vi.mocked(getAllPositionsLocal).mockReturnValue([{
+      ticker: 'AAPL', status: 'open', entryDate: '2026-09-01', entryPrice: 100,
+      stopPrice: 95, shares: 10, trailMethod: 'manual', trailParam: null,
+    }]);
+    await getDailyReview();
+
+    const options = vi.mocked(fetchJson).mock.calls.at(-1)?.[1];
+    expect(JSON.parse(options?.body as string).positions[0])
+      .toMatchObject({ trail_method: 'manual', trail_param: null });
   });
 });

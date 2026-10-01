@@ -46,6 +46,8 @@ function toPositionApi(position: ReturnType<typeof getAllPositionsLocal>[number]
     current_price: position.currentPrice ?? null,
     notes: position.notes ?? '',
     exit_order_ids: position.exitOrderIds ?? null,
+    trail_method: position.trailMethod ?? 'sma20',
+    trail_param: position.trailParam ?? null,
   };
 }
 

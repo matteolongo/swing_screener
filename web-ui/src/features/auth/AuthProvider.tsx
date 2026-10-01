@@ -58,7 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await apiFetch(API_ENDPOINTS.authLogout, { method: 'POST' });
+    const response = await apiFetch(API_ENDPOINTS.authLogout, { method: 'POST' });
+    if (!response.ok) throw new Error('Failed to sign out');
     becomeAnonymous();
   }, [becomeAnonymous]);
 
