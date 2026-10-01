@@ -83,4 +83,21 @@ describe('AuthProvider', () => {
     expect(auth.status).toBe('authenticated');
     expect(screen.getByText('authenticated:admin:u-1')).toBeInTheDocument();
   });
+
+  it('keeps an authenticated session when logout returns HTTP 401', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        authenticated: true,
+        user: { subject: 'u-1', email: null, display_name: 'User' },
+        role: 'admin',
+        csrf_token: 'csrf',
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 401 }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAuthProbe();
+    await screen.findByText('authenticated:admin:u-1');
+
+    await act(async () => { await expect(auth.logout()).rejects.toThrow(); });
+    expect(screen.getByText('authenticated:admin:u-1')).toBeInTheDocument();
+  });
 });

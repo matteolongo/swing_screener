@@ -44,4 +44,16 @@ describe('apiFetch', () => {
     expect(listener).toHaveBeenCalledTimes(1);
     unsubscribe();
   });
+
+  it('can suppress expiry events for an unauthorized request', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('{}', { status: 401 }))));
+    setCsrfToken('csrf-value');
+    const listener = vi.fn();
+    const unsubscribe = subscribeAuthExpired(listener);
+
+    await apiFetch('/api/logout', { method: 'POST', expireAuthOnUnauthorized: false });
+
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
 });
