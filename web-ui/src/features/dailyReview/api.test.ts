@@ -80,7 +80,8 @@ describe('getWatchlistNearTrigger', () => {
     }]);
     await getDailyReview();
 
-    const options = vi.mocked(fetchJson).mock.calls.at(-1)?.[1];
+    const calls = vi.mocked(fetchJson).mock.calls;
+    const options = calls[calls.length - 1]?.[1];
     expect(JSON.parse(options?.body as string).positions[0])
       .toMatchObject({ trail_method: 'manual', trail_param: null });
   });
