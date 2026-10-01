@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 
 import ModalShell from '@/components/common/ModalShell';
 import Card from '@/components/common/Card';
@@ -416,6 +416,25 @@ export default function Universes() {
     setActiveDetailTab('screener');
   };
 
+  const handleDetailTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex = index;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      nextIndex = (index + 1) % DETAIL_TABS.length;
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      nextIndex = (index - 1 + DETAIL_TABS.length) % DETAIL_TABS.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = DETAIL_TABS.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    setActiveDetailTab(DETAIL_TABS[nextIndex].id);
+    document.getElementById(`universe-tab-${DETAIL_TABS[nextIndex].id}`)?.focus();
+  };
+
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-4">
       <div className="mb-4">
@@ -440,12 +459,18 @@ export default function Universes() {
 
         {/* Tabbed detail panel */}
         <div>
-          <div className="flex border-b border-border mb-4">
-            {DETAIL_TABS.map((tab) => (
+          <div className="flex border-b border-border mb-4" role="tablist" aria-label={t('universesPage.title')}>
+            {DETAIL_TABS.map((tab, index) => (
               <button
                 key={tab.id}
                 type="button"
+                id={`universe-tab-${tab.id}`}
+                role="tab"
+                aria-selected={activeDetailTab === tab.id}
+                aria-controls={`universe-panel-${tab.id}`}
+                tabIndex={activeDetailTab === tab.id ? 0 : -1}
                 onClick={() => setActiveDetailTab(tab.id)}
+                onKeyDown={(event) => handleDetailTabKeyDown(event, index)}
                 className={cn(
                   'px-4 py-2.5 text-sm font-medium transition-colors',
                   activeDetailTab === tab.id
@@ -458,62 +483,69 @@ export default function Universes() {
             ))}
           </div>
 
-          {activeDetailTab === 'config' && (
-            <UniverseConfigTab
-              universes={universes}
-              selectedSummary={selectedSummary}
-              detail={detail}
-              detailLoading={detailQuery.isLoading}
-              detailError={detailQuery.isError}
-              benchmarkDraft={benchmarkDraft}
-              onBenchmarkDraftChange={setBenchmarkDraft}
-              benchmarkMutation={benchmarkMutation}
-              refreshMutation={refreshMutation}
-            />
-          )}
+          <div
+            role="tabpanel"
+            id={`universe-panel-${activeDetailTab}`}
+            aria-labelledby={`universe-tab-${activeDetailTab}`}
+            tabIndex={0}
+          >
+            {activeDetailTab === 'config' && (
+              <UniverseConfigTab
+                universes={universes}
+                selectedSummary={selectedSummary}
+                detail={detail}
+                detailLoading={detailQuery.isLoading}
+                detailError={detailQuery.isError}
+                benchmarkDraft={benchmarkDraft}
+                onBenchmarkDraftChange={setBenchmarkDraft}
+                benchmarkMutation={benchmarkMutation}
+                refreshMutation={refreshMutation}
+              />
+            )}
 
-          {activeDetailTab === 'constituents' && (
-            <UniverseConstituentsTab detail={detail} />
-          )}
+            {activeDetailTab === 'constituents' && (
+              <UniverseConstituentsTab detail={detail} />
+            )}
 
-          {activeDetailTab === 'discovery' && (
-            <UniverseDiscoveryTab
-              discoveryProvider={discoveryProvider}
-              onProviderChange={setDiscoveryProvider}
-              marketPreset={marketPreset}
-              onMarketPresetChange={handleMarketPresetChange}
-              currencyPreset={currencyPreset}
-              onCurrencyPresetChange={setCurrencyPreset}
-              typePreset={typePreset}
-              onTypePresetChange={setTypePreset}
-              discoveryMinVolume={discoveryMinVolume}
-              onMinVolumeChange={setDiscoveryMinVolume}
-              discoveryMinMarketCap={discoveryMinMarketCap}
-              onMinMarketCapChange={setDiscoveryMinMarketCap}
-              discoveryLimit={discoveryLimit}
-              onLimitChange={setDiscoveryLimit}
-              screenerTop={screenerTop}
-              onScreenerTopChange={setScreenerTop}
-              selectedScreens={selectedScreens}
-              onToggleScreen={toggleScreen}
-              selectedMarket={selectedMarket}
-              yahooUsesCustomScreener={yahooUsesCustomScreener}
-              eodhdNeedsKey={eodhdNeedsKey}
-              discoveryMutation={discoveryMutation}
-              discoveryScreenerMutation={discoveryScreenerMutation}
-              onDiscover={runDiscovery}
-              onRunScreener={handleRunScreener}
-            />
-          )}
+            {activeDetailTab === 'discovery' && (
+              <UniverseDiscoveryTab
+                discoveryProvider={discoveryProvider}
+                onProviderChange={setDiscoveryProvider}
+                marketPreset={marketPreset}
+                onMarketPresetChange={handleMarketPresetChange}
+                currencyPreset={currencyPreset}
+                onCurrencyPresetChange={setCurrencyPreset}
+                typePreset={typePreset}
+                onTypePresetChange={setTypePreset}
+                discoveryMinVolume={discoveryMinVolume}
+                onMinVolumeChange={setDiscoveryMinVolume}
+                discoveryMinMarketCap={discoveryMinMarketCap}
+                onMinMarketCapChange={setDiscoveryMinMarketCap}
+                discoveryLimit={discoveryLimit}
+                onLimitChange={setDiscoveryLimit}
+                screenerTop={screenerTop}
+                onScreenerTopChange={setScreenerTop}
+                selectedScreens={selectedScreens}
+                onToggleScreen={toggleScreen}
+                selectedMarket={selectedMarket}
+                yahooUsesCustomScreener={yahooUsesCustomScreener}
+                eodhdNeedsKey={eodhdNeedsKey}
+                discoveryMutation={discoveryMutation}
+                discoveryScreenerMutation={discoveryScreenerMutation}
+                onDiscover={runDiscovery}
+                onRunScreener={handleRunScreener}
+              />
+            )}
 
-          {activeDetailTab === 'screener' && (
-            <UniverseScreenerTab
-              discoveryScreenerMutation={discoveryScreenerMutation}
-              onSelectCandidate={setDetailCandidate}
-            />
-          )}
+            {activeDetailTab === 'screener' && (
+              <UniverseScreenerTab
+                discoveryScreenerMutation={discoveryScreenerMutation}
+                onSelectCandidate={setDetailCandidate}
+              />
+            )}
 
-          {activeDetailTab === 'pool' && <PoolTab />}
+            {activeDetailTab === 'pool' && <PoolTab />}
+          </div>
         </div>
       </div>
 

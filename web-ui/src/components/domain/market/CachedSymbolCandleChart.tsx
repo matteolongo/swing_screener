@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
+import ModalShell from '@/components/common/ModalShell';
 import type { CandlePattern, PriceHistoryPoint } from '@/features/screener/types';
 import {
   getAvailablePriceRanges,
@@ -197,13 +197,6 @@ export function CachedSymbolCandleChart({ ticker, className, width, height }: Ca
     [benchmarkBars, effectiveRange],
   );
 
-  useEffect(() => {
-    if (!fullscreen) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setFullscreen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [fullscreen]);
-
   const sharedChartProps = {
     ticker,
     bars: visibleBars,
@@ -239,26 +232,20 @@ export function CachedSymbolCandleChart({ ticker, className, width, height }: Ca
       <Suspense fallback={<ChartLoadingFallback height={height} />}>
         <CandleChart {...sharedChartProps} width={width} height={height} />
       </Suspense>
-      {fullscreen &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            role="dialog"
-            aria-modal="true"
-            onClick={() => setFullscreen(false)}
-          >
-            <div
-              className="w-full max-w-[95vw] rounded-lg bg-surface p-4 shadow-xl"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <ChartToolbar {...toolbarProps} />
-              <Suspense fallback={<ChartLoadingFallback height={overlayHeight} />}>
-                <CandleChart {...sharedChartProps} width={1280} height={overlayHeight} />
-              </Suspense>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {fullscreen && (
+        <ModalShell
+          title={t('chart.fullscreen')}
+          onClose={() => setFullscreen(false)}
+          closeOnBackdrop={false}
+          fullScreen
+          contentClassName="p-4"
+        >
+          <ChartToolbar {...toolbarProps} />
+          <Suspense fallback={<ChartLoadingFallback height={overlayHeight} />}>
+            <CandleChart {...sharedChartProps} width={1280} height={overlayHeight} />
+          </Suspense>
+        </ModalShell>
+      )}
     </div>
   );
 }

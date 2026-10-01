@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
+import Field from '@/components/common/Field';
 import Textarea from '@/components/common/Textarea';
 import { useWeeklyReview, useUpsertWeeklyReviewMutation } from '@/features/weeklyReview/hooks';
+import { t } from '@/i18n/t';
+import type { MessageKey } from '@/i18n/types';
 
 function getCurrentWeekId(): string {
   const now = new Date();
@@ -28,11 +31,27 @@ const BLANK: FormState = {
   next_week_focus: '',
 };
 
-const FIELDS: Array<{ key: keyof FormState; label: string; placeholder: string }> = [
-  { key: 'what_worked', label: 'What Worked', placeholder: 'What setups or decisions went well this week?' },
-  { key: 'what_didnt', label: "What Didn't Work", placeholder: 'What went wrong or felt off?' },
-  { key: 'rules_violated', label: 'Rules Violated', placeholder: 'Did you break any trading rules?' },
-  { key: 'next_week_focus', label: 'Next Week Focus', placeholder: 'What will you focus on or improve?' },
+const FIELDS: Array<{ key: keyof FormState; labelKey: MessageKey; placeholderKey: MessageKey }> = [
+  {
+    key: 'what_worked',
+    labelKey: 'weeklyReview.fields.whatWorked.label',
+    placeholderKey: 'weeklyReview.fields.whatWorked.placeholder',
+  },
+  {
+    key: 'what_didnt',
+    labelKey: 'weeklyReview.fields.whatDidnt.label',
+    placeholderKey: 'weeklyReview.fields.whatDidnt.placeholder',
+  },
+  {
+    key: 'rules_violated',
+    labelKey: 'weeklyReview.fields.rulesViolated.label',
+    placeholderKey: 'weeklyReview.fields.rulesViolated.placeholder',
+  },
+  {
+    key: 'next_week_focus',
+    labelKey: 'weeklyReview.fields.nextWeekFocus.label',
+    placeholderKey: 'weeklyReview.fields.nextWeekFocus.placeholder',
+  },
 ];
 
 export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormProps) {
@@ -72,28 +91,25 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
     <div className="rounded-lg border border-border bg-surface p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
-          Week {resolvedWeekId}
+          {t('weeklyReview.weekLabel', { id: resolvedWeekId })}
         </h3>
         {updatedAt && (
           <span className="text-[11px] text-muted">
-            Last saved {new Date(updatedAt).toLocaleDateString()}
+            {t('weeklyReview.lastSaved', { date: new Date(updatedAt).toLocaleDateString() })}
           </span>
         )}
       </div>
 
-      {FIELDS.map(({ key, label, placeholder }) => (
-        <div key={key}>
-          <label className="block text-xs font-medium text-muted mb-1">
-            {label}
-          </label>
+      {FIELDS.map(({ key, labelKey, placeholderKey }) => (
+        <Field key={key} label={t(labelKey)}>
           <Textarea
             value={form[key]}
             onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
             rows={3}
-            placeholder={placeholder}
+            placeholder={t(placeholderKey)}
             className="px-2 py-1.5 resize-none focus:ring-1 focus:ring-primary/50"
           />
-        </div>
+        </Field>
       ))}
 
       <div className="flex items-center gap-3">
@@ -103,13 +119,13 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
           disabled={upsertMutation.isPending}
           className="px-3 py-1.5 text-sm bg-primary/10 text-primary rounded-md hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {upsertMutation.isPending ? 'Saving…' : 'Save Review'}
+          {upsertMutation.isPending ? t('weeklyReview.actions.saving') : t('weeklyReview.actions.save')}
         </button>
         {upsertMutation.isSuccess && (
-          <span className="text-xs text-success">Saved.</span>
+          <span className="text-xs text-success">{t('weeklyReview.actions.saved')}</span>
         )}
         {upsertMutation.isError && (
-          <span className="text-xs text-danger">Failed to save.</span>
+          <span className="text-xs text-danger">{t('weeklyReview.actions.saveError')}</span>
         )}
       </div>
     </div>

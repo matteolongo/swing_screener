@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, type KeyboardEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import ConcentrationBar from '@/components/domain/portfolio/ConcentrationBar';
@@ -426,6 +426,25 @@ export default function Book() {
     { key: 'journal', label: t('bookPage.tabs.journalPerformance') },
   ];
 
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex = index;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      nextIndex = (index + 1) % tabs.length;
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      nextIndex = (index - 1 + tabs.length) % tabs.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = tabs.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    setActiveTab(tabs[nextIndex].key);
+    document.getElementById(`book-tab-${tabs[nextIndex].key}`)?.focus();
+  };
+
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-4">
       {/* Page header */}
@@ -439,14 +458,18 @@ export default function Book() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-2 mb-6" role="tablist">
-        {tabs.map(({ key, label }) => (
+      <div className="flex gap-2 mb-6" role="tablist" aria-label={t('bookPage.title')}>
+        {tabs.map(({ key, label }, index) => (
           <button
             key={key}
             type="button"
             role="tab"
+            id={`book-tab-${key}`}
             aria-selected={activeTab === key}
+            aria-controls={`book-panel-${key}`}
+            tabIndex={activeTab === key ? 0 : -1}
             onClick={() => setActiveTab(key)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
             className={cn(
               'px-4 py-2 rounded-full text-sm font-medium transition-colors',
               activeTab === key
@@ -460,7 +483,12 @@ export default function Book() {
       </div>
 
       {/* Tab content */}
-      <div>
+      <div
+        role="tabpanel"
+        id={`book-panel-${activeTab}`}
+        aria-labelledby={`book-tab-${activeTab}`}
+        tabIndex={0}
+      >
         {activeTab === 'positions' && <PositionsTab />}
         {activeTab === 'orders' && <PendingOrdersTab />}
         {activeTab === 'journal' && (

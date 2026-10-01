@@ -2977,6 +2977,34 @@ export const messagesEn = {
     degiroNotConnected: 'DeGiro not connected',
     markSubmitted: 'Mark submitted',
   },
+  weeklyReview: {
+    weekLabel: 'Week {{id}}',
+    lastSaved: 'Last saved {{date}}',
+    fields: {
+      whatWorked: {
+        label: 'What Worked',
+        placeholder: 'What setups or decisions went well this week?',
+      },
+      whatDidnt: {
+        label: "What Didn't Work",
+        placeholder: 'What went wrong or felt off?',
+      },
+      rulesViolated: {
+        label: 'Rules Violated',
+        placeholder: 'Did you break any trading rules?',
+      },
+      nextWeekFocus: {
+        label: 'Next Week Focus',
+        placeholder: 'What will you focus on or improve?',
+      },
+    },
+    actions: {
+      save: 'Save Review',
+      saving: 'Saving…',
+      saved: 'Saved.',
+      saveError: 'Failed to save.',
+    },
+  },
   fillViaDegiroModal: {
     title: 'Link fill for {{ticker}}',
     loading: 'Fetching recent DeGiro orders...',
@@ -3034,6 +3062,7 @@ export const messagesEn = {
       sectionTitle: 'Open positions',
       analyzing: 'Analyzing…',
       analyzeButton: 'Analyze',
+      rowActions: 'Actions for {{ticker}}',
       noIntelligence: 'No analysis yet',
       stopAction: {
         NO_ACTION: 'Hold stop',

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
@@ -84,6 +85,23 @@ describe('FillViaDegiroModal', () => {
     fireEvent.click(row.closest('tr')!);
     const btn = screen.getByRole('button', { name: t('fillViaDegiroModal.confirmButton') });
     expect(btn).toBeEnabled();
+  });
+
+  it('selects a row with the keyboard', async () => {
+    server.use(
+      http.get('*/api/portfolio/degiro/order-history', () =>
+        HttpResponse.json({ orders: degiroOrders, asof: '2026-04-27' })
+      )
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<FillViaDegiroModal order={order} onClose={vi.fn()} />);
+
+    const product = await screen.findByRole('button', { name: 'SBMO Offshore' });
+    product.focus();
+    await user.keyboard('{Enter}');
+
+    expect(screen.getByRole('button', { name: t('fillViaDegiroModal.confirmButton') })).toBeEnabled();
+    expect(product.closest('tr')).toHaveAttribute('aria-selected', 'true');
   });
 
   it('shows empty state when no orders', async () => {

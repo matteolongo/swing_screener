@@ -60,77 +60,75 @@ export default function OpenPositionIntelligencePanel({ onTickerSelect }: Props)
         const posSignal = item.intelligence?.positionSignal;
 
         return (
-          <button
+          <div
             key={item.positionId}
-            type="button"
-            onClick={() => onTickerSelect(item.ticker)}
-            className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-primary/40"
+            role="group"
+            aria-label={t('todayPage.openPositions.rowActions', { ticker: item.ticker })}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-primary/40"
           >
-            <span className="text-sm font-semibold text-foreground min-w-[60px] shrink-0">
-              {item.ticker}
-            </span>
-
-            <span
-              className={cn(
-                'text-xs font-semibold tabular-nums shrink-0',
-                getSignColorClass(item.rNow),
-              )}
+            <button
+              type="button"
+              onClick={() => onTickerSelect(item.ticker)}
+              className="min-w-0 flex-1 text-left flex items-center gap-3"
             >
-              {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
-            </span>
-
-            <span
-              className={cn(
-                'text-xs font-medium px-1.5 py-0.5 rounded shrink-0',
-                stopActionColor(item.stopAction),
-              )}
-            >
-              {stopActionLabel(item.stopAction)}
-            </span>
-
-            {posSignal ? (
-              <>
-                <span
-                  className={cn(
-                    'text-xs font-medium px-1.5 py-0.5 rounded shrink-0',
-                    positionSignalColor(posSignal.action),
-                  )}
-                >
-                  {positionSignalLabel(posSignal.action)}
-                </span>
-                <span className="text-xs text-muted truncate flex-1 min-w-0">
-                  {item.intelligence?.summaryLine}
-                </span>
-              </>
-            ) : (
-              <span className="text-xs text-muted flex-1 min-w-0">
-                {t('todayPage.openPositions.noIntelligence')}
+              <span className="text-sm font-semibold text-foreground min-w-[60px] shrink-0">
+                {item.ticker}
               </span>
-            )}
 
-            <span
-              role="button"
-              tabIndex={0}
+              <span
+                className={cn(
+                  'text-xs font-semibold tabular-nums shrink-0',
+                  getSignColorClass(item.rNow),
+                )}
+              >
+                {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
+              </span>
+
+              <span
+                className={cn(
+                  'text-xs font-medium px-1.5 py-0.5 rounded shrink-0',
+                  stopActionColor(item.stopAction),
+                )}
+              >
+                {stopActionLabel(item.stopAction)}
+              </span>
+
+              {posSignal ? (
+                <>
+                  <span
+                    className={cn(
+                      'text-xs font-medium px-1.5 py-0.5 rounded shrink-0',
+                      positionSignalColor(posSignal.action),
+                    )}
+                  >
+                    {positionSignalLabel(posSignal.action)}
+                  </span>
+                  <span className="text-xs text-muted truncate flex-1 min-w-0">
+                    {item.intelligence?.summaryLine}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-muted flex-1 min-w-0">
+                  {t('todayPage.openPositions.noIntelligence')}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
               aria-label={t('todayPage.openPositions.analyzeButton')}
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={() => {
                 analyzeMutation.mutate(item.positionId);
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.stopPropagation();
-                  analyzeMutation.mutate(item.positionId);
-                }
-              }}
-              className="shrink-0 text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer"
+              className="shrink-0 text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20"
             >
               {isAnalyzing ? (
                 <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
               ) : (
                 t('todayPage.openPositions.analyzeButton')
               )}
-            </span>
-          </button>
+            </button>
+          </div>
         );
       })}
     </div>

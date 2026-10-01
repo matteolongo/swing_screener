@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
 import type { useRunScreenerMutation } from '@/features/screener/hooks';
@@ -16,6 +17,12 @@ export default function UniverseScreenerTab({
   onSelectCandidate,
 }: UniverseScreenerTabProps) {
   const discoveryScreenerResult = discoveryScreenerMutation.data;
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+
+  const handleSelect = (candidate: ScreenerCandidate) => {
+    setSelectedTicker(candidate.ticker);
+    onSelectCandidate(candidate);
+  };
 
   return (
     <Card variant="bordered" className="p-4">
@@ -60,16 +67,26 @@ export default function UniverseScreenerTab({
                 {discoveryScreenerResult.candidates.map((candidate) => (
                   <tr
                     key={candidate.ticker}
-                    onClick={() => onSelectCandidate(candidate)}
+                    onClick={() => handleSelect(candidate)}
+                    aria-selected={selectedTicker === candidate.ticker}
                     className="cursor-pointer hover:bg-foreground/5"
                   >
                     <td className="px-3 py-2 font-medium text-foreground">#{candidate.priorityRank ?? candidate.rank}</td>
                     <td className="px-3 py-2">
-                      <div className="font-semibold text-foreground">{candidate.ticker}</div>
-                      <div className="text-xs text-muted">
-                        {candidate.name ?? '—'}
-                        {candidate.sector ? ` · ${candidate.sector}` : ''}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleSelect(candidate);
+                        }}
+                        className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      >
+                        <div className="font-semibold text-foreground">{candidate.ticker}</div>
+                        <div className="text-xs text-muted">
+                          {candidate.name ?? '—'}
+                          {candidate.sector ? ` · ${candidate.sector}` : ''}
+                        </div>
+                      </button>
                     </td>
                     <td className="px-3 py-2 text-muted">{formatWorkflowNextStep(candidate.recommendation?.nextStep)}</td>
                     <td className="px-3 py-2 text-right font-mono text-foreground">{formatCurrency(candidate.close, candidate.currency)}</td>

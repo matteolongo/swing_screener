@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('lightweight-charts');
 import { screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/lib/api';
 import { server } from '@/test/mocks/server';
@@ -50,6 +51,23 @@ describe('CachedSymbolCandleChart', () => {
     // both the inline and overlay toolbars now show "Exit fullscreen"
     fireEvent.click(screen.getAllByRole('button', { name: 'Exit fullscreen' })[0]);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('returns focus to the fullscreen trigger after Escape', async () => {
+    seedStore(300);
+    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+
+    const user = userEvent.setup();
+    const trigger = screen.getByRole('button', { name: 'Fullscreen' });
+    await user.click(trigger);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+    });
   });
 
   it('uses the selected candidate bars instead of an unrelated Last Run snapshot', () => {

@@ -10,6 +10,25 @@ describe('Universes page', () => {
   beforeEach(() => useScreenerStore.setState({
     lastResult: null, lastRunContext: null, todayRun: null, todayRunInitialized: true,
   }));
+
+  it('supports roving keyboard navigation across universe detail tabs', async () => {
+    const { user } = renderWithProviders(<Universes />);
+    const tabs = await screen.findAllByRole('tab');
+    tabs[0].focus();
+
+    await user.keyboard('{ArrowRight}');
+    expect(tabs[1]).toHaveFocus();
+    expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
+
+    await user.keyboard('{End}');
+    expect(tabs[tabs.length - 1]).toHaveFocus();
+    expect(tabs[tabs.length - 1]).toHaveAttribute('aria-selected', 'true');
+
+    await user.keyboard('{Home}');
+    expect(tabs[0]).toHaveFocus();
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('shows unpinned scan results without replacing the pinned run', async () => {
     const store = useScreenerStore.getState();
     store.recordScreenerRun({ asofDate: '2026-09-15', candidates: [], totalScreened: 0 } as never,
@@ -31,7 +50,7 @@ describe('Universes page', () => {
   it('runs live symbol discovery and shows taxonomy plus candidates', async () => {
     const { user } = renderWithProviders(<Universes />)
 
-    await user.click(screen.getByRole('button', { name: 'Discovery' }))
+    await user.click(screen.getByRole('tab', { name: 'Discovery' }))
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.discoverSymbols') }))
 
     expect(await screen.findByText('NVDA')).toBeInTheDocument()
@@ -55,7 +74,7 @@ describe('Universes page', () => {
   it('opens the symbol detail modal when a screener result row is clicked', async () => {
     const { user } = renderWithProviders(<Universes />)
 
-    await user.click(screen.getByRole('button', { name: 'Discovery' }))
+    await user.click(screen.getByRole('tab', { name: 'Discovery' }))
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.discoverSymbols') }))
     await screen.findByText('NVDA')
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.runScreener') }))
@@ -65,6 +84,22 @@ describe('Universes page', () => {
 
     expect(await screen.findByText('AAPL Details')).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: t('workspacePage.panels.analysis.tabs.order') })).not.toBeInTheDocument()
+  })
+
+  it('selects a screener candidate with the keyboard', async () => {
+    const { user } = renderWithProviders(<Universes />)
+
+    await user.click(screen.getByRole('tab', { name: 'Discovery' }))
+    await user.click(screen.getByRole('button', { name: t('universesPage.discovery.discoverSymbols') }))
+    await screen.findByText('NVDA')
+    await user.click(screen.getByRole('button', { name: t('universesPage.discovery.runScreener') }))
+    await screen.findByText('Screener Results for Discovered Symbols')
+
+    const candidateButton = screen.getByRole('button', { name: /AAPL/ })
+    candidateButton.focus()
+    await user.keyboard('{Enter}')
+
+    expect(candidateButton.closest('tr')).toHaveAttribute('aria-selected', 'true')
   })
 
   it('exposes the screener run form and feeds todayRun/lastResult on completion', async () => {

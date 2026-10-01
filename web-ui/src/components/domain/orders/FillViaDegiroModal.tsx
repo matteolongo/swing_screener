@@ -44,12 +44,19 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
       <tr
         key={o.orderId}
         onClick={() => setSelectedOrderId(o.orderId)}
+        aria-selected={isSelected}
         className={`cursor-pointer border-b border-border hover:bg-primary/10 ${
           isSelected ? 'bg-primary/10' : ''
         }`}
       >
         <td className="py-2 pr-3 text-sm text-foreground">
-          {o.productName ?? o.orderId}
+          <button
+            type="button"
+            onClick={() => setSelectedOrderId(o.orderId)}
+            className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            {o.productName ?? o.orderId}
+          </button>
         </td>
         <td className="py-2 pr-3 text-sm text-right text-muted">
           {o.price != null ? o.price.toFixed(2) : t('common.placeholders.dash')}
