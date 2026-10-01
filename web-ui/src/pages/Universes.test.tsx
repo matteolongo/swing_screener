@@ -61,10 +61,10 @@ describe('Universes page', () => {
 
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.runScreener') }))
 
-    expect(await screen.findByText('Screener Results for Discovered Symbols')).toBeInTheDocument()
+    expect(await screen.findByText(t('universesPage.discovery.screener.title'))).toBeInTheDocument()
     expect(screen.getByText(t('universesPage.discovery.columns.nextAction'))).toBeInTheDocument()
     expect(screen.getByText('AAPL')).toBeInTheDocument()
-    expect(screen.getByText('500 screened')).toBeInTheDocument()
+    expect(screen.getByText(t('universesPage.discovery.screener.screenedCount', { count: '500' }))).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.queryByText(t('universesPage.discovery.discovering'))).not.toBeInTheDocument()
@@ -78,7 +78,7 @@ describe('Universes page', () => {
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.discoverSymbols') }))
     await screen.findByText('NVDA')
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.runScreener') }))
-    await screen.findByText('Screener Results for Discovered Symbols')
+    await screen.findByText(t('universesPage.discovery.screener.title'))
 
     await user.click(screen.getByText('AAPL'))
 
@@ -93,7 +93,7 @@ describe('Universes page', () => {
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.discoverSymbols') }))
     await screen.findByText('NVDA')
     await user.click(screen.getByRole('button', { name: t('universesPage.discovery.runScreener') }))
-    await screen.findByText('Screener Results for Discovered Symbols')
+    await screen.findByText(t('universesPage.discovery.screener.title'))
 
     const candidateButton = screen.getByRole('button', { name: /AAPL/ })
     candidateButton.focus()

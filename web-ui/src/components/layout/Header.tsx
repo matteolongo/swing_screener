@@ -164,7 +164,7 @@ export default function Header() {
             title={t('sidebar.signOut')}
             aria-label={t('sidebar.signOut')}
             onClick={handleLogout}
-            className="grid h-7 w-7 place-items-center rounded text-muted hover:bg-surface-hover hover:text-foreground"
+            className="grid h-7 w-7 place-items-center rounded text-muted hover:bg-foreground/5 hover:text-foreground"
           >
             <LogOut size={15} aria-hidden="true" />
           </button>

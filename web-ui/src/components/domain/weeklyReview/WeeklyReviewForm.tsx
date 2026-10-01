@@ -7,9 +7,14 @@ import type { MessageKey } from '@/i18n/types';
 
 function getCurrentWeekId(): string {
   const now = new Date();
-  const jan4 = new Date(now.getFullYear(), 0, 4);
-  const weekNum = Math.ceil(((now.getTime() - jan4.getTime()) / 86400000 + jan4.getDay() + 1) / 7);
-  return `${now.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const isoDay = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - isoDay);
+
+  const isoYear = date.getUTCFullYear();
+  const yearStart = Date.UTC(isoYear, 0, 1);
+  const week = Math.ceil((((date.getTime() - yearStart) / 86400000) + 1) / 7);
+  return `${isoYear}-W${String(week).padStart(2, '0')}`;
 }
 
 interface WeeklyReviewFormProps {

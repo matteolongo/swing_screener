@@ -2874,6 +2874,7 @@ export const messagesEn = {
         instrument_type: 'Instrument type',
       },
       columns: {
+        rank: 'Rank',
         symbol: 'Symbol',
         name: 'Name',
         exchange: 'Exchange',
@@ -2883,6 +2884,20 @@ export const messagesEn = {
         marketCap: 'Market Cap',
         source: 'Source',
         nextAction: 'Next action',
+        close: 'Close',
+        score: 'Score',
+        momentum6m: '6M momentum',
+        relativeStrength: 'Rel strength',
+        riskReward: 'R:R',
+        fundamentals: 'Fundamentals',
+      },
+      screener: {
+        error: 'Screener run failed.',
+        title: 'Screener Results for Discovered Symbols',
+        candidateCount: '{{count}} candidates',
+        screenedCount: '{{count}} screened',
+        benchmark: 'Benchmark {{ticker}}',
+        empty: 'Run discovery on the Discovery tab, then click "Run Screener on These Symbols".',
       },
     },
     screenerRun: {

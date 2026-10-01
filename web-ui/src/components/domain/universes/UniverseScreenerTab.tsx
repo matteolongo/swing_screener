@@ -18,6 +18,7 @@ export default function UniverseScreenerTab({
 }: UniverseScreenerTabProps) {
   const discoveryScreenerResult = discoveryScreenerMutation.data;
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+  const dash = t('common.placeholders.emDash');
 
   const handleSelect = (candidate: ScreenerCandidate) => {
     setSelectedTicker(candidate.ticker);
@@ -28,17 +29,33 @@ export default function UniverseScreenerTab({
     <Card variant="bordered" className="p-4">
       {discoveryScreenerMutation.isError ? (
         <div className="mb-3 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
-          {discoveryScreenerMutation.error instanceof Error ? discoveryScreenerMutation.error.message : 'Screener run failed.'}
+          {discoveryScreenerMutation.error instanceof Error
+            ? discoveryScreenerMutation.error.message
+            : t('universesPage.discovery.screener.error')}
         </div>
       ) : null}
       {discoveryScreenerResult ? (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold text-foreground">Screener Results for Discovered Symbols</h3>
-            <Badge variant="default">{discoveryScreenerResult.candidates.length} candidates</Badge>
-            <Badge variant="default">{discoveryScreenerResult.totalScreened} screened</Badge>
+            <h3 className="text-sm font-semibold text-foreground">
+              {t('universesPage.discovery.screener.title')}
+            </h3>
+            <Badge variant="default">
+              {t('universesPage.discovery.screener.candidateCount', {
+                count: String(discoveryScreenerResult.candidates.length),
+              })}
+            </Badge>
+            <Badge variant="default">
+              {t('universesPage.discovery.screener.screenedCount', {
+                count: String(discoveryScreenerResult.totalScreened),
+              })}
+            </Badge>
             {discoveryScreenerResult.benchmarkTicker ? (
-              <Badge variant="default">Benchmark {discoveryScreenerResult.benchmarkTicker}</Badge>
+              <Badge variant="default">
+                {t('universesPage.discovery.screener.benchmark', {
+                  ticker: discoveryScreenerResult.benchmarkTicker,
+                })}
+              </Badge>
             ) : null}
           </div>
           {discoveryScreenerResult.warnings?.length ? (
@@ -52,15 +69,15 @@ export default function UniverseScreenerTab({
             <table className="min-w-full divide-y divide-border text-sm">
               <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
                 <tr>
-                  <th className="px-3 py-2">Rank</th>
-                  <th className="px-3 py-2">Symbol</th>
+                  <th className="px-3 py-2">{t('universesPage.discovery.columns.rank')}</th>
+                  <th className="px-3 py-2">{t('universesPage.discovery.columns.symbol')}</th>
                   <th className="px-3 py-2">{t('universesPage.discovery.columns.nextAction')}</th>
-                  <th className="px-3 py-2 text-right">Close</th>
-                  <th className="px-3 py-2 text-right">Score</th>
-                  <th className="px-3 py-2 text-right">6M momentum</th>
-                  <th className="px-3 py-2 text-right">Rel strength</th>
-                  <th className="px-3 py-2 text-right">R:R</th>
-                  <th className="px-3 py-2">Fundamentals</th>
+                  <th className="px-3 py-2 text-right">{t('universesPage.discovery.columns.close')}</th>
+                  <th className="px-3 py-2 text-right">{t('universesPage.discovery.columns.score')}</th>
+                  <th className="px-3 py-2 text-right">{t('universesPage.discovery.columns.momentum6m')}</th>
+                  <th className="px-3 py-2 text-right">{t('universesPage.discovery.columns.relativeStrength')}</th>
+                  <th className="px-3 py-2 text-right">{t('universesPage.discovery.columns.riskReward')}</th>
+                  <th className="px-3 py-2">{t('universesPage.discovery.columns.fundamentals')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border bg-surface">
@@ -83,7 +100,7 @@ export default function UniverseScreenerTab({
                       >
                         <div className="font-semibold text-foreground">{candidate.ticker}</div>
                         <div className="text-xs text-muted">
-                          {candidate.name ?? '—'}
+                          {candidate.name ?? dash}
                           {candidate.sector ? ` · ${candidate.sector}` : ''}
                         </div>
                       </button>
@@ -93,8 +110,8 @@ export default function UniverseScreenerTab({
                     <td className="px-3 py-2 text-right font-mono text-foreground">{candidate.score.toFixed(1)}</td>
                     <td className="px-3 py-2 text-right font-mono text-foreground">{formatPercent(candidate.momentum6m, 1)}</td>
                     <td className="px-3 py-2 text-right font-mono text-foreground">{formatPercent(candidate.relStrength, 1)}</td>
-                    <td className="px-3 py-2 text-right font-mono text-foreground">{candidate.rr != null ? candidate.rr.toFixed(1) : '—'}</td>
-                    <td className="px-3 py-2 text-muted">{candidate.fundamentalsCoverageStatus ?? '—'}</td>
+                    <td className="px-3 py-2 text-right font-mono text-foreground">{candidate.rr != null ? candidate.rr.toFixed(1) : dash}</td>
+                    <td className="px-3 py-2 text-muted">{candidate.fundamentalsCoverageStatus ?? dash}</td>
                   </tr>
                 ))}
               </tbody>
@@ -103,7 +120,7 @@ export default function UniverseScreenerTab({
         </div>
       ) : (
         <div className="py-8 text-center text-sm text-muted">
-          Run discovery on the Discovery tab, then click "Run Screener on These Symbols".
+          {t('universesPage.discovery.screener.empty')}
         </div>
       )}
     </Card>
