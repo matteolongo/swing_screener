@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
 import { API_BASE_URL } from '@/lib/api';
@@ -144,5 +144,29 @@ describe('ManagePositionPanel', () => {
     expect(screen.getByText(`${t('workspacePage.panels.analysis.managePosition.liveR')}: +2.38R`)).toBeInTheDocument();
     expect(screen.getByText(new RegExp(t('workspacePage.panels.analysis.managePosition.currentStop')))).toBeInTheDocument();
     expect(screen.getByText(new RegExp(t('workspacePage.panels.analysis.managePosition.suggestedStop')))).toBeInTheDocument();
+  });
+
+  it('requests a fresh read-only preview on every Check live click', async () => {
+    let requests = 0;
+    server.use(http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-preview`, () => {
+      requests += 1;
+      return HttpResponse.json({ ticker: 'LRCX', status: 'open', last: 400, entry: 383.04,
+        stop_old: 346.3, stop_suggested: 346.3, shares: 2, r_now: 0.5,
+        action: 'NO_ACTION', reason: 'Current stop remains valid.' });
+    }));
+    renderWithProviders(<ManagePositionPanel position={position} candidate={null} />);
+    const button = screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.checkLive') });
+    await userEvent.click(button);
+    await waitFor(() => expect(requests).toBe(1));
+    await userEvent.click(button);
+    await waitFor(() => expect(requests).toBe(2));
+  });
+
+  it('shows local feedback when a live preview request fails', async () => {
+    server.use(http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-preview`, () =>
+      HttpResponse.json({ detail: 'Live quote unavailable' }, { status: 503 })));
+    renderWithProviders(<ManagePositionPanel position={position} candidate={null} />);
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.checkLive') }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Live quote unavailable');
   });
 });

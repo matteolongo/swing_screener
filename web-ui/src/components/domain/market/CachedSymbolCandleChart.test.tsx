@@ -1,9 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('lightweight-charts');
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { API_BASE_URL } from '@/lib/api';
+import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { CachedSymbolCandleChart } from './CachedSymbolCandleChart';
 import type { ScreenerResponse } from '@/features/screener/types';
 
@@ -25,6 +29,7 @@ function seedStore(barCount: number) {
 describe('CachedSymbolCandleChart', () => {
   beforeEach(() => {
     useScreenerStore.setState({ lastResult: null });
+    useWorkspaceStore.setState({ selection: null });
   });
 
   it('renders range buttons including 1W and MAX', () => {
@@ -45,5 +50,33 @@ describe('CachedSymbolCandleChart', () => {
     // both the inline and overlay toolbars now show "Exit fullscreen"
     fireEvent.click(screen.getAllByRole('button', { name: 'Exit fullscreen' })[0]);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('uses the selected candidate bars instead of an unrelated Last Run snapshot', () => {
+    seedStore(300);
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'AAA', source: 'today_run', rowId: 'today:AAA',
+      candidate: {
+        ticker: 'AAA', rank: 1, entry: 100,
+        priceHistory: [{ date: '2025-01-01', open: 100, high: 101, low: 99, close: 100, volume: 1000 }],
+        patterns: [],
+      } as any,
+    });
+    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+    expect(screen.queryByRole('button', { name: '1W' })).not.toBeInTheDocument();
+  });
+
+  it('fetches direct candles for a selected symbol without a candidate snapshot', async () => {
+    seedStore(300);
+    let requests = 0;
+    server.use(http.get(`${API_BASE_URL}/api/market-data/AAA/candles`, () => {
+      requests += 1;
+      return HttpResponse.json({ ticker: 'AAA', price_history: [], patterns: [] });
+    }));
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'AAA', source: 'today_position', rowId: 'position:AAA',
+    });
+    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+    await waitFor(() => expect(requests).toBe(1));
   });
 });

@@ -381,6 +381,27 @@ describe('AnalysisDecisionStrip — source chips', () => {
 });
 
 describe('AnalysisDecisionStrip held position', () => {
+  it('uses initial risk when the held metrics omit per-share risk', () => {
+    const position = { positionId: 'POS-1', ticker: 'AAPL', entryPrice: 100,
+      stopPrice: 105, targetPrice: 140, initialRisk: 12 } as any;
+    render(<AnalysisDecisionStrip ticker="AAPL" position={position} />);
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR')).closest('tr')).toHaveTextContent('$12.00');
+  });
+
+  it('keeps held entry and original 1R when an add-on draft is available', () => {
+    const position = { positionId: 'POS-1', ticker: 'AAPL', entryPrice: 100,
+      stopPrice: 105, targetPrice: 140, perShareRisk: 10 } as any;
+    const candidate = buildCandidate({
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } } as any,
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 120, stop: 110,
+        target: 140, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed' },
+    });
+    render(<AnalysisDecisionStrip ticker="AAPL" position={position} candidate={candidate} />);
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entry')).closest('tr')).toHaveTextContent('$100.00');
+    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR')).closest('tr')).toHaveTextContent('$10.00');
+  });
+
   it('shows the real filled entry, not the fresh-setup close', () => {
     const position = {
       positionId: 'POS-1', ticker: 'LRCX', entryPrice: 383.04, stopPrice: 346.3,

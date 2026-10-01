@@ -32,7 +32,11 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
   const partialCloseMutation = usePartialClosePositionMutation(() => setModal(null));
   const closePositionMutation = useClosePositionMutation(() => setModal(null));
   const positionId = position.positionId ?? '';
-  const stopPreview = usePositionStopPreviewQuery(positionId, null, checkLive);
+  const stopPreview = usePositionStopPreviewQuery(positionId, null, false);
+  const handleCheckLive = () => {
+    setCheckLive(true);
+    void stopPreview.refetch();
+  };
 
   const setActiveTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const canAdd = Boolean(
@@ -40,7 +44,7 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
       && getCanonicalOrderDraft(candidate),
   );
 
-  const displayedR = checkLive && stopPreview.data ? stopPreview.data.rNow : position.rNow;
+  const displayedR = checkLive && !stopPreview.isError && stopPreview.data ? stopPreview.data.rNow : position.rNow;
   const rSign = displayedR >= 0 ? '+' : '';
 
   return (
@@ -73,12 +77,17 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
             {t('workspacePage.panels.analysis.managePosition.previewDescription')}
           </p>
         </div>
-        <Button size="sm" variant="secondary" onClick={() => setCheckLive(true)}>
+        <Button size="sm" variant="secondary" onClick={handleCheckLive}>
           {t('workspacePage.panels.analysis.managePosition.checkLive')}
         </Button>
+        {checkLive && stopPreview.isError && (
+          <p role="alert" className="text-sm text-danger">
+            {stopPreview.error instanceof Error ? stopPreview.error.message : t('workspacePage.overview.reviewFallback')}
+          </p>
+        )}
       </section>
 
-      {checkLive && stopPreview.data && (
+      {checkLive && !stopPreview.isError && stopPreview.data && (
         <div className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-muted space-y-1">
           <div>
             <span className="font-medium text-foreground">{stopPreview.data.action}</span>
