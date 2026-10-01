@@ -21,6 +21,7 @@ export default function Header() {
   const now = new Date();
   const { locale, t } = useI18n();
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const { user, role, logout } = useAuth();
   const reviewQueueQuery = useReviewQueue();
   const reviewCount = reviewQueueQuery.data?.length ?? 0;
@@ -42,6 +43,30 @@ export default function Header() {
     portfolioSummaryQuery.isError ||
     strategiesQuery.isError ||
     activeStrategyQuery.isError;
+  const hasActionError = setActiveMutation.isError || Boolean(logoutError);
+  const hasHealthError = hasQueryError || hasActionError;
+  const healthLabel = hasHealthError
+    ? t('header.dataHealth.partial')
+    : isFinal
+      ? t('cockpit.strip.finalClose')
+      : t('cockpit.strip.intradayPreview');
+  const healthClass = hasHealthError
+    ? 'border-danger/40 bg-danger/10 text-danger'
+    : isFinal
+      ? 'border-success/40 bg-success/10 text-success'
+      : 'border-warning/40 bg-warning/10 text-warning';
+  const strategyError = setActiveMutation.isError
+    ? setActiveMutation.error instanceof Error
+      ? setActiveMutation.error.message
+      : t('sidebar.updateError')
+    : null;
+  const handleLogout = () => {
+    setLogoutError(null);
+    void logout().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : '';
+      setLogoutError(message && message !== 'Failed to sign out' ? message : t('sidebar.logoutError'));
+    });
+  };
 
   const dateStr = now.toLocaleDateString(locale, {
     weekday: 'short',
@@ -79,6 +104,9 @@ export default function Header() {
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </Select>
+        {strategyError ? (
+          <p role="alert" className="mt-1 text-xs text-danger">{strategyError}</p>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -87,18 +115,16 @@ export default function Header() {
           aria-hidden="true"
           className={cn(
             'h-[9px] w-[9px] rounded-full',
-            hasQueryError ? 'bg-danger' : isFinal ? 'bg-success' : 'bg-warning',
+            hasHealthError ? 'bg-danger' : isFinal ? 'bg-success' : 'bg-warning',
           )}
         />
         <span
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-medium',
-            isFinal
-              ? 'border-success/40 bg-success/10 text-success'
-              : 'border-warning/40 bg-warning/10 text-warning',
+            healthClass,
           )}
         >
-          <span>{isFinal ? t('cockpit.strip.finalClose') : t('cockpit.strip.intradayPreview')}</span>
+          <span>{healthLabel}</span>
           {reviewSource ? (
             <span className="font-normal text-muted">{formatDate(reviewSource.asofDate)}</span>
           ) : null}
@@ -135,13 +161,16 @@ export default function Header() {
           <Badge variant={role === 'admin' ? 'success' : 'default'}>{role}</Badge>
           <button
             type="button"
-            title="Sign out"
-            aria-label="Sign out"
-            onClick={() => { void logout(); }}
+            title={t('sidebar.signOut')}
+            aria-label={t('sidebar.signOut')}
+            onClick={handleLogout}
             className="grid h-7 w-7 place-items-center rounded text-muted hover:bg-surface-hover hover:text-foreground"
           >
             <LogOut size={15} aria-hidden="true" />
           </button>
+          {logoutError ? (
+            <p role="alert" className="max-w-52 text-xs text-danger">{logoutError}</p>
+          ) : null}
         </div>
       </div>
     </header>

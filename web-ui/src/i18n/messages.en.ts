@@ -645,6 +645,8 @@ export const messagesEn = {
     customStrategy: 'Custom strategy',
     loadError: 'Failed to load strategies',
     updateError: 'Failed to update active strategy',
+    logoutError: 'Sign out failed. Please try again.',
+    signOut: 'Sign out',
     versionLabel: 'Risk-first swing trading',
   },
   analysis: {
@@ -716,6 +718,8 @@ export const messagesEn = {
     test: 'Test',
     testAll: 'Test all',
     testing: 'Testing…',
+    testError: 'Data-source test failed. Please try again.',
+    testAllError: 'Data-source test failed. Please try again.',
     notConfigured: 'Not configured',
     notProbeable: 'No probe',
     fallbacks: {
@@ -934,6 +938,7 @@ export const messagesEn = {
       watch: 'Watch',
       unwatch: 'Unwatch',
       watchPending: 'Updating…',
+      watchError: 'Watchlist update failed. Please try again.',
       sources: {
         market: 'Market',
         fundamentals: 'Fundamentals',
@@ -1433,6 +1438,9 @@ export const messagesEn = {
     focusView: 'Focus view',
     showNavigation: 'Show navigation',
     hideNavigation: 'Hide navigation',
+    dataHealth: {
+      partial: 'Needs attention',
+    },
   },
   strategyCoach: {
     title: 'Strategy Coach',

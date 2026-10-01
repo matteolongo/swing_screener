@@ -81,4 +81,29 @@ describe('Header', () => {
     await user.click(badge);
     expect(screen.getByText(messagesEn.reviewQueue.title)).toBeInTheDocument();
   });
+
+  it('keeps the confirmed strategy and reports a failed strategy change', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/api/strategy/active`, () =>
+        HttpResponse.json({ detail: 'strategy unavailable' }, { status: 500 })),
+    );
+    const { user } = renderHeader();
+    const select = await screen.findByRole('combobox', { name: t('sidebar.activeStrategy') });
+    await user.selectOptions(select, 'momentum');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('strategy unavailable');
+    expect(select).toHaveValue('default');
+  });
+
+  it('reports a failed logout without hiding the authenticated controls', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/api/auth/logout`, () =>
+        HttpResponse.json({ detail: 'logout failed' }, { status: 500 })),
+    );
+    const { user } = renderHeader();
+    await user.click(await screen.findByRole('button', { name: t('sidebar.signOut') }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('sidebar.logoutError'));
+    expect(screen.getByRole('button', { name: t('sidebar.signOut') })).toBeInTheDocument();
+  });
 });
