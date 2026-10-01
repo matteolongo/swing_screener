@@ -11,7 +11,16 @@ export const queryKeys = {
   universeDetail: (id?: string | null) => ['universe-detail', id ?? null] as const,
   taxonomyPresets: () => ['taxonomy-presets'] as const,
   reviewQueue: () => ['review-queue'] as const,
+  dailyReviewPrefix: () => ['dailyReview'] as const,
   dailyReview: (topN: number, universe?: string | null) => ['dailyReview', topN, universe ?? null] as const,
+  earningsProximity: (ticker?: string | null) => ['earnings-proximity', ticker ?? null] as const,
+  regimeBreakdown: () => ['regime-breakdown'] as const,
+  weeklyReviews: () => ['weekly-reviews'] as const,
+  weeklyReview: (weekId?: string | null) => ['weekly-review', weekId ?? null] as const,
+  screenerPrefix: () => ['screener'] as const,
+  screenerRecurrence: () => ['screener', 'recurrence'] as const,
+  backtest: () => ['backtest'] as const,
+  intelligencePrefix: () => ['intelligence'] as const,
   orders: (status?: OrderFilterStatus) =>
     status == null ? (['orders'] as const) : (['orders', status] as const),
   positions: (status?: PositionFilterStatus | 'open') =>
