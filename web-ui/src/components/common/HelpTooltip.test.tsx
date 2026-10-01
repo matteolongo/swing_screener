@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
 import HelpTooltip from './HelpTooltip';
@@ -17,7 +17,9 @@ describe('HelpTooltip', () => {
     expect(screen.getByRole('dialog', { name: 'Details' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
 
-    expect(screen.queryByRole('dialog', { name: 'Details' })).not.toBeInTheDocument();
-    expect(trigger).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Details' })).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+    });
   });
 });

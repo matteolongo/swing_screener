@@ -63,6 +63,11 @@
 
 ## Current implementation plans
 
+- [docs/superpowers/specs/2026-10-01-frontend-remediation-design.md](../superpowers/specs/2026-10-01-frontend-remediation-design.md) — approved frontend remediation scope and non-goals
+- [docs/superpowers/plans/2026-10-01-frontend-remediation.md](../superpowers/plans/2026-10-01-frontend-remediation.md) — task-by-task TDD plan for audit remediation
+- [docs/superpowers/sdd/2026-10-01-frontend-remediation/task-5-report.md](../superpowers/sdd/2026-10-01-frontend-remediation/task-5-report.md) — keyboard and modal interaction review evidence
+- [docs/superpowers/sdd/2026-10-01-frontend-remediation/task-6-report.md](../superpowers/sdd/2026-10-01-frontend-remediation/task-6-report.md) — date, locale, token, and final verification evidence
+
 - [`docs/superpowers/plans/2026-09-30-cockpit-review-fixes.md`](../superpowers/plans/2026-09-30-cockpit-review-fixes.md) — PR #481 fixes, validation, merge, and frontend audit scope
 
 - [`docs/superpowers/plans/2026-09-16-p1-p2-fixes.md`](../superpowers/plans/2026-09-16-p1-p2-fixes.md) — task-by-task TDD plan for the six P1/P2 review fixes (cache head freshness, linked-stop lifecycle, sizing batch abort, weekend stop validation, workspace auto-reselect, journal visibility)
