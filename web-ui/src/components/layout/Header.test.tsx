@@ -89,7 +89,7 @@ describe('Header', () => {
     );
     const { user } = renderHeader();
     const select = await screen.findByRole('combobox', { name: t('sidebar.activeStrategy') });
-    await user.selectOptions(select, 'momentum');
+    await user.selectOptions(select, await screen.findByRole('option', { name: 'Momentum' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('strategy unavailable');
     expect(select).toHaveValue('default');
