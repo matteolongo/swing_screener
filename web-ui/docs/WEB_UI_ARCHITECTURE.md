@@ -1,7 +1,7 @@
 # Web UI Architecture
 
 > Status: current.  
-> Last reviewed: 2026-07-28.
+> Last reviewed: 2026-10-02.
 
 ## Directory Structure
 
@@ -50,6 +50,11 @@
 - React Query keys live in `src/lib/queryKeys.ts`. Always use these for cache invalidation — do not construct key arrays inline.
 - Every create, submit, cancel, or fill order transition invalidates the Daily Review cache through `invalidateOrderLifecycleQueries`; fill transitions additionally invalidate positions.
 - All user-facing strings go through `src/i18n/`. No hardcoded copy in components or tests.
+- Calendar headings format date-only events with the active `I18nProvider` locale. Its `EventSourceTag` legend always enumerates `position`, `screener`, `economic`, and `ipo` so a source tag is not silently omitted from the UI.
+- Weekly Review IDs use ISO week-year semantics (`YYYY-Www`) calculated from UTC calendar dates. The review form uses `Field` plus `Textarea`, which supplies stable label/control associations.
+- `ModalShell` owns modal Escape handling, focus trapping, scroll locking, and restoration to the opening control. Help and chart fullscreen surfaces use it instead of ad-hoc overlays.
+- Tabs use native buttons with `tablist`/`tab`/`tabpanel` relationships, roving `tabIndex`, and Arrow/Home/End navigation. Row-level secondary actions are sibling native buttons; table selections expose `aria-selected`.
+- Frontend styling uses semantic tokens. ESLint rejects hardcoded Tailwind palette utilities, including directional `border-t-*`, `border-r-*`, `border-b-*`, `border-l-*`, `border-x-*`, `border-y-*`, `border-s-*`, and `border-e-*` variants.
 - Today row actions are sibling native buttons in a labelled group. Its `j`/`k` and arrow navigation is scoped to the visible list, tracks source-specific row IDs, and is suspended for editable controls and dialogs.
 
 ## State

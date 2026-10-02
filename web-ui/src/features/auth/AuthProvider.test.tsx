@@ -9,10 +9,24 @@ function Probe() {
   return <div>{auth.status}:{auth.role ?? 'none'}:{auth.user?.subject ?? 'none'}</div>;
 }
 
+let auth: ReturnType<typeof useAuth>;
+function AuthProbe() {
+  auth = useAuth();
+  return <Probe />;
+}
+
 function renderProvider() {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <AuthProvider><Probe /></AuthProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function renderAuthProbe() {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <AuthProvider><AuthProbe /></AuthProvider>
     </QueryClientProvider>,
   );
 }
@@ -50,5 +64,40 @@ describe('AuthProvider', () => {
     await act(async () => { await apiFetch('/api/protected'); });
 
     await waitFor(() => expect(screen.getByText('anonymous:none:none')).toBeInTheDocument());
+  });
+
+  it('keeps an authenticated session when logout returns HTTP 500', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        authenticated: true,
+        user: { subject: 'u-1', email: null, display_name: 'User' },
+        role: 'admin',
+        csrf_token: 'csrf',
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'logout failed' }), { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAuthProbe();
+    await screen.findByText('authenticated:admin:u-1');
+
+    await expect(auth.logout()).rejects.toThrow();
+    expect(auth.status).toBe('authenticated');
+    expect(screen.getByText('authenticated:admin:u-1')).toBeInTheDocument();
+  });
+
+  it('keeps an authenticated session when logout returns HTTP 401', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        authenticated: true,
+        user: { subject: 'u-1', email: null, display_name: 'User' },
+        role: 'admin',
+        csrf_token: 'csrf',
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 401 }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAuthProbe();
+    await screen.findByText('authenticated:admin:u-1');
+
+    await act(async () => { await expect(auth.logout()).rejects.toThrow(); });
+    expect(screen.getByText('authenticated:admin:u-1')).toBeInTheDocument();
   });
 });

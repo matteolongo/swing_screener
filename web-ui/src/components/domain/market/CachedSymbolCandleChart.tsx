@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
+import ModalShell from '@/components/common/ModalShell';
 import type { CandlePattern, PriceHistoryPoint } from '@/features/screener/types';
 import {
   getAvailablePriceRanges,
@@ -9,6 +9,7 @@ import {
 } from '@/features/screener/priceHistory';
 import { useTickerCandles } from '@/features/screener/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
@@ -137,15 +138,30 @@ function ChartToolbar({
 
 /**
  * Candlestick chart for full symbol views. Sources OHLCV bars, detected patterns,
- * and the benchmark comparison series from the cached screener result by ticker.
+ * and the benchmark comparison series from the selected review snapshot when
+ * one exists, with cached/direct data fallbacks for unselected symbols.
  * Adds a time-range selector (1W..MAX), overlay toggles, and a fullscreen overlay.
  */
 export function CachedSymbolCandleChart({ ticker, className, width, height }: CachedSymbolCandleChartProps) {
   const symbol = ticker.toUpperCase();
-  const candidate = useScreenerStore((state) =>
-    state.lastResult?.candidates.find((c) => c.ticker.toUpperCase() === symbol),
-  );
-  const benchmarkLabel = useScreenerStore((state) => state.lastResult?.benchmarkTicker ?? null);
+  const selection = useWorkspaceStore((state) => state.selection);
+  const selectedCandidate = selection?.ticker === symbol ? selection.candidate : undefined;
+  const lastRunCandidate = useScreenerStore((state) => {
+    // A workspace selection is authoritative, even when it deliberately has
+    // no candidate snapshot (for example, a held position). Do not silently
+    // replace that selection with an unrelated Last Run row.
+    if (selection?.ticker === symbol) return undefined;
+    return state.lastResult?.candidates.find((c) => c.ticker.toUpperCase() === symbol);
+  });
+  const candidate = selectedCandidate ?? lastRunCandidate;
+  const benchmarkLabel = useScreenerStore((state) => {
+    if (selection?.ticker === symbol) {
+      if (selection.source === 'today_run') return state.todayRun?.result.benchmarkTicker ?? null;
+      if (selection.source === 'last_run') return state.lastResult?.benchmarkTicker ?? null;
+      return null;
+    }
+    return state.lastResult?.benchmarkTicker ?? null;
+  });
 
   // Fall back to a direct API fetch when the ticker is not in the screener store
   // (e.g. open positions, watchlist items that were never screened).
@@ -180,13 +196,6 @@ export function CachedSymbolCandleChart({ ticker, className, width, height }: Ca
     () => slicePriceHistory(benchmarkBars, effectiveRange),
     [benchmarkBars, effectiveRange],
   );
-
-  useEffect(() => {
-    if (!fullscreen) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setFullscreen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [fullscreen]);
 
   const sharedChartProps = {
     ticker,
@@ -223,26 +232,20 @@ export function CachedSymbolCandleChart({ ticker, className, width, height }: Ca
       <Suspense fallback={<ChartLoadingFallback height={height} />}>
         <CandleChart {...sharedChartProps} width={width} height={height} />
       </Suspense>
-      {fullscreen &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            role="dialog"
-            aria-modal="true"
-            onClick={() => setFullscreen(false)}
-          >
-            <div
-              className="w-full max-w-[95vw] rounded-lg bg-surface p-4 shadow-xl"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <ChartToolbar {...toolbarProps} />
-              <Suspense fallback={<ChartLoadingFallback height={overlayHeight} />}>
-                <CandleChart {...sharedChartProps} width={1280} height={overlayHeight} />
-              </Suspense>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {fullscreen && (
+        <ModalShell
+          title={t('chart.fullscreen')}
+          onClose={() => setFullscreen(false)}
+          closeOnBackdrop={false}
+          fullScreen
+          contentClassName="p-4"
+        >
+          <ChartToolbar {...toolbarProps} />
+          <Suspense fallback={<ChartLoadingFallback height={overlayHeight} />}>
+            <CandleChart {...sharedChartProps} width={1280} height={overlayHeight} />
+          </Suspense>
+        </ModalShell>
+      )}
     </div>
   );
 }

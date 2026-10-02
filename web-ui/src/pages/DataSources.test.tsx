@@ -29,4 +29,15 @@ describe('DataSources page', () => {
     expect(await screen.findByText('Company IR RSS')).toBeInTheDocument();
     expect(screen.getByText(t('datasources.title'))).toBeInTheDocument();
   });
+
+  it('shows a retryable error when Test all fails', async () => {
+    server.use(
+      http.post('*/api/datasources/probe', () =>
+        HttpResponse.json({ detail: 'probe service unavailable' }, { status: 500 })),
+    );
+    const { user } = renderWithProviders(<DataSources />, { route: '/datasources' });
+    await user.click(screen.getByRole('button', { name: t('datasources.testAll') }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('probe service unavailable');
+  });
 });

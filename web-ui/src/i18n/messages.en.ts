@@ -645,6 +645,8 @@ export const messagesEn = {
     customStrategy: 'Custom strategy',
     loadError: 'Failed to load strategies',
     updateError: 'Failed to update active strategy',
+    logoutError: 'Sign out failed. Please try again.',
+    signOut: 'Sign out',
     versionLabel: 'Risk-first swing trading',
   },
   analysis: {
@@ -716,6 +718,8 @@ export const messagesEn = {
     test: 'Test',
     testAll: 'Test all',
     testing: 'Testing…',
+    testError: 'Data-source test failed. Please try again.',
+    testAllError: 'Data-source test failed. Please try again.',
     notConfigured: 'Not configured',
     notProbeable: 'No probe',
     fallbacks: {
@@ -934,6 +938,7 @@ export const messagesEn = {
       watch: 'Watch',
       unwatch: 'Unwatch',
       watchPending: 'Updating…',
+      watchError: 'Watchlist update failed. Please try again.',
       sources: {
         market: 'Market',
         fundamentals: 'Fundamentals',
@@ -1433,6 +1438,9 @@ export const messagesEn = {
     focusView: 'Focus view',
     showNavigation: 'Show navigation',
     hideNavigation: 'Hide navigation',
+    dataHealth: {
+      partial: 'Needs attention',
+    },
   },
   strategyCoach: {
     title: 'Strategy Coach',
@@ -2866,6 +2874,7 @@ export const messagesEn = {
         instrument_type: 'Instrument type',
       },
       columns: {
+        rank: 'Rank',
         symbol: 'Symbol',
         name: 'Name',
         exchange: 'Exchange',
@@ -2875,6 +2884,20 @@ export const messagesEn = {
         marketCap: 'Market Cap',
         source: 'Source',
         nextAction: 'Next action',
+        close: 'Close',
+        score: 'Score',
+        momentum6m: '6M momentum',
+        relativeStrength: 'Rel strength',
+        riskReward: 'R:R',
+        fundamentals: 'Fundamentals',
+      },
+      screener: {
+        error: 'Screener run failed.',
+        title: 'Screener Results for Discovered Symbols',
+        candidateCount: '{{count}} candidates',
+        screenedCount: '{{count}} screened',
+        benchmark: 'Benchmark {{ticker}}',
+        empty: 'Run discovery on the Discovery tab, then click "Run Screener on These Symbols".',
       },
     },
     screenerRun: {
@@ -2969,6 +2992,34 @@ export const messagesEn = {
     degiroNotConnected: 'DeGiro not connected',
     markSubmitted: 'Mark submitted',
   },
+  weeklyReview: {
+    weekLabel: 'Week {{id}}',
+    lastSaved: 'Last saved {{date}}',
+    fields: {
+      whatWorked: {
+        label: 'What Worked',
+        placeholder: 'What setups or decisions went well this week?',
+      },
+      whatDidnt: {
+        label: "What Didn't Work",
+        placeholder: 'What went wrong or felt off?',
+      },
+      rulesViolated: {
+        label: 'Rules Violated',
+        placeholder: 'Did you break any trading rules?',
+      },
+      nextWeekFocus: {
+        label: 'Next Week Focus',
+        placeholder: 'What will you focus on or improve?',
+      },
+    },
+    actions: {
+      save: 'Save Review',
+      saving: 'Saving…',
+      saved: 'Saved.',
+      saveError: 'Failed to save.',
+    },
+  },
   fillViaDegiroModal: {
     title: 'Link fill for {{ticker}}',
     loading: 'Fetching recent DeGiro orders...',
@@ -3026,6 +3077,7 @@ export const messagesEn = {
       sectionTitle: 'Open positions',
       analyzing: 'Analyzing…',
       analyzeButton: 'Analyze',
+      rowActions: 'Actions for {{ticker}}',
       noIntelligence: 'No analysis yet',
       stopAction: {
         NO_ACTION: 'Hold stop',

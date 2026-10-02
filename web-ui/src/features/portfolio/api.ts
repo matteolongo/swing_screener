@@ -565,6 +565,8 @@ export async function fetchPositionStopSuggestion(positionId: string): Promise<P
           current_price: localPosition.currentPrice ?? null,
           notes: localPosition.notes ?? '',
           exit_order_ids: localPosition.exitOrderIds ?? null,
+          trail_method: localPosition.trailMethod ?? 'sma20',
+          trail_param: localPosition.trailParam ?? null,
         },
         manage: {
           breakeven_at_r: strategy.manage.breakevenAtR,

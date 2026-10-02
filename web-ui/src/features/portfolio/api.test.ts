@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { closePosition, createOrder, fetchOrders, fetchPositions, fetchPositionMetrics, fetchPortfolioSummary, fillOrder, partialClosePosition } from '@/features/portfolio/api';
-import { resetTradingStore, mutateTradingStore, readTradingStore } from '@/features/persistence';
+import { closePosition, fetchPositionStopSuggestion, createOrder, fetchOrders, fetchPositions, fetchPositionMetrics, fetchPortfolioSummary, fillOrder, partialClosePosition } from '@/features/portfolio/api';
+import { createDefaultTradingStore, resetTradingStore, mutateTradingStore, readTradingStore, writeTradingStore } from '@/features/persistence';
 
 describe('portfolio api', () => {
   it('uses the stateless projection for local metrics without recalculating or saving it', async () => {
@@ -21,6 +21,24 @@ describe('portfolio api', () => {
     expect(fetchMock.mock.calls.every(([url]) => String(url).endsWith('/api/portfolio/state/metrics'))).toBe(true);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ revision: 0, positions: [{ position_id: 'POS-1' }] });
     expect(readTradingStore()).toEqual(before);
+  });
+
+  it('sends a manual trailing policy for local stop suggestions', async () => {
+    vi.stubEnv('VITE_PERSISTENCE_MODE', 'local');
+    vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'true');
+    const store = createDefaultTradingStore();
+    store.positions = [{ ticker: 'AAPL', status: 'open', positionId: 'POS-1', entryDate: '2026-09-01', entryPrice: 100, stopPrice: 95, shares: 10, trailMethod: 'manual', trailParam: null }];
+    writeTradingStore(store);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ticker: 'AAPL', status: 'open', last: 110, entry: 100, stop_old: 95,
+      stop_suggested: 100, shares: 10, r_now: 2, action: 'MOVE_STOP_UP', reason: 'manual',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchPositionStopSuggestion('POS-1');
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string).position)
+      .toMatchObject({ trail_method: 'manual', trail_param: null });
   });
   beforeEach(() => {
     vi.stubEnv('VITE_PERSISTENCE_MODE', 'api');

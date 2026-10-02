@@ -9,6 +9,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Frontend review workflows now preserve local trading state and selected
+  snapshots, show failed actions, support keyboard and modal-focus operation,
+  and use correct ISO review weeks and active-locale calendar dates.
+
 - Cockpit order-review buttons open the signed-draft ticket, unpinned screener
   results remain available in Universes, and newer daily prices mark cached AI
   analysis outdated.

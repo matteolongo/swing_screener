@@ -154,6 +154,18 @@ describe('SymbolDetailPanel', () => {
     await user.click(screen.getByRole('button', { name: t('cockpit.detail.close') }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('reports a failed Watch action without changing watched state', async () => {
+    server.use(
+      http.put(`${API_BASE_URL}/api/watchlist/ADYEN`, () =>
+        HttpResponse.json({ detail: 'watch failed' }, { status: 500 })),
+    );
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    await user.click(screen.getByRole('button', { name: t('workspacePage.overview.watch') }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('watch failed');
+    expect(screen.getByRole('button', { name: t('workspacePage.overview.watch') })).toBeInTheDocument();
+  });
 });
 
 function adyenIntelligenceApi(generatedAt: string, summaryLine: string) {

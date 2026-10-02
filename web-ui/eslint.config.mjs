@@ -8,7 +8,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 // These selectors are shared so any block that sets `no-restricted-syntax` keeps the
 // color ban (flat config does not merge a rule's options across blocks — last wins).
 const COLOR_PALETTE =
-  '(?:bg|text|border|divide|ring|fill|stroke|from|via|to|outline|placeholder|caret|accent|decoration)-(?:gray|slate|zinc|neutral|stone|blue|sky|indigo|purple|violet|fuchsia|cyan|pink|rose|red|orange|amber|yellow|lime|green|emerald|teal)-[0-9]';
+  '(?:bg|text|border(?:-[trblxyse])?|divide|ring|fill|stroke|from|via|to|outline|placeholder|caret|accent|decoration)-(?:gray|slate|zinc|neutral|stone|blue|sky|indigo|purple|violet|fuchsia|cyan|pink|rose|red|orange|amber|yellow|lime|green|emerald|teal)-[0-9]';
 const TOKEN_MSG =
   'Use a semantic design token (surface/foreground/muted/border/primary/success/danger/warning), not a hardcoded Tailwind palette color. See docs/DESIGN_TOKENS.md.';
 const DARK_MSG = 'The app is dark-only; drop dark: variants and use the base token.';

@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { t } from '@/i18n/t';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useCalendarEventsQuery } from '@/features/calendar/hooks';
 import type { CalendarEvent, EventSourceTag } from '@/features/calendar/types';
+
+const SOURCE_TAGS = ['position', 'screener', 'economic', 'ipo'] as const satisfies readonly EventSourceTag[];
 
 const SOURCE_STYLES: Record<EventSourceTag, { dot: string; badge: string }> = {
   position: {
@@ -22,9 +25,9 @@ const SOURCE_STYLES: Record<EventSourceTag, { dot: string; badge: string }> = {
   },
 };
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, locale: string): string {
   const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function EventRow({ event }: { event: CalendarEvent }) {
@@ -43,11 +46,11 @@ function EventRow({ event }: { event: CalendarEvent }) {
   );
 }
 
-function DateGroup({ date, events }: { date: string; events: CalendarEvent[] }) {
+function DateGroup({ date, events, locale }: { date: string; events: CalendarEvent[]; locale: string }) {
   return (
     <div className="mb-4">
       <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
-        {formatDate(date)}
+        {formatDate(date, locale)}
       </div>
       <div className="divide-y divide-border rounded-lg border border-border bg-surface px-4">
         {events.map((e, i) => (
@@ -60,6 +63,7 @@ function DateGroup({ date, events }: { date: string; events: CalendarEvent[] }) 
 
 export default function Calendar() {
   const daysAhead = 60;
+  const { locale } = useI18n();
   const { data, isLoading, isError } = useCalendarEventsQuery(daysAhead);
 
   const grouped = useMemo(() => {
@@ -85,7 +89,7 @@ export default function Calendar() {
       </div>
 
       <div className="mb-6 flex flex-wrap gap-3">
-        {(['position', 'screener', 'economic'] as EventSourceTag[]).map((tag) => (
+        {SOURCE_TAGS.map((tag) => (
           <div key={tag} className="flex items-center gap-1.5">
             <span className={`h-2.5 w-2.5 rounded-full ${SOURCE_STYLES[tag].dot}`} />
             <span className="text-xs text-muted">
@@ -107,7 +111,7 @@ export default function Calendar() {
         </p>
       )}
       {grouped.map(([date, events]) => (
-        <DateGroup key={date} date={date} events={events} />
+        <DateGroup key={date} date={date} events={events} locale={locale} />
       ))}
     </div>
   );

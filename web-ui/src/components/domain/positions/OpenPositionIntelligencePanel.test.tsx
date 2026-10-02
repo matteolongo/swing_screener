@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
+import { t } from '@/i18n/t';
 import OpenPositionIntelligencePanel from './OpenPositionIntelligencePanel';
 import { server } from '@/test/mocks/server';
 import { http, HttpResponse } from 'msw';
@@ -81,5 +83,26 @@ describe('OpenPositionIntelligencePanel', () => {
     const ticker = await screen.findByText('BESI.AS');
     await user.click(ticker);
     expect(onSelect).toHaveBeenCalledWith('BESI.AS');
+  });
+
+  it('analyzes a position without selecting its ticker', async () => {
+    const onSelect = vi.fn();
+    let analyzeRequests = 0;
+    server.use(
+      http.get(openPositionsUrl, () => HttpResponse.json([mockPositionRow])),
+      http.post('*/api/intelligence/position/pos-1', () => {
+        analyzeRequests += 1;
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<OpenPositionIntelligencePanel onTickerSelect={onSelect} />);
+
+    await user.click(await screen.findByRole('button', {
+      name: t('todayPage.openPositions.analyzeButton'),
+    }));
+
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(analyzeRequests).toBe(1);
   });
 });

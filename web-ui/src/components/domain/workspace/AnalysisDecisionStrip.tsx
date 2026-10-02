@@ -127,7 +127,7 @@ export default function AnalysisDecisionStrip({
     !heldMode &&
     suggestedOrderEntry != null &&
     (!isPositiveNumber(closeEntry) || Math.abs(suggestedOrderEntry - closeEntry) >= 0.005);
-  const entry = orderDraft?.entry ?? (usesSuggestedEntry ? suggestedOrderEntry : closeEntry);
+  const entry = heldMode ? position!.entryPrice : orderDraft?.entry ?? (usesSuggestedEntry ? suggestedOrderEntry : closeEntry);
   const stop = heldMode
     ? position!.stopPrice
     : (orderDraft?.stop ?? summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop ?? position?.stopPrice ?? null);
@@ -137,13 +137,15 @@ export default function AnalysisDecisionStrip({
   const computedRr = target != null && entry != null && stop != null && entry > stop
     ? (target - entry) / (entry - stop)
     : null;
-  const rr = orderDraft?.rr ?? computedRr ?? summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr ?? null;
-  const oneR = entry != null && stop != null ? entry - stop : null;
+  const rr = heldMode ? computedRr : orderDraft?.rr ?? computedRr ?? summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr ?? null;
+  const heldOneR = position?.perShareRisk ?? position?.initialRisk ?? null;
+  const oneR = heldMode ? heldOneR : entry != null && stop != null ? entry - stop : null;
   const pctToTarget = target != null && entry != null && entry > 0 ? (target - entry) / entry * 100 : null;
-  const riskPct = candidate?.recommendation?.risk?.riskPct
-    ?? (position != null && isPositiveNumber(position.perShareRisk) && isPositiveNumber(position.entryPrice)
-      ? position.perShareRisk / position.entryPrice
-      : undefined);
+  const riskPct = heldMode
+    ? (isPositiveNumber(heldOneR) && position != null && isPositiveNumber(position.entryPrice)
+      ? heldOneR / position.entryPrice
+      : undefined)
+    : candidate?.recommendation?.risk?.riskPct;
   const entryLabel = heldMode
     ? t('workspacePage.panels.analysis.decisionSummary.tradePlan.entry')
     : usesSuggestedEntry

@@ -27,6 +27,13 @@ export default function DataSources() {
     probeOne.mutate(id, { onSettled: () => setTestingId(null) });
   }, [probeOne]);
 
+  const probeOneError = probeOne.isError
+    ? probeOne.error instanceof Error ? probeOne.error.message : t('datasources.testError')
+    : null;
+  const probeAllError = probeAll.isError
+    ? probeAll.error instanceof Error ? probeAll.error.message : t('datasources.testAllError')
+    : null;
+
   const sources = sourcesQuery.data ?? [];
   const grouped = DOMAIN_ORDER.map((domain) => ({
     domain,
@@ -49,6 +56,8 @@ export default function DataSources() {
           {probeAll.isPending ? t('datasources.testing') : t('datasources.testAll')}
         </button>
       </header>
+      {probeAllError ? <p role="alert" className="text-sm text-danger">{probeAllError}</p> : null}
+      {probeOneError ? <p role="alert" className="text-sm text-danger">{probeOneError}</p> : null}
 
       {grouped.map((group) => (
         <section key={group.domain}>

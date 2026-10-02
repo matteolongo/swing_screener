@@ -170,7 +170,7 @@ export function usePortfolioSummary() {
 export function useEarningsProximity(ticker?: string) {
   const normalizedTicker = ticker?.trim().toUpperCase();
   return useQuery({
-    queryKey: ['earnings-proximity', normalizedTicker] as const,
+    queryKey: queryKeys.earningsProximity(normalizedTicker),
     queryFn: () => fetchEarningsProximity(normalizedTicker as string),
     enabled: Boolean(normalizedTicker),
     staleTime: 8 * 60 * 60 * 1000,
@@ -277,7 +277,7 @@ export function usePartialClosePositionMutation(onSuccess?: () => void) {
 
 export function useRegimeBreakdown() {
   return useQuery({
-    queryKey: ['regime-breakdown'],
+    queryKey: queryKeys.regimeBreakdown(),
     queryFn: fetchRegimeBreakdown,
     staleTime: 5 * 60 * 1000,
   });

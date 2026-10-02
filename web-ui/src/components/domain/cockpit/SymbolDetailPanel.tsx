@@ -284,6 +284,10 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
       watchSymbolMutation.variables?.ticker?.toUpperCase() === normalized) ||
     (unwatchSymbolMutation.isPending &&
       unwatchSymbolMutation.variables?.toUpperCase() === normalized);
+  const watchMutationError = watchSymbolMutation.error ?? unwatchSymbolMutation.error;
+  const watchError = watchSymbolMutation.isError || unwatchSymbolMutation.isError
+    ? (watchMutationError instanceof Error ? watchMutationError.message : t('workspacePage.overview.watchError'))
+    : null;
 
   const orderDraft = getCanonicalOrderDraft(candidate);
   const canReviewOrder = Boolean(orderDraft);
@@ -343,6 +347,9 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
           }
           onUnwatch={() => unwatchSymbolMutation.mutate(normalized)}
         />
+        {watchError ? (
+          <p role="alert" className="text-xs text-danger">{watchError}</p>
+        ) : null}
         <DecisionWhyPanel
           summary={candidate?.decisionSummary ?? null}
           recommendation={candidate?.recommendation ?? null}

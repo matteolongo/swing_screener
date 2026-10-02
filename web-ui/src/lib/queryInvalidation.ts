@@ -19,7 +19,7 @@ export async function invalidateStrategyQueries(queryClient: QueryClient): Promi
  * that otherwise has no React Query key to invalidate.
  */
 export async function invalidateStrategyDependentQueries(queryClient: QueryClient): Promise<void> {
-  useScreenerStore.getState().clearLastResult();
+  useScreenerStore.getState().invalidateActionableRuns();
   await Promise.all([
     invalidateStrategyQueries(queryClient),
     queryClient.invalidateQueries({ queryKey: queryKeys.positions() }),
@@ -28,12 +28,12 @@ export async function invalidateStrategyDependentQueries(queryClient: QueryClien
     queryClient.invalidateQueries({ queryKey: queryKeys.openPositionsIntelligence() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.watchlist() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.watchlistPipeline() }),
-    queryClient.invalidateQueries({ queryKey: ['dailyReview'] }),
-    queryClient.invalidateQueries({ queryKey: ['earnings-proximity'] }),
-    queryClient.invalidateQueries({ queryKey: ['regime-breakdown'] }),
-    queryClient.invalidateQueries({ queryKey: ['screener'] }),
-    queryClient.invalidateQueries({ queryKey: ['backtest'] }),
-    queryClient.invalidateQueries({ queryKey: ['intelligence'] }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.dailyReviewPrefix() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.earningsProximity() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.regimeBreakdown() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.screenerPrefix() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.backtest() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.intelligencePrefix() }),
   ]);
 }
 
@@ -58,7 +58,7 @@ export async function invalidateOrderLifecycleQueries(
 }
 
 export async function invalidateDailyReviewQueries(queryClient: QueryClient): Promise<void> {
-  await queryClient.invalidateQueries({ queryKey: ['dailyReview'] });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.dailyReviewPrefix() });
 }
 
 export async function invalidatePositionQueries(queryClient: QueryClient): Promise<void> {

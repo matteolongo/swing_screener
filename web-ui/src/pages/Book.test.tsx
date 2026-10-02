@@ -47,6 +47,25 @@ describe('Book page route state', () => {
     expect(screen.getByRole('tab', { name: t('bookPage.tabs.journalPerformance') })).toBeInTheDocument();
   });
 
+  it('supports arrow, Home, and End navigation across tabs', async () => {
+    const user = userEvent.setup();
+    renderBookWithRouteState({ tab: 'positions' });
+
+    const tabs = screen.getAllByRole('tab');
+    tabs[0].focus();
+    await user.keyboard('{ArrowRight}');
+    expect(tabs[1]).toHaveFocus();
+    expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
+
+    await user.keyboard('{End}');
+    expect(tabs[2]).toHaveFocus();
+    expect(tabs[2]).toHaveAttribute('aria-selected', 'true');
+
+    await user.keyboard('{Home}');
+    expect(tabs[0]).toHaveFocus();
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('opens the journal tab when navigation state requests review', async () => {
     server.use(
       http.get(`${API_BASE_URL}/api/weekly-reviews/:weekId`, () =>

@@ -809,6 +809,10 @@ export const handlers = [
     })
   }),
 
+  http.get(`${API_BASE_URL}/api/portfolio/analytics/regime-breakdown`, () => {
+    return HttpResponse.json({ regimes: [], benchmark: '^SPX' })
+  }),
+
   http.post(`${API_BASE_URL}/api/portfolio/orders`, async ({ request }) => {
     const body = asObject(await request.json())
     return HttpResponse.json({ 
@@ -1090,6 +1094,10 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/api/screener/run`, () => {
     return HttpResponse.json(mockScreenerResults)
+  }),
+
+  http.get(`${API_BASE_URL}/api/screener/recurrence`, () => {
+    return HttpResponse.json({ items: [] })
   }),
 
   http.get(`${API_BASE_URL}/api/market-data/:ticker/volume-analysis`, () => {

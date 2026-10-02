@@ -46,7 +46,7 @@ beforeAll(async () => {
   server = mod.server
   resetMockApiState = mod.resetMockApiState
   resetMockApiState?.()
-  server.listen({ onUnhandledRequest: 'warn' })
+  server.listen({ onUnhandledRequest: 'error' })
   console.error = (...args) => {
     if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) {
       return
