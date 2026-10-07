@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 
 import Universes from './Universes'
 import { renderWithProviders } from '@/test/utils'
 import { t } from '@/i18n/t'
 import { useScreenerStore } from '@/stores/screenerStore'
+import { transformScreenerResponse } from '@/features/screener/types'
+import { mockScreenerResults } from '@/test/mocks/handlers'
+
+vi.mock('lightweight-charts')
 
 describe('Universes page', () => {
   beforeEach(() => useScreenerStore.setState({
@@ -45,6 +49,21 @@ describe('Universes page', () => {
       name: t('workspacePage.symbolDetails.title', { ticker: 'AAPL' }),
     })).toBeInTheDocument();
     expect(useScreenerStore.getState().todayRun).toEqual(pinned);
+  });
+
+  it('keeps the saved run benchmark in its symbol modal', async () => {
+    useScreenerStore.getState().recordScreenerRun(
+      transformScreenerResponse({ ...mockScreenerResults, candidates: mockScreenerResults.candidates.map((candidate) => ({
+        ...candidate,
+        price_history: candidate.price_history.map((bar) => ({ ...bar, open: bar.close - 1, high: bar.close + 1, low: bar.close - 2 })),
+      })) }),
+      { request: { maxPrice: 500 }, displayFilters: { recommendedOnly: false, actionFilter: 'all' } },
+      false,
+    );
+    const { user } = renderWithProviders(<Universes />);
+    await user.click(within(screen.getByTestId('screener-run-section')).getByText('AAPL'));
+    const modal = await screen.findByRole('dialog', { name: t('workspacePage.symbolDetails.title', { ticker: 'AAPL' }) });
+    expect(await within(modal).findByText('ACWI')).toBeVisible();
   });
 
   it('runs live symbol discovery and shows taxonomy plus candidates', async () => {

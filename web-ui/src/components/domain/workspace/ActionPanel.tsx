@@ -2,7 +2,7 @@ import OrderActionPanel from '@/components/domain/orders/OrderActionPanel';
 import type { OrderReviewContext } from '@/components/domain/orders/OrderReviewExperience';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useCreateOrderMutation, useOpenPositions } from '@/features/portfolio/hooks';
-import { getCanonicalOrderDraft, type SameSymbolCandidateContext, type ScreenerCandidate } from '@/features/screener/types';
+import { getCanonicalOrderDraft, type SameSymbolCandidateContext } from '@/features/screener/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { t } from '@/i18n/t';
 import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
@@ -12,7 +12,7 @@ import SourceHealthSummary from './SourceHealthSummary';
 
 interface ActionPanelProps {
   ticker: string;
-  candidate?: ScreenerCandidate | null;
+  candidate?: SymbolAnalysisCandidate | null;
   source?: WorkspaceSourceState;
 }
 

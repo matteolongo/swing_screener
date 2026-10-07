@@ -14,6 +14,22 @@ React 18 + TypeScript frontend for Swing Screener.
 | Data Sources | `/datasources` | Data source diagnostics: per-source health, live probe, fallback event feed |
 | Onboarding | `/onboarding` | Setup guide |
 
+## Candidate review
+
+**Refresh the candidate data** recomputes the selected symbol for the latest
+session with a forced market-data refresh. Today and Universes preserve the
+originating scan's filter and indicator overrides. The returned candidate,
+chart, benchmark, and signed order draft stay together in the open review;
+saved Last Run and pinned Today snapshots remain unchanged. Failed or empty
+responses keep the previous candidate visible with a retryable error, and
+late responses cannot replace a newer workspace selection. Success shows the
+returned data date and labels intraday results explicitly.
+
+Held-position metrics use the actual position entry and initial per-share risk
+for 1R, R:R, and risk percentage. **Check live** fetches a new read-only stop
+preview on every click and exposes failures for retry. The scan waiting panel
+lists its operations without claiming timed completion of individual stages.
+
 ## Development
 
 Local persistence keeps the portfolio ledger in browser storage, but trading

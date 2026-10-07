@@ -104,7 +104,14 @@ optional immutable run ID, candidate snapshot, and stable row ID), plus compatib
 selectors for the selected ticker and selection version. Today, Last Run, position,
 watchlist, portfolio, and ad-hoc entry points write the envelope; workspace consumers
 receive its candidate directly and never re-query the unrelated Last Run by ticker.
-Single-symbol computation is a request-keyed workspace-local cache and never changes
+`features/workspaceData/useCandidateAnalysis` owns single-symbol computation and
+forced candidate refresh for the open review. It preserves the originating run's
+request overrides while requesting only the selected ticker and latest session.
+Results and errors are scoped to the candidate snapshot and selection version;
+late responses are discarded, and empty or wrong-ticker responses preserve the
+previous candidate. The displayed candidate supplies the chart, benchmark, and
+order-review draft together. Saved-run and discovery modals capture request and
+benchmark context with their selected candidate. Computation never changes
 `lastResult` or the immutable, display-filtered `todayRun`. A strategy transition clears
 persisted actionable runs before dependent queries refresh.
 active analysis tab, expanded/split mode, full-screen mode, and activity-drawer
@@ -135,6 +142,12 @@ Intelligence generation is a separate explicit action and records the precise
 input manifest and per-source degradation. Neither action mutates trading
 state. Backtest is not included in this health model and preserves its existing
 query and run/reset behavior.
+
+Held-position displays take entry and initial per-share risk from the position,
+even when its current stop has moved or a candidate carries an add-on draft.
+Live stop preview explicitly refetches on repeated checks and displays request
+errors; it never persists a stop. Screener waiting UI has no per-stage progress
+contract and does not simulate stage completion with elapsed time.
 
 When the Today workspace is expanded, the mounted Today, Last Run, or Watchlist
 panel renders its compact symbol-rail variant from the same loaded collection.

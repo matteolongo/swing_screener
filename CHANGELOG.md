@@ -12,6 +12,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Frontend review workflows now preserve local trading state and selected
   snapshots, show failed actions, support keyboard and modal-focus operation,
   and use correct ISO review weeks and active-locale calendar dates.
+- Candidate review now exposes a forced data-refresh action, preserves original
+  scan overrides, and keeps the selected chart, benchmark, and order draft in
+  sync without replacing saved runs. Failed refreshes preserve the prior review.
+- Held-position target R:R now uses the original 1R after a stop move.
+- Screener waiting feedback no longer marks stages complete on a timer.
 
 - Cockpit order-review buttons open the signed-draft ticket, unpinned screener
   results remain available in Universes, and newer daily prices mark cached AI

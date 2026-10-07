@@ -49,13 +49,15 @@ describe('ScreenerRunningPanel', () => {
     expect(screen.getByText(t('screener.running.steps.downloadingPrices'))).toBeInTheDocument();
   });
 
-  it('stops advancing past the last step', () => {
+  it('does not claim that elapsed time completed backend stages', () => {
     renderWithProviders(<ScreenerRunningPanel />);
     act(() => {
       vi.advanceTimersByTime(10000);
     });
-    // All steps should still be in the document
     expect(screen.getByText(t('screener.running.steps.buildingPlans'))).toBeInTheDocument();
+    for (const step of ['preparingUniverse', 'downloadingPrices', 'scoringSetups', 'applyingRisk', 'buildingPlans'] as const) {
+      expect(screen.getByText(t(`screener.running.steps.${step}`))).not.toHaveClass('line-through');
+    }
   });
 });
 

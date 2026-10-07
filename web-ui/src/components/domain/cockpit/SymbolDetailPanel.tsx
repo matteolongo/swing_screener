@@ -38,6 +38,8 @@ import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorksp
 import { isIntelligenceOutdated } from '@/features/workspaceData/health';
 import { t } from '@/i18n/t';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useScreenerStore } from '@/stores/screenerStore';
+import { useCandidateAnalysis } from '@/features/workspaceData/useCandidateAnalysis';
 
 interface SymbolDetailPanelProps {
   ticker: string;
@@ -70,8 +72,20 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
   // WorkspaceSelection envelope: the already-selected candidate snapshot travels
   // with the selection (CandidateQueue writes it). Never look the ticker back up
   // in the screener Last Run store here.
-  const candidate =
+  const selectedCandidate =
     selection?.ticker === normalized ? (selection.candidate ?? null) : null;
+  const benchmarkTicker = useScreenerStore((state) => {
+    if (state.todayRun && selection?.source === 'today_run' && selection.runId === state.todayRun.completedAt) return state.todayRun.result.benchmarkTicker ?? null;
+    if (selection?.source === 'last_run' && selection.runId === state.lastRunContext?.completedAt) return state.lastResult?.benchmarkTicker ?? null;
+    return null;
+  });
+  const runRequest = useScreenerStore((state) => {
+    if (state.todayRun && selection?.source === 'today_run' && selection.runId === state.todayRun.completedAt) return state.todayRun.request;
+    if (selection?.source === 'last_run' && selection.runId === state.lastRunContext?.completedAt) return state.lastRunContext?.request;
+    return undefined;
+  });
+  const candidateAnalysis = useCandidateAnalysis(normalized, selectedCandidate, selectionVersion, benchmarkTicker, runRequest);
+  const candidate = candidateAnalysis.candidate;
 
   const openPositionsQuery = useOpenPositions();
   const position =
@@ -346,6 +360,13 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
             })
           }
           onUnwatch={() => unwatchSymbolMutation.mutate(normalized)}
+          candidateRefresh={{
+            onRefresh: candidateAnalysis.refresh,
+            isPending: candidateAnalysis.isPending,
+            error: candidateAnalysis.error,
+            asOf: candidateAnalysis.refreshedResult ? candidate?.lastBar ?? candidateAnalysis.refreshedResult.asofDate : null,
+            freshness: candidateAnalysis.refreshedResult?.dataFreshness,
+          }}
         />
         {watchError ? (
           <p role="alert" className="text-xs text-danger">{watchError}</p>
@@ -384,7 +405,7 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-foreground">{t('cockpit.detail.chart')}</h2>
         <div className="rounded-lg border border-border bg-surface p-3">
-          <CachedSymbolCandleChart ticker={normalized} width={820} height={220} />
+          <CachedSymbolCandleChart ticker={normalized} candidate={candidate} benchmarkTicker={candidateAnalysis.benchmarkTicker} width={820} height={220} />
         </div>
       </section>
 

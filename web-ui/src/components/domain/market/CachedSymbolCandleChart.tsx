@@ -8,8 +8,7 @@ import {
   type PriceRangeKey,
 } from '@/features/screener/priceHistory';
 import { useTickerCandles } from '@/features/screener/hooks';
-import { useScreenerStore } from '@/stores/screenerStore';
-import { useWorkspaceStore } from '@/stores/workspaceStore';
+import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
@@ -17,6 +16,8 @@ const CandleChart = lazy(() => import('./CandleChart').then((module) => ({ defau
 
 interface CachedSymbolCandleChartProps {
   ticker: string;
+  candidate?: SymbolAnalysisCandidate | null;
+  benchmarkTicker?: string | null;
   className?: string;
   width?: number;
   height?: number;
@@ -138,36 +139,18 @@ function ChartToolbar({
 
 /**
  * Candlestick chart for full symbol views. Sources OHLCV bars, detected patterns,
- * and the benchmark comparison series from the selected review snapshot when
- * one exists, with cached/direct data fallbacks for unselected symbols.
+ * and the benchmark comparison series from the explicitly selected snapshot.
  * Adds a time-range selector (1W..MAX), overlay toggles, and a fullscreen overlay.
  */
-export function CachedSymbolCandleChart({ ticker, className, width, height }: CachedSymbolCandleChartProps) {
-  const symbol = ticker.toUpperCase();
-  const selection = useWorkspaceStore((state) => state.selection);
-  const selectedCandidate = selection?.ticker === symbol ? selection.candidate : undefined;
-  const lastRunCandidate = useScreenerStore((state) => {
-    // A workspace selection is authoritative, even when it deliberately has
-    // no candidate snapshot (for example, a held position). Do not silently
-    // replace that selection with an unrelated Last Run row.
-    if (selection?.ticker === symbol) return undefined;
-    return state.lastResult?.candidates.find((c) => c.ticker.toUpperCase() === symbol);
-  });
-  const candidate = selectedCandidate ?? lastRunCandidate;
-  const benchmarkLabel = useScreenerStore((state) => {
-    if (selection?.ticker === symbol) {
-      if (selection.source === 'today_run') return state.todayRun?.result.benchmarkTicker ?? null;
-      if (selection.source === 'last_run') return state.lastResult?.benchmarkTicker ?? null;
-      return null;
-    }
-    return state.lastResult?.benchmarkTicker ?? null;
-  });
+export function CachedSymbolCandleChart({ ticker, candidate: selectedCandidate, benchmarkTicker = null, className, width, height }: CachedSymbolCandleChartProps) {
+  const symbol = ticker.trim().toUpperCase();
+  const candidate = selectedCandidate?.ticker?.trim().toUpperCase() === symbol ? selectedCandidate : null;
+  const benchmarkLabel = candidate ? benchmarkTicker : null;
 
-  // Fall back to a direct API fetch when the ticker is not in the screener store
-  // (e.g. open positions, watchlist items that were never screened).
-  const candlesQuery = useTickerCandles(candidate ? null : symbol);
+  // A snapshot without bars still needs the canonical candle query.
+  const candlesQuery = useTickerCandles(candidate?.priceHistory?.length ? null : symbol);
 
-  const bars = candidate?.priceHistory ?? candlesQuery.data?.priceHistory ?? EMPTY_BARS;
+  const bars = candidate?.priceHistory?.length ? candidate.priceHistory : candlesQuery.data?.priceHistory ?? EMPTY_BARS;
   const patterns = candidate?.patterns ?? candlesQuery.data?.patterns ?? EMPTY_PATTERNS;
   const benchmarkBars = candidate?.benchmarkPriceHistory ?? EMPTY_BARS;
   const outperformancePct = candidate?.benchmarkOutperformancePct ?? null;

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { act, screen, within, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
@@ -8,6 +8,7 @@ import { t } from '@/i18n/t';
 import SymbolDetailPanel from './SymbolDetailPanel';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { mockScreenerResults } from '@/test/mocks/handlers';
 
 function eligibleAdyenCandidate(name = 'Adyen N.V.') {
   return {
@@ -109,6 +110,92 @@ describe('SymbolDetailPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     seedSelectionPinnedFirst('Adyen N.V.', null);
+  });
+
+  it('refreshes the selected candidate without replacing the saved run or selection', async () => {
+    seedSelectionPinnedFirst('Pinned Adyen N.V.', 'Last Run Adyen');
+    const savedRun = useScreenerStore.getState().lastResult;
+    const savedSelection = useWorkspaceStore.getState().selection;
+    let requestBody: unknown;
+    server.use(http.post(`${API_BASE_URL}/api/screener/run`, async ({ request }) => {
+      requestBody = await request.json();
+      return HttpResponse.json({ ...mockScreenerResults, candidates: [{ ...mockScreenerResults.candidates[0], ticker: 'ADYEN', name: 'Refreshed Adyen', close: 1500, entry: 1500 }] });
+    }));
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    await user.click(screen.getByRole('button', { name: t('recommendation.workflow.nextStep.refresh_data') }));
+    expect(await screen.findByText('Refreshed Adyen')).toBeVisible();
+    expect(requestBody).toMatchObject({ tickers: ['ADYEN'], top: 1, include_held: true, force_refresh: true });
+    expect(useScreenerStore.getState().lastResult).toBe(savedRun);
+    expect(useWorkspaceStore.getState().selection).toBe(savedSelection);
+  });
+
+  it('retains the selected candidate on a failed refresh and allows retry', async () => {
+    let fail = true;
+    server.use(http.post(`${API_BASE_URL}/api/screener/run`, () => fail
+      ? HttpResponse.json({ detail: 'Candidate refresh unavailable' }, { status: 503 })
+      : HttpResponse.json({ ...mockScreenerResults, candidates: [{ ...mockScreenerResults.candidates[0], ticker: 'ADYEN', name: 'Refreshed Adyen' }] })));
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    const button = screen.getByRole('button', { name: t('recommendation.workflow.nextStep.refresh_data') });
+    await user.click(button);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Candidate refresh unavailable');
+    expect(screen.getByText('Adyen N.V.')).toBeVisible();
+    fail = false;
+    await user.click(button);
+    expect(await screen.findByText('Refreshed Adyen')).toBeVisible();
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  it('preserves the selected run filters while refreshing the latest session', async () => {
+    const selection = useWorkspaceStore.getState().selection!;
+    useScreenerStore.setState({
+      todayRun: {
+        completedAt: selection.runId!,
+        request: { minPrice: 5, maxPrice: 2000, currencies: ['EUR'], breakoutLookback: 63, asofDate: '2026-09-01' },
+        displayFilters: { recommendedOnly: false, actionFilter: 'all' },
+        result: { asofDate: '2026-09-01', totalScreened: 1, dataFreshness: 'final_close', candidates: [eligibleAdyenCandidate()] },
+      },
+      lastRunContext: { completedAt: 'unrelated-run', request: { maxPrice: 120 }, displayFilters: { recommendedOnly: false, actionFilter: 'all' } },
+    });
+    let requestBody: Record<string, unknown> = {};
+    server.use(http.post(`${API_BASE_URL}/api/screener/run`, async ({ request }) => {
+      requestBody = await request.json() as Record<string, unknown>;
+      const candidates = requestBody.max_price === 2000
+        ? [{ ...mockScreenerResults.candidates[0], ticker: 'ADYEN', name: 'Current Adyen' }]
+        : [];
+      return HttpResponse.json({ ...mockScreenerResults, candidates });
+    }));
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    await user.click(screen.getByRole('button', { name: t('recommendation.workflow.nextStep.refresh_data') }));
+    expect(await screen.findByText('Current Adyen')).toBeVisible();
+    expect(requestBody).toMatchObject({ min_price: 5, max_price: 2000, currencies: ['EUR'], breakout_lookback: 63 });
+    expect(requestBody).not.toHaveProperty('asof_date');
+  });
+
+  it.each([{ candidates: [] }, { candidates: [{ ...mockScreenerResults.candidates[0], ticker: 'MSFT' }] }])('rejects a refresh without the requested candidate', async ({ candidates }) => {
+    server.use(http.post(`${API_BASE_URL}/api/screener/run`, () => HttpResponse.json({ ...mockScreenerResults, candidates })));
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    await user.click(screen.getByRole('button', { name: t('recommendation.workflow.nextStep.refresh_data') }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('workspacePage.panels.analysis.computeAnalysis.noCandidate', { ticker: 'ADYEN' }));
+    expect(screen.getByText('Adyen N.V.')).toBeVisible();
+  });
+
+  it('discards a late refresh when another run of the same ticker is selected', async () => {
+    let started = false;
+    let release!: () => void;
+    const responseReady = new Promise<void>((resolve) => { release = resolve; });
+    server.use(http.post(`${API_BASE_URL}/api/screener/run`, async () => {
+      started = true;
+      await responseReady;
+      return HttpResponse.json({ ...mockScreenerResults, candidates: [{ ...mockScreenerResults.candidates[0], ticker: 'ADYEN', name: 'Late Adyen' }] });
+    }));
+    const { user, queryClient } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    await user.click(screen.getByRole('button', { name: t('recommendation.workflow.nextStep.refresh_data') }));
+    await waitFor(() => expect(started).toBe(true));
+    act(() => useWorkspaceStore.getState().setWorkspaceSelection({ ticker: 'ADYEN', source: 'last_run', runId: 'other-run', rowId: 'other-run:ADYEN', candidate: eligibleAdyenCandidate('Other selected Adyen') }));
+    release();
+    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    expect(screen.getByText('Other selected Adyen')).toBeVisible();
+    expect(screen.queryByText('Late Adyen')).not.toBeInTheDocument();
   });
 
   it('renders action, chart and AI summary blocks in order', () => {

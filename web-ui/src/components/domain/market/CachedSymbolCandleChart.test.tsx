@@ -25,6 +25,7 @@ function seedStore(barCount: number) {
       benchmarkTicker: '^AEX',
     } as unknown as ScreenerResponse,
   });
+  return useScreenerStore.getState().lastResult!.candidates[0];
 }
 
 describe('CachedSymbolCandleChart', () => {
@@ -34,15 +35,23 @@ describe('CachedSymbolCandleChart', () => {
   });
 
   it('renders range buttons including 1W and MAX', () => {
-    seedStore(300);
-    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+    const candidate = seedStore(300);
+    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" candidate={candidate} />);
     expect(screen.getByRole('button', { name: '1W' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'MAX' })).toBeInTheDocument();
   });
 
-  it('opens and closes the fullscreen overlay', () => {
+  it('uses the selected benchmark instead of the unrelated Last Run benchmark', async () => {
     seedStore(300);
-    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+    const candidate = { ticker: 'AAA', entry: 100, stop: 90, target: 120, priceHistory: [{ date: '2026-10-07', open: 99, high: 101, low: 98, close: 100 }], benchmarkPriceHistory: [{ date: '2026-10-07', close: 500 }], benchmarkOutperformancePct: 5 };
+    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" candidate={candidate} benchmarkTicker="SPY" />);
+    expect(await screen.findByText('SPY')).toBeVisible();
+    expect(screen.queryByText('^AEX')).not.toBeInTheDocument();
+  });
+
+  it('opens and closes the fullscreen overlay', () => {
+    const candidate = seedStore(300);
+    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" candidate={candidate} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
@@ -54,8 +63,8 @@ describe('CachedSymbolCandleChart', () => {
   });
 
   it('returns focus to the fullscreen trigger after Escape', async () => {
-    seedStore(300);
-    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+    const candidate = seedStore(300);
+    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" candidate={candidate} />);
 
     const user = userEvent.setup();
     const trigger = screen.getByRole('button', { name: 'Fullscreen' });
@@ -80,7 +89,7 @@ describe('CachedSymbolCandleChart', () => {
         patterns: [],
       } as any,
     });
-    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+    renderWithProviders(<CachedSymbolCandleChart ticker="AAA" candidate={useWorkspaceStore.getState().selection?.candidate} />);
     expect(screen.queryByRole('button', { name: '1W' })).not.toBeInTheDocument();
   });
 

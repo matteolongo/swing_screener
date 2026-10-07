@@ -16,6 +16,35 @@ const position = {
 } as any;
 
 describe('ManagePositionPanel', () => {
+  it('fetches a new observation on each Check live action', async () => {
+    let observations = 0;
+    server.use(http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-preview`, () => {
+      observations += 1;
+      return HttpResponse.json({ ticker: 'LRCX', status: 'open', last: 400, entry: 383.04, stop_old: 346.3, stop_suggested: 346.3, shares: 2, r_now: observations, action: 'NO_ACTION', reason: '' });
+    }));
+    const { user } = renderWithProviders(<ManagePositionPanel position={position} />);
+    const button = screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.checkLive') });
+    await user.click(button);
+    expect(await screen.findByText(`${t('workspacePage.panels.analysis.managePosition.currentR')}: +1.00R`)).toBeVisible();
+    await user.click(button);
+    expect(await screen.findByText(`${t('workspacePage.panels.analysis.managePosition.currentR')}: +2.00R`)).toBeVisible();
+  });
+
+  it('shows a failed preview and retries it on the next Check live action', async () => {
+    let fail = true;
+    server.use(http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-preview`, () => fail
+      ? HttpResponse.json({ detail: 'Preview unavailable' }, { status: 503 })
+      : HttpResponse.json({ ticker: 'LRCX', status: 'open', last: 400, entry: 383.04, stop_old: 346.3, stop_suggested: 346.3, shares: 2, r_now: 1, action: 'NO_ACTION', reason: '' })));
+    const { user } = renderWithProviders(<ManagePositionPanel position={position} />);
+    const button = screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.checkLive') });
+    await user.click(button);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Preview unavailable');
+    fail = false;
+    await user.click(button);
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+    expect(await screen.findByText(`${t('workspacePage.panels.analysis.managePosition.currentR')}: +1.00R`)).toBeVisible();
+  });
+
   it('renders manage actions and no create-entry / setup-fails copy', () => {
     renderWithProviders(<ManagePositionPanel position={position} candidate={null} />);
     expect(screen.getByText(t('workspacePage.panels.analysis.managePosition.title'))).toBeInTheDocument();

@@ -994,6 +994,8 @@ export const messagesEn = {
           runAction: 'Compute analysis',
           runningAction: 'Computing...',
           runError: 'Failed to compute analysis',
+          noCandidate: 'No analysis was returned for {{ticker}}. The previous candidate is still shown.',
+          refreshed: 'Refreshed for this review · data as of {{date}}',
         },
         volumeZones: {
           title: 'Volume Zones',
@@ -1776,6 +1778,8 @@ export const messagesEn = {
       },
     },
     running: {
+      waiting: 'Screener running…',
+      description: 'Waiting for the scan result. These are the operations in the scan; progress is not available yet.',
       steps: {
         preparingUniverse: 'Preparing universe',
         downloadingPrices: 'Downloading prices',

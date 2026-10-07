@@ -26,7 +26,7 @@ import {
 import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
-import type { ScreenerCandidate } from '@/features/screener/types';
+import type { ScreenerCandidate, ScreenerRequest } from '@/features/screener/types';
 import type { DecisionActionFilter } from '@/features/screener/prioritization';
 import type { TaxonomyFilterValues } from '@/features/pool/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
@@ -37,7 +37,13 @@ import { useOpenPositions } from '@/features/portfolio/hooks';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
-function UniverseSymbolModal({ candidate, onBack, initialTab = 'overview' }: { candidate: ScreenerCandidate; onBack: () => void; initialTab?: WorkspaceAnalysisTab }) {
+interface CandidateReview {
+  candidate: ScreenerCandidate;
+  benchmarkTicker?: string;
+  runRequest?: ScreenerRequest;
+}
+
+function UniverseSymbolModal({ candidate, benchmarkTicker, runRequest, onBack, initialTab = 'overview' }: CandidateReview & { onBack: () => void; initialTab?: WorkspaceAnalysisTab }) {
   const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>(initialTab);
   const ticker = candidate.ticker;
   const openPositionsQuery = useOpenPositions();
@@ -49,10 +55,12 @@ function UniverseSymbolModal({ candidate, onBack, initialTab = 'overview' }: { c
       <SymbolAnalysisContent
         ticker={ticker}
         candidate={candidate}
+        benchmarkTicker={benchmarkTicker}
+        runRequest={runRequest}
         position={openPosition}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        orderPanel={<ActionPanel ticker={ticker} candidate={candidate} />}
+        orderPanel={(reviewCandidate) => <ActionPanel ticker={ticker} candidate={reviewCandidate} />}
       />
     </ModalShell>
   );
@@ -104,7 +112,7 @@ function ScreenerRunSection() {
   const todayRun = useScreenerStore((state) => state.todayRun);
   const lastRunContext = useScreenerStore((state) => state.lastRunContext);
   const lastResult = useScreenerStore((state) => state.lastResult);
-  const [detail, setDetail] = useState<{ candidate: ScreenerCandidate; tab: WorkspaceAnalysisTab } | null>(null);
+  const [detail, setDetail] = useState<(CandidateReview & { tab: WorkspaceAnalysisTab }) | null>(null);
   const activeStrategyQuery = useActiveStrategyQuery();
   const configDefaultsQuery = useConfigDefaultsQuery();
   const activeStrategy = activeStrategyQuery.data;
@@ -220,6 +228,9 @@ function ScreenerRunSection() {
       lastRunContext &&
       todayRun.completedAt === lastRunContext.completedAt,
   );
+  const openCandidate = (candidate: ScreenerCandidate, tab: WorkspaceAnalysisTab = 'overview') => setDetail({
+    candidate, tab, benchmarkTicker: lastResult?.benchmarkTicker, runRequest: lastRunContext?.request,
+  });
 
   return (
     <Card variant="bordered" className="p-4">
@@ -299,13 +310,13 @@ function ScreenerRunSection() {
             ))}
             <ScreenerCandidatesTable
               candidates={filterCandidates(prioritizeCandidates(lastResult.candidates), lastRunContext?.displayFilters ?? { recommendedOnly: false, actionFilter: 'all' })}
-              onRowClick={(candidate) => setDetail({ candidate, tab: 'overview' })}
-              onRecommendationDetails={(candidate) => setDetail({ candidate, tab: 'overview' })}
-              onCreateOrder={(candidate) => setDetail({ candidate, tab: 'order' })}
+              onRowClick={(candidate) => openCandidate(candidate)}
+              onRecommendationDetails={(candidate) => openCandidate(candidate)}
+              onCreateOrder={(candidate) => openCandidate(candidate, 'order')}
             />
           </section>
         ) : null}
-        {detail ? <UniverseSymbolModal candidate={detail.candidate} initialTab={detail.tab} onBack={() => setDetail(null)} /> : null}
+        {detail ? <UniverseSymbolModal {...detail} initialTab={detail.tab} onBack={() => setDetail(null)} /> : null}
       </section>
     </Card>
   );
@@ -325,7 +336,7 @@ export default function Universes() {
   const [discoveryMinVolume, setDiscoveryMinVolume] = useState(1_000_000);
   const [discoveryMinMarketCap, setDiscoveryMinMarketCap] = useState(0);
   const [screenerTop, setScreenerTop] = useState(20);
-  const [detailCandidate, setDetailCandidate] = useState<ScreenerCandidate | null>(null);
+  const [detailCandidate, setDetailCandidate] = useState<CandidateReview | null>(null);
 
   useEffect(() => {
     if (!selectedUniverseId && universes.length > 0) {
@@ -540,7 +551,7 @@ export default function Universes() {
             {activeDetailTab === 'screener' && (
               <UniverseScreenerTab
                 discoveryScreenerMutation={discoveryScreenerMutation}
-                onSelectCandidate={setDetailCandidate}
+                onSelectCandidate={(candidate) => setDetailCandidate({ candidate, benchmarkTicker: discoveryScreenerMutation.data?.benchmarkTicker, runRequest: discoveryScreenerMutation.variables })}
               />
             )}
 
@@ -550,7 +561,7 @@ export default function Universes() {
       </div>
 
       {detailCandidate ? (
-        <UniverseSymbolModal candidate={detailCandidate} onBack={() => setDetailCandidate(null)} />
+        <UniverseSymbolModal {...detailCandidate} onBack={() => setDetailCandidate(null)} />
       ) : null}
     </div>
   );

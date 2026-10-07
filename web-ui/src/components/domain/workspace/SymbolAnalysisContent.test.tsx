@@ -9,6 +9,10 @@ import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import SymbolAnalysisContent from './SymbolAnalysisContent';
 import type { WorkspaceAnalysisTab } from './types';
+import { mockScreenerResults } from '@/test/mocks/handlers';
+import ActionPanel from './ActionPanel';
+import { formatCurrency } from '@/utils/formatters';
+import { transformScreenerResponse } from '@/features/screener/types';
 
 const position = {
   positionId: 'POS-1', ticker: 'LRCX', entryPrice: 383.04, stopPrice: 346.3, targetPrice: 498.26,
@@ -101,6 +105,32 @@ function CandidateOrderHarness({ workflowStatus }: { workflowStatus: 'ready' | '
 }
 
 describe('SymbolAnalysisContent candidate order transition', () => {
+  it('passes the refreshed signed draft to order review', async () => {
+    const recommendation = {
+      verdict: 'RECOMMENDED', reasons_short: [], reasons_detailed: [],
+      risk: { entry: 210, stop: 200, target: 230, shares: 1, risk_amount: 10, risk_pct: 0.01, position_size: 210 },
+      costs: { commission_estimate: 0, fx_estimate: 0, slippage_estimate: 0, total_cost: 0 },
+      checklist: [], education: { common_bias_warning: '', what_to_learn: '', what_would_make_valid: [] },
+      workflow_status: 'ready', next_step: { code: 'review_order' },
+    };
+    const refreshedResponse = {
+      ...mockScreenerResults,
+      candidates: [{ ...mockScreenerResults.candidates[0], entry: 210, stop: 200, target: 230, recommendation,
+        execution_eligibility: { allowed: true, mode: 'ready', reason: null },
+        canonical_order_draft: { order_type: 'BUY_STOP', entry: 210, stop: 200, target: 230, shares: 1, rr: 2, quote_currency: 'USD', approval_token: 'fresh-signed-token' } }],
+    } as const;
+    server.use(http.post(`${API_BASE_URL}/api/screener/run`, () => HttpResponse.json(refreshedResponse)));
+    const candidate = transformScreenerResponse({ ...refreshedResponse, candidates: [{ ...refreshedResponse.candidates[0], canonical_order_draft: { ...refreshedResponse.candidates[0].canonical_order_draft, entry: 200, stop: 190, target: 220 } }] } as any).candidates[0];
+    function RefreshHarness() {
+      const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
+      return <SymbolAnalysisContent ticker="AAPL" candidate={candidate} activeTab={activeTab} onTabChange={setActiveTab} orderPanel={(reviewCandidate) => <ActionPanel ticker="AAPL" candidate={reviewCandidate} />} />;
+    }
+    const { user } = renderWithProviders(<RefreshHarness />);
+    await user.click(screen.getByRole('button', { name: t('recommendation.workflow.nextStep.refresh_data') }));
+    expect(await screen.findByText(formatCurrency(210, 'USD'))).toBeVisible();
+    await user.click(screen.getByRole('button', { name: t('analysis.prepareOrder') }));
+    expect(await screen.findByRole('spinbutton', { name: t('order.candidateModal.triggerPrice') })).toHaveValue(210);
+  });
   it('keeps the canonical decision inside Overview instead of repeating it above every tab', async () => {
     renderWithProviders(<CandidateOrderHarness workflowStatus="ready" />);
     expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'))).toBeVisible();

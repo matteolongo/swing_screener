@@ -9,7 +9,7 @@ import {
   useRunTrace,
   useTickerRuns,
 } from '@/features/intelligence/hooks';
-import { getCanonicalOrderDraft } from '@/features/screener/types';
+import { getCanonicalOrderDraft, type ScreenerRequest } from '@/features/screener/types';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type {
   EvidenceRefreshResponse,
@@ -22,7 +22,7 @@ import SymbolOverviewTab from '@/components/domain/workspace/SymbolOverviewTab';
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
-import { useRunScreenerMutation } from '@/features/screener/hooks';
+import { useCandidateAnalysis } from '@/features/workspaceData/useCandidateAnalysis';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
@@ -39,6 +39,8 @@ interface SymbolAnalysisContentProps {
   orderPanel?: ReactNode | ((candidate: SymbolAnalysisCandidate | null) => ReactNode);
   intelligenceOutdated?: boolean;
   selectionVersion?: number;
+  benchmarkTicker?: string | null;
+  runRequest?: ScreenerRequest;
   intelligenceWorkflow?: {
     sources: WorkspaceSourceState[];
     onEvidenceRefresh?: (result: EvidenceRefreshResponse) => void;
@@ -65,6 +67,8 @@ export default function SymbolAnalysisContent({
   orderPanel = null,
   intelligenceOutdated = false,
   selectionVersion = 0,
+  benchmarkTicker = null,
+  runRequest,
   intelligenceWorkflow,
   fundamentals = {
     data: undefined,
@@ -77,19 +81,12 @@ export default function SymbolAnalysisContent({
     onRefresh: () => undefined,
   },
 }: SymbolAnalysisContentProps) {
-  const [adHocAnalyses, setAdHocAnalyses] = useState<Record<string, SymbolAnalysisCandidate>>({});
   const currentSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
-  const candidate = adHocAnalyses[currentSession] ?? incomingCandidate;
+  const candidateAnalysis = useCandidateAnalysis(ticker, incomingCandidate, selectionVersion, benchmarkTicker, runRequest);
+  const candidate = candidateAnalysis.candidate;
   const watchlistQuery = useWatchlist();
   const watchSymbolMutation = useWatchSymbolMutation();
   const unwatchSymbolMutation = useUnwatchSymbolMutation();
-  const computeAnalysisMutation = useRunScreenerMutation((result, request) => {
-    const newCandidate = result.candidates[0];
-    const requestTicker = request.tickers?.[0]?.trim().toUpperCase();
-    const requestSession = requestTicker ? `${requestTicker}:${selectionVersion}` : null;
-    if (!newCandidate || !requestSession || !requestMatchesLiveSession(requestSession, newCandidate.ticker)) return;
-    setAdHocAnalyses((current) => ({ ...current, [requestSession]: newCandidate }));
-  });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
   const evidenceRefreshMutation = useEvidenceRefreshMutation();
@@ -273,10 +270,10 @@ export default function SymbolAnalysisContent({
     if (!position || candidate) return;
     const key = currentSession;
     if (autoComputedRef.current.has(key)) return;
-    if (computeAnalysisMutation.isPending) return;
+    if (candidateAnalysis.isPending) return;
     autoComputedRef.current.add(key);
-    computeAnalysisMutation.mutate({ tickers: [ticker], top: 1, includeHeld: true });
-  }, [ticker, position, candidate, computeAnalysisMutation, currentSession]);
+    candidateAnalysis.compute();
+  }, [ticker, position, candidate, candidateAnalysis, currentSession]);
 
   const heldMode = Boolean(position);
   const canAddOn = Boolean(
@@ -385,18 +382,18 @@ export default function SymbolAnalysisContent({
                     type="button"
                     size="sm"
                     variant="secondary"
-                    onClick={() => computeAnalysisMutation.mutate({ tickers: [ticker], top: 1, includeHeld: true })}
-                    disabled={computeAnalysisMutation.isPending}
+                    onClick={candidateAnalysis.compute}
+                    disabled={candidateAnalysis.isPending}
                   >
-                    {computeAnalysisMutation.isPending
+                    {candidateAnalysis.isPending
                       ? t('workspacePage.panels.analysis.computeAnalysis.runningAction')
                       : t('workspacePage.panels.analysis.computeAnalysis.runAction')}
                   </Button>
                 </div>
-                {computeAnalysisMutation.isError && (
-                  <p className="text-sm text-danger">
-                    {computeAnalysisMutation.error instanceof Error
-                      ? computeAnalysisMutation.error.message
+                {candidateAnalysis.error && (
+                  <p role="alert" className="text-sm text-danger">
+                    {candidateAnalysis.error instanceof Error
+                      ? candidateAnalysis.error.message
                       : t('workspacePage.panels.analysis.computeAnalysis.runError')}
                   </p>
                 )}
@@ -406,6 +403,14 @@ export default function SymbolAnalysisContent({
               model={{
                 ticker,
                 candidate,
+                benchmarkTicker: candidateAnalysis.benchmarkTicker,
+                candidateRefresh: candidate ? {
+                  onRefresh: candidateAnalysis.refresh,
+                  isPending: candidateAnalysis.isPending,
+                  error: candidateAnalysis.error,
+                  asOf: candidateAnalysis.refreshedResult ? candidate.lastBar ?? candidateAnalysis.refreshedResult.asofDate : null,
+                  freshness: candidateAnalysis.refreshedResult?.dataFreshness,
+                } : undefined,
                 position,
                 fundamentals: {
                   data: fundamentals.data,
