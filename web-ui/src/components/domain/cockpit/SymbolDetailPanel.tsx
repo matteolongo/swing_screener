@@ -40,10 +40,14 @@ import { t } from '@/i18n/t';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useCandidateAnalysis } from '@/features/workspaceData/useCandidateAnalysis';
+import ManualOrderDraftForm from '@/components/domain/orders/ManualOrderDraftForm';
 
 interface SymbolDetailPanelProps {
   ticker: string;
   onClose: () => void;
+  isRefreshingToday?: boolean;
+  onRefreshToday?: () => void;
+  todayRefreshError?: Error | null;
 }
 
 type SecondaryTab = 'intelligence' | 'backtest' | 'volumeZones';
@@ -61,13 +65,15 @@ function workflowBadgeVariant(tone: WorkflowTone): 'success' | 'warning' | 'erro
   }
 }
 
-export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanelProps) {
+export default function SymbolDetailPanel({ ticker, onClose, isRefreshingToday = false, onRefreshToday, todayRefreshError }: SymbolDetailPanelProps) {
   const normalized = ticker.trim().toUpperCase();
   const selection = useWorkspaceStore((s) => s.selection);
   const selectionVersion = useWorkspaceStore((s) => s.selectionVersion);
   const setAnalysisTab = useWorkspaceStore((s) => s.setAnalysisTab);
   const analysisTab = useWorkspaceStore((s) => s.analysisTab);
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab | null>(null);
+  const [showDraft, setShowDraft] = useState(false);
+  useEffect(() => { setShowDraft(false); }, [normalized, selectionVersion]);
 
   // WorkspaceSelection envelope: the already-selected candidate snapshot travels
   // with the selection (CandidateQueue writes it). Never look the ticker back up
@@ -304,7 +310,7 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
     : null;
 
   const orderDraft = getCanonicalOrderDraft(candidate);
-  const canReviewOrder = Boolean(orderDraft);
+  const canReviewOrder = Boolean(orderDraft) && !isRefreshingToday;
 
   const workflowPresentation = getWorkflowPresentation(candidate?.recommendation);
   const company = candidate?.name ?? fundamentals?.companyName ?? null;
@@ -349,6 +355,7 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
           candidate={candidate}
           position={position}
           onPrepareOrder={canReviewOrder ? () => setAnalysisTab('order') : undefined}
+          onSaveDraft={!isRefreshingToday ? () => setShowDraft(true) : undefined}
           isWatched={isWatched}
           isPendingWatch={isWatchPending}
           onWatch={() =>
@@ -361,9 +368,11 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
           }
           onUnwatch={() => unwatchSymbolMutation.mutate(normalized)}
           candidateRefresh={{
-            onRefresh: candidateAnalysis.refresh,
-            isPending: candidateAnalysis.isPending,
-            error: candidateAnalysis.error,
+            onRefresh: ['today_run', 'last_run'].includes(selection?.source ?? '')
+              ? onRefreshToday ?? candidateAnalysis.refresh
+              : candidateAnalysis.refresh,
+            isPending: isRefreshingToday || candidateAnalysis.isPending,
+            error: todayRefreshError ?? candidateAnalysis.error,
             asOf: candidateAnalysis.refreshedResult ? candidate?.lastBar ?? candidateAnalysis.refreshedResult.asofDate : null,
             freshness: candidateAnalysis.refreshedResult?.dataFreshness,
           }}
@@ -401,6 +410,7 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
           />
         </ModalShell>
       ) : null}
+      {showDraft ? <ModalShell title={t('manualOrderDraft.title', { ticker: normalized })} onClose={() => setShowDraft(false)} className="max-w-xl" closeOnBackdrop={false}><ManualOrderDraftForm ticker={normalized} candidate={candidate} /></ModalShell> : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-foreground">{t('cockpit.detail.chart')}</h2>

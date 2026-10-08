@@ -5,6 +5,7 @@ import { t } from '@/i18n/t';
 import OrderReviewExperience from './OrderReviewExperience';
 import type { OrderReviewContext } from './OrderReviewExperience';
 import type { Recommendation } from '@/types/recommendation';
+import type { Order } from '@/types/order';
 
 function makeContext(overrides: Partial<OrderReviewContext> = {}): OrderReviewContext {
   return {
@@ -253,6 +254,33 @@ describe('OrderReviewExperience — order ticket', () => {
 });
 
 describe('OrderReviewExperience — target price defaulting', () => {
+  it('preserves the saved draft plan and notes with matching R:R when promoting the same order', async () => {
+    const savedDraft: Order = {
+      orderId: 'DRAFT-1', ticker: 'AAPL', status: 'draft', orderType: 'BUY_STOP',
+      quantity: 7, limitPrice: 21, stopPrice: 19, targetPrice: 25, quoteCurrency: 'USD',
+      notes: 'My saved plan', orderKind: 'entry', orderDate: '2026-10-07',
+      filledDate: '', entryPrice: null, positionId: null, parentOrderId: null, tif: 'GTC',
+    };
+    const onSubmitOrder = vi.fn().mockResolvedValue({});
+    renderWithProviders(<OrderReviewExperience context={makeContext({ savedDraft, draftOrderId: savedDraft.orderId, canonicalOrderDraft: { ...makeContext().canonicalOrderDraft, target: 26, rr: 3 } })} defaultNotes={savedDraft.notes} onSubmitOrder={onSubmitOrder} />);
+    expect(screen.getByLabelText(t('order.candidateModal.quantity'))).toHaveValue(7);
+    expect(screen.getByLabelText(t('order.candidateModal.triggerPrice'))).toHaveValue(21);
+    expect(screen.getByLabelText(t('order.candidateModal.stopPrice'))).toHaveValue(19);
+    expect(screen.getByLabelText(t('order.candidateModal.targetPrice'))).toHaveValue(25);
+    expect(screen.getByLabelText(t('order.candidateModal.notes'))).toHaveValue(savedDraft.notes);
+    const rrTile = screen.getByText(t('order.candidateModal.labels.rr')).parentElement!;
+    expect(within(rrTile).getByText('2.0')).toBeInTheDocument();
+    // The displayed saved plan is 2R even though the scan's draft says 3R.
+    expect(within(rrTile).queryByText('3.0')).not.toBeInTheDocument();
+    fireEvent.submit(screen.getByRole('button', { name: t('manualOrderDraft.approve') }).closest('form')!);
+    await waitFor(() => expect(onSubmitOrder).toHaveBeenCalledWith(expect.objectContaining({
+      quantity: 7, limitPrice: 21, stopPrice: 19, targetPrice: 25, notes: savedDraft.notes,
+      draftOrderId: savedDraft.orderId, approvalToken: 'signed-token',
+    })));
+    expect(await screen.findByText(t('manualOrderDraft.approved'))).toBeVisible();
+    expect(screen.getByRole('button', { name: t('manualOrderDraft.approve') })).toBeDisabled();
+  });
+
   it('pre-fills the backend canonical target', async () => {
     renderWithProviders(
       <OrderReviewExperience

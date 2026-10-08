@@ -3,8 +3,8 @@
 Runtime data for Swing Screener.
 
 ## Primary Files
-- `orders.json`: order records (primary storage today)
-- `positions.json`: position records (primary storage today)
+- `orders.json`: CLI order records and import-only legacy source for the SQL API
+- `positions.json`: CLI position records and import-only legacy source for the SQL API
 - `watchlist.json`: watchlist state
 - `intelligence/`: runtime intelligence snapshots, jobs, caches, and reports
   - `intelligence/evidence/{date}/{ticker}.json`: per-ticker curated catalyst evidence cache (regenerable; gitignored). Created on-demand by the evidence collector pipeline. No schema migration required.
@@ -25,6 +25,21 @@ User-authored configuration no longer lives under `data/`. Shared configuration 
 
 ## Daily Reviews
 - `daily_reviews/`: daily review snapshots (not committed)
+
+## Manual order drafts (2026-10-08)
+
+API and browser-owned order snapshots accept the additive status `draft`.
+Manual entry drafts keep the proposed quantity, entry, stop, target, notes and
+`quote_currency`, without an approval token or approved exposure. They cannot
+be submitted or filled. A current signed review promotes the same order ID to
+`pending`; cancellation changes an unfilled order to `cancelled` and retains
+its record.
+
+Existing JSON/browser records require no backfill or browser schema-version
+change. The API's SQL ledger requires Alembic migration `20261008_0003` to
+expand its status constraint. Downgrading converts drafts to `cancelled` so
+their saved plans survive under the previous constraint. API startup checks the
+migration head; see `api/README.md` for deployment and backup instructions.
 
 ## positions.json schema notes
 

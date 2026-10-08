@@ -35,8 +35,8 @@ multi-worker deployment requires a shared limiter before increasing
 
 ## Entry Approval Tokens
 
-Actionable screener candidates carry a short-lived HMAC approval token. Entry
-orders must return that opaque token; the API verifies its ticker, active
+Actionable screener candidates carry a short-lived HMAC approval token. Approved
+entry orders must return that opaque token; the API verifies its ticker, active
 strategy, signed decision gates, freshness, currency, FX, target source, and
 earnings context, then recomputes quantity, price, reward/risk, trade risk,
 position cap, cash, heat, and fees from the submitted order. Country
@@ -48,6 +48,33 @@ A `waiting_trigger` pullback may receive a pending `BUY_LIMIT` token for manual
 order review; the observed entry trigger has not passed. `ready` still means
 the observed entry trigger passed. The token is required and submission remains
 manual.
+
+### Manual entry drafts
+
+`POST /api/portfolio/orders` also accepts `save_as_draft=true` to save a proposed
+`NEW_ENTRY` plan without scan approval. This path requires an entry `BUY_LIMIT`
+or `BUY_STOP`, positive integer quantity, registered `currency`, and finite
+positive prices satisfying `stop_price < limit_price < target_price`. It stores
+`status="draft"` with quote currency and notes, without approval metadata. A
+manual draft is excluded from pending exposure, cannot be submitted or filled,
+and does not authorize broker execution.
+
+To promote it, refresh the candidate and send a normal create request containing
+`draft_order_id` plus the current canonical `approval_token`. All existing
+freshness, risk, exposure, duplicate-position and pending-order checks apply.
+Only a matching active entry draft can be promoted; success updates that same
+order ID to `pending`. Its submitted prices, quantity and notes are preserved.
+The same flags are accepted by the stateless `create_order` command.
+
+`DELETE /api/portfolio/orders/{order_id}` marks an unfilled `draft`, `pending`,
+or `submitted` order as `cancelled`, retaining its history. It does not undo an
+actual fill or cancel anything at a broker. Order list/snapshot statuses now
+include `draft`; `status=draft`, `cancelled`, and `filled` are valid list filters.
+
+Alembic revision `20261008_0003` expands the SQL status constraint. Existing
+orders need no backfill. Run `alembic upgrade head` before serving an existing
+database. Downgrade preserves saved plans by converting drafts to `cancelled`
+before restoring the previous constraint.
 
 FastAPI service that exposes the Swing Screener backend as a REST API.
 
@@ -360,14 +387,16 @@ Portfolio (`/api/portfolio`):
   closed-trade analytics and configured rendering thresholds.
 - `GET /api/portfolio/earnings-proximity/{ticker}`
 - `GET /api/portfolio/analytics/regime-breakdown`
-- `POST /api/portfolio/orders`
+- `POST /api/portfolio/orders` — signed entry creation, manual draft save, or
+  signed promotion of an existing `draft_order_id`.
 - `GET /api/portfolio/orders/local` — includes the same freshness metadata for
   the persisted order ledger.
 - `POST /api/portfolio/orders/{order_id}/fill` — filling an entry order also
   creates (or, for add-ons, refreshes) the position's pending linked stop order
   (`ORD-STOP-{position_id}`, `SELL_STOP`, ledger only; broker execution stays
   manual) and records it in the position's `exit_order_ids`.
-- `DELETE /api/portfolio/orders/{order_id}`
+- `DELETE /api/portfolio/orders/{order_id}` — cancel an unfilled draft, pending,
+  or submitted order while preserving history.
 
 Daily Review (`/api/daily-review`):
 - `GET /api/daily-review` — read-only computation that accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) for the legacy combined review. Pass `include_candidates=false` for a portfolio/watchlist-only review that does not run the screener.

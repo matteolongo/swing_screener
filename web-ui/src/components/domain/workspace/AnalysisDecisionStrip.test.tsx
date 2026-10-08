@@ -93,6 +93,20 @@ describe('AnalysisDecisionStrip — order preparation authority', () => {
     valuationContext: { method: 'not_available' as const, summary: '' },
   };
 
+  it('uses the blocking reason instead of a conflicting technical-ready summary', () => {
+    const reason = 'No active signal from the system.';
+    const summary = { ...buyNowSummary, whyNow: 'Technical setup is ready.' };
+    const candidate = buildCandidate({
+      decisionSummary: summary,
+      recommendation: { workflowStatus: 'no_setup', nextStep: { code: 'observe' }, reasonsShort: [reason], risk: { entry: 200, stop: 190, target: 220 } } as any,
+      executionEligibility: { allowed: false, mode: null, reason: 'skip_guidance' },
+    });
+    render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} onSaveDraft={vi.fn()} />);
+    expect(screen.queryByText(summary.whyNow)).not.toBeInTheDocument();
+    expect(screen.getAllByText(reason)).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: t('manualOrderDraft.save') })).toBeEnabled();
+  });
+
   it('does not expose Prepare order for a BUY_NOW opinion without ready workflow status', () => {
     render(
       <AnalysisDecisionStrip

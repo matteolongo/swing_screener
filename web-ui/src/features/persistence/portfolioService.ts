@@ -49,7 +49,7 @@ const hasStrings = (value: Record<string, unknown>, keys: string[]) => keys.ever
 const hasFiniteNumbers = (value: Record<string, unknown>, keys: string[]) => keys.every(key => isFiniteNumber(value[key]));
 const isOptional = (value: unknown, valid: (item: unknown) => boolean) => value === undefined || valid(value);
 const isOneOf = (value: unknown, values: readonly string[]) => typeof value === 'string' && values.includes(value);
-const isOrderStatus = (value: unknown) => isOneOf(value, ['pending', 'submitted', 'filled', 'cancelled']);
+const isOrderStatus = (value: unknown) => isOneOf(value, ['draft', 'pending', 'submitted', 'filled', 'cancelled']);
 const isPositionStatus = (value: unknown) => isOneOf(value, ['open', 'closed']);
 const isOrderKind = (value: unknown) => isOneOf(value, ['entry', 'stop', 'take_profit']);
 const isTrailMethod = (value: unknown) => isOneOf(value, ['sma20', 'atr', 'fixed_pct', 'manual']);

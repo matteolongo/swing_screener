@@ -7,8 +7,19 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Manual entry drafts save a proposed entry, stop, target, quantity, currency
+  and notes while candidate warnings remain visible. Fresh signed review can
+  promote the same draft; unapproved drafts cannot be submitted or filled.
+
 ### Fixed
 
+- Today now reruns its saved scan settings on entry/reload and explicit refresh,
+  updating the queue, counts and selected scan candidate together. Refresh
+  completion and errors are visible even when the daily market date is unchanged.
+- Book exposes cancellation for unfilled orders and a cancelled-history filter,
+  so an order can be marked as not filled without losing its record.
 - Frontend review workflows now preserve local trading state and selected
   snapshots, show failed actions, support keyboard and modal-focus operation,
   and use correct ISO review weeks and active-locale calendar dates.

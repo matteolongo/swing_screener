@@ -337,27 +337,33 @@ class OrdersService:
             approved=cash_pass and heat_pass and concentration_pass and event_pass,
             cash=PortfolioApprovalGate(
                 status="PASS" if cash_pass else "BLOCK",
-                explanation="Sufficient unreserved capital."
-                if cash_pass
-                else "Insufficient capital after open and pending exposure.",
+                explanation=(
+                    "Sufficient unreserved capital."
+                    if cash_pass
+                    else "Insufficient capital after open and pending exposure."
+                ),
                 current=round(available, 2),
                 projected=round(available - notional, 2),
                 limit=0.0,
             ),
             heat=PortfolioApprovalGate(
                 status="PASS" if heat_pass else "BLOCK",
-                explanation="Projected portfolio heat is within policy."
-                if heat_pass
-                else "Projected portfolio heat exceeds policy.",
+                explanation=(
+                    "Projected portfolio heat is within policy."
+                    if heat_pass
+                    else "Projected portfolio heat exceeds policy."
+                ),
                 current=round(position_risk + pending_risk, 2),
                 projected=round(projected_heat, 2),
                 limit=round(heat_limit, 2),
             ),
             concentration=PortfolioApprovalGate(
                 status="PASS" if concentration_pass else "BLOCK",
-                explanation=f"Projected {country} risk concentration is within policy."
-                if concentration_pass
-                else f"Projected {country} risk concentration exceeds policy.",
+                explanation=(
+                    f"Projected {country} risk concentration is within policy."
+                    if concentration_pass
+                    else f"Projected {country} risk concentration exceeds policy."
+                ),
                 projected=round(projected_concentration, 2),
                 limit=round(concentration_limit, 2),
             ),
@@ -366,9 +372,11 @@ class OrdersService:
                 explanation=(
                     f"Earnings are {request.days_to_earnings} days away."
                     if request.days_to_earnings is not None and event_pass
-                    else "Earnings are inside the three-day risk window."
-                    if request.days_to_earnings is not None
-                    else "Earnings status is unknown."
+                    else (
+                        "Earnings are inside the three-day risk window."
+                        if request.days_to_earnings is not None
+                        else "Earnings status is unknown."
+                    )
                 ),
             ),
             projected_risk=round(risk, 2),
@@ -407,9 +415,7 @@ class OrdersService:
         ).encode("utf-8")
         return hashlib.sha256(canonical).hexdigest()
 
-    def _recover_idempotency_race(
-        self, idempotency_key: str, request_hash: str
-    ):
+    def _recover_idempotency_race(self, idempotency_key: str, request_hash: str):
         assert self._uow is not None
         self._uow.session.rollback()
         self._uow.write_started = False
@@ -459,9 +465,7 @@ class OrdersService:
                 response={},
             )
         except IntegrityError:
-            existing = self._recover_idempotency_race(
-                idempotency_key, request_hash
-            )
+            existing = self._recover_idempotency_race(idempotency_key, request_hash)
             return dict(existing.response)
         self._uow.lock_portfolio_state()
         try:
@@ -470,16 +474,33 @@ class OrdersService:
             raise ConflictError(
                 "Order conflicts with concurrently committed portfolio state."
             ) from exc
-        self._uow.idempotency.complete(
-            reservation, status_code=201, response=response
-        )
+        self._uow.idempotency.complete(reservation, status_code=201, response=response)
         return response
 
     def _create_order_impl(self, request: CreateOrderRequest) -> dict:
         ticker = request.ticker.upper()
         orders, _ = self._orders_repo.list_orders()
 
-        if request.order_kind == "entry":
+        draft = None
+        if request.draft_order_id:
+            draft = (
+                self._orders_repo.get_order(request.draft_order_id, for_update=True)
+                if self._uow is not None
+                else self._orders_repo.get_order(request.draft_order_id)
+            )
+            if draft is None:
+                raise NotFoundError(f"Draft {request.draft_order_id} not found")
+            if (
+                draft.get("status") != "draft"
+                or draft.get("order_kind") != "entry"
+                or draft.get("ticker") != ticker
+                or request.order_kind != "entry"
+            ):
+                raise ConflictError(
+                    "Only a matching manual entry draft can be approved."
+                )
+
+        if request.order_kind == "entry" and not request.save_as_draft:
             pending_entry = any(
                 o.get("ticker") == ticker
                 and o.get("status") in ("pending", "submitted")
@@ -521,12 +542,14 @@ class OrdersService:
         while order_id in existing_ids:
             n += 1
             order_id = f"{base}-{n:03d}"
+        if draft:
+            order_id = draft["order_id"]
 
         isin = request.isin or _resolve_isin(ticker)
         order = {
             "order_id": order_id,
             "ticker": ticker,
-            "status": "pending",
+            "status": "draft" if request.save_as_draft else "pending",
             "order_type": request.order_type,
             "quantity": request.quantity,
             "limit_price": request.limit_price,
@@ -538,38 +561,47 @@ class OrdersService:
             "notes": request.notes.strip(),
             "order_kind": request.order_kind,
             "parent_order_id": None,
-            "position_id": request.position_id
-            if request.entry_mode == "ADD_ON"
-            else None,
+            "position_id": (
+                request.position_id if request.entry_mode == "ADD_ON" else None
+            ),
             "tif": "GTC",
             "fee_eur": None,
             "fill_fx_rate": None,
             "isin": isin,
             "thesis": request.thesis,
-            "quote_currency": verified_context.quote_currency
-            if verified_context
-            else request.currency,
-            "account_currency": verified_context.account_currency
-            if verified_context
-            else None,
-            "approval_fx_rate": verified_context.account_to_quote_rate
-            if verified_context
-            else request.account_to_quote_rate,
-            "decision_context": verified_context.model_dump(mode="json")
-            if verified_context
-            else {
-                "setup_status": request.setup_status,
-                "trigger_status": request.trigger_status,
-                "data_status": request.data_status,
-                "data_asof": request.data_asof,
-                "target_source": request.target_source,
-                "strategy_id": request.strategy_id,
-            },
-            "portfolio_approval": approval.model_dump(mode="json")
-            if approval
-            else None,
+            "quote_currency": (
+                verified_context.quote_currency
+                if verified_context
+                else request.currency
+            ),
+            "account_currency": (
+                verified_context.account_currency if verified_context else None
+            ),
+            "approval_fx_rate": (
+                verified_context.account_to_quote_rate
+                if verified_context
+                else request.account_to_quote_rate
+            ),
+            "decision_context": (
+                verified_context.model_dump(mode="json")
+                if verified_context
+                else {
+                    "setup_status": request.setup_status,
+                    "trigger_status": request.trigger_status,
+                    "data_status": request.data_status,
+                    "data_asof": request.data_asof,
+                    "target_source": request.target_source,
+                    "strategy_id": request.strategy_id,
+                }
+            ),
+            "portfolio_approval": (
+                approval.model_dump(mode="json") if approval else None
+            ),
         }
-        self._orders_repo.append_order(order)
+        if draft:
+            self._orders_repo.update_order(order_id, order)
+        else:
+            self._orders_repo.append_order(order)
         return order
 
     def list_local_orders(self, status: Optional[str] = None) -> dict:
@@ -634,9 +666,7 @@ class OrdersService:
                 response={},
             )
         except IntegrityError:
-            existing = self._recover_idempotency_race(
-                idempotency_key, request_hash
-            )
+            existing = self._recover_idempotency_race(idempotency_key, request_hash)
             return FillOrderResponse.model_validate(existing.response)
         response = self._fill_order_impl(order_id, request)
         self._uow.idempotency.complete(
@@ -724,9 +754,11 @@ class OrdersService:
     def _fill_order_impl(
         self, order_id: str, request: FillOrderRequest
     ) -> FillOrderResponse:
-        order = self._orders_repo.get_order(
-            order_id, for_update=True
-        ) if self._uow is not None else self._orders_repo.get_order(order_id)
+        order = (
+            self._orders_repo.get_order(order_id, for_update=True)
+            if self._uow is not None
+            else self._orders_repo.get_order(order_id)
+        )
         if order is None:
             raise NotFoundError(f"Order {order_id} not found")
         if order.get("status") not in ("pending", "submitted"):
@@ -757,6 +789,7 @@ class OrdersService:
         # ADD_ON fill: merge into the referenced open position (weighted-average
         # entry, keep the existing stop) instead of creating a duplicate lot.
         if target_position_id:
+
             def _merge(data: dict) -> dict:
                 for pos in data.get("positions", []):
                     if pos.get("position_id") == target_position_id:

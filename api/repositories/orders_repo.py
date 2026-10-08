@@ -1,11 +1,16 @@
 """Orders JSON repository."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from api.utils.file_lock import locked_read_json, locked_read_modify_write, locked_write_json
+from api.utils.file_lock import (
+    locked_read_json,
+    locked_read_modify_write,
+    locked_write_json,
+)
 from api.utils.files import get_today_str
 
 
@@ -89,7 +94,7 @@ class OrdersRepository:
             for order in orders:
                 if order.get("order_id") == order_id:
                     result["order"] = order
-                    if order.get("status") in ("pending", "submitted"):
+                    if order.get("status") in ("draft", "pending", "submitted"):
                         order["status"] = "cancelled"
                         data["orders"] = orders
                         data["asof"] = get_today_str()

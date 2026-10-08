@@ -20,6 +20,7 @@ import type { CanonicalOrderDraft, SameSymbolCandidateContext } from '@/features
 import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
 import { getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
+import type { Order } from '@/types/order';
 
 export interface OrderReviewContext {
   ticker: string;
@@ -35,6 +36,8 @@ export interface OrderReviewContext {
   daysToEarnings?: number | null;
   strategyId?: string;
   canonicalOrderDraft: CanonicalOrderDraft;
+  draftOrderId?: string;
+  savedDraft?: Order;
 }
 
 interface OrderReviewExperienceProps {
@@ -59,10 +62,13 @@ export default function OrderReviewExperience({
   const defaultOrderType = orderDraft.orderType;
   const thesis = context.recommendation?.thesis;
   const thesisEducation = thesis?.educationGenerated?.thesis;
-  const suggestedEntry = orderDraft.entry;
-  const suggestedStop = orderDraft.stop;
-  const suggestedTarget = orderDraft.target;
-  const suggestedShares = orderDraft.shares;
+  const suggestedEntry = context.savedDraft?.limitPrice ?? orderDraft.entry;
+  const suggestedStop = context.savedDraft?.stopPrice ?? orderDraft.stop;
+  const suggestedTarget = context.savedDraft?.targetPrice ?? orderDraft.target;
+  const suggestedShares = context.savedDraft?.quantity ?? orderDraft.shares;
+  const suggestedRr = context.savedDraft
+    ? (suggestedTarget - suggestedEntry) / (suggestedEntry - suggestedStop)
+    : orderDraft.rr;
   const workflow = getWorkflowPresentation(context.recommendation);
   const currency = orderDraft.quoteCurrency;
   const knownCurrentPrice =
@@ -160,6 +166,7 @@ export default function OrderReviewExperience({
         daysToEarnings: context.daysToEarnings,
         strategyId: context.strategyId,
         approvalToken: orderDraft.approvalToken,
+        ...(context.draftOrderId ? { draftOrderId: context.draftOrderId } : {}),
       });
       setSubmitSucceeded(true);
       onSuccess?.();
@@ -185,7 +192,7 @@ export default function OrderReviewExperience({
         suggestedStop={suggestedStop}
         suggestedTarget={suggestedTarget}
         suggestedShares={suggestedShares}
-        suggestedRr={orderDraft.rr}
+        suggestedRr={suggestedRr}
         thesis={thesis}
         thesisEducation={thesisEducation}
         guidance={guidance}
@@ -332,16 +339,16 @@ export default function OrderReviewExperience({
               <div className="sticky bottom-0 z-10 -mx-1 rounded-xl border border-border bg-surface/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-surface/90">
                 {submitSucceeded ? (
                   <div className="mb-3 rounded border border-success/40 bg-success/10 p-2 text-xs text-success">
-                    {successMessage}
+                    {context.draftOrderId ? t('manualOrderDraft.approved') : successMessage}
                   </div>
                 ) : null}
                 <div className="flex justify-end">
                   <Button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (Boolean(context.draftOrderId) && submitSucceeded)}
                     className="w-full sm:w-auto"
                   >
-                    {isSubmitting ? t('order.candidateModal.creating') : t('order.candidateModal.createAction')}
+                    {isSubmitting ? t('order.candidateModal.creating') : context.draftOrderId ? t('manualOrderDraft.approve') : t('order.candidateModal.createAction')}
                   </Button>
                 </div>
               </div>

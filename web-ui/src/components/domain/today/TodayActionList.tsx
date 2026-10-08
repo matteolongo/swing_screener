@@ -30,9 +30,11 @@ import {
 interface TodayActionListProps {
   onTickerSelect: (ticker: string) => void;
   compact?: boolean;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
-export default function TodayActionList({ onTickerSelect, compact = false }: TodayActionListProps) {
+export default function TodayActionList({ onTickerSelect, compact = false, onRefresh, isRefreshing = false }: TodayActionListProps) {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
   const {
@@ -258,13 +260,13 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
         </div>
         <button
           type="button"
-          onClick={() => refetch()}
-          disabled={isFetching}
+          onClick={() => onRefresh ? onRefresh() : refetch()}
+          disabled={isFetching || isRefreshing}
           title={t('dailyReview.header.refreshTitle')}
           aria-label={t('dailyReview.header.refreshTitle')}
           className="p-1 rounded hover:bg-foreground/5 text-muted disabled:opacity-50"
         >
-          <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} aria-hidden="true" />
+          <RefreshCw className={cn('h-3.5 w-3.5', (isFetching || isRefreshing) && 'animate-spin')} aria-hidden="true" />
         </button>
       </div>
 

@@ -32,6 +32,7 @@ interface AnalysisDecisionStripProps {
   onUnwatch?: () => void;
   decisionContext?: ReactNode;
   candidateRefresh?: CandidateRefreshControl;
+  onSaveDraft?: () => void;
 }
 
 function convictionLabel(conviction: DecisionConviction): string {
@@ -112,6 +113,7 @@ export default function AnalysisDecisionStrip({
   onUnwatch,
   decisionContext,
   candidateRefresh,
+  onSaveDraft,
 }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
@@ -129,6 +131,9 @@ export default function AnalysisDecisionStrip({
   const operationalNextStep = candidate?.recommendation
     ? formatWorkflowNextStep(candidate.recommendation.nextStep)
     : undefined;
+  const explanation = !heldMode && !canPrepareOrder && candidate?.recommendation
+    ? candidate.recommendation.reasonsShort?.[0] ?? t('workspacePage.overview.reviewFallback')
+    : summary?.explanation?.summaryLine ?? summary?.whyNow ?? candidate?.recommendation?.reasonsShort?.[0];
   const closeEntry = heldMode
     ? position!.entryPrice
     : (orderDraft?.entry ?? summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null);
@@ -193,10 +198,7 @@ export default function AnalysisDecisionStrip({
               ))}
             </div>
             <p className="text-xs text-muted">
-              {summary?.explanation?.summaryLine
-                ?? summary?.whyNow
-                ?? candidate?.recommendation?.reasonsShort?.[0]
-                ?? t('workspacePage.overview.reviewFallback')}
+              {explanation ?? t('workspacePage.overview.reviewFallback')}
             </p>
             {operationalNextStep ? (
               <p className="text-sm font-medium text-foreground">
@@ -221,6 +223,13 @@ export default function AnalysisDecisionStrip({
         </div>
 
         {decisionContext}
+        {!heldMode && candidate && !canPrepareOrder ? (
+          <div className="space-y-1 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <p className="font-medium text-warning">{t('manualOrderDraft.orderBlocked')}</p>
+            <p className="text-muted">{t('manualOrderDraft.reviewHelp')}</p>
+            {candidate.recommendation?.reasonsShort?.map((reason) => <p key={reason} className="text-muted">{reason}</p>)}
+          </div>
+        ) : null}
 
         {candidateRefresh ? (
           <div className="space-y-2">
@@ -270,6 +279,7 @@ export default function AnalysisDecisionStrip({
             </button>
           </div>
         )}
+        {!heldMode && onSaveDraft ? <button type="button" onClick={onSaveDraft} className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground/5">{t('manualOrderDraft.save')}</button> : null}
       </div>
     </div>
   );

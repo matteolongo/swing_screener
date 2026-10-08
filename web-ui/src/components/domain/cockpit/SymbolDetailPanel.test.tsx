@@ -285,7 +285,25 @@ function adyenFundamentalsApi(updatedAt: string) {
   };
 }
 
+describe('SymbolDetailPanel Today refresh scope', () => {
+  it.each(['today_watchlist', 'today_position'] as const)('refreshes a %s symbol outside the pinned scan', async (source) => {
+    seedSelectionPinnedFirst('Adyen N.V.', null);
+    useWorkspaceStore.getState().setWorkspaceSelection({ ticker: 'ADYEN', source, rowId: `${source}:ADYEN` });
+    let requestBody: unknown;
+    server.use(http.post(`${API_BASE_URL}/api/screener/run`, async ({ request }) => {
+      requestBody = await request.json();
+      return HttpResponse.json({ ...mockScreenerResults, candidates: [{ ...mockScreenerResults.candidates[0], ticker: 'ADYEN', name: 'Fresh watchlist Adyen' }] });
+    }));
+    const onRefreshToday = vi.fn();
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} onRefreshToday={onRefreshToday} />);
+    await user.click(screen.getByRole('button', { name: t('recommendation.workflow.nextStep.refresh_data') }));
+    expect(await screen.findByText('Fresh watchlist Adyen')).toBeVisible();
+    expect(requestBody).toMatchObject({ tickers: ['ADYEN'], include_held: true, force_refresh: true });
+  });
+});
+
 describe('SymbolDetailPanel Approfondisci live wiring', () => {
+  beforeEach(() => seedSelectionPinnedFirst('Adyen N.V.', null));
   it('generates analysis from the Approfondisci tab through the live intelligence endpoint', async () => {
     let postCount = 0;
     server.use(

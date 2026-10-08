@@ -12,7 +12,7 @@ class LegacyOrder(BaseModel):
 
     order_id: str
     ticker: str
-    status: Literal["pending", "submitted", "filled", "cancelled"] = "pending"
+    status: Literal["draft", "pending", "submitted", "filled", "cancelled"] = "pending"
     order_type: str
     order_kind: Literal["entry", "stop", "take_profit"] = "entry"
     quantity: int = Field(gt=0)

@@ -9,6 +9,9 @@ import { useNavigate } from 'react-router-dom';
 import { t } from '@/i18n/t';
 import { useWeeklyReviews } from '@/features/weeklyReview/hooks';
 import { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
+import { useTodayRefresh } from '@/features/screener/useTodayRefresh';
+import Button from '@/components/common/Button';
+import { formatDateTime } from '@/utils/formatters';
 
 // ─── Weekly review nudge ─────────────────────────────────────────────────────
 
@@ -77,6 +80,7 @@ function PendingOrdersBadge() {
 // ─── Today page (cockpit) ────────────────────────────────────────────────────
 
 export default function Today() {
+  const todayRefresh = useTodayRefresh();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const workspaceMode = useWorkspaceStore((state) => state.workspaceMode);
   const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
@@ -127,6 +131,17 @@ export default function Today() {
   return (
     <div className="mx-auto max-w-[1600px]">
       <TodayStatsStrip />
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p role="status" className="text-xs text-muted">{todayRefresh.isRefreshing
+          ? t('todayPage.refresh.running')
+          : todayRefresh.updatedAt
+            ? t('todayPage.refresh.updated', { time: formatDateTime(todayRefresh.updatedAt) })
+            : t('todayPage.refresh.description')}</p>
+        <Button variant="secondary" onClick={todayRefresh.refresh} disabled={todayRefresh.isRefreshing}>
+          {todayRefresh.isRefreshing ? t('todayPage.refresh.running') : t('todayPage.refresh.action')}
+        </Button>
+      </div>
+      {todayRefresh.error ? <p role="alert" className="mt-2 text-sm text-danger">{t('todayPage.refresh.error', { message: todayRefresh.error.message })}</p> : null}
       <div className="mt-4 grid gap-4 xl:grid-cols-12">
         {/* Left column: attenzioni + candidate queue, always mounted */}
         <div
@@ -141,15 +156,15 @@ export default function Today() {
             <PendingOrdersBadge />
           </div>
           <div data-testid="today-action-list">
-            <TodayActionList compact={compact} onTickerSelect={handleTickerSelect} />
+            <TodayActionList compact={compact} onTickerSelect={handleTickerSelect} onRefresh={todayRefresh.refresh} isRefreshing={todayRefresh.isRefreshing} />
           </div>
-          <CandidateQueue onSelectTicker={handleTickerSelect} />
+          <CandidateQueue onSelectTicker={handleTickerSelect} isRefreshing={todayRefresh.isRefreshing} />
         </div>
 
         {/* Right column: detail panel or empty state */}
         <div className="min-w-0 flex flex-col xl:col-span-5">
           {selectedTicker ? (
-            <SymbolDetailPanel ticker={selectedTicker} onClose={clearSelectedTicker} />
+            <SymbolDetailPanel ticker={selectedTicker} onClose={clearSelectedTicker} isRefreshingToday={todayRefresh.isRefreshing} onRefreshToday={todayRefresh.refresh} todayRefreshError={todayRefresh.error} />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center gap-3">
               <div className="text-4xl select-none">📊</div>

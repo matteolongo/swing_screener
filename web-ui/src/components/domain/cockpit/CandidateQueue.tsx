@@ -32,9 +32,10 @@ const TONE_TEXT_CLASS: Record<WorkflowTone, string> = {
 
 interface CandidateQueueProps {
   onSelectTicker: (ticker: string) => void;
+  isRefreshing?: boolean;
 }
 
-export default function CandidateQueue({ onSelectTicker }: CandidateQueueProps) {
+export default function CandidateQueue({ onSelectTicker, isRefreshing = false }: CandidateQueueProps) {
   const todayResult = useScreenerStore((s) => s.todayRun?.result);
   const lastResult = useScreenerStore((s) => s.lastResult);
   const todayCompletedAt = useScreenerStore((s) => s.todayRun?.completedAt);
@@ -150,6 +151,7 @@ export default function CandidateQueue({ onSelectTicker }: CandidateQueueProps) 
                     <button
                       type="button"
                       onClick={() => handleSelect(candidate, true)}
+                      disabled={isRefreshing}
                       aria-label={`${t('cockpit.queue.reviewOrder')} ${ticker}`}
                       className="shrink-0 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
                     >

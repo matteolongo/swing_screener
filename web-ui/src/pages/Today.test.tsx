@@ -7,6 +7,9 @@ import { t } from '@/i18n/t';
 import Today from './Today';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { runScreener } from '@/features/screener/api';
+
+vi.mock('@/features/screener/api', async (original) => ({ ...await original<typeof import('@/features/screener/api')>(), runScreener: vi.fn() }));
 
 function makeCloseItem(ticker: string, positionId: string) {
   return {
@@ -46,6 +49,8 @@ const threeCloseItemReview = {
 };
 
 beforeEach(() => {
+  vi.mocked(runScreener).mockReset().mockResolvedValue({ asofDate: '2026-10-07', candidates: [], dataFreshness: 'final_close' } as never);
+  useScreenerStore.setState({ todayRun: null, todayRunInitialized: true, lastRunContext: null, lastResult: null });
   useWorkspaceStore.setState({
     selectedTicker: null,
     selectedTickerSource: null,
@@ -562,6 +567,7 @@ function eligibleCockpitCandidate() {
 
 describe('Today page — cockpit composition', () => {
   it('shows strip, queue and opens detail on row select without collapsing the list', async () => {
+    vi.mocked(runScreener).mockResolvedValue({ asofDate: '2026-10-07', dataFreshness: 'final_close', candidates: [eligibleCockpitCandidate()] } as never);
     useScreenerStore.setState({
       todayRun: null,
       lastRunContext: null,
@@ -582,7 +588,7 @@ describe('Today page — cockpit composition', () => {
     const { user } = renderWithProviders(<Today />);
     expect(await screen.findByTestId('today-stats-strip')).toBeInTheDocument();
     expect(screen.getByTestId('candidate-queue')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: `${t('cockpit.queue.reviewOrder')} ADYEN` }));
+    await user.click(await screen.findByRole('button', { name: `${t('cockpit.queue.reviewOrder')} ADYEN` }));
     expect(screen.getByTestId('symbol-detail-panel')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: t('order.review.formTitle') })).toBeInTheDocument();
     expect(screen.getByTestId('candidate-queue')).toBeInTheDocument();

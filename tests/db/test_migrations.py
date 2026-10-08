@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 
 from api.db.settings import DatabaseConfigurationError, DatabaseSettings
 
@@ -104,12 +104,41 @@ def test_upgrade_downgrade_upgrade_creates_relational_schema(tmp_path):
     } <= set(position_columns)
     idempotency_uniques = inspector.get_unique_constraints("idempotency_records")
     assert any(
-        constraint["column_names"] == ["key"]
-        for constraint in idempotency_uniques
+        constraint["column_names"] == ["key"] for constraint in idempotency_uniques
     )
 
     command.downgrade(config, "base")
     assert "portfolio_orders" not in inspect(engine).get_table_names()
     command.upgrade(config, "head")
     assert "portfolio_positions" in inspect(engine).get_table_names()
+    engine.dispose()
+
+
+def test_manual_draft_migration_preserves_populated_orders_and_safe_rollback(tmp_path):
+    url = f"sqlite:///{tmp_path / 'draft-migration.db'}"
+    config = _config(url)
+    command.upgrade(config, "20260721_0002")
+    engine = create_engine(url)
+    insert = text(
+        "INSERT INTO portfolio_orders (order_id,ticker,status,order_type,order_kind,quantity,limit_price,stop_price,target_price,order_date,payload) VALUES (:id,'STMPA.PA',:status,'BUY_LIMIT','entry',8,50.43,49.11,58.18,'2026-10-06','{}')"
+    )
+    with engine.begin() as connection:
+        connection.execute(insert, {"id": "existing", "status": "pending"})
+    command.upgrade(config, "head")
+    with engine.begin() as connection:
+        connection.execute(insert, {"id": "manual", "status": "draft"})
+    command.downgrade(config, "20260721_0002")
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT order_id,status,quantity,limit_price,target_price FROM portfolio_orders ORDER BY order_id"
+            )
+        ).all()
+    assert rows == [
+        ("existing", "pending", 8, 50.43, 58.18),
+        ("manual", "cancelled", 8, 50.43, 58.18),
+    ]
+    command.upgrade(config, "head")
+    with engine.begin() as connection:
+        connection.execute(insert, {"id": "new-manual", "status": "draft"})
     engine.dispose()

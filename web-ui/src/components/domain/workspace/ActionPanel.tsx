@@ -9,11 +9,14 @@ import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/
 import { formatWorkflowNextStep } from '@/components/domain/recommendation/workflowPresentation';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import SourceHealthSummary from './SourceHealthSummary';
+import type { Order } from '@/types/order';
 
 interface ActionPanelProps {
   ticker: string;
   candidate?: SymbolAnalysisCandidate | null;
   source?: WorkspaceSourceState;
+  draftOrderId?: string;
+  savedDraft?: Order;
 }
 
 type PositionEntryContext = SameSymbolCandidateContext & { mode: 'ADD_ON' | 'SCALE_BACK' };
@@ -58,7 +61,7 @@ function buildDefaultNotes(
   });
 }
 
-export default function ActionPanel({ ticker, candidate = null, source }: ActionPanelProps) {
+export default function ActionPanel({ ticker, candidate = null, source, draftOrderId, savedDraft }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const activeStrategyQuery = useActiveStrategyQuery();
   const openPositionsQuery = useOpenPositions();
@@ -66,7 +69,7 @@ export default function ActionPanel({ ticker, candidate = null, source }: Action
   const createOrderMutation = useCreateOrderMutation();
 
   const sameSymbol = resolveSameSymbolContext(candidate ?? null);
-  const defaultNotes = buildDefaultNotes(candidate ?? null, sameSymbol, normalizedTicker);
+  const defaultNotes = savedDraft?.notes ?? buildDefaultNotes(candidate ?? null, sameSymbol, normalizedTicker);
   const orderDraft = getCanonicalOrderDraft(candidate);
   const canReviewOrder = Boolean(
     orderDraft &&
@@ -87,6 +90,8 @@ export default function ActionPanel({ ticker, candidate = null, source }: Action
     daysToEarnings: candidate?.daysToEarnings ?? null,
     strategyId: activeStrategyQuery.data?.id,
     canonicalOrderDraft: orderDraft!,
+    draftOrderId,
+    savedDraft,
   };
 
   const content = canReviewOrder ? (

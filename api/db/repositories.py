@@ -18,7 +18,6 @@ from api.db.models import (
 )
 from api.utils.files import get_today_str
 
-
 ORDER_FIELDS = {
     "order_id",
     "ticker",
@@ -175,10 +174,10 @@ class SqlOrdersRepository:
 
     def cancel_order(self, order_id: str) -> dict | None:
         row = self.get_order(order_id, for_update=True)
-        if row is None or row["status"] not in {"pending", "submitted"}:
+        if row is None or row["status"] not in {"draft", "pending", "submitted"}:
             return row
         return self.transition(
-            order_id, {"pending", "submitted"}, {"status": "cancelled"}
+            order_id, {"draft", "pending", "submitted"}, {"status": "cancelled"}
         )
 
     def transition(
@@ -263,9 +262,7 @@ class SqlPositionsRepository:
 
     def update(self, modify_fn) -> dict:
         positions, asof = self.list_positions()
-        original_positions = {
-            item["position_id"]: deepcopy(item) for item in positions
-        }
+        original_positions = {item["position_id"]: deepcopy(item) for item in positions}
         current_versions = {
             item["position_id"]: int(item["version"]) for item in positions
         }

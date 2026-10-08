@@ -115,7 +115,7 @@ class InMemoryOrdersRepository:
         order = self.get_order(order_id)
         if order is None:
             return None
-        if order.get("status") in ("pending", "submitted"):
+        if order.get("status") in ("draft", "pending", "submitted"):
             order["status"] = "cancelled"
             self.update_order(order_id, order)
         return self.get_order(order_id)
