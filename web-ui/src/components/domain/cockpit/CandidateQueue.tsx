@@ -106,7 +106,7 @@ export default function CandidateQueue({ onSelectTicker, isRefreshing = false }:
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t('cockpit.queue.searchPlaceholder')}
           aria-label={t('cockpit.queue.searchPlaceholder')}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground placeholder:text-muted"
+          className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground placeholder:text-muted"
         />
         <button
           type="button"

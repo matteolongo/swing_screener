@@ -82,15 +82,32 @@ describe('TodayActionList holdings', () => {
     expect(screen.getAllByText('LRCX')).toHaveLength(1);
   });
 
-  it('renders only the symbol rail variant when compact', () => {
+  it('renders the symbol rail with shared controls when compact', () => {
     useWorkspaceStore.setState({ selectedTicker: 'LRCX' });
     renderWithProviders(<TodayActionList compact onTickerSelect={() => {}} />);
 
     expect(screen.getByTestId('symbol-rail-list')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /LRCX/i })).toHaveAttribute('aria-current', 'true');
-    expect(screen.queryByRole('button', {
+    expect(screen.getByRole('button', {
       name: t('dailyReview.header.refreshTitle'),
-    })).not.toBeInTheDocument();
+    })).toBeInTheDocument();
+  });
+
+  it('keeps source filters usable while a symbol is selected', async () => {
+    useWorkspaceStore.setState({ selectedTicker: 'LRCX' });
+    useScreenerStore.setState({ todayRun: {
+      request: { preset: 'eu_blue_chips' },
+      displayFilters: { recommendedOnly: true, actionFilter: 'all' },
+      completedAt: '2026-06-26T20:00:00Z',
+      result: { asofDate: '2026-06-26', candidates: [] },
+    } as unknown as TodayRunSnapshot });
+    const { user } = renderWithProviders(<TodayActionList compact onTickerSelect={() => {}} />);
+
+    await user.click(screen.getByRole('button', { name: t('todayPage.actionList.allSourceCandidates') }));
+    expect(useScreenerStore.getState().todayRun?.displayFilters.recommendedOnly).toBe(false);
+    await user.click(screen.getByRole('button', { name: t('todayPage.actionList.readyFilter') }));
+    expect(useScreenerStore.getState().todayRun?.displayFilters.recommendedOnly).toBe(true);
+    expect(screen.getByRole('button', { name: /LRCX/i })).toHaveAttribute('aria-current', 'true');
   });
 
   it('prioritizes an urgent close over the generic held-position row', () => {

@@ -32,6 +32,10 @@ and signed order draft stay together without replacing saved runs. Wrong-ticker
 or empty single-symbol responses retain the prior review with an error. Intraday
 results remain explicitly labelled.
 
+Today's refresh and **Ready / All from run** controls remain visible when a
+symbol is open. The action list uses its content height so the candidate search,
+**Show no-setup** toggle and queue stay below it without overlapping.
+
 **Needs review** means follow the displayed next step and reason: refresh stale
 data, fix an invalid stop, or define a valid target. Prices alone do not approve
 an entry signal. **Save manual draft** keeps a proposed entry, stop, target,

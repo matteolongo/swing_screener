@@ -219,7 +219,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
 
   const compactRail = compact ? (
       <div
-        className="h-full space-y-1 overflow-y-auto p-2"
+        className="space-y-1 p-2"
         data-testid="symbol-rail-list"
       >
         {compactRows.map((row) => (
@@ -241,14 +241,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
   ) : null;
 
   return (
-    <>
-      {compactRail}
-      <div
-        className="flex flex-col h-full overflow-hidden"
-        hidden={compact}
-        aria-hidden={compact || undefined}
-        {...(compact ? { inert: '' } : {})}
-      >
+    <div className="flex min-w-0 flex-col">
       {/* Panel header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
@@ -341,8 +334,16 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
         )}
       </div>
 
+      {compactRail}
+
       {/* Action list */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3" onKeyDown={handleListKeyDown}>
+      <div
+        className={cn('px-2 py-2 space-y-3', compact && 'hidden')}
+        hidden={compact}
+        aria-hidden={compact || undefined}
+        {...(compact ? { inert: '' } : {})}
+        onKeyDown={handleListKeyDown}
+      >
         {error && (
           <div className="flex items-center gap-2 px-2 text-sm text-danger">
             {t('dailyReview.header.error', { message: error instanceof Error ? error.message : t('dailyReview.header.unknownError') })}
@@ -567,7 +568,6 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
           onSubmit={(req) => handlePartialClose(trimTarget, req)}
         />
       )}
-      </div>
-    </>
+    </div>
   );
 }

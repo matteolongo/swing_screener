@@ -22,6 +22,10 @@ filters and indicator overrides; Last Run stays available for exploration.
 Completion includes a refresh time because a daily candle's date/prices may
 remain unchanged. Errors keep the previous successful candidate snapshot.
 
+`TodayActionList` shares its refresh, summary and **Ready / All from run**
+controls between expanded and symbol-rail views. Only the active list body
+occupies space; the candidate search and no-setup toggle remain below the list.
+
 Blocked candidates show the next step and reasons alongside **Save manual
 draft** (`ManualOrderDraftForm`). The form saves quantity, quote currency,
 entry, stop, target and notes under the non-actionable `draft` status. **Book

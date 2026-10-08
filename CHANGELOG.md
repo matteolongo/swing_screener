@@ -15,6 +15,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Today keeps refresh and Ready/All filters visible with a symbol open, removes
+  the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,
   updating the queue, counts and selected scan candidate together. Refresh
   completion and errors are visible even when the daily market date is unchanged.
