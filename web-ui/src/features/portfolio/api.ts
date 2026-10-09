@@ -321,7 +321,7 @@ export async function createOrder(
     await createOrderLocal(request, resolveIdempotencyKey(idempotencyKey));
     return;
   }
-  if ((request.orderKind ?? 'entry') === 'entry' && !request.approvalToken) {
+  if ((request.orderKind ?? 'entry') === 'entry' && !request.saveAsDraft && !request.approvalToken) {
     throw new Error('Entry order approval token is required. Refresh the screener candidate and try again.');
   }
   await fetchJson<void>(API_ENDPOINTS.orders, {

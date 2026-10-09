@@ -28,6 +28,7 @@ interface ScreenerStore {
   /** Prevents legacy persisted results from being promoted more than once. */
   todayRunInitialized: boolean;
   setLastResult: (result: ScreenerResponse) => void;
+  recordTodayRun: (result: ScreenerResponse, context: ScreenerRunContext) => void;
   recordScreenerRun: (
     result: ScreenerResponse,
     context: Omit<ScreenerRunContext, 'completedAt'> & { completedAt?: string },
@@ -48,6 +49,10 @@ export const useScreenerStore = create<ScreenerStore>()(
       lastRunContext: null,
       todayRun: null,
       todayRunInitialized: false,
+      recordTodayRun: (result, context) => set({
+        todayRun: { ...context, result: { ...result, candidates: prioritizeCandidates(result.candidates) } },
+        todayRunInitialized: true,
+      }),
       setLastResult: (result) =>
         set({
           lastResult: {

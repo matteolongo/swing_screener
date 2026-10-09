@@ -994,6 +994,8 @@ export const messagesEn = {
           runAction: 'Compute analysis',
           runningAction: 'Computing...',
           runError: 'Failed to compute analysis',
+          noCandidate: 'No analysis was returned for {{ticker}}. The previous candidate is still shown.',
+          refreshed: 'Refreshed for this review · data as of {{date}}',
         },
         volumeZones: {
           title: 'Volume Zones',
@@ -1776,6 +1778,8 @@ export const messagesEn = {
       },
     },
     running: {
+      waiting: 'Screener running…',
+      description: 'Waiting for the scan result. These are the operations in the scan; progress is not available yet.',
       steps: {
         preparingUniverse: 'Preparing universe',
         downloadingPrices: 'Downloading prices',
@@ -2057,6 +2061,7 @@ export const messagesEn = {
     createAction: 'Create Order',
     confirmCancel: 'Are you sure you want to cancel this order?',
     filter: {
+      draft: 'Drafts',
       all: 'All',
       pending: 'Pending',
       submitted: 'Submitted',
@@ -2064,6 +2069,7 @@ export const messagesEn = {
       cancelled: 'Cancelled',
     },
     listTitle: {
+      draft: 'Manual drafts',
       all: 'All Orders',
       pending: 'Pending Orders',
       submitted: 'Submitted Orders',
@@ -2981,7 +2987,7 @@ export const messagesEn = {
   },
   pendingOrdersTab: {
     title: 'Pending Orders',
-    empty: 'No pending orders. Create one from the Today page when a candidate is ready.',
+    empty: 'No orders in this category. Create a plan from the Today page.',
     columnTicker: 'Ticker',
     columnShares: 'Shares',
     columnLimit: 'Limit',
@@ -2991,6 +2997,34 @@ export const messagesEn = {
     fillManually: 'Fill manually',
     degiroNotConnected: 'DeGiro not connected',
     markSubmitted: 'Mark submitted',
+    columnTarget: 'Target',
+    cancelOrder: 'Cancel order',
+    cancelTitle: 'Cancel {{ticker}} order',
+    keepOrder: 'Keep order',
+    cancelHelp: 'Mark this order as not filled and remove it from active orders. Its record stays in cancelled history. If you placed it at your broker, cancel it there too.',
+    lifecycleHelp: 'Save plans in Drafts. Use Fill only after an actual broker fill; use Cancel order when it will not be filled. Broker actions remain manual.',
+  },
+  manualOrderDraft: {
+    title: 'Manual draft — {{ticker}}',
+    save: 'Save manual draft',
+    saving: 'Saving draft…',
+    saved: 'Manual draft saved. It is not an approved order.',
+    manage: 'View drafts in Book',
+    warning: 'This saves your proposed entry, stop and target as a manual draft. It does not approve the setup or send anything to a broker.',
+    orderBlocked: 'Order preparation is blocked',
+    reviewHelp: 'Follow the next step above and review the reason below. Entry, stop and target prices describe a plan; the entry signal and risk checks also need to pass. You can save a manual draft while you resolve the issue.',
+    currency: 'Quote currency',
+    chooseCurrency: 'Choose currency',
+    currencyError: 'Choose a supported quote currency.',
+    entry: 'Planned entry price',
+    target: 'Target price',
+    review: 'Refresh and review',
+    reviewTitle: 'Review draft — {{ticker}}',
+    approvalRequired: 'Refresh the analysis to check this draft. When the scan permits order review, review its current plan and approve it before submission or recording a fill.',
+    planMismatch: 'The saved order type or quote currency differs from the current approved plan. Review the change before replacing the draft’s prices and size; its notes will be kept.',
+    useCurrentPlan: 'Use the current approved plan',
+    approve: 'Approve draft',
+    approved: 'Draft approved. It is now a pending order. Broker execution remains manual.',
   },
   weeklyReview: {
     weekLabel: 'Week {{id}}',
@@ -3067,6 +3101,13 @@ export const messagesEn = {
     },
   },
   todayPage: {
+    refresh: {
+      action: 'Refresh Today',
+      running: 'Refreshing Today…',
+      updated: 'Today updated {{time}}. Prices reflect the latest available daily candle.',
+      description: 'Today reloads its scan and portfolio data on entry. Refresh uses the same scan settings and the latest available daily session.',
+      error: 'Refresh failed: {{message}}. The last successful candidate data is still shown. Retry with Refresh Today.',
+    },
     tabs: {
       ariaLabel: 'Today views',
       today: 'Today',

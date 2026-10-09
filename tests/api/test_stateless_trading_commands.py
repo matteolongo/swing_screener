@@ -115,6 +115,115 @@ def _post_command(api, snapshot, operation, payload, expected_revision=None):
     )
 
 
+def test_manual_draft_can_be_saved_without_scan_approval_and_cancelled(command_api):
+    payload = _entry_payload(command_api)
+    payload.update(save_as_draft=True, approval_token=None, currency="EUR")
+    response = _post_command(command_api, _empty_snapshot(), "create_order", payload)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    order = result["orders"][0]
+    assert order["status"] == "draft"
+    assert order["portfolio_approval"] is None
+    assert result["positions"] == []
+    snapshot = TradingStateSnapshot.model_validate(result)
+    for operation, next_payload in [
+        ("submit_order", {"order_id": order["order_id"]}),
+        (
+            "fill_order",
+            {
+                "order_id": order["order_id"],
+                "filled_price": 100,
+                "filled_date": "2026-09-09",
+            },
+        ),
+    ]:
+        blocked = _post_command(command_api, snapshot, operation, next_payload)
+        assert blocked.status_code == 409, blocked.text
+    cancelled = _post_command(
+        command_api, snapshot, "cancel_order", {"order_id": order["order_id"]}
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["orders"][0]["status"] == "cancelled"
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        {"target_price": None},
+        {"target_price": 90},
+        {"currency": "UNKNOWN"},
+        {"order_kind": "stop", "order_type": "SELL_STOP"},
+    ],
+)
+def test_manual_draft_rejects_incomplete_or_invalid_plans(command_api, updates):
+    payload = _entry_payload(command_api)
+    payload.update(
+        {"save_as_draft": True, "approval_token": None, "currency": "EUR", **updates}
+    )
+    response = _post_command(command_api, _empty_snapshot(), "create_order", payload)
+    assert response.status_code == 422, response.text
+
+
+def test_manual_draft_promotion_requires_current_signed_approval(command_api):
+    payload = _entry_payload(command_api)
+    payload.update(
+        save_as_draft=True, approval_token=None, currency="EUR", notes="My saved plan"
+    )
+    saved = _post_command(command_api, _empty_snapshot(), "create_order", payload)
+    assert saved.status_code == 200, saved.text
+    snapshot = TradingStateSnapshot.model_validate(saved.json())
+    order_id = saved.json()["orders"][0]["order_id"]
+    rejected = _post_command(
+        command_api,
+        snapshot,
+        "create_order",
+        _entry_payload(command_api, approval_token=None, draft_order_id=order_id),
+    )
+    assert rejected.status_code == 422, rejected.text
+    approved = _post_command(
+        command_api,
+        snapshot,
+        "create_order",
+        _entry_payload(command_api, draft_order_id=order_id, notes="My saved plan"),
+    )
+    assert approved.status_code == 200, approved.text
+    orders = approved.json()["orders"]
+    assert len(orders) == 1
+    assert orders[0]["order_id"] == order_id
+    assert orders[0]["status"] == "pending"
+    assert orders[0]["notes"] == "My saved plan"
+    assert orders[0]["portfolio_approval"]["approved"] is True
+
+
+def test_cancelled_draft_cannot_be_promoted(command_api):
+    from api.models.portfolio import TradingOrderSnapshot
+
+    snapshot = _empty_snapshot()
+    snapshot.orders.append(
+        TradingOrderSnapshot.model_validate(
+            {
+                "order_id": "ORD-NVDA-001",
+                "ticker": "NVDA",
+                "status": "cancelled",
+                "order_type": "BUY_LIMIT",
+                "order_kind": "entry",
+                "quantity": 10,
+                "limit_price": 100,
+                "stop_price": 95,
+                "target_price": 112,
+                "order_date": "2026-09-09",
+            }
+        )
+    )
+    response = _post_command(
+        command_api,
+        snapshot,
+        "create_order",
+        _entry_payload(command_api, draft_order_id="ORD-NVDA-001"),
+    )
+    assert response.status_code == 409, response.text
+
+
 @pytest.mark.parametrize(
     "operation",
     ["create_order", "fill_order", "close_position", "partial_close", "update_stop"],
@@ -466,9 +575,7 @@ def test_entry_fill_creates_linked_stop_order(command_api):
     result = response.json()
     position_id = result["affected_position_ids"][0]
     linked_id = f"ORD-STOP-{position_id}"
-    linked = next(
-        order for order in result["orders"] if order["order_id"] == linked_id
-    )
+    linked = next(order for order in result["orders"] if order["order_id"] == linked_id)
     assert linked["order_kind"] == "stop"
     assert linked["order_type"] == "SELL_STOP"
     assert linked["status"] == "pending"

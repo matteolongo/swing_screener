@@ -30,9 +30,11 @@ import {
 interface TodayActionListProps {
   onTickerSelect: (ticker: string) => void;
   compact?: boolean;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
-export default function TodayActionList({ onTickerSelect, compact = false }: TodayActionListProps) {
+export default function TodayActionList({ onTickerSelect, compact = false, onRefresh, isRefreshing = false }: TodayActionListProps) {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
   const {
@@ -217,7 +219,7 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
 
   const compactRail = compact ? (
       <div
-        className="h-full space-y-1 overflow-y-auto p-2"
+        className="space-y-1 p-2"
         data-testid="symbol-rail-list"
       >
         {compactRows.map((row) => (
@@ -239,14 +241,7 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
   ) : null;
 
   return (
-    <>
-      {compactRail}
-      <div
-        className="flex flex-col h-full overflow-hidden"
-        hidden={compact}
-        aria-hidden={compact || undefined}
-        {...(compact ? { inert: '' } : {})}
-      >
+    <div className="flex min-w-0 flex-col">
       {/* Panel header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
@@ -258,13 +253,13 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
         </div>
         <button
           type="button"
-          onClick={() => refetch()}
-          disabled={isFetching}
+          onClick={() => onRefresh ? onRefresh() : refetch()}
+          disabled={isFetching || isRefreshing}
           title={t('dailyReview.header.refreshTitle')}
           aria-label={t('dailyReview.header.refreshTitle')}
           className="p-1 rounded hover:bg-foreground/5 text-muted disabled:opacity-50"
         >
-          <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} aria-hidden="true" />
+          <RefreshCw className={cn('h-3.5 w-3.5', (isFetching || isRefreshing) && 'animate-spin')} aria-hidden="true" />
         </button>
       </div>
 
@@ -339,8 +334,16 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
         )}
       </div>
 
+      {compactRail}
+
       {/* Action list */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3" onKeyDown={handleListKeyDown}>
+      <div
+        className={cn('px-2 py-2 space-y-3', compact && 'hidden')}
+        hidden={compact}
+        aria-hidden={compact || undefined}
+        {...(compact ? { inert: '' } : {})}
+        onKeyDown={handleListKeyDown}
+      >
         {error && (
           <div className="flex items-center gap-2 px-2 text-sm text-danger">
             {t('dailyReview.header.error', { message: error instanceof Error ? error.message : t('dailyReview.header.unknownError') })}
@@ -565,7 +568,6 @@ export default function TodayActionList({ onTickerSelect, compact = false }: Tod
           onSubmit={(req) => handlePartialClose(trimTarget, req)}
         />
       )}
-      </div>
-    </>
+    </div>
   );
 }

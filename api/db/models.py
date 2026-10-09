@@ -20,7 +20,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from api.db.base import Base
 
-
 PRICE = Numeric(20, 8)
 MONEY = Numeric(20, 4)
 
@@ -29,7 +28,7 @@ class OrderRow(Base):
     __tablename__ = "portfolio_orders"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending','submitted','filled','cancelled')",
+            "status IN ('draft','pending','submitted','filled','cancelled')",
             name="status_valid",
         ),
         CheckConstraint("quantity > 0", name="quantity_positive"),

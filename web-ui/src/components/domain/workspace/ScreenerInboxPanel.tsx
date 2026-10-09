@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
@@ -74,43 +74,16 @@ const RUNNING_STEPS = [
 ] as const;
 
 export function ScreenerRunningPanel() {
-  const [currentStep, setCurrentStep] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentStep((prev) => Math.min(prev + 1, RUNNING_STEPS.length - 1));
-    }, 1500);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 space-y-2">
-      {RUNNING_STEPS.map((stepKey, index) => {
-        const isCompleted = index < currentStep;
-        const isCurrent = index === currentStep;
-        return (
-          <div key={stepKey} className="flex items-center gap-2 text-sm">
-            {isCompleted ? (
-              <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-            ) : isCurrent ? (
-              <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
-            ) : (
-              <div className="w-4 h-4 rounded-full border border-border flex-shrink-0" />
-            )}
-            <span
-              className={
-                isCompleted
-                  ? 'text-muted line-through'
-                  : isCurrent
-                    ? 'text-primary font-medium'
-                    : 'text-muted'
-              }
-            >
-              {t(stepKey)}
-            </span>
-          </div>
-        );
-      })}
+    <div role="status" className="rounded-lg border border-primary/40 bg-primary/10 p-4 space-y-2">
+      <div className="flex items-center gap-2 text-sm font-medium text-primary">
+        <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin flex-shrink-0" />
+        {t('screener.running.waiting')}
+      </div>
+      <p className="text-xs text-muted">{t('screener.running.description')}</p>
+      <ul className="space-y-1 text-sm text-muted">
+        {RUNNING_STEPS.map((stepKey) => <li key={stepKey}>{t(stepKey)}</li>)}
+      </ul>
     </div>
   );
 }

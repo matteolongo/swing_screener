@@ -1,5 +1,5 @@
 import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCandleChart';
-import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
+import AnalysisDecisionStrip, { type CandidateRefreshControl } from '@/components/domain/workspace/AnalysisDecisionStrip';
 import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
@@ -21,6 +21,8 @@ interface QuerySummary<T> {
 export interface SymbolOverviewModel {
   ticker: string;
   candidate?: SymbolAnalysisCandidate | null;
+  benchmarkTicker?: string | null;
+  candidateRefresh?: CandidateRefreshControl;
   position?: PositionWithMetrics | null;
   fundamentals: QuerySummary<FundamentalSnapshot>;
   catalyst: QuerySummary<CatalystOpportunity>;
@@ -72,6 +74,7 @@ export default function SymbolOverviewTab({ model }: { model: SymbolOverviewMode
         isPendingWatch={model.isPendingWatch}
         onWatch={model.onWatch}
         onUnwatch={model.onUnwatch}
+        candidateRefresh={model.candidateRefresh}
         decisionContext={summary ? (
           <section className="rounded-lg border border-border bg-surface p-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
@@ -172,7 +175,7 @@ export default function SymbolOverviewTab({ model }: { model: SymbolOverviewMode
       {position ? <ManagePositionPanel position={position} candidate={candidate} /> : null}
 
       <div data-testid="symbol-candle-chart" className="rounded-lg border border-border bg-surface p-3">
-        <CachedSymbolCandleChart ticker={model.ticker} width={820} height={220} />
+        <CachedSymbolCandleChart ticker={model.ticker} candidate={candidate} benchmarkTicker={model.benchmarkTicker} width={820} height={220} />
         {candidate?.patternStop != null ? (
           <p className="mt-2 text-xs text-primary">
             {t('chart.patternStopLabel')}: {candidate.patternStop.toFixed(2)}

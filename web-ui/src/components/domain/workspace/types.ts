@@ -6,6 +6,7 @@ import type {
   DecisionSummary,
   ExecutionEligibility,
   SameSymbolCandidateContext,
+  PriceHistoryPoint,
 } from '@/features/screener/types';
 
 export type WorkspaceAnalysisTab =
@@ -28,6 +29,7 @@ export interface SymbolAnalysisCandidate {
   fundamentalsFreshnessStatus?: string;
   fundamentalsAsOf?: string;
   lastBar?: string;
+  dataAsOf?: string;
   dataStatus?: 'current' | 'stale' | 'intraday' | 'unknown';
   degradedReasons?: string[];
   atr?: number;
@@ -43,6 +45,7 @@ export interface SymbolAnalysisCandidate {
   signal?: string;
   entry?: number;
   stop?: number;
+  target?: number;
   shares?: number;
   rr?: number;
   rReward?: number;
@@ -61,4 +64,7 @@ export interface SymbolAnalysisCandidate {
   patterns?: CandlePattern[];
   patternStop?: number | null;
   patternStopReason?: string | null;
+  priceHistory?: PriceHistoryPoint[];
+  benchmarkPriceHistory?: PriceHistoryPoint[];
+  benchmarkOutperformancePct?: number | null;
 }

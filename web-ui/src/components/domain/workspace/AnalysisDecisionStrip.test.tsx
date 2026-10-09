@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
+import type { PositionWithMetrics } from '@/features/portfolio/api';
+import { formatCurrency } from '@/utils/formatters';
 
 function buildCandidate(overrides: Partial<SymbolAnalysisCandidate> = {}): SymbolAnalysisCandidate {
   return {
@@ -13,6 +15,29 @@ function buildCandidate(overrides: Partial<SymbolAnalysisCandidate> = {}): Symbo
     ...overrides,
   };
 }
+
+describe('AnalysisDecisionStrip held trade metrics', () => {
+  it.each([100, 110])('preserves initial 1R when the stop reaches %s', (stopPrice) => {
+    const position = { ticker: 'AAPL', entryPrice: 100, stopPrice, targetPrice: 130, perShareRisk: 10 } as PositionWithMetrics;
+    render(<AnalysisDecisionStrip ticker="AAPL" position={position} />);
+    const row = screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR')).closest('tr')!;
+    expect(within(row).getByText(formatCurrency(10, 'USD'))).toBeVisible();
+  });
+
+  it('keeps an add-on draft separate from the held trade metrics', () => {
+    const position = { ticker: 'AAPL', entryPrice: 100, stopPrice: 95, targetPrice: 130, perShareRisk: 10 } as PositionWithMetrics;
+    const candidate = buildCandidate({
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' }, risk: { riskPct: 0.01 } } as any,
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 120, stop: 110, target: 140, shares: 1, rr: 2, quoteCurrency: 'USD', approvalToken: 'signed' },
+    });
+    render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} position={position} />);
+    const metric = (key: Parameters<typeof t>[0]) => screen.getByText(t(key)).closest('tr')!;
+    expect(metric('workspacePage.panels.analysis.decisionSummary.tradePlan.entry')).toHaveTextContent(formatCurrency(100, 'USD'));
+    expect(metric('workspacePage.panels.analysis.decisionSummary.tradePlan.rr')).toHaveTextContent('3.0x');
+    expect(metric('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent')).toHaveTextContent('10.00%');
+  });
+});
 
 describe('AnalysisDecisionStrip — % to target cell', () => {
   it('shows % to target when entry and target are available', () => {
@@ -67,6 +92,20 @@ describe('AnalysisDecisionStrip — order preparation authority', () => {
     drivers: { positives: [], negatives: [], warnings: [] },
     valuationContext: { method: 'not_available' as const, summary: '' },
   };
+
+  it('uses the blocking reason instead of a conflicting technical-ready summary', () => {
+    const reason = 'No active signal from the system.';
+    const summary = { ...buyNowSummary, whyNow: 'Technical setup is ready.' };
+    const candidate = buildCandidate({
+      decisionSummary: summary,
+      recommendation: { workflowStatus: 'no_setup', nextStep: { code: 'observe' }, reasonsShort: [reason], risk: { entry: 200, stop: 190, target: 220 } } as any,
+      executionEligibility: { allowed: false, mode: null, reason: 'skip_guidance' },
+    });
+    render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} onSaveDraft={vi.fn()} />);
+    expect(screen.queryByText(summary.whyNow)).not.toBeInTheDocument();
+    expect(screen.getAllByText(reason)).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: t('manualOrderDraft.save') })).toBeEnabled();
+  });
 
   it('does not expose Prepare order for a BUY_NOW opinion without ready workflow status', () => {
     render(

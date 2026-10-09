@@ -1,19 +1,34 @@
 import { useState } from 'react';
-import { useOrders, useDegiroStatusQuery, useFillOrderMutation, useSubmitOrderMutation } from '@/features/portfolio/hooks';
+import { useOrders, useDegiroStatusQuery, useFillOrderMutation, useSubmitOrderMutation, useCancelOrderMutation } from '@/features/portfolio/hooks';
+import { useLocation } from 'react-router-dom';
+import ModalShell from '@/components/common/ModalShell';
+import Button from '@/components/common/Button';
+import DraftOrderReview from './DraftOrderReview';
 import { t } from '@/i18n/t';
 import type { Order } from '@/types/order';
 import FillOrderModalForm from './FillOrderModalForm';
+import { formatCurrency } from '@/utils/formatters';
+import { isSupportedCurrency } from '@/types/currency';
 
 import FillViaDegiroModal from './FillViaDegiroModal';
 
-type ActiveFilter = 'pending' | 'submitted';
+type ActiveFilter = 'draft' | 'pending' | 'submitted' | 'cancelled' | 'filled';
+
+function orderPrice(value: number | null | undefined, currency?: string | null) {
+  if (value == null) return t('common.placeholders.dash');
+  return isSupportedCurrency(currency) ? formatCurrency(value, currency.trim().toUpperCase()) : value.toFixed(2);
+}
 
 export default function PendingOrdersTab() {
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('pending');
+  const location = useLocation();
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>(location.state?.orderFilter === 'draft' ? 'draft' : 'pending');
   const ordersQuery = useOrders(activeFilter);
   const degiroStatusQuery = useDegiroStatusQuery();
   const [fillDegiroOrder, setFillDegiroOrder] = useState<Order | null>(null);
   const [fillManualOrder, setFillManualOrder] = useState<Order | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
+  const [reviewDraft, setReviewDraft] = useState<Order | null>(null);
+  const cancelMutation = useCancelOrderMutation();
 
   const fillMutation = useFillOrderMutation(() => {
     setFillManualOrder(null);
@@ -24,7 +39,8 @@ export default function PendingOrdersTab() {
   const orders = (ordersQuery.data ?? []).filter((o) => o.orderKind === 'entry');
   const degiroAvailable = degiroStatusQuery.data?.available ?? false;
 
-  const filterTabs: ActiveFilter[] = ['pending', 'submitted'];
+  const filterTabs: ActiveFilter[] = ['draft', 'pending', 'submitted', 'cancelled', 'filled'];
+  const isMutating = submitMutation.isPending || fillMutation.isPending || cancelMutation.isPending;
 
   if (ordersQuery.isLoading) {
     return <p className="text-sm text-muted py-4">{t('common.table.loading')}</p>;
@@ -49,6 +65,8 @@ export default function PendingOrdersTab() {
           </button>
         ))}
       </div>
+      <p className="mb-3 text-xs text-muted">{t('pendingOrdersTab.lifecycleHelp')}</p>
+      {ordersQuery.error || submitMutation.error ? <p role="alert" className="mb-3 text-sm text-danger">{(ordersQuery.error ?? submitMutation.error)?.message}</p> : null}
 
       {orders.length === 0 ? (
         <p className="text-sm text-muted py-4">{t('pendingOrdersTab.empty')}</p>
@@ -61,6 +79,7 @@ export default function PendingOrdersTab() {
                 <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnShares')}</th>
                 <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnLimit')}</th>
                 <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnStop')}</th>
+                <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnTarget')}</th>
                 <th className="py-2 pr-4 text-left font-medium">{t('pendingOrdersTab.columnDate')}</th>
                 <th className="py-2 text-left font-medium" />
               </tr>
@@ -81,11 +100,12 @@ export default function PendingOrdersTab() {
                   </td>
                   <td className="py-2 pr-4 text-right text-muted">{order.quantity}</td>
                   <td className="py-2 pr-4 text-right text-muted">
-                    {order.limitPrice != null ? order.limitPrice.toFixed(2) : t('common.placeholders.dash')}
+                    {orderPrice(order.limitPrice, order.quoteCurrency)}
                   </td>
                   <td className="py-2 pr-4 text-right text-muted">
-                    {order.stopPrice != null ? order.stopPrice.toFixed(2) : t('common.placeholders.dash')}
+                    {orderPrice(order.stopPrice, order.quoteCurrency)}
                   </td>
+                  <td className="py-2 pr-4 text-right text-muted">{orderPrice(order.targetPrice, order.quoteCurrency)}</td>
                   <td className="py-2 pr-4 text-muted">{order.orderDate}</td>
                   <td className="py-2">
                     <div className="flex gap-2">
@@ -93,16 +113,16 @@ export default function PendingOrdersTab() {
                         <button
                           type="button"
                           onClick={() => submitMutation.mutate(order.orderId)}
-                          disabled={submitMutation.isPending}
+                          disabled={isMutating}
                           className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {t('pendingOrdersTab.markSubmitted')}
                         </button>
                       )}
-                      <button
+                      {(order.status === 'pending' || order.status === 'submitted') ? <><button
                         type="button"
                         onClick={() => setFillDegiroOrder(order)}
-                        disabled={!degiroAvailable}
+                        disabled={!degiroAvailable || isMutating}
                         title={!degiroAvailable ? t('pendingOrdersTab.degiroNotConnected') : undefined}
                         className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
@@ -111,10 +131,13 @@ export default function PendingOrdersTab() {
                       <button
                         type="button"
                         onClick={() => setFillManualOrder(order)}
+                        disabled={isMutating}
                         className="px-2 py-1 rounded text-xs font-medium bg-foreground/5 text-muted hover:bg-foreground/10"
                       >
                         {t('pendingOrdersTab.fillManually')}
-                      </button>
+                      </button></> : null}
+                      {order.status === 'draft' ? <button type="button" onClick={() => setReviewDraft(order)} disabled={isMutating} className="rounded px-2 py-1 text-xs font-medium text-primary">{t('manualOrderDraft.review')}</button> : null}
+                      {['draft', 'pending', 'submitted'].includes(order.status) ? <button type="button" onClick={() => { cancelMutation.reset(); setCancelTarget(order); }} disabled={isMutating} className="rounded px-2 py-1 text-xs font-medium text-danger disabled:opacity-40">{t('pendingOrdersTab.cancelOrder')}</button> : null}
                     </div>
                   </td>
                 </tr>
@@ -130,6 +153,17 @@ export default function PendingOrdersTab() {
           onClose={() => setFillDegiroOrder(null)}
         />
       )}
+      {reviewDraft ? <DraftOrderReview key={reviewDraft.orderId} order={reviewDraft} onClose={() => setReviewDraft(null)} /> : null}
+      {cancelTarget ? <ModalShell title={t('pendingOrdersTab.cancelTitle', { ticker: cancelTarget.ticker })} onClose={() => { if (!cancelMutation.isPending) setCancelTarget(null); }} className="max-w-lg" closeOnBackdrop={false}>
+        <div className="space-y-4">
+          <p className="text-sm text-muted">{t('pendingOrdersTab.cancelHelp')}</p>
+          {cancelMutation.error ? <p role="alert" className="text-sm text-danger">{cancelMutation.error.message}</p> : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" disabled={cancelMutation.isPending} onClick={() => setCancelTarget(null)}>{t('pendingOrdersTab.keepOrder')}</Button>
+            <Button variant="danger" disabled={cancelMutation.isPending} onClick={() => cancelMutation.mutate(cancelTarget.orderId, { onSuccess: () => setCancelTarget(null) })}>{t('pendingOrdersTab.cancelOrder')}</Button>
+          </div>
+        </div>
+      </ModalShell> : null}
 
       {fillManualOrder && (
         <FillOrderModalForm

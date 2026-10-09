@@ -6,13 +6,52 @@ React 18 + TypeScript frontend for Swing Screener.
 
 | Page | Route | Purpose |
 | --- | --- | --- |
-| Today | `/today` | Pinned candidate queue, portfolio review, symbol detail, and signed-draft order ticket. Unpinned scans remain inspectable in Universes without replacing Today's source. |
+| Today | `/today` | Automatically refreshed candidate queue, portfolio review, symbol detail, signed order review and manual drafts. Uses the saved scan settings; unpinned exploration stays in Universes. |
 | Calendar | `/calendar` | Earnings calendar and upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management; trade journal; performance analytics; weekly review |
 | Universes | `/universes` | Full screener run and latest results, explicit pinning for Today, universe management, manual refresh, benchmark, and symbol discovery |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Data Sources | `/datasources` | Data source diagnostics: per-source health, live probe, fallback event feed |
 | Onboarding | `/onboarding` | Setup guide |
+
+## Candidate review
+
+Today force-refreshes its scan on entry/reload and through **Refresh Today**.
+It reuses the pinned settings (or the last scan/defaults when none are pinned),
+requests the latest daily session, and reloads portfolio, order and watchlist
+queries. A successful run replaces Today's snapshot and its selected candidate
+together while preserving Last Run. Completion shows the refresh time; the
+market date and prices may remain unchanged until a new daily candle exists.
+Errors keep the previous successful data visible with a retry action. Strategy
+changes trigger a new run; late responses cannot replace a newer pin or policy.
+
+**Refresh the candidate data** uses the same full refresh for Today scan rows.
+Watchlist/position rows and Universes reviews retain single-symbol refresh with
+the originating filter and indicator settings. Their candidate, chart, benchmark
+and signed order draft stay together without replacing saved runs. Wrong-ticker
+or empty single-symbol responses retain the prior review with an error. Intraday
+results remain explicitly labelled.
+
+Today's refresh and **Ready / All from run** controls remain visible when a
+symbol is open. The action list uses its content height so the candidate search,
+**Show no-setup** toggle and queue stay below it without overlapping.
+
+**Needs review** means follow the displayed next step and reason: refresh stale
+data, fix an invalid stop, or define a valid target. Prices alone do not approve
+an entry signal. **Save manual draft** keeps a proposed entry, stop, target,
+quantity, currency and notes with the warning visible. In **Book → Orders →
+Drafts**, **Refresh and review** checks current eligibility; **Approve draft**
+promotes the same record only after signed approval and risk checks pass. Saved
+prices and notes remain available for review; switching to a different approved
+order type/currency explicitly replaces the plan while retaining notes. Drafts
+cannot be submitted or filled. **Cancel order** marks an unfilled draft, pending
+or submitted order as not filled and retains it under **Cancelled**. All broker
+actions remain manual.
+
+Held-position metrics use the actual position entry and initial per-share risk
+for 1R, R:R, and risk percentage. **Check live** fetches a new read-only stop
+preview on every click and exposes failures for retry. The scan waiting panel
+lists its operations without claiming timed completion of individual stages.
 
 ## Development
 

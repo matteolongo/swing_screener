@@ -77,7 +77,7 @@ export default function ManagePositionPanel({ position, candidate }: ManagePosit
             {t('workspacePage.panels.analysis.managePosition.previewDescription')}
           </p>
         </div>
-        <Button size="sm" variant="secondary" onClick={handleCheckLive}>
+        <Button size="sm" variant="secondary" disabled={stopPreview.isFetching} onClick={handleCheckLive}>
           {t('workspacePage.panels.analysis.managePosition.checkLive')}
         </Button>
         {checkLive && stopPreview.isError && (

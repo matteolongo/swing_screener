@@ -3,7 +3,7 @@
 import type { Position, PositionApiResponse } from './position';
 import { transformPosition } from './position';
 
-export type OrderStatus = 'pending' | 'submitted' | 'filled' | 'cancelled';
+export type OrderStatus = 'draft' | 'pending' | 'submitted' | 'filled' | 'cancelled';
 export type OrderKind = 'entry' | 'stop' | 'take_profit';
 export type EntryMode = 'NEW_ENTRY' | 'ADD_ON';
 
@@ -29,6 +29,7 @@ export interface Order {
   brokerOrderId?: string | null;
   broker?: string | null;
   brokerSyncedAt?: string | null;
+  quoteCurrency?: string | null;
 }
 
 export interface CreateOrderRequest {
@@ -55,6 +56,8 @@ export interface CreateOrderRequest {
   daysToEarnings?: number | null;
   strategyId?: string;
   approvalToken?: string;
+  saveAsDraft?: boolean;
+  draftOrderId?: string;
 }
 
 export interface CreateOrderRequestApi {
@@ -71,6 +74,9 @@ export interface CreateOrderRequestApi {
   isin: string | null;
   thesis: string | null;
   approval_token: string | null;
+  save_as_draft?: boolean;
+  draft_order_id?: string;
+  currency?: string;
 }
 
 export interface FillOrderRequest {
@@ -104,6 +110,7 @@ export interface OrderApiResponse {
   broker_order_id?: string | null;
   broker?: string | null;
   broker_synced_at?: string | null;
+  quote_currency?: string | null;
 }
 
 export interface OrderSnapshot {
@@ -208,6 +215,7 @@ export function transformOrder(apiOrder: OrderApiResponse): Order {
     brokerOrderId: apiOrder.broker_order_id ?? null,
     broker: apiOrder.broker ?? null,
     brokerSyncedAt: apiOrder.broker_synced_at ?? null,
+    quoteCurrency: apiOrder.quote_currency ?? null,
   };
 }
 
@@ -277,5 +285,7 @@ export function transformCreateOrderRequest(req: CreateOrderRequest): CreateOrde
     isin: req.isin ?? null,
     thesis: req.thesis ?? null,
     approval_token: req.approvalToken ?? null,
+    ...(req.saveAsDraft ? { save_as_draft: true, currency: req.currency } : {}),
+    ...(req.draftOrderId ? { draft_order_id: req.draftOrderId } : {}),
   };
 }

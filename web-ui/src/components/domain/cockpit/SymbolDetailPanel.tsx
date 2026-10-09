@@ -38,10 +38,16 @@ import { useSymbolWorkspaceData } from '@/features/workspaceData/useSymbolWorksp
 import { isIntelligenceOutdated } from '@/features/workspaceData/health';
 import { t } from '@/i18n/t';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useScreenerStore } from '@/stores/screenerStore';
+import { useCandidateAnalysis } from '@/features/workspaceData/useCandidateAnalysis';
+import ManualOrderDraftForm from '@/components/domain/orders/ManualOrderDraftForm';
 
 interface SymbolDetailPanelProps {
   ticker: string;
   onClose: () => void;
+  isRefreshingToday?: boolean;
+  onRefreshToday?: () => void;
+  todayRefreshError?: Error | null;
 }
 
 type SecondaryTab = 'intelligence' | 'backtest' | 'volumeZones';
@@ -59,19 +65,33 @@ function workflowBadgeVariant(tone: WorkflowTone): 'success' | 'warning' | 'erro
   }
 }
 
-export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanelProps) {
+export default function SymbolDetailPanel({ ticker, onClose, isRefreshingToday = false, onRefreshToday, todayRefreshError }: SymbolDetailPanelProps) {
   const normalized = ticker.trim().toUpperCase();
   const selection = useWorkspaceStore((s) => s.selection);
   const selectionVersion = useWorkspaceStore((s) => s.selectionVersion);
   const setAnalysisTab = useWorkspaceStore((s) => s.setAnalysisTab);
   const analysisTab = useWorkspaceStore((s) => s.analysisTab);
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab | null>(null);
+  const [showDraft, setShowDraft] = useState(false);
+  useEffect(() => { setShowDraft(false); }, [normalized, selectionVersion]);
 
   // WorkspaceSelection envelope: the already-selected candidate snapshot travels
   // with the selection (CandidateQueue writes it). Never look the ticker back up
   // in the screener Last Run store here.
-  const candidate =
+  const selectedCandidate =
     selection?.ticker === normalized ? (selection.candidate ?? null) : null;
+  const benchmarkTicker = useScreenerStore((state) => {
+    if (state.todayRun && selection?.source === 'today_run' && selection.runId === state.todayRun.completedAt) return state.todayRun.result.benchmarkTicker ?? null;
+    if (selection?.source === 'last_run' && selection.runId === state.lastRunContext?.completedAt) return state.lastResult?.benchmarkTicker ?? null;
+    return null;
+  });
+  const runRequest = useScreenerStore((state) => {
+    if (state.todayRun && selection?.source === 'today_run' && selection.runId === state.todayRun.completedAt) return state.todayRun.request;
+    if (selection?.source === 'last_run' && selection.runId === state.lastRunContext?.completedAt) return state.lastRunContext?.request;
+    return undefined;
+  });
+  const candidateAnalysis = useCandidateAnalysis(normalized, selectedCandidate, selectionVersion, benchmarkTicker, runRequest);
+  const candidate = candidateAnalysis.candidate;
 
   const openPositionsQuery = useOpenPositions();
   const position =
@@ -290,7 +310,7 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
     : null;
 
   const orderDraft = getCanonicalOrderDraft(candidate);
-  const canReviewOrder = Boolean(orderDraft);
+  const canReviewOrder = Boolean(orderDraft) && !isRefreshingToday;
 
   const workflowPresentation = getWorkflowPresentation(candidate?.recommendation);
   const company = candidate?.name ?? fundamentals?.companyName ?? null;
@@ -335,6 +355,7 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
           candidate={candidate}
           position={position}
           onPrepareOrder={canReviewOrder ? () => setAnalysisTab('order') : undefined}
+          onSaveDraft={!isRefreshingToday ? () => setShowDraft(true) : undefined}
           isWatched={isWatched}
           isPendingWatch={isWatchPending}
           onWatch={() =>
@@ -346,6 +367,15 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
             })
           }
           onUnwatch={() => unwatchSymbolMutation.mutate(normalized)}
+          candidateRefresh={{
+            onRefresh: ['today_run', 'last_run'].includes(selection?.source ?? '')
+              ? onRefreshToday ?? candidateAnalysis.refresh
+              : candidateAnalysis.refresh,
+            isPending: isRefreshingToday || candidateAnalysis.isPending,
+            error: todayRefreshError ?? candidateAnalysis.error,
+            asOf: candidateAnalysis.refreshedResult ? candidate?.lastBar ?? candidateAnalysis.refreshedResult.asofDate : null,
+            freshness: candidateAnalysis.refreshedResult?.dataFreshness,
+          }}
         />
         {watchError ? (
           <p role="alert" className="text-xs text-danger">{watchError}</p>
@@ -380,11 +410,12 @@ export default function SymbolDetailPanel({ ticker, onClose }: SymbolDetailPanel
           />
         </ModalShell>
       ) : null}
+      {showDraft ? <ModalShell title={t('manualOrderDraft.title', { ticker: normalized })} onClose={() => setShowDraft(false)} className="max-w-xl" closeOnBackdrop={false}><ManualOrderDraftForm ticker={normalized} candidate={candidate} /></ModalShell> : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-foreground">{t('cockpit.detail.chart')}</h2>
         <div className="rounded-lg border border-border bg-surface p-3">
-          <CachedSymbolCandleChart ticker={normalized} width={820} height={220} />
+          <CachedSymbolCandleChart ticker={normalized} candidate={candidate} benchmarkTicker={candidateAnalysis.benchmarkTicker} width={820} height={220} />
         </div>
       </section>
 

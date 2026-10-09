@@ -121,6 +121,15 @@ pending → cancelled  (cancel_order)
 
 Orders are persisted to `data/orders.json`. Use `load_orders()` / `save_orders()` for all reads and writes — never edit the JSON directly while the CLI is running (file locking is active).
 
+The API owns a separate SQL ledger (or request-supplied browser ledger for
+stateless commands). Its manual-plan lifecycle is `draft → pending → submitted
+→ filled`, with unfilled `draft`, `pending` and `submitted` records cancellable
+to `cancelled`. `save_as_draft` stores a coherent proposed entry plan without
+approval; submission/fill are blocked until a fresh signed review promotes it
+through `draft_order_id`. Drafts are excluded from pending exposure. Cancellation
+preserves the record and never cancels a broker order. See `api/README.md` and
+`data/README.md` for the request contract and migration `20261008_0003`.
+
 ## Notes
 
 - `fill_entry_order()` automatically creates linked stop and take-profit orders.

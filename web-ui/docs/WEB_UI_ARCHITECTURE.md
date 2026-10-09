@@ -49,6 +49,11 @@
   entry trigger passed; the token is required and submission remains manual.
 - React Query keys live in `src/lib/queryKeys.ts`. Always use these for cache invalidation — do not construct key arrays inline.
 - Every create, submit, cancel, or fill order transition invalidates the Daily Review cache through `invalidateOrderLifecycleQueries`; fill transitions additionally invalidate positions.
+- Manual plans use the distinct `draft` lifecycle status and `saveAsDraft`
+  request flag. They do not grant execution eligibility. Review carries the
+  saved prices, size, currency and notes; a fresh signed plan is required to
+  promote the same `draftOrderId`. Cancellation preserves history, and draft
+  or cancelled records never expose submit/fill actions.
 - All user-facing strings go through `src/i18n/`. No hardcoded copy in components or tests.
 - Calendar headings format date-only events with the active `I18nProvider` locale. Its `EventSourceTag` legend always enumerates `position`, `screener`, `economic`, and `ipo` so a source tag is not silently omitted from the UI.
 - Weekly Review IDs use ISO week-year semantics (`YYYY-Www`) calculated from UTC calendar dates. The review form uses `Field` plus `Textarea`, which supplies stable label/control associations.
@@ -104,10 +109,26 @@ optional immutable run ID, candidate snapshot, and stable row ID), plus compatib
 selectors for the selected ticker and selection version. Today, Last Run, position,
 watchlist, portfolio, and ad-hoc entry points write the envelope; workspace consumers
 receive its candidate directly and never re-query the unrelated Last Run by ticker.
-Single-symbol computation is a request-keyed workspace-local cache and never changes
-`lastResult` or the immutable, display-filtered `todayRun`. A strategy transition clears
-persisted actionable runs before dependent queries refresh.
-active analysis tab, expanded/split mode, full-screen mode, and activity-drawer
+`features/workspaceData/useCandidateAnalysis` owns single-symbol computation and
+forced candidate refresh for the open review. It preserves the originating run's
+request overrides while requesting only the selected ticker and latest session.
+Results and errors are scoped to the candidate snapshot and selection version;
+late responses are discarded, and empty or wrong-ticker responses preserve the
+previous candidate. The displayed candidate supplies the chart, benchmark, and
+order-review draft together. Saved-run and discovery modals capture request and
+benchmark context with their selected candidate. Computation never changes
+`lastResult` or the display-filtered `todayRun`. In contrast,
+`features/screener/useTodayRefresh` owns automatic page-entry/reload and explicit
+Today refresh. It force-runs the latest session with the pinned/last/default
+settings and refetches active portfolio/order/watchlist review queries. It
+replaces Today's snapshot and matching selected scan row together; Last Run
+remains unchanged. New pins and strategy changes invalidate late responses;
+a policy change during a run schedules its replacement when the old run settles.
+Strategy transitions clear persisted actionable runs before dependent queries
+refresh. Watchlist/position detail refresh remains single-symbol even when
+outside the pinned scan. Refresh time is distinct from the daily candle date.
+The store also owns the active analysis tab, expanded/split mode, full-screen
+mode, and activity-drawer
 visibility plus a bounded history of 20 request activities per ticker/version
 session. The drawer filters history to the live selection so an earlier symbol
 cannot be retried against the current workspace.
@@ -135,6 +156,12 @@ Intelligence generation is a separate explicit action and records the precise
 input manifest and per-source degradation. Neither action mutates trading
 state. Backtest is not included in this health model and preserves its existing
 query and run/reset behavior.
+
+Held-position displays take entry and initial per-share risk from the position,
+even when its current stop has moved or a candidate carries an add-on draft.
+Live stop preview explicitly refetches on repeated checks and displays request
+errors; it never persists a stop. Screener waiting UI has no per-stage progress
+contract and does not simulate stage completion with elapsed time.
 
 When the Today workspace is expanded, the mounted Today, Last Run, or Watchlist
 panel renders its compact symbol-rail variant from the same loaded collection.

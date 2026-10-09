@@ -332,7 +332,7 @@ class CreatePositionRequest(BaseModel):
 
 
 class CreateOrderRequest(BaseModel):
-    """Request to create a pending entry order."""
+    """Create an approved order or save a non-actionable manual entry draft."""
 
     ticker: str
     order_type: str
@@ -361,6 +361,8 @@ class CreateOrderRequest(BaseModel):
     days_to_earnings: Optional[int] = None
     strategy_id: Optional[str] = None
     approval_token: Optional[str] = None
+    save_as_draft: bool = False
+    draft_order_id: Optional[str] = None
 
     @field_validator("ticker")
     @classmethod
@@ -391,6 +393,30 @@ class CreateOrderRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_stop_below_limit(self):
+        if self.save_as_draft:
+            from swing_screener.data.currencies import supported_currency_codes
+
+            if (
+                self.order_kind != "entry"
+                or self.entry_mode != "NEW_ENTRY"
+                or self.order_type not in {"BUY_LIMIT", "BUY_STOP"}
+            ):
+                raise ValueError(
+                    "manual drafts must be new-entry BUY_LIMIT or BUY_STOP plans"
+                )
+            if self.draft_order_id is not None:
+                raise ValueError("a draft cannot approve another draft")
+            if (
+                self.limit_price is None
+                or self.limit_price <= 0
+                or self.stop_price is None
+                or self.target_price is None
+                or not self.stop_price < self.limit_price < self.target_price
+            ):
+                raise ValueError("manual drafts require stop < entry < target")
+            self.currency = str(self.currency or "").strip().upper()
+            if self.currency not in supported_currency_codes():
+                raise ValueError("manual drafts require a supported quote currency")
         valid_types = {
             "entry": {"BUY_LIMIT", "BUY_STOP", "BUY_MARKET"},
             "stop": {"SELL_STOP"},
@@ -428,7 +454,7 @@ class OrderSnapshot(BaseModel):
 
     order_id: str
     ticker: str
-    status: Literal["pending", "submitted", "filled", "cancelled"] = "pending"
+    status: Literal["draft", "pending", "submitted", "filled", "cancelled"] = "pending"
     order_kind: Literal["entry", "stop", "take_profit"] = "entry"
     order_date: Optional[str] = None
     position_id: Optional[str] = None
@@ -1031,8 +1057,12 @@ class PortfolioAnalytics(BaseModel):
     max_loss_streak: int = 0
     equity_curve: list[PortfolioAnalyticsCurvePoint] = Field(default_factory=list)
     tag_breakdown: list[PortfolioAnalyticsTag] = Field(default_factory=list)
-    journal_tag_breakdown: list[PortfolioAnalyticsJournalTag] = Field(default_factory=list)
-    insight: PortfolioAnalyticsInsight = Field(default_factory=PortfolioAnalyticsInsight)
+    journal_tag_breakdown: list[PortfolioAnalyticsJournalTag] = Field(
+        default_factory=list
+    )
+    insight: PortfolioAnalyticsInsight = Field(
+        default_factory=PortfolioAnalyticsInsight
+    )
 
 
 class PortfolioAnalyticsMetadata(BaseModel):

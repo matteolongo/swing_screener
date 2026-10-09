@@ -99,11 +99,14 @@ class TestYfinanceProvider:
         monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         provider = YfinanceProvider()
 
-        end = datetime.now().strftime("%Y-%m-%d")
-        start = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        start, end = "2026-01-01", "2026-01-31"
 
         df = provider.fetch_ohlcv(
-            tickers=["AAPL"], start_date=start, end_date=end, interval="1d"
+            tickers=["AAPL"],
+            start_date=start,
+            end_date=end,
+            interval="1d",
+            use_cache=False,
         )
 
         # Check format
@@ -137,12 +140,15 @@ class TestYfinanceProvider:
         monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         provider = YfinanceProvider()
 
-        end = datetime.now().strftime("%Y-%m-%d")
-        start = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        start, end = "2026-01-01", "2026-01-31"
 
         tickers = ["AAPL", "MSFT", "GOOGL"]
         df = provider.fetch_ohlcv(
-            tickers=tickers, start_date=start, end_date=end, interval="1d"
+            tickers=tickers,
+            start_date=start,
+            end_date=end,
+            interval="1d",
+            use_cache=False,
         )
 
         # Check all tickers present
@@ -408,9 +414,7 @@ class TestYfinanceProvider:
         assert merged is not None
         assert merged.index.max().date().isoformat() == today
 
-    def test_head_reaching_download_renews_cache_freshness(
-        self, monkeypatch, tmp_path
-    ):
+    def test_head_reaching_download_renews_cache_freshness(self, monkeypatch, tmp_path):
         """A download that verifies the head advances the file's mtime."""
         import os
         import time
@@ -1078,10 +1082,9 @@ class TestProviderCompatibility:
         monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         yf_provider = YfinanceProvider()
 
-        end = datetime.now().strftime("%Y-%m-%d")
-        start = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+        start, end = "2026-01-01", "2026-01-31"
 
-        yf_df = yf_provider.fetch_ohlcv(["AAPL"], start, end)
+        yf_df = yf_provider.fetch_ohlcv(["AAPL"], start, end, use_cache=False)
 
         # Check structure
         assert isinstance(yf_df.columns, pd.MultiIndex)

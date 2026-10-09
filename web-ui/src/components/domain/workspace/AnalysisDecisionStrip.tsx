@@ -8,10 +8,18 @@ import type {
 } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
+import { formatCurrency, formatDateTime, formatNumber } from '@/utils/formatters';
 import { formatWorkflowNextStep, getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 import { getCanonicalOrderDraft } from '@/features/screener/types';
 import type { WorkflowTone } from '@/components/domain/recommendation/workflowPresentation';
+
+export interface CandidateRefreshControl {
+  onRefresh: () => void;
+  isPending: boolean;
+  error: Error | null;
+  asOf: string | null;
+  freshness?: string;
+}
 
 interface AnalysisDecisionStripProps {
   ticker: string;
@@ -23,6 +31,8 @@ interface AnalysisDecisionStripProps {
   onWatch?: () => void;
   onUnwatch?: () => void;
   decisionContext?: ReactNode;
+  candidateRefresh?: CandidateRefreshControl;
+  onSaveDraft?: () => void;
 }
 
 function convictionLabel(conviction: DecisionConviction): string {
@@ -102,6 +112,8 @@ export default function AnalysisDecisionStrip({
   onWatch,
   onUnwatch,
   decisionContext,
+  candidateRefresh,
+  onSaveDraft,
 }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
@@ -119,6 +131,9 @@ export default function AnalysisDecisionStrip({
   const operationalNextStep = candidate?.recommendation
     ? formatWorkflowNextStep(candidate.recommendation.nextStep)
     : undefined;
+  const explanation = !heldMode && !canPrepareOrder && candidate?.recommendation
+    ? candidate.recommendation.reasonsShort?.[0] ?? t('workspacePage.overview.reviewFallback')
+    : summary?.explanation?.summaryLine ?? summary?.whyNow ?? candidate?.recommendation?.reasonsShort?.[0];
   const closeEntry = heldMode
     ? position!.entryPrice
     : (orderDraft?.entry ?? summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null);
@@ -134,12 +149,12 @@ export default function AnalysisDecisionStrip({
   const target = heldMode
     ? (position!.targetPrice ?? null)
     : (orderDraft?.target ?? summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? position?.targetPrice ?? null);
-  const computedRr = target != null && entry != null && stop != null && entry > stop
-    ? (target - entry) / (entry - stop)
-    : null;
-  const rr = heldMode ? computedRr : orderDraft?.rr ?? computedRr ?? summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr ?? null;
   const heldOneR = position?.perShareRisk ?? position?.initialRisk ?? null;
   const oneR = heldMode ? heldOneR : entry != null && stop != null ? entry - stop : null;
+  const computedRr = target != null && entry != null && oneR != null && oneR > 0
+    ? (target - entry) / oneR
+    : null;
+  const rr = heldMode ? computedRr : orderDraft?.rr ?? computedRr ?? summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr ?? null;
   const pctToTarget = target != null && entry != null && entry > 0 ? (target - entry) / entry * 100 : null;
   const riskPct = heldMode
     ? (isPositiveNumber(heldOneR) && position != null && isPositiveNumber(position.entryPrice)
@@ -183,10 +198,7 @@ export default function AnalysisDecisionStrip({
               ))}
             </div>
             <p className="text-xs text-muted">
-              {summary?.explanation?.summaryLine
-                ?? summary?.whyNow
-                ?? candidate?.recommendation?.reasonsShort?.[0]
-                ?? t('workspacePage.overview.reviewFallback')}
+              {explanation ?? t('workspacePage.overview.reviewFallback')}
             </p>
             {operationalNextStep ? (
               <p className="text-sm font-medium text-foreground">
@@ -211,6 +223,35 @@ export default function AnalysisDecisionStrip({
         </div>
 
         {decisionContext}
+        {!heldMode && candidate && !canPrepareOrder ? (
+          <div className="space-y-1 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <p className="font-medium text-warning">{t('manualOrderDraft.orderBlocked')}</p>
+            <p className="text-muted">{t('manualOrderDraft.reviewHelp')}</p>
+            {candidate.recommendation?.reasonsShort?.map((reason) => <p key={reason} className="text-muted">{reason}</p>)}
+          </div>
+        ) : null}
+
+        {candidateRefresh ? (
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={candidateRefresh.onRefresh}
+              disabled={candidateRefresh.isPending}
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground/5 disabled:opacity-50"
+            >
+              {candidateRefresh.isPending
+                ? t('workspacePage.panels.analysis.computeAnalysis.runningAction')
+                : t('recommendation.workflow.nextStep.refresh_data')}
+            </button>
+            {candidateRefresh.error ? <p role="alert" className="text-sm text-danger">{candidateRefresh.error.message}</p> : null}
+            {candidateRefresh.asOf ? (
+              <p role="status" className="text-xs text-muted">
+                {t('workspacePage.panels.analysis.computeAnalysis.refreshed', { date: formatDateTime(candidateRefresh.asOf) })}
+                {candidateRefresh.freshness === 'intraday' ? ` · ${t('workspacePage.panels.screener.freshness.intraday')}` : null}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-1" aria-label={t('workspacePage.overview.tradePlan')}>
@@ -238,6 +279,7 @@ export default function AnalysisDecisionStrip({
             </button>
           </div>
         )}
+        {!heldMode && onSaveDraft ? <button type="button" onClick={onSaveDraft} className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground/5">{t('manualOrderDraft.save')}</button> : null}
       </div>
     </div>
   );

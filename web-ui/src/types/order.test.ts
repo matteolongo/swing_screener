@@ -51,6 +51,7 @@ describe('Order Type Transformations', () => {
         brokerOrderId: null,
         broker: null,
         brokerSyncedAt: null,
+        quoteCurrency: null,
       })
     })
 
