@@ -153,30 +153,38 @@ class StatelessTradingService:
                 position_id = order.get("position_id")
                 position = state.positions_repo.get_position(position_id)
                 if position is None:
-                    raise UnprocessableError("Exit order must reference an open position")
+                    raise UnprocessableError(
+                        "Exit order must reference an open position"
+                    )
                 if order.get("ticker") != position.get("ticker"):
-                    raise UnprocessableError("Exit order ticker must match the position")
+                    raise UnprocessableError(
+                        "Exit order ticker must match the position"
+                    )
                 quantity = int(order["quantity"])
                 shares = int(position["shares"])
                 if quantity > shares:
-                    raise UnprocessableError("Exit order quantity exceeds position shares")
+                    raise UnprocessableError(
+                        "Exit order quantity exceeds position shares"
+                    )
                 portfolio = PortfolioService(
                     positions_repo=state.positions_repo,
+                    orders_repo=state.orders_repo,
                     config_repo=self._config_repo,
                     provider=_CommandPriceProvider(context.market_price),
                     business_date=lambda: command.payload.filled_date,
                 )
                 if quantity == shares:
-                    portfolio.close_position(
+                    lifecycle = portfolio.close_position(
                         position_id,
                         ClosePositionRequest(
                             exit_price=command.payload.filled_price,
                             fee_eur=command.payload.fee_eur,
                             exit_fx_rate=command.payload.fill_fx_rate,
                         ),
+                        filled_exit_order_id=command.payload.order_id,
                     )
                 else:
-                    portfolio.partial_close_position(
+                    lifecycle = portfolio.partial_close_position(
                         position_id,
                         PartialCloseRequest(
                             shares_closed=quantity,
@@ -184,6 +192,7 @@ class StatelessTradingService:
                             fee_eur=command.payload.fee_eur,
                             fx_rate=command.payload.fill_fx_rate,
                         ),
+                        filled_exit_order_id=command.payload.order_id,
                     )
                 state.orders_repo.update_order(
                     command.payload.order_id,
@@ -195,6 +204,7 @@ class StatelessTradingService:
                         "fill_fx_rate": command.payload.fill_fx_rate,
                     },
                 )
+                affected_orders.extend(lifecycle.get("linked_order_ids", []))
                 affected_orders.append(command.payload.order_id)
                 affected_positions.append(position_id)
             else:
@@ -210,53 +220,25 @@ class StatelessTradingService:
         else:
             portfolio = PortfolioService(
                 positions_repo=state.positions_repo,
+                orders_repo=state.orders_repo,
                 config_repo=self._config_repo,
                 provider=_CommandPriceProvider(context.market_price),
                 business_date=business_date,
             )
             if command.operation == "update_stop":
                 position_id = command.payload.position_id
-                old_position = state.positions_repo.get_position(position_id)
-                old_stop = old_position.get("stop_price") if old_position else None
-                portfolio.update_position_stop(position_id, command.payload)
-                updated = state.positions_repo.get_position(position_id)
-                assert updated is not None
-                linked = orders.sync_linked_stop_order(
-                    position_id=position_id,
-                    ticker=str(updated.get("ticker")),
-                    shares=int(updated.get("shares")),
-                    stop_price=float(updated.get("stop_price")),
-                    business_date=business_date(),
-                    parent_order_id=updated.get("source_order_id"),
-                    notes=(
-                        "Auto-created from position stop update (was "
-                        f"{old_stop})"
-                    ),
-                    quote_currency=updated.get("quote_currency"),
-                    account_currency=updated.get("account_currency"),
-                )
-                linked_id = str(linked.get("order_id"))
-
-                def _link_exit_order(data: dict) -> dict:
-                    for entry in data.get("positions", []):
-                        if entry.get("position_id") == position_id:
-                            ids = [
-                                order_id
-                                for order_id in (entry.get("exit_order_ids") or [])
-                                if order_id != linked_id
-                            ]
-                            ids.append(linked_id)
-                            entry["exit_order_ids"] = ids
-                    return data
-
-                state.positions_repo.update(_link_exit_order)
-                affected_orders.append(linked_id)
+                result = portfolio.update_position_stop(position_id, command.payload)
+                affected_orders.extend(result.get("linked_order_ids", []))
             elif command.operation == "partial_close":
-                portfolio.partial_close_position(
+                result = portfolio.partial_close_position(
                     command.payload.position_id, command.payload
                 )
+                affected_orders.extend(result.get("linked_order_ids", []))
             elif command.operation == "close_position":
-                portfolio.close_position(command.payload.position_id, command.payload)
+                result = portfolio.close_position(
+                    command.payload.position_id, command.payload
+                )
+                affected_orders.extend(result.get("linked_order_ids", []))
             else:
                 raise UnprocessableError("Unsupported trading command")
             affected_positions.append(command.payload.position_id)

@@ -558,6 +558,7 @@ class FillOrderRequest(BaseModel):
 class FillOrderResponse(BaseModel):
     order_id: str
     position: Position
+    linked_order_ids: list[str] = Field(default_factory=list)
 
 
 class OrderReference(BaseModel):

@@ -11,6 +11,7 @@ import { useWeeklyReviews } from '@/features/weeklyReview/hooks';
 import { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
 import { useTodayRefresh } from '@/features/screener/useTodayRefresh';
 import Button from '@/components/common/Button';
+import PositionProtectionNotice from '@/components/domain/orders/PositionProtectionNotice';
 import { formatDateTime } from '@/utils/formatters';
 
 // ─── Weekly review nudge ─────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ export default function Today() {
 
   return (
     <div className="mx-auto max-w-[1600px]">
+      <PositionProtectionNotice />
       <TodayStatsStrip />
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p role="status" className="text-xs text-muted">{todayRefresh.isRefreshing

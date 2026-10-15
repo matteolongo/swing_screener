@@ -59,8 +59,8 @@ function createWrapper(queryClient: QueryClient) {
 describe('portfolio hooks', () => {
   it.each([useClosePositionMutation, usePartialClosePositionMutation])('invalidates linked order queries after a close mutation', async useHook => {
     const queryClient = createQueryClient()
-    vi.mocked(portfolioApi.closePosition).mockResolvedValue(undefined)
-    vi.mocked(portfolioApi.partialClosePosition).mockResolvedValue(undefined)
+    vi.mocked(portfolioApi.closePosition).mockResolvedValue({ linkedOrderIds: [] })
+    vi.mocked(portfolioApi.partialClosePosition).mockResolvedValue({ linkedOrderIds: [] })
     const { result } = renderHook(() => useHook(), { wrapper: createWrapper(queryClient) })
     await act(async () => {
       await result.current.mutateAsync({ positionId: 'POS-1', request: { exitPrice: 110, sharesClosed: 2, price: 110 } })
@@ -151,7 +151,7 @@ describe('portfolio hooks', () => {
 
   it('invalidates cached daily review and positions after a fill transition', async () => {
     const queryClient = createQueryClient()
-    vi.mocked(portfolioApi.fillOrder).mockResolvedValue(undefined)
+    vi.mocked(portfolioApi.fillOrder).mockResolvedValue({ linkedOrderIds: [] })
     const { result } = renderHook(() => useFillOrderMutation(), { wrapper: createWrapper(queryClient) })
 
     await act(async () => {
@@ -183,7 +183,7 @@ describe('portfolio hooks', () => {
         reason: 'trail',
       },
     }
-    mockedUpdatePositionStop.mockResolvedValue(undefined)
+    mockedUpdatePositionStop.mockResolvedValue({ linkedOrderIds: [] })
 
     const { result } = renderHook(() => useUpdateStopMutation(onSuccess), {
       wrapper: createWrapper(queryClient),

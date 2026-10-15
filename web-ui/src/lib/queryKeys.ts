@@ -30,6 +30,8 @@ export const queryKeys = {
   positionMetrics: (positionId?: string) =>
     positionId == null ? (['position-metrics'] as const) : (['position-metrics', positionId] as const),
   portfolioSummary: () => ['portfolio-summary'] as const,
+  positionLifecycle: (action?: 'adjustment' | 'cancellation' | 'fill') =>
+    action == null ? (['position-lifecycle'] as const) : (['position-lifecycle', action] as const),
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
   positionStopPreview: (positionId: string) =>
