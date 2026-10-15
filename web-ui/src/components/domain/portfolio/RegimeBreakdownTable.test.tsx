@@ -16,6 +16,17 @@ const MOCK_RESPONSE = {
 };
 
 describe('RegimeBreakdownTable', () => {
+  it('shows an unavailable win rate for scratch-only trades rather than a loss rate', async () => {
+    server.use(http.get('*/api/portfolio/analytics/regime-breakdown', () =>
+      HttpResponse.json({ benchmark: 'SPY', regimes: [
+        { regime: 'choppy', count: 1, win_rate: null, avg_r: 0, expectancy: 0 },
+      ] }),
+    ));
+    renderWithProviders(<RegimeBreakdownTable />);
+    await screen.findByText(t('analyticsPage.regimeBreakdown.regimes.choppy'));
+    expect(screen.getByText(t('common.placeholders.emDash'))).toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+  });
   it('renders regime rows with stats', async () => {
     server.use(
       http.get('*/api/portfolio/analytics/regime-breakdown', () =>

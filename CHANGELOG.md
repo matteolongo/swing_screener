@@ -15,6 +15,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Market-regime performance uses canonical shares-weighted R across all exit
+  legs. Scratches and unknown-risk trades follow Journal semantics; unavailable
+  benchmark data no longer appears as a successful empty result.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes
   the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,

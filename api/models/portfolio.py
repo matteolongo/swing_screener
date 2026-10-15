@@ -814,7 +814,9 @@ class EarningsProximityResponse(BaseModel):
 class RegimeStats(BaseModel):
     regime: str = Field(..., description="trending_up | trending_down | choppy")
     count: int = Field(..., ge=0)
-    win_rate: float = Field(..., ge=0, le=100)
+    win_rate: float | None = Field(
+        ..., ge=0, le=100, description="Wins / decided trades; null for scratches only"
+    )
     avg_r: float
     expectancy: float
 

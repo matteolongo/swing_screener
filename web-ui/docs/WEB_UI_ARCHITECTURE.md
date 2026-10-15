@@ -64,6 +64,10 @@
 
 ## State
 
+- Regime analytics consume backend-owned canonical trade outcomes. `winRate`
+  may be `null` for scratch-only groups and is rendered as unavailable, never
+  converted to zero. Benchmark-unavailable `503` responses use the query error
+  state, distinct from a successful empty portfolio result.
 - Server state: React Query (auto-caching and invalidation via query keys).
 - Client/UI state: Zustand stores in `src/stores/`.
 - No local persistence by default (`VITE_PERSISTENCE_MODE=api`).
