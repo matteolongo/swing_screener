@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from '@/lib/api';
 import { apiFetch } from '@/lib/apiFetch';
 import { fetchJson } from '@/lib/fetchJson';
+import { t } from '@/i18n/t';
 import type { OrderApiResponse } from '@/types/order';
 import type { PositionUpdateApiResponse } from '@/types/position';
 import type { OpenPositionIntelligenceSummaryAPI, OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
@@ -532,6 +533,7 @@ export async function updatePositionStop(
     },
     body: JSON.stringify({
       new_stop: request.newStop,
+      expected_version: request.expectedVersion,
       reason: request.reason || '',
     }),
     errorMessage: 'Failed to update stop',
@@ -605,11 +607,11 @@ export async function updatePositionTrailMethod(
   positionId: string,
   request: UpdateTrailMethodRequest,
   idempotencyKey?: string,
-): Promise<void> {
+): Promise<{ positionVersion: number }> {
   if (isLocalPersistenceMode()) {
     throw new Error('Trail method update is not supported in local persistence mode');
   }
-  await fetchJson<void>(API_ENDPOINTS.positionTrailMethod(positionId), {
+  const result = await fetchJson<{ position_version: number }>(API_ENDPOINTS.positionTrailMethod(positionId), {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -617,10 +619,15 @@ export async function updatePositionTrailMethod(
     },
     body: JSON.stringify({
       trail_method: request.trailMethod,
+      expected_version: request.expectedVersion,
       trail_param: request.trailParam ?? null,
     }),
     errorMessage: 'Failed to update trail method',
   });
+  if (!Number.isInteger(result?.position_version) || result.position_version < 1) {
+    throw new Error(t('positions.concurrency.versionUnavailable'));
+  }
+  return { positionVersion: result.position_version };
 }
 
 export async function computePositionStopSuggestion(
@@ -672,6 +679,7 @@ export async function closePosition(
     },
     body: JSON.stringify({
       exit_price: request.exitPrice,
+      expected_version: request.expectedVersion,
       fee_eur: request.feeEur,
       exit_fx_rate: request.exitFxRate,
       reason: request.reason || '',
@@ -702,6 +710,7 @@ export async function partialClosePosition(
     },
     body: JSON.stringify({
       shares_closed: request.sharesClosed,
+      expected_version: request.expectedVersion,
       price: request.price,
       fee_eur: request.feeEur,
       fx_rate: request.fxRate,

@@ -33,6 +33,13 @@ def _round_price(value: float) -> float:
     return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
+def _check_position_version(position: dict, expected_version: int | None) -> None:
+    if expected_version is not None and position.get("version", 1) != expected_version:
+        raise ConflictError(
+            "Position changed. Review its current shares and stop before retrying."
+        )
+
+
 @dataclass(frozen=True)
 class PreparedStopUpdate:
     position_id: str
@@ -121,6 +128,7 @@ class PortfolioWriteService:
         pos0 = self._positions_repo.get_position(position_id)
         if pos0 is None:
             raise NotFoundError(f"Position not found: {position_id}")
+        _check_position_version(pos0, request.expected_version)
         if pos0.get("status") != "open":
             raise ValidationError("Cannot update stop on closed position")
 
@@ -172,6 +180,7 @@ class PortfolioWriteService:
         def _modify(data: dict) -> dict:
             for pos in data.get("positions", []):
                 if pos.get("position_id") == position_id:
+                    _check_position_version(pos, request.expected_version)
                     if pos.get("status") != "open":
                         raise ValidationError("Cannot update stop on closed position")
                     locked_stop = _round_price(float(pos.get("stop_price")))
@@ -207,12 +216,15 @@ class PortfolioWriteService:
     def update_position_stop(
         self, position_id: str, request: UpdateStopRequest
     ) -> dict:
-        return self.apply_position_stop(self.prepare_position_stop(position_id, request))
+        return self.apply_position_stop(
+            self.prepare_position_stop(position_id, request)
+        )
 
     def close_position(self, position_id: str, request: ClosePositionRequest) -> dict:
         def _modify(data: dict) -> dict:
             for pos in data.get("positions", []):
                 if pos.get("position_id") == position_id:
+                    _check_position_version(pos, request.expected_version)
                     if pos.get("status") != "open":
                         raise ValidationError("Position already closed")
 
@@ -255,6 +267,7 @@ class PortfolioWriteService:
                 if pos.get("position_id") != position_id:
                     continue
 
+                _check_position_version(pos, request.expected_version)
                 if pos.get("status") != "open":
                     raise ValidationError("Position is not open")
 
@@ -315,6 +328,7 @@ class PortfolioWriteService:
         def _modify(data: dict) -> dict:
             for pos in data.get("positions", []):
                 if pos.get("position_id") == position_id:
+                    _check_position_version(pos, request.expected_version)
                     if pos.get("status") != "open":
                         raise ValidationError(
                             "Cannot update trail method on a closed position",
@@ -326,10 +340,15 @@ class PortfolioWriteService:
             raise NotFoundError(f"Position {position_id} not found")
 
         self._begin_write()
-        self._positions_repo.update(_modify)
+        updated = self._positions_repo.update(_modify)
         return {
             "status": "ok",
             "position_id": position_id,
             "trail_method": request.trail_method,
             "trail_param": request.trail_param,
+            "position_version": next(
+                pos.get("version", 1)
+                for pos in updated["positions"]
+                if pos.get("position_id") == position_id
+            ),
         }

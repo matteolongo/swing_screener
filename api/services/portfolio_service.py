@@ -78,7 +78,11 @@ class PortfolioService:
                 "subject": subject,
                 "operation": operation,
                 "resource": resource,
-                "body": body,
+                "body": {
+                    key: value
+                    for key, value in body.items()
+                    if key != "expected_version" or value is not None
+                },
             },
             sort_keys=True,
             separators=(",", ":"),
@@ -96,7 +100,9 @@ class PortfolioService:
             self._uow.write_started = False
             return None
         if existing.request_hash != request_hash:
-            raise ConflictError("Idempotency-Key was already used for a different request.")
+            raise ConflictError(
+                "Idempotency-Key was already used for a different request."
+            )
         response = dict(existing.response)
         self._uow.session.rollback()
         self._uow.write_started = False
@@ -112,7 +118,9 @@ class PortfolioService:
         if existing is None:
             raise ConflictError("Concurrent idempotent request could not be replayed.")
         if existing.request_hash != request_hash:
-            raise ConflictError("Idempotency-Key was already used for a different request.")
+            raise ConflictError(
+                "Idempotency-Key was already used for a different request."
+            )
         return dict(existing.response)
 
     def _run_idempotent_write(
@@ -154,10 +162,10 @@ class PortfolioService:
             return self._recover_idempotency_race(
                 idempotency_key=idempotency_key, request_hash=request_hash
             )
+        if resource != "positions":
+            self._uow.positions.get_position(resource, for_update=True)
         response = action()
-        self._uow.idempotency.complete(
-            reservation, status_code=200, response=response
-        )
+        self._uow.idempotency.complete(reservation, status_code=200, response=response)
         return response
 
     def fetch_recent_ohlcv(

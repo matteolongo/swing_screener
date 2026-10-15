@@ -11,12 +11,19 @@ interface FlatItem {
   id: string;
 }
 
-export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: string) => void) {
+export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: string) => void, positions: Position[] = [], positionsUnavailable = false) {
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
   const [acceptedStops, setAcceptedStops] = useState<Set<string>>(new Set());
-  const [updateStopTarget, setUpdateStopTarget] = useState<Position | null>(null);
-  const [closeTarget, setCloseTarget] = useState<Position | null>(null);
-  const [trimTarget, setTrimTarget] = useState<Position | null>(null);
+  const [updateStopTargetId, setUpdateStopTargetId] = useState<string | null>(null);
+  const [closeTargetId, setCloseTargetId] = useState<string | null>(null);
+  const [trimTargetId, setTrimTargetId] = useState<string | null>(null);
+  const currentPosition = (id: string | null) => positions.find(position => position.positionId === id && position.status === 'open') ?? null;
+  const updateStopTarget = currentPosition(updateStopTargetId);
+  const closeTarget = currentPosition(closeTargetId);
+  const trimTarget = currentPosition(trimTargetId);
+  const setUpdateStopTarget = (position: Position | null) => setUpdateStopTargetId(position?.positionId ?? null);
+  const setCloseTarget = (position: Position | null) => setCloseTargetId(position?.positionId ?? null);
+  const setTrimTarget = (position: Position | null) => setTrimTargetId(position?.positionId ?? null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const focusedIdRef = useRef(focusedId);
 
@@ -27,12 +34,14 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
 
   const handleAcceptStop = useCallback(
     (positionId: string, stopSuggested: number, reason: string) => {
+      const position = positions.find(item => item.positionId === positionId && item.status === 'open');
+      if (!position || positionsUnavailable) return;
       acceptStopMutation.mutate(
-        { positionId, request: { newStop: stopSuggested, reason } },
+        { positionId, request: { newStop: stopSuggested, reason, expectedVersion: position.version ?? 1 } },
         { onSuccess: () => setAcceptedStops((prev) => new Set([...prev, positionId])) },
       );
     },
-    [acceptStopMutation],
+    [acceptStopMutation, positions, positionsUnavailable],
   );
 
   const handleUpdateStop = useCallback(
@@ -41,7 +50,7 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
         { positionId: position.positionId!, request: req },
         {
           onSuccess: () => {
-            setUpdateStopTarget(null);
+            setUpdateStopTargetId(null);
             setDoneIds((prev) => new Set([...prev, position.positionId!]));
           },
         },
@@ -56,7 +65,7 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
         { positionId: position.positionId!, request: req },
         {
           onSuccess: () => {
-            setCloseTarget(null);
+            setCloseTargetId(null);
             setDoneIds((prev) => new Set([...prev, position.positionId!]));
           },
         },
@@ -69,7 +78,7 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
     (position: Position, req: PartialCloseRequest) => {
       partialCloseMutation.mutate(
         { positionId: position.positionId!, request: req },
-        { onSuccess: () => setTrimTarget(null) },
+        { onSuccess: () => setTrimTargetId(null) },
       );
     },
     [partialCloseMutation],

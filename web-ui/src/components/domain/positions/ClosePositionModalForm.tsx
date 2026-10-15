@@ -7,6 +7,8 @@ import type { ClosePositionRequest, Position } from '@/features/portfolio/types'
 import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
+import { usePositionVersion } from '@/features/portfolio/usePositionVersion';
+import PositionVersionNotice from './PositionVersionNotice';
 
 interface ClosePositionModalFormProps {
   position: Position;
@@ -69,6 +71,7 @@ export default function ClosePositionModalForm({
   onClose,
   onSubmit,
 }: ClosePositionModalFormProps) {
+  const version = usePositionVersion(position);
   const [exitPriceValue, setExitPriceValue] = useState(() => position.entryPrice.toFixed(2));
   const [feeEurValue, setFeeEurValue] = useState('');
   const [reasonValue, setReasonValue] = useState('');
@@ -77,6 +80,7 @@ export default function ClosePositionModalForm({
   const [formError, setFormError] = useState<string | null>(null);
 
   const buildRequest = (tags: string[]): ClosePositionRequest | null => {
+    if (version.needsReview || version.isUnavailable || position.status !== 'open') return null;
     setFormError(null);
 
     const exitPrice = parsePositiveNumber(exitPriceValue);
@@ -96,6 +100,7 @@ export default function ClosePositionModalForm({
     }
 
     return {
+      expectedVersion: version.expectedVersion,
       exitPrice,
       feeEur,
       reason: reasonValue,
@@ -133,6 +138,7 @@ export default function ClosePositionModalForm({
   return (
     <ModalShell title={t('positions.closeModal.title', { ticker: position.ticker })} onClose={onClose} className="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {(version.needsReview || version.isUnavailable) && <PositionVersionNotice position={position} onReview={version.reviewCurrent} unavailable={version.isUnavailable} onRefresh={version.refresh} disabled={isLoading || version.isRefreshing} />}
         <div className="bg-foreground/5 p-3 rounded">
           <p className="text-sm text-muted">{t('positions.closeModal.positionDetails')}</p>
           <p className="text-sm mt-1">
@@ -255,11 +261,11 @@ export default function ClosePositionModalForm({
             {t('common.actions.cancel')}
           </Button>
           {exitPriceValue ? (
-            <Button type="button" variant="secondary" onClick={() => submitWithTags([])} disabled={isLoading}>
+            <Button type="button" variant="secondary" onClick={() => submitWithTags([])} disabled={isLoading || version.needsReview || version.isUnavailable || position.status !== 'open'}>
               {t('closePositionModal.skipTags')}
             </Button>
           ) : null}
-          <Button type="button" variant="primary" onClick={() => submitWithTags(selectedTags)} disabled={isLoading}>
+          <Button type="button" variant="primary" onClick={() => submitWithTags(selectedTags)} disabled={isLoading || version.needsReview || version.isUnavailable || position.status !== 'open'}>
             {isLoading ? t('positions.closeModal.closing') : t('closePositionModal.confirmClose')}
           </Button>
         </div>

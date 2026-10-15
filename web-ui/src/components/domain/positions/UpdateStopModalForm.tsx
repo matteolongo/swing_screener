@@ -10,6 +10,8 @@ import { usePositionStopSuggestion, useUpdateTrailMethodMutation } from '@/featu
 import type { Position, PositionUpdate, TrailMethod, UpdateStopRequest } from '@/features/portfolio/types';
 import { formatCurrency } from '@/utils/formatters';
 import { t } from '@/i18n/t';
+import { usePositionVersion } from '@/features/portfolio/usePositionVersion';
+import PositionVersionNotice from './PositionVersionNotice';
 
 interface UpdateStopModalFormProps {
   position: Position;
@@ -30,6 +32,7 @@ export default function UpdateStopModalForm({
   onClose,
   onSubmit,
 }: UpdateStopModalFormProps) {
+  const version = usePositionVersion(position);
   const suggestionQuery = usePositionStopSuggestion(position.positionId);
   const [liveSuggestion, setLiveSuggestion] = useState<PositionUpdate | null>(null);
 
@@ -93,19 +96,23 @@ export default function UpdateStopModalForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (version.needsReview || version.isUnavailable || position.status !== 'open') return;
     setTrailError('');
+    let expectedVersion = version.expectedVersion;
     if (trailMethodChanged && position.positionId) {
       try {
-        await trailMethodMutation.mutateAsync({
+        const committed = await trailMethodMutation.mutateAsync({
           positionId: position.positionId,
-          request: { trailMethod, trailParam },
+          request: { trailMethod, trailParam, expectedVersion },
         });
+        expectedVersion = committed.positionVersion;
+        version.acceptCommitted(expectedVersion);
       } catch (err) {
         setTrailError(err instanceof Error ? err.message : 'Failed to update trail method');
         return;
       }
     }
-    onSubmit({ ...formData, newStop: roundToCents(formData.newStop) });
+    onSubmit({ ...formData, newStop: roundToCents(formData.newStop), expectedVersion });
   };
 
   const handleUseSuggested = () => {
@@ -122,6 +129,7 @@ export default function UpdateStopModalForm({
   return (
     <ModalShell title={t('positions.updateStopModal.title', { ticker: position.ticker })} onClose={onClose} className="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {(version.needsReview || version.isUnavailable) && <PositionVersionNotice position={position} onReview={version.reviewCurrent} unavailable={version.isUnavailable} onRefresh={version.refresh} disabled={isLoading || version.isRefreshing} />}
         <div className="bg-foreground/5 p-3 rounded">
           <p className="text-sm text-muted">{t('positions.updateStopModal.currentPosition')}</p>
           <p className="text-sm mt-1">
@@ -223,7 +231,7 @@ export default function UpdateStopModalForm({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
             {t('common.actions.cancel')}
           </Button>
-          <Button type="submit" variant="primary" disabled={isLoading || !canMoveUp}>
+          <Button type="submit" variant="primary" disabled={isLoading || trailMethodMutation.isPending || !canMoveUp || version.needsReview || version.isUnavailable || position.status !== 'open'}>
             {isLoading ? t('positions.updateStopModal.updating') : t('common.actions.updateStop')}
           </Button>
         </div>

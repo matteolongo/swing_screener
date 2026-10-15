@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
+import { ApiHttpError } from '@/lib/fetchJson';
 import {
   createOrder,
   cancelOrder,
@@ -37,6 +39,12 @@ import { queryKeys } from '@/lib/queryKeys';
 import { invalidateDailyReviewQueries, invalidateOrderLifecycleQueries, invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
 
 const mutationIdempotencyKeys = new WeakMap<object, string>();
+
+async function refreshPositionOnConflict(queryClient: QueryClient, error: Error) {
+  if (error instanceof ApiHttpError && error.status === 409) {
+    await invalidatePositionQueries(queryClient);
+  }
+}
 
 function idempotencyKeyForMutation(variables: object): string {
   const existing = mutationIdempotencyKeys.get(variables);
@@ -181,6 +189,7 @@ export function useEarningsProximity(ticker?: string) {
 export function useUpdateStopMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
+    onError: (error) => refreshPositionOnConflict(queryClient, error),
     mutationFn: (variables: { positionId: string; request: UpdateStopRequest }) =>
       updatePositionStop(
         variables.positionId,
@@ -199,6 +208,7 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
 export function useUpdateTrailMethodMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
+    onError: (error) => refreshPositionOnConflict(queryClient, error),
     mutationFn: (variables: {
       positionId: string;
       request: UpdateTrailMethodRequest;
@@ -242,6 +252,7 @@ export function usePositionStopPreviewQuery(
 export function useClosePositionMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
+    onError: (error) => refreshPositionOnConflict(queryClient, error),
     mutationFn: (variables: { positionId: string; request: ClosePositionRequest }) =>
       closePosition(
         variables.positionId,
@@ -260,6 +271,7 @@ export function useClosePositionMutation(onSuccess?: () => void) {
 export function usePartialClosePositionMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
+    onError: (error) => refreshPositionOnConflict(queryClient, error),
     mutationFn: (variables: { positionId: string; request: PartialCloseRequest }) =>
       partialClosePosition(
         variables.positionId,
