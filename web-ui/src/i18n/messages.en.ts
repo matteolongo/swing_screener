@@ -2787,7 +2787,8 @@ export const messagesEn = {
       colWinRate: 'Win Rate',
       colAvgR: 'Avg R',
       colExpectancy: 'Expectancy',
-      expectancyHint: 'win_rate × avg_win_R − loss_rate × avg_loss_R',
+      expectancyHint: 'Average R per trade, including scratches',
+      methodology: 'R includes every recorded exit leg, weighted by shares and measured against initial risk. Scratches count toward average R, not win rate; their win rate alone is unavailable. Trades with unknown risk are excluded. Fees and FX affect cash, not R.',
       regimes: {
         trending_up: 'Trending Up',
         trending_down: 'Trending Down',

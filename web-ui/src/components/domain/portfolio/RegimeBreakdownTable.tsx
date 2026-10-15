@@ -66,5 +66,10 @@ export default function RegimeBreakdownTable() {
     expectancy: stat.expectancy,
   }));
 
-  return <StatsTable headers={headers} rows={rows} />;
+  return (
+    <div className="space-y-3">
+      <StatsTable headers={headers} rows={rows} />
+      <p className="text-xs text-muted">{t('analyticsPage.regimeBreakdown.methodology')}</p>
+    </div>
+  );
 }

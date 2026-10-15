@@ -386,7 +386,14 @@ Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/summary` — open-risk/cash summary plus canonical
   closed-trade analytics and configured rendering thresholds.
 - `GET /api/portfolio/earnings-proximity/{ticker}`
-- `GET /api/portfolio/analytics/regime-breakdown`
+- `GET /api/portfolio/analytics/regime-breakdown` — classifies trades by benchmark
+  trend at entry, then reuses canonical portfolio analytics for each group.
+  `avg_r` and `expectancy` include every exit leg weighted by shares and measured
+  against initial risk; fees/FX do not change R. `count` excludes unknown-risk
+  trades. Scratches enter average R but not the win-rate denominator;
+  `win_rate` is `null` when a group contains only scratches. Missing/failed
+  benchmark data returns `503`, not an empty successful result. No eligible
+  closed trades still returns `200` with `regimes: []` without provider I/O.
 - `POST /api/portfolio/orders` — signed entry creation, manual draft save, or
   signed promotion of an existing `draft_order_id`.
 - `GET /api/portfolio/orders/local` — includes the same freshness metadata for

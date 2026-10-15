@@ -2,6 +2,10 @@
 
 React 18 + TypeScript frontend for Swing Screener.
 
+Regime performance consumes the same shares-weighted trade R as Journal and
+Performance. Scratch-only win rates display as unavailable; unknown-risk trades
+are excluded. A benchmark outage displays the regime error state, not no trades.
+
 ## Pages
 
 | Page | Route | Purpose |
