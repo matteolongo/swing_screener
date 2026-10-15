@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import PortfolioTable from '@/components/domain/workspace/PortfolioTable';
+import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
 import { t } from '@/i18n/t';
 import { renderWithProviders } from '@/test/utils';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
@@ -12,8 +13,11 @@ const { positionsMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/components/domain/workspace/SymbolAnalysisContent', () => ({
-  default: ({ orderPanel }: { orderPanel: React.ReactNode | ((candidate: unknown) => React.ReactNode) }) => (
-    <>{typeof orderPanel === 'function' ? orderPanel({ ticker: 'TEST', currency: 'USD' }) : orderPanel}</>
+  default: ({ orderPanel, position }: { position: PositionWithMetrics | null; orderPanel: React.ReactNode | ((candidate: unknown) => React.ReactNode) }) => (
+    <>
+      {position ? <ManagePositionPanel position={position} /> : null}
+      {typeof orderPanel === 'function' ? orderPanel({ ticker: 'TEST', currency: 'USD' }) : orderPanel}
+    </>
   ),
 }));
 
@@ -41,6 +45,7 @@ vi.mock('@/features/portfolio/hooks', () => ({
   usePartialClosePositionMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
   useFillOrderMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
   useCancelOrderMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  usePositionStopPreviewQuery: () => ({ data: undefined, isFetching: false, isError: false, refetch: vi.fn() }),
 }));
 
 function makePosition(overrides: Partial<PositionWithMetrics> = {}): PositionWithMetrics {
@@ -136,5 +141,30 @@ describe('PortfolioTable symbol analysis', () => {
     await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
 
     expect(screen.getByTestId('modal-order-candidate')).toHaveTextContent('TEST');
+  });
+
+  it('reopens management from current query data without closing Details', async () => {
+    positionsMock.mockReturnValue([makePosition({ shares: 10, version: 1 })]);
+    const { rerender } = renderWithProviders(<PortfolioTable />);
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
+
+    positionsMock.mockReturnValue([makePosition({ shares: 5, stopPrice: 95, version: 2 })]);
+    rerender(<PortfolioTable />);
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.scaleOut') }));
+
+    expect(screen.getByLabelText(t('positions.partialCloseModal.sharesLabel'))).toHaveAttribute('max', '4');
+    expect(screen.getByLabelText(t('positions.partialCloseModal.sharesLabel'))).toHaveValue(2);
+  });
+
+  it('removes management controls when the analyzed position leaves open positions', async () => {
+    positionsMock.mockReturnValue([makePosition()]);
+    const { rerender } = renderWithProviders(<PortfolioTable />);
+    await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
+
+    positionsMock.mockReturnValue([]);
+    rerender(<PortfolioTable />);
+
+    expect(screen.queryByRole('button', { name: t('workspacePage.panels.analysis.managePosition.scaleOut') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('workspacePage.panels.analysis.managePosition.exit') })).not.toBeInTheDocument();
   });
 });

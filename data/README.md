@@ -43,6 +43,16 @@ migration head; see `api/README.md` for deployment and backup instructions.
 
 ## positions.json schema notes
 
+### Position management versions (2026-10-15)
+
+The SQL ledger already owns `version`; no migration or new column is needed.
+Position reads expose that version. New management clients send
+`expected_version`; older clients may omit it and retain weaker latest-state
+validation. Browser snapshots without a position version normalize to 1 on the
+existing snapshot/API boundary, then increment only changed positions during
+canonical commands. No JSON import source is rewritten or backfilled in place.
+Snapshot `expected_revision` checks remain required and unchanged.
+
 ### v3 transactional import compatibility
 
 `positions.json` is a frozen legacy import source once SQL portfolio storage is

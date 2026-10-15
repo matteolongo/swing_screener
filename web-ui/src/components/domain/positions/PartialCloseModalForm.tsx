@@ -6,6 +6,8 @@ import RChip from '@/components/common/RChip';
 import type { PartialCloseRequest, Position } from '@/features/portfolio/types';
 import { formatCurrency, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
+import { usePositionVersion } from '@/features/portfolio/usePositionVersion';
+import PositionVersionNotice from './PositionVersionNotice';
 
 interface PartialCloseModalFormProps {
   position: Position;
@@ -32,6 +34,7 @@ export default function PartialCloseModalForm({
   onClose,
   onSubmit,
 }: PartialCloseModalFormProps) {
+  const version = usePositionVersion(position);
   const defaultShares = Math.max(1, Math.floor(position.shares / 2));
   const [sharesValue, setSharesValue] = useState(String(defaultShares));
   const [priceValue, setPriceValue] = useState(position.entryPrice.toFixed(2));
@@ -48,6 +51,7 @@ export default function PartialCloseModalForm({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (version.needsReview || version.isUnavailable || position.status !== 'open') return;
     setFormError(null);
 
     const shares = parsePositiveInt(sharesValue);
@@ -72,7 +76,7 @@ export default function PartialCloseModalForm({
         ? Number.parseFloat(feeEurStr)
         : undefined;
 
-    onSubmit({ sharesClosed: shares, price, feeEur });
+    onSubmit({ sharesClosed: shares, price, feeEur, expectedVersion: version.expectedVersion });
   };
 
   return (
@@ -82,6 +86,7 @@ export default function PartialCloseModalForm({
       className="max-w-md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {(version.needsReview || version.isUnavailable) && <PositionVersionNotice position={position} onReview={version.reviewCurrent} unavailable={version.isUnavailable} onRefresh={version.refresh} disabled={isLoading || version.isRefreshing} />}
         {/* Position summary */}
         <div className="bg-foreground/5 p-3 rounded text-sm space-y-1">
           <p><strong>{t('positions.closeModal.entryLabel')}</strong> {formatCurrency(position.entryPrice)}</p>
@@ -178,7 +183,7 @@ export default function PartialCloseModalForm({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
             {t('common.actions.cancel')}
           </Button>
-          <Button type="submit" variant="primary" disabled={isLoading}>
+          <Button type="submit" variant="primary" disabled={isLoading || version.needsReview || version.isUnavailable || position.status !== 'open'}>
             {isLoading ? t('positions.closeModal.closing') : t('positions.partialCloseModal.submit')}
           </Button>
         </div>

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { renderWithProviders as render } from '@/test/utils';
 import userEvent from '@testing-library/user-event';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import { t } from '@/i18n/t';
@@ -34,6 +35,24 @@ const basePosition = {
 };
 
 describe('UpdateStopModalForm', () => {
+  it('uses the committed trail version for the followup stop instead of the old form version', async () => {
+    usePositionStopSuggestionMock.mockReturnValue({ data: null, isLoading: false, error: null });
+    const saveTrail = vi.fn().mockResolvedValue({ positionVersion: 5 });
+    useUpdateTrailMethodMutationMock.mockReturnValue({ mutateAsync: saveTrail });
+    computePositionStopSuggestionMock.mockResolvedValue(null);
+    const onSubmit = vi.fn();
+    render(<UpdateStopModalForm position={{ ...basePosition, version: 4 }} isLoading={false} onClose={vi.fn()} onSubmit={onSubmit} />);
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'manual');
+    const price = screen.getByLabelText(t('positions.updateStopModal.newStopPrice'));
+    await userEvent.clear(price);
+    await userEvent.type(price, '17.8');
+    fireEvent.submit(price.closest('form')!);
+    await waitFor(() => expect(saveTrail).toHaveBeenCalledWith({
+      positionId: basePosition.positionId,
+      request: { trailMethod: 'manual', trailParam: null, expectedVersion: 4 },
+    }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ expectedVersion: 5, newStop: 17.8 }));
+  });
   it('rounds suggested stop to two decimals when applying suggestion', async () => {
     const user = userEvent.setup();
 

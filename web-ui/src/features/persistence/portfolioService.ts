@@ -252,7 +252,7 @@ export function cancelOrderLocal(orderId: string, key?: string) {
 }
 export function updatePositionStopLocal(positionId: string, request: UpdateStopRequest, key?: string) {
   if (!request.marketPrice) return Promise.reject(new Error('A current timestamped market price observation is required to update the stop.'));
-  return executeTradingCommandLocal('update_stop', { position_id: positionId, new_stop: request.newStop, reason: request.reason ?? '' }, key, request.marketPrice);
+  return executeTradingCommandLocal('update_stop', { position_id: positionId, new_stop: request.newStop, reason: request.reason ?? '', expected_version: request.expectedVersion }, key, request.marketPrice);
 }
 export function closePositionLocal(positionId: string, request: ClosePositionRequest, key?: string) {
   return executeTradingCommandLocal('close_position', { position_id: positionId, ...toTradingApi(request) as object }, key);
