@@ -15,6 +15,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Position exits now reconcile their linked local stop and target records in
+  the same transaction: scale-outs resize full-position protection, final exits
+  cancel remaining local protection, and a filled exit remains historical.
+  Broker changes remain manual.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes
   the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,

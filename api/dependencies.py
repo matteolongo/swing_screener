@@ -277,18 +277,24 @@ def get_orders_service(
 def get_stateless_trading_service(
     config_repo: Annotated[ConfigRepository, Depends(get_config_repo)],
     strategy_repo: Annotated[StrategyRepository, Depends(get_strategy_repo)],
-    approval_signer: Annotated[OrderApprovalTokenSigner, Depends(get_order_approval_signer)],
+    approval_signer: Annotated[
+        OrderApprovalTokenSigner, Depends(get_order_approval_signer)
+    ],
 ) -> StatelessTradingService:
     return StatelessTradingService(config_repo, strategy_repo, approval_signer)
 
 
 def get_portfolio_service(
     positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
+    orders_repo: SqlOrdersRepository = Depends(get_orders_repo),
     config_repo: ConfigRepository = Depends(get_config_repo),
     uow: PortfolioUnitOfWork = Depends(get_portfolio_uow),
 ) -> PortfolioService:
     return PortfolioService(
-        positions_repo=positions_repo, config_repo=config_repo, uow=uow
+        positions_repo=positions_repo,
+        orders_repo=orders_repo,
+        config_repo=config_repo,
+        uow=uow,
     )
 
 

@@ -25,6 +25,7 @@ from api.models.portfolio import (
     UpdateTrailMethodRequest,
 )
 from api.repositories.config_repo import ConfigRepository
+from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.db.unit_of_work import PortfolioUnitOfWork
 from api.services.portfolio import (
@@ -44,12 +45,14 @@ class PortfolioService:
     def __init__(
         self,
         positions_repo: PositionsRepository,
+        orders_repo: OrdersRepository | None = None,
         provider: Optional[MarketDataProvider] = None,
         config_repo: Optional[ConfigRepository] = None,
         uow: PortfolioUnitOfWork | None = None,
         business_date: Callable[[], str] | None = None,
     ) -> None:
         self._positions_repo = positions_repo
+        self._orders_repo = orders_repo
         self._provider = provider or get_market_data_provider()
         self._config_repo = config_repo or ConfigRepository()
         self._uow = uow
@@ -59,11 +62,12 @@ class PortfolioService:
             self._positions_repo, self._pricing, self._config_repo
         )
         self._write = PortfolioWriteService(
-            self._positions_repo,
-            self._provider,
-            self._config_repo,
+            positions_repo=self._positions_repo,
+            provider=self._provider,
+            config_repo=self._config_repo,
             begin_write=self._uow.begin_write if self._uow is not None else None,
             business_date=business_date,
+            orders_repo=self._orders_repo,
         )
         self._advisor = PositionStopAdvisor(
             self._positions_repo, self._provider, self._config_repo
@@ -96,7 +100,9 @@ class PortfolioService:
             self._uow.write_started = False
             return None
         if existing.request_hash != request_hash:
-            raise ConflictError("Idempotency-Key was already used for a different request.")
+            raise ConflictError(
+                "Idempotency-Key was already used for a different request."
+            )
         response = dict(existing.response)
         self._uow.session.rollback()
         self._uow.write_started = False
@@ -112,7 +118,9 @@ class PortfolioService:
         if existing is None:
             raise ConflictError("Concurrent idempotent request could not be replayed.")
         if existing.request_hash != request_hash:
-            raise ConflictError("Idempotency-Key was already used for a different request.")
+            raise ConflictError(
+                "Idempotency-Key was already used for a different request."
+            )
         return dict(existing.response)
 
     def _run_idempotent_write(
@@ -154,10 +162,9 @@ class PortfolioService:
             return self._recover_idempotency_race(
                 idempotency_key=idempotency_key, request_hash=request_hash
             )
+        self._uow.lock_portfolio_state()
         response = action()
-        self._uow.idempotency.complete(
-            reservation, status_code=200, response=response
-        )
+        self._uow.idempotency.complete(reservation, status_code=200, response=response)
         return response
 
     def fetch_recent_ohlcv(
@@ -247,6 +254,7 @@ class PortfolioService:
         *,
         idempotency_key: str | None = None,
         subject: str = "local",
+        filled_exit_order_id: str | None = None,
     ) -> dict:
         return self._run_idempotent_write(
             operation="close_position",
@@ -254,7 +262,11 @@ class PortfolioService:
             body=request.model_dump(mode="json"),
             idempotency_key=idempotency_key,
             subject=subject,
-            action=lambda: self._write.close_position(position_id, request),
+            action=lambda: self._write.close_position(
+                position_id,
+                request,
+                filled_exit_order_id=filled_exit_order_id,
+            ),
         )
 
     def partial_close_position(
@@ -264,6 +276,7 @@ class PortfolioService:
         *,
         idempotency_key: str | None = None,
         subject: str = "local",
+        filled_exit_order_id: str | None = None,
     ) -> dict:
         return self._run_idempotent_write(
             operation="partial_close_position",
@@ -271,7 +284,11 @@ class PortfolioService:
             body=request.model_dump(mode="json"),
             idempotency_key=idempotency_key,
             subject=subject,
-            action=lambda: self._write.partial_close_position(position_id, request),
+            action=lambda: self._write.partial_close_position(
+                position_id,
+                request,
+                filled_exit_order_id=filled_exit_order_id,
+            ),
         )
 
     def update_trail_method(

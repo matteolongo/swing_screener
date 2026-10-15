@@ -41,6 +41,32 @@ expand its status constraint. Downgrading converts drafts to `cancelled` so
 their saved plans survive under the previous constraint. API startup checks the
 migration head; see `api/README.md` for deployment and backup instructions.
 
+## Linked local protective exits (2026-10-15)
+
+Active SQL-ledger `stop` and `take_profit` records are linked by exact
+`position_id`. A partial local exit resizes supported full-position protection
+to the remaining shares; a final local exit cancels its remaining active local
+protection. A filled exit record remains `filled`. These are local ledger
+updates only: users must still adjust or cancel the corresponding broker order
+manually.
+
+For legacy orphaned or oversized local records, back up the SQL database before
+repair. For SQLite, stop writers and run
+`sqlite3 data/swing_screener.db ".backup data/swing_screener.before-exit-repair.db"`.
+For PostgreSQL, create a provider snapshot or run
+`pg_dump "$DATABASE_URL" --format=custom --file swing-screener.before-exit-repair.dump`.
+Then preview changes with:
+
+```bash
+uv run python scripts/reconcile_exit_orders.py
+```
+
+The command is dry-run by default. After reviewing its proposed changes, use
+`--apply` to reconcile each position in its own database transaction. Ambiguous
+multiple active stops or targets, and active records whose position no longer
+exists, are skipped and reported for manual review. The command never runs
+automatically and never changes broker state.
+
 ## positions.json schema notes
 
 ### v3 transactional import compatibility

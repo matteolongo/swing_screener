@@ -130,6 +130,13 @@ through `draft_order_id`. Drafts are excluded from pending exposure. Cancellatio
 preserves the record and never cancels a broker order. See `api/README.md` and
 `data/README.md` for the request contract and migration `20261008_0003`.
 
+Active local `stop` and `take_profit` records are protective ledger entries,
+not broker instructions. Position scale-outs resize a full-position protective
+record to the remaining shares, and final exits cancel the remaining active
+protective records in the same local transaction. If a linked exit is filled,
+that record remains historical as `filled` while other protection reconciles.
+Users must make the corresponding broker change manually.
+
 ## Notes
 
 - `fill_entry_order()` automatically creates linked stop and take-profit orders.
