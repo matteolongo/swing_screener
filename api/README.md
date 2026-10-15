@@ -386,6 +386,14 @@ Portfolio (`/api/portfolio`):
 - `POST /api/portfolio/positions/{position_id}/partial-close` — resizes a
   linked full-position local stop/take-profit record to remaining shares in the
   same transaction. It does not adjust a broker order.
+
+Stop, close, partial-close and protective-order fill responses include
+`linked_order_ids` for other local protective records changed in the operation.
+The filled exit retains its own `filled` status. Partial-close also returns
+`shares_remaining`; stop updates return `new_stop`. Clients show broker
+follow-up only after success, using these IDs. Stateless command responses
+include the changed records in `orders` and their IDs in `affected_order_ids`.
+
 - `GET /api/portfolio/summary` — open-risk/cash summary plus canonical
   closed-trade analytics and configured rendering thresholds.
 - `GET /api/portfolio/earnings-proximity/{ticker}`

@@ -28,7 +28,68 @@ const pendingOrder = {
   thesis: null,
 };
 
+const linkedStopOrder = {
+  ...pendingOrder,
+  order_id: 'ORD-STOP-POS-AAPL-001',
+  ticker: 'AAPL',
+  order_type: 'SELL_STOP',
+  order_kind: 'stop',
+  position_id: 'POS-AAPL-001',
+  quantity: 10,
+  limit_price: null,
+  stop_price: 95,
+};
+
+const linkedTargetOrder = {
+  ...pendingOrder,
+  order_id: 'ORD-TARGET-POS-AAPL-001',
+  ticker: 'AAPL',
+  order_type: 'SELL_LIMIT',
+  order_kind: 'take_profit',
+  position_id: 'POS-AAPL-001',
+  quantity: 10,
+  limit_price: 110,
+  stop_price: null,
+};
+
 describe('PendingOrdersTab', () => {
+  it('groups active entry and linked protective records, then keeps cancelled protection in history', async () => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', ({ request }) => {
+        const status = new URL(request.url).searchParams.get('status');
+        if (status === 'pending') {
+          return HttpResponse.json({
+            orders: [pendingOrder, linkedStopOrder, linkedTargetOrder],
+            asof: '2026-10-08',
+          });
+        }
+        if (status === 'cancelled') {
+          return HttpResponse.json({
+            orders: [{ ...linkedStopOrder, status: 'cancelled' }],
+            asof: '2026-10-08',
+          });
+        }
+        return HttpResponse.json({ orders: [], asof: '2026-10-08' });
+      }),
+    );
+
+    const { user } = renderWithProviders(<PendingOrdersTab />);
+
+    expect(await screen.findByRole('heading', { name: t('orders.protection.entryGroup') })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: t('orders.protection.activeGroup') })).toBeInTheDocument();
+    const activeProtection = screen.getByRole('region', { name: t('orders.protection.activeGroup') });
+    expect(within(activeProtection).getByRole('cell', { name: t('orders.protection.kind.stop') })).toBeInTheDocument();
+    expect(within(activeProtection).getByRole('cell', { name: t('orders.protection.kind.takeProfit') })).toBeInTheDocument();
+    expect(screen.getAllByText('POS-AAPL-001')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: t('ordersPage.filter.cancelled') }));
+
+    expect(await screen.findByRole('heading', { name: t('orders.protection.historyGroup') })).toBeInTheDocument();
+    const history = screen.getByRole('region', { name: t('orders.protection.historyGroup') });
+    expect(within(history).getByRole('cell', { name: t('orders.protection.kind.stop') })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('pendingOrdersTab.fillManually') })).not.toBeInTheDocument();
+  });
+
   it.each(['draft', 'pending', 'submitted'])('cancels a %s order and keeps it visible in cancelled history', async (initialStatus) => {
     let status = initialStatus;
     server.use(

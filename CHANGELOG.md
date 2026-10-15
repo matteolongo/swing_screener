@@ -19,6 +19,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the same transaction: scale-outs resize full-position protection, final exits
   cancel remaining local protection, and a filled exit remains historical.
   Broker changes remain manual.
+- Book Orders now exposes linked local stop/target records and their history.
+  Successful position changes identify affected protection and the manual broker
+  adjustment or cancellation still required.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes
   the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,

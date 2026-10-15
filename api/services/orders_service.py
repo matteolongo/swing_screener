@@ -970,7 +970,7 @@ class OrdersService:
             business_date=lambda: request.filled_date,
         )
         if quantity == shares:
-            writer.close_position(
+            lifecycle = writer.close_position(
                 position_id,
                 ClosePositionRequest(
                     exit_price=request.filled_price,
@@ -980,7 +980,7 @@ class OrdersService:
                 filled_exit_order_id=str(order["order_id"]),
             )
         else:
-            writer.partial_close_position(
+            lifecycle = writer.partial_close_position(
                 position_id,
                 PartialCloseRequest(
                     shares_closed=quantity,
@@ -1006,5 +1006,7 @@ class OrdersService:
         updated_position = self._positions_repo.get_position(position_id)
         assert updated_position is not None
         return FillOrderResponse(
-            order_id=str(order["order_id"]), position=Position(**updated_position)
+            order_id=str(order["order_id"]),
+            position=Position(**updated_position),
+            linked_order_ids=lifecycle["linked_order_ids"],
         )

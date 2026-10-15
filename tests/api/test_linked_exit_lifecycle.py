@@ -201,9 +201,11 @@ def test_filled_exit_stays_filled_while_other_protection_is_cancelled(tmp_path):
         positions_repo=PositionsRepository(positions_path),
     )
 
-    service.fill_order(
+    result = service.fill_order(
         "T1", FillOrderRequest(filled_price=110, filled_date="2026-10-14")
     )
+
+    assert result.linked_order_ids == ["S1"]
 
     orders = {
         order["order_id"]: order
