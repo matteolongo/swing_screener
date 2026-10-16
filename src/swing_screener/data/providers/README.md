@@ -18,6 +18,11 @@ is the latest returned candle date; `fetched_at` is the separate,
 timezone-aware API fetch timestamp. Neither timestamp is inferred from the
 other, and `data_as_of` is null when the provider returns no bars.
 
+Scan UIs also retain per-symbol `data_asof` / `last_bar` and provider warnings.
+They display market content dates separately from request completion; an older
+candle cannot become current from a fresh HTTP response. Requested symbols,
+symbols with market data and returned strategy candidates are separate counts.
+
 ## Cache freshness policy
 
 `MarketDataProvider.fetch_ohlcv()` accepts an optional

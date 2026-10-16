@@ -19,6 +19,19 @@
 
 ## Contracts
 
+- `features/screener/resultQuality.ts` maps transported scan coverage and market
+  status for presentation only. `ResultQualitySummary` shows requested symbols,
+  symbols with market data, and returned candidates without treating strategy
+  exclusions or top-N trimming as provider failures. Warnings and content dates
+  remain in the persisted run snapshot through navigation/reload.
+  Missing counts/freshness/candle dates stay unavailable/unknown. Explicit stale
+  status or observed candles older than the requested session cannot become
+  final/current merely because a request completed. This is not an eligibility
+  engine or a wall-clock/holiday freshness policy.
+  Today and candidate review show actual candle dates separately from request
+  completion. Fetch state is independent: initial loading, retained data while
+  refreshing, cached-after-failure with Retry, and successful empty results have
+  distinct copy. The strip uses the same market-quality mapping as the summary.
 - Screener candidates preserve `technicalRank`, `confidenceRank`, and final
   `priorityRank`. List ordering reads `priorityRank`; legacy `rank` remains the
   technical-rank alias for older API payloads.
@@ -127,6 +140,8 @@ a policy change during a run schedules its replacement when the old run settles.
 Strategy transitions clear persisted actionable runs before dependent queries
 refresh. Watchlist/position detail refresh remains single-symbol even when
 outside the pinned scan. Refresh time is distinct from the daily candle date.
+Legacy saved runs without recorded completion times retain that absence when
+promoted to Today; promotion is not a newly completed request.
 The store also owns the active analysis tab, expanded/split mode, full-screen
 mode, and activity-drawer
 visibility plus a bounded history of 20 request activities per ticker/version

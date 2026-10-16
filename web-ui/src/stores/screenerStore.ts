@@ -12,7 +12,8 @@ export interface TodayRunDisplayFilters {
 export interface ScreenerRunContext {
   request: ScreenerRequest;
   displayFilters: TodayRunDisplayFilters;
-  completedAt: string;
+  /** Absent for legacy snapshots whose request completion was not recorded. */
+  completedAt?: string;
 }
 
 export interface TodayRunSnapshot extends ScreenerRunContext {
@@ -84,7 +85,6 @@ export const useScreenerStore = create<ScreenerStore>()(
         const context: ScreenerRunContext = lastRunContext ?? {
           request: {},
           displayFilters: { recommendedOnly: false, actionFilter: 'all' },
-          completedAt: new Date().toISOString(),
         };
         set({ todayRun: { ...context, result: lastResult }, todayRunInitialized: true });
       },

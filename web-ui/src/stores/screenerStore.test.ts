@@ -109,4 +109,14 @@ describe('useScreenerStore', () => {
     expect(result.current.lastResult).toBeNull();
     expect(result.current.todayRun).toBeNull();
   });
+
+  it('does not invent request completion when promoting a legacy saved result', () => {
+    const saved = response([candidate('SAVED', 1)]);
+    useScreenerStore.setState({ lastResult: saved });
+
+    act(() => useScreenerStore.getState().initializeTodayRunFromLegacyResult());
+
+    expect(useScreenerStore.getState().todayRun?.result.candidates[0].ticker).toBe('SAVED');
+    expect(useScreenerStore.getState().todayRun?.completedAt).toBeUndefined();
+  });
 });

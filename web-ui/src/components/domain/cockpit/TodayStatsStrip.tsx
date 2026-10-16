@@ -1,8 +1,8 @@
 import { useOrders, usePositions } from '@/features/portfolio/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
-import { formatDate } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
+import { getResultMarketStatus } from '@/features/screener/resultQuality';
 
 export default function TodayStatsStrip() {
   const ordersQuery = useOrders('pending');
@@ -12,7 +12,8 @@ export default function TodayStatsStrip() {
   const reviewSource = todayRunResult ?? lastResultFallback;
   const candidates = reviewSource?.candidates ?? [];
   const readyCount = candidates.filter((c) => c.recommendation?.workflowStatus === 'ready').length;
-  const isFinal = (reviewSource?.dataFreshness ?? 'intraday') === 'final_close';
+  const marketStatus = getResultMarketStatus(reviewSource);
+  const isFinal = marketStatus === 'final_close';
 
   const positionCount = positionsQuery.data?.length ?? 0;
   const pendingEntryCount = (ordersQuery.data ?? []).filter((o) => o.orderKind === 'entry').length;
@@ -38,10 +39,10 @@ export default function TodayStatsStrip() {
         )}
       >
         <div className={cn('text-sm font-medium', isFinal ? 'text-success' : 'text-warning')}>
-          {isFinal ? t('cockpit.strip.finalClose') : t('cockpit.strip.intradayPreview')}
+          {t(`screener.quality.market.${marketStatus}`)}
         </div>
         {reviewSource ? (
-          <div className="text-xs text-muted">{formatDate(reviewSource.asofDate)}</div>
+          <div className="text-xs text-muted">{t('screener.quality.sessionDate', { date: reviewSource.asofDate })}</div>
         ) : null}
       </div>
     </div>
