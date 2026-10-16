@@ -157,7 +157,7 @@ function JournalTab() {
     : analytics?.averageMaxR ?? null;
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-6">
+    <div className="min-w-0 mx-auto max-w-[1200px] py-6 sm:px-4">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">{t('journalPage.title')}</h1>
         <p className="text-sm text-muted mt-1">{t('journalPage.subtitle')}</p>
@@ -224,7 +224,8 @@ function JournalTab() {
               })}
             </div>
           ) : null}
-          <div className="overflow-x-auto rounded-lg border border-border">
+          <p className="mb-2 text-xs text-muted lg:hidden">{t('sidebar.scrollTable')}</p>
+          <div className="overflow-x-auto rounded-lg border border-border" role="region" aria-label={t('journalPage.title')} tabIndex={0}>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-foreground/5">
@@ -279,6 +280,7 @@ function PositionsTab() {
     <div className="space-y-4">
       <PortfolioRiskSummary summary={portfolioSummaryQuery.data} />
       <ConcentrationBar groups={portfolioSummaryQuery.data?.concentration ?? []} />
+      <p className="text-xs text-muted lg:hidden">{t('sidebar.scrollTable')}</p>
       <PortfolioPanel />
     </div>
   );
@@ -446,7 +448,7 @@ export default function Book() {
   };
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-4">
+    <div className="min-w-0 mx-auto max-w-[1200px] py-4 sm:px-4">
       {/* Page header */}
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-foreground">
@@ -458,7 +460,7 @@ export default function Book() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-2 mb-6" role="tablist" aria-label={t('bookPage.title')}>
+      <div className="flex flex-wrap gap-2 mb-6" role="tablist" aria-label={t('bookPage.title')}>
         {tabs.map(({ key, label }, index) => (
           <button
             key={key}
@@ -490,7 +492,12 @@ export default function Book() {
         tabIndex={0}
       >
         {activeTab === 'positions' && <PositionsTab />}
-        {activeTab === 'orders' && <PendingOrdersTab />}
+        {activeTab === 'orders' && (
+          <div className="min-w-0 space-y-2">
+            <p className="text-xs text-muted lg:hidden">{t('sidebar.scrollTable')}</p>
+            <PendingOrdersTab />
+          </div>
+        )}
         {activeTab === 'journal' && (
           <div className="space-y-8">
             <JournalTab />

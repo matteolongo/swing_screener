@@ -91,14 +91,15 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
       <div className="h-12 px-4 flex items-center gap-2.5 border-b border-border shrink-0">
         <BrandMark size={6} />
         <span className="text-[13px] font-semibold text-foreground tracking-tight leading-none">
-          Swing Screener
+          {t('header.brand')}
         </span>
       </div>
 
       {/* Primary nav */}
       <nav
+        id="primary-navigation"
         className="flex-1 py-2 px-2 space-y-px overflow-y-auto"
-        aria-label="Primary navigation"
+        aria-label={t('sidebar.navigation')}
       >
         {cockpitNav.map(renderNavItem)}
         <details>

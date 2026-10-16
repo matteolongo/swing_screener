@@ -24,8 +24,8 @@ function WeeklyReviewNudge() {
   const hasCurrentWeekReview = (reviews ?? []).some((r) => r.week_id === currentWeekId);
   if (!isFriday || hasCurrentWeekReview || dismissed) return null;
   return (
-    <div className="mb-3 flex items-center gap-3 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2">
-      <span className="text-sm text-primary flex-1">
+    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2">
+      <span className="min-w-0 text-sm text-primary flex-1 basis-48">
         {t('todayPage.weeklyNudge.message')}
       </span>
       <button
@@ -61,7 +61,7 @@ function PendingOrdersBadge() {
       : t('todayPage.pendingBadge.plural', { count: String(count) });
 
   return (
-    <div className="mb-4 flex items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2">
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2">
       <span className="text-sm text-warning">
         <span aria-hidden="true">⏳ </span>
         <span>{label}</span>
@@ -129,7 +129,7 @@ export default function Today() {
   }, [selectedTicker]);
 
   return (
-    <div className="mx-auto max-w-[1600px]">
+    <div className="min-w-0 mx-auto max-w-[1600px]">
       <TodayStatsStrip />
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p role="status" className="text-xs text-muted">{todayRefresh.isRefreshing

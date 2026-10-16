@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import Badge from '@/components/common/Badge';
 import Select from '@/components/common/Select';
@@ -17,7 +17,7 @@ import { cn } from '@/utils/cn';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthProvider';
 
-export default function Header() {
+export default function Header({ navigation }: { navigation?: ReactNode }) {
   const now = new Date();
   const { locale, t } = useI18n();
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -80,8 +80,9 @@ export default function Header() {
   });
 
   return (
-    <header className="h-12 px-4 border-b border-border bg-surface flex items-center gap-4 shrink-0">
-      <div className="flex-1 max-w-xs">
+    <header className="min-h-12 px-4 py-2 border-b border-border bg-surface flex flex-wrap items-center gap-x-4 gap-y-2 shrink-0">
+      {navigation}
+      <div className="min-w-0 flex-1 basis-40 max-w-xs">
         <Select
           value={activeId}
           onChange={(e) => {
@@ -91,7 +92,7 @@ export default function Header() {
           }}
           aria-label={t('sidebar.activeStrategy')}
           className={cn(
-            'h-7 px-2 text-[13px] rounded',
+            'h-7 px-2 py-0 text-[13px] rounded',
             'focus:ring-1 focus:border-primary',
             'disabled:opacity-50'
           )}
@@ -109,7 +110,7 @@ export default function Header() {
         ) : null}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="min-w-0 flex flex-wrap items-center gap-2">
         <span
           data-testid="data-health-dot"
           aria-hidden="true"
@@ -120,7 +121,7 @@ export default function Header() {
         />
         <span
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-medium',
+            'min-w-0 inline-flex flex-wrap items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-medium',
             healthClass,
           )}
         >
@@ -131,7 +132,7 @@ export default function Header() {
         </span>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="min-w-0 flex flex-1 basis-full flex-wrap items-center gap-3 lg:basis-0">
         {reviewCount > 0 && (
           <button
             type="button"
@@ -150,13 +151,13 @@ export default function Header() {
             realizedPnl: portfolioSummaryQuery.data.realizedPnl,
           } : undefined}
           variant="compact"
-          className="max-w-[42rem]"
+          className="min-w-0 flex-1 basis-64 max-w-[42rem]"
         />
-        <div className="flex items-center gap-1.5 text-[12px] text-muted">
+        <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
           <span>{dateStr}</span>
           <span className="font-mono">{timeStr}</span>
         </div>
-        <div className="flex items-center gap-2 border-l border-border pl-3 text-[12px] text-muted">
+        <div className="min-w-0 flex flex-wrap items-center gap-2 border-l border-border pl-3 text-[12px] text-muted">
           <span className="max-w-36 truncate">{user?.display_name || user?.email || user?.subject}</span>
           <Badge variant={role === 'admin' ? 'success' : 'default'}>{role}</Badge>
           <button
