@@ -1635,6 +1635,31 @@ export const messagesEn = {
     },
   },
   screener: {
+    quality: {
+      title: 'Scan quality',
+      complete: 'Complete market-data coverage',
+      partial: 'Partial market-data coverage',
+      empty: 'No symbols evaluated',
+      coverageUnavailable: 'Market-data coverage is unavailable',
+      counts: '{{requested}} requested · {{evaluated}} with market data · {{matched}} candidates returned',
+      countsHelp: 'Coverage counts market data, not strategy matches. Returned candidates also reflect filters and the result limit.',
+      market: { final_close: 'Final close', intraday: 'Intraday preview', stale: 'Stale market data', unknown: 'Market freshness unknown' },
+      sessionDate: 'Requested session: {{date}}',
+      candleDate: 'Candle date: {{date}}',
+      candleDates: 'Candle dates: {{first}} to {{last}}',
+      unknownDate: 'Unknown',
+      requestCompleted: 'Request completed: {{time}}',
+      warnings: 'Provider and symbol warnings',
+      providerDetails: 'Inspect data sources',
+      initialLoading: 'Loading the first scan. No completed result is available yet.',
+      previousWhileRefreshing: 'Showing the previous completed scan while refresh runs.',
+      cachedAfterFailure: 'Refresh failed. Showing the previous completed scan; it was not refreshed.',
+      unavailable: 'Scan results are unavailable.',
+      retry: 'Retry scan',
+      noMatches: 'Scan completed. No candidates were returned for these scan settings.',
+      noFilterMatches: 'No candidates match the visible filters.',
+      clearFilters: 'Clear candidate filters',
+    },
     workflowGroups: {
       ready: {
         title: 'Ready for order review',
@@ -3104,9 +3129,9 @@ export const messagesEn = {
     refresh: {
       action: 'Refresh Today',
       running: 'Refreshing Today…',
-      updated: 'Today updated {{time}}. Prices reflect the latest available daily candle.',
+      updated: 'Request completed {{time}}. Check candle dates and scan quality below.',
       description: 'Today reloads its scan and portfolio data on entry. Refresh uses the same scan settings and the latest available daily session.',
-      error: 'Refresh failed: {{message}}. The last successful candidate data is still shown. Retry with Refresh Today.',
+      error: 'Refresh failed: {{message}}. Use Retry scan to try again.',
     },
     tabs: {
       ariaLabel: 'Today views',

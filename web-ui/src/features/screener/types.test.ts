@@ -107,6 +107,16 @@ describe('transformCandlePattern', () => {
 });
 
 describe('transformScreenerResponse', () => {
+  it('preserves known coverage and warnings but never defaults missing freshness to final close', () => {
+    const result = transformScreenerResponse({ asof_date: '2026-10-14', candidates: [],
+      total_screened: 4, total_with_market_data: 3, total_returned_candidates: 0,
+      warnings: ['TEST_PROVIDER_UNAVAILABLE'],
+    });
+    expect(result.totalScreened).toBe(4);
+    expect(result.totalWithMarketData).toBe(3);
+    expect(result.warnings).toEqual(['TEST_PROVIDER_UNAVAILABLE']);
+    expect(result.dataFreshness).toBe('unknown');
+  });
   const canonicalResponse = (draft: Record<string, unknown>): ScreenerResponseAPI => ({
     asof_date: '2026-09-10',
     total_screened: 1,

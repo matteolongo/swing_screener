@@ -2,6 +2,12 @@
 
 React 18 + TypeScript frontend for Swing Screener.
 
+Today shows requested / with-market-data / returned counts and provider warnings
+from the saved scan. Candle dates and freshness are separate from request
+completion; missing metadata remains unknown, including completion times on
+legacy saved scans. Refresh failures preserve and
+label the previous result, with Retry; empty candidate filters expose reset.
+
 ## Pages
 
 | Page | Route | Purpose |

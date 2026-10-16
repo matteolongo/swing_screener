@@ -15,6 +15,7 @@ vi.mock('./api', async (original) => ({ ...await original<typeof import('./api')
 
 const response = (entry: number) => ({
   asofDate: '2026-10-07', dataFreshness: 'final_close', benchmarkTicker: 'SPY',
+  totalScreened: 4, totalWithMarketData: 3, warnings: ['TEST_PROVIDER_UNAVAILABLE'],
   candidates: [{ ticker: 'STMPA.PA', entry, currency: 'EUR' }],
 } as ScreenerResponse);
 
@@ -32,6 +33,16 @@ beforeEach(() => {
 });
 
 describe('Today refresh', () => {
+  it('refreshes a legacy Today snapshot without borrowing another run timestamp', async () => {
+    useScreenerStore.setState({
+      todayRun: { result: response(50), request: { tickers: ['STMPA.PA'] }, displayFilters: { recommendedOnly: false, actionFilter: 'all' } },
+      lastRunContext: { request: { tickers: ['OTHER'] }, displayFilters: { recommendedOnly: false, actionFilter: 'all' }, completedAt: 'other-run' },
+    });
+    const { result } = setup();
+    await waitFor(() => expect(result.current.isRefreshing).toBe(false));
+    expect(useScreenerStore.getState().todayRun?.result.candidates[0].entry).toBe(51);
+    expect(useScreenerStore.getState().todayRun?.completedAt).toBeDefined();
+  });
   it('runs the latest session on entry with the pinned settings and updates the selected snapshot', async () => {
     useScreenerStore.getState().recordScreenerRun(response(50), {
       request: { preset: 'europe_large_cap_equities', asofDate: '2026-10-06', top: 30, breakoutLookback: 40 },
@@ -69,6 +80,7 @@ describe('Today refresh', () => {
     const { result } = setup();
     await waitFor(() => expect(result.current.error?.message).toBe('provider unavailable'));
     expect(useScreenerStore.getState().todayRun).toBe(saved);
+    expect(useScreenerStore.getState().todayRun?.result).toMatchObject({ totalScreened: 4, totalWithMarketData: 3, warnings: ['TEST_PROVIDER_UNAVAILABLE'] });
     act(() => result.current.refresh());
     await waitFor(() => expect(useScreenerStore.getState().todayRun?.result.candidates[0].entry).toBe(51));
   });

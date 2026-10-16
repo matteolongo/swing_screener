@@ -89,7 +89,7 @@ export default function CandidateQueue({ onSelectTicker, isRefreshing = false }:
     onSelectTicker(normalized);
   };
 
-  if (!todayRunInitialized && !result) {
+  if ((!todayRunInitialized || isRefreshing) && !result) {
     return (
       <div data-testid="candidate-queue" className="flex flex-col gap-3">
         <ScreenerRunningPanel />
@@ -116,6 +116,12 @@ export default function CandidateQueue({ onSelectTicker, isRefreshing = false }:
           {showNoSetup ? t('cockpit.queue.hideNoSetup') : t('cockpit.queue.showNoSetup')}
         </button>
       </div>
+      {groups.length === 0 ? <div className="space-y-2 rounded border border-border p-3 text-sm text-muted">
+        <p role="status">{t(!result ? 'screener.quality.unavailable' : candidates.length === 0
+          ? 'screener.quality.noMatches' : 'screener.quality.noFilterMatches')}</p>
+        {candidates.length > 0 ? <button type="button" className="text-primary underline"
+          onClick={() => { setQuery(''); setShowNoSetup(true); }}>{t('screener.quality.clearFilters')}</button> : null}
+      </div> : null}
       {groups.map((group) => (
         <section key={group.status} aria-label={t(group.labelKey)} className="flex flex-col gap-1.5">
           <h3 className={`text-xs font-semibold uppercase tracking-wide ${TONE_TEXT_CLASS[group.presentation.tone]}`}>

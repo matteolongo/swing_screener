@@ -15,6 +15,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Today exposes partial scan coverage and provider/symbol warnings, separates
+  candle dates from request completion, and labels cached results during failed
+  refreshes. Loading, empty scans and empty filters have distinct recovery copy.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes
   the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,
