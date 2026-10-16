@@ -63,11 +63,11 @@ export default function StrategyCapitalRiskSummary({
     return (
       <div
         className={cn(
-          'flex flex-wrap items-center gap-2 rounded-lg border border-border bg-foreground/5 px-3 py-2 text-xs text-muted shadow-sm',
+          'min-w-0 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-foreground/5 px-3 py-2 text-xs text-muted shadow-sm',
           className,
         )}
       >
-        <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+        <span className="min-w-0 inline-flex flex-wrap items-center gap-1 font-semibold text-foreground [overflow-wrap:anywhere]">
           <span className="text-muted">{t('strategyCapitalRisk.risk')}</span>
           <span>{snapshot.strategyName}</span>
         </span>

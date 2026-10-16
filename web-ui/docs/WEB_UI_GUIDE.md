@@ -90,6 +90,21 @@ Symbol analysis overview (`components/domain/workspace/SymbolAnalysisContent.tsx
 
 Symbol intelligence tab (`components/domain/workspace/SymbolAnalysisContent.tsx`, intelligence tab): starts with the manual **Position Review** panel (`PositionReviewPanel`) for held and ad-hoc symbols. It calls `POST /api/intelligence/position-review/{position_id}` for held positions or `POST /api/intelligence/{ticker}/position-review` for symbol-only review, and renders structured cards for **Why it moved**, **Protect profit**, **Stop advice**, **Macro/geopolitical overlay**, and **Evidence used**. This review is advisory-only and does not mutate positions or orders. Below it, the tab contains the full narrative analysis (`NarrativeAnalysisCard`), the Analyze/Refresh controls, and a compact follow-up chat (`IntelligenceChatPanel`) at the bottom. The intelligence decision brief and `NarrativeAnalysisCard` use the canonical workflow badge and next-step copy for operational guidance. When the AI's analytical action differs from the screener's compatibility action, the card renders a neutral second-opinion note without echoing either legacy action label (suppressed in position/manage-only mode). The card also renders a prominent **pre-open outlook** card (gap direction + magnitude + overnight driver + at-open/stop-gap actions, only when the US market is pre-open), a **thesis-delta** badge in the decision-focus block ("since last analysis": confirmed/weakening/invalidated), an **Evidence balance** panel from `intelligence.evidenceLedger` (qualitative net bullish/bearish/mixed chip, bull/bear bar, and collapsed weighted-signal details), dated **what-to-expect** and **news** rows, and a collapsible **analysis-history timeline** fed by `useIntelligenceHistoryQuery` (`GET /api/intelligence/{ticker}/history`). Timeline rows can show prediction-outcome badges (`Confirmed`, `Contradicted`, `Unresolved`) when later analyses have annotated prior predictions. The chat is persisted per ticker/day, stays advisory-only, and shows an **Evidence used** disclosure only for replies where the user explicitly enabled source refresh through app-configured evidence collectors.
 
+## Responsive application layout
+
+`MainLayout` uses Tailwind's existing `lg` breakpoint (1024px): desktop keeps
+the fixed-width sidebar; narrower screens expose the Header's **Show navigation**
+button (`aria-expanded` / `aria-controls`). Only one shared `Sidebar` is mounted,
+either in the desktop layout or in a `ModalShell` drawer. Navigation, Escape,
+the close button and the backdrop close the drawer; the shell restores focus
+and document scrolling. Crossing into desktop also closes an open drawer.
+
+The header, account/risk summary and Book tabs wrap to the available width.
+Main content and summary flex children retain `min-width: 0`; monetary values
+remain visible. Today stacks its queue and detail panes below `xl`. Wide Book
+tables keep their local horizontal scrolling, with a narrow-screen scroll hint;
+the journal scroll region also supports keyboard focus.
+
 ## Shared primitives
 
 Reusable building blocks live in `components/common/`. Prefer these over hand-rolling markup so styling and behavior stay in one place (colors come from the semantic tokens in `docs/DESIGN_TOKENS.md`, enforced by the ESLint token rule).

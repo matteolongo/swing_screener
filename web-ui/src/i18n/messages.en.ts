@@ -621,6 +621,8 @@ export const messagesEn = {
     yes: 'Yes',
   },
   sidebar: {
+    navigation: 'Primary navigation',
+    scrollTable: 'Scroll horizontally to see all columns.',
     nav: {
       workspace: 'Workspace',
       dailyReview: 'Daily Review',
