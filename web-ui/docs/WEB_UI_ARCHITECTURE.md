@@ -62,6 +62,10 @@
   controls inside closed disclosures and hidden/inert content are excluded.
   Native Tab/Enter disclosure behavior is preserved in order-review and fullscreen dialogs.
 - Tabs use native buttons with `tablist`/`tab`/`tabpanel` relationships, roving `tabIndex`, and Arrow/Home/End navigation. Row-level secondary actions are sibling native buttons; table selections expose `aria-selected`.
+  Selectable-row keyboard handlers only handle keys aimed at the row itself,
+  preserving Enter/Space on nested native actions. Book row actions use `ActionMenu`
+  outside the table's overflow; its labelled button group retains standard Tab
+  behavior, Escape dismissal and focus return without assigning a partial menu role.
 - Frontend styling uses semantic tokens. ESLint rejects hardcoded Tailwind palette utilities, including directional `border-t-*`, `border-r-*`, `border-b-*`, `border-l-*`, `border-x-*`, `border-y-*`, `border-s-*`, and `border-e-*` variants.
 - Today row actions are sibling native buttons in a labelled group. Its `j`/`k` and arrow navigation is scoped to the visible list, tracks source-specific row IDs, and is suspended for editable controls and dialogs.
 

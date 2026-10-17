@@ -72,6 +72,7 @@ export default function DataTable<RowT>({
           className={typeof rowClassName === 'function' ? rowClassName(row, index) : rowClassName}
           onClick={onRowClick ? () => onRowClick(row, index) : undefined}
           onKeyDown={onRowClick ? (event) => {
+            if (event.target !== event.currentTarget) return;
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               onRowClick(row, index);

@@ -44,38 +44,6 @@ export function TimeStopBadge({ position }: { position: PositionWithMetrics | nu
   );
 }
 
-/** Compact actions dropdown using native <details> */
-export function ActionsDropdown({ children }: { children: React.ReactNode }) {
-  return (
-    <details className="relative inline-block">
-      <summary className="list-none cursor-pointer rounded p-1.5 hover:bg-foreground/5 text-muted select-none">
-        ⋯
-      </summary>
-      <div className="absolute right-0 z-10 mt-1 min-w-[10rem] rounded-lg border border-border bg-surface shadow-md p-1">
-        {children}
-      </div>
-    </details>
-  );
-}
-
-export function DropdownItem({ onClick, label, className }: { onClick: () => void; label: string; className?: string }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        // close the details parent
-        const details = (e.target as HTMLElement).closest('details');
-        if (details) (details as HTMLDetailsElement).open = false;
-        onClick();
-      }}
-      className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-foreground/5 ${className ?? ''}`}
-    >
-      {label}
-    </button>
-  );
-}
-
 interface StopPreviewPanelProps {
   positionId: string;
   ticker: string;

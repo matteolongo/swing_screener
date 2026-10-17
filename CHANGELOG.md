@@ -15,6 +15,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Book row actions now open outside the table's clipped overflow, with named
+  keyboard controls, popup dismissal and focus return. Screener and shared table
+  rows preserve Enter/Space activation of their nested action buttons.
 - Dialog keyboard focus now reaches native disclosures and skips controls inside
   closed or hidden content, while preserving Escape and opening-control focus.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes

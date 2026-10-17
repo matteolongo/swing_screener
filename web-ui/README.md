@@ -57,6 +57,11 @@ Order-review and fullscreen dialogs include native disclosure summaries in their
 keyboard focus cycle. Closed disclosures keep their controls out of the cycle;
 Escape closes the dialog and restores focus to its opening control.
 
+Book row actions stay visible outside the scrolling positions table. Their
+labelled button opens a popup that supports Tab, Escape and focus return.
+Enter and Space on a row's action buttons activate that action directly,
+including signed order review from the screener.
+
 ## Development
 
 Local persistence keeps the portfolio ledger in browser storage, but trading
