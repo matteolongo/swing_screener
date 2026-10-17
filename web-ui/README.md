@@ -53,6 +53,10 @@ for 1R, R:R, and risk percentage. **Check live** fetches a new read-only stop
 preview on every click and exposes failures for retry. The scan waiting panel
 lists its operations without claiming timed completion of individual stages.
 
+Order-review and fullscreen dialogs include native disclosure summaries in their
+keyboard focus cycle. Closed disclosures keep their controls out of the cycle;
+Escape closes the dialog and restores focus to its opening control.
+
 ## Development
 
 Local persistence keeps the portfolio ledger in browser storage, but trading

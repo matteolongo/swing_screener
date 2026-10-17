@@ -15,6 +15,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Dialog keyboard focus now reaches native disclosures and skips controls inside
+  closed or hidden content, while preserving Escape and opening-control focus.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes
   the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,
