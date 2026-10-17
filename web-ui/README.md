@@ -62,6 +62,10 @@ labelled button opens a popup that supports Tab, Escape and focus return.
 Enter and Space on a row's action buttons activate that action directly,
 including signed order review from the screener.
 
+Journal trade details use a visible Expand/Collapse button with its expanded
+state and a link to the controlled history row. Enter and Space toggle details
+while keyboard focus stays on the button.
+
 ## Development
 
 Local persistence keeps the portfolio ledger in browser storage, but trading

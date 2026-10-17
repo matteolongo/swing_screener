@@ -15,6 +15,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Journal trade details now expand with a native keyboard button that announces
+  its expanded state and keeps focus while toggling.
 - Book row actions now open outside the table's clipped overflow, with named
   keyboard controls, popup dismissal and focus return. Screener and shared table
   rows preserve Enter/Space activation of their nested action buttons.

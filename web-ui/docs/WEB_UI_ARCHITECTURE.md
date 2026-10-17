@@ -66,6 +66,11 @@
   preserving Enter/Space on nested native actions. Book row actions use `ActionMenu`
   outside the table's overflow; its labelled button group retains standard Tab
   behavior, Escape dismissal and focus return without assigning a partial menu role.
+- Book journal history uses a native Expand/Collapse button with `aria-expanded`
+  and `aria-controls` referencing the stable trade-history row. Collapsed history
+  stays hidden, and table rows keep their native semantics. Index checkboxes in
+  `QuickFilterBar` get their accessible names from the associated visible labels,
+  resolved from the localized index resources rather than membership IDs.
 - Frontend styling uses semantic tokens. ESLint rejects hardcoded Tailwind palette utilities, including directional `border-t-*`, `border-r-*`, `border-b-*`, `border-l-*`, `border-x-*`, `border-y-*`, `border-s-*`, and `border-e-*` variants.
 - Today row actions are sibling native buttons in a labelled group. Its `j`/`k` and arrow navigation is scoped to the visible list, tracks source-specific row IDs, and is suspended for editable controls and dialogs.
 
