@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import PortfolioTable from '@/components/domain/workspace/PortfolioTable';
@@ -164,7 +164,11 @@ describe('PortfolioTable symbol analysis', () => {
     expect(screen.getByRole('button', { name: t('modal.closeAria') })).toHaveFocus();
     expect(screen.queryByRole('group', { name: label })).not.toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
-    expect(fill).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(fill).toHaveFocus();
+      expect(document.body.style.overflow).toBe('');
+    });
   });
 
   it('opens labelled row actions with the keyboard and returns focus after analysis', async () => {
@@ -182,7 +186,11 @@ describe('PortfolioTable symbol analysis', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: t('modal.closeAria') })).toHaveFocus();
     await userEvent.keyboard('{Escape}');
-    expect(trigger).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+      expect(document.body.style.overflow).toBe('');
+    });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 
