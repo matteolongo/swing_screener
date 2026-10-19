@@ -53,6 +53,19 @@ for 1R, R:R, and risk percentage. **Check live** fetches a new read-only stop
 preview on every click and exposes failures for retry. The scan waiting panel
 lists its operations without claiming timed completion of individual stages.
 
+Order-review and fullscreen dialogs include native disclosure summaries in their
+keyboard focus cycle. Closed disclosures keep their controls out of the cycle;
+Escape closes the dialog and restores focus to its opening control.
+
+Book row actions stay visible outside the scrolling positions table. Their
+labelled button opens a popup that supports Tab, Escape and focus return.
+Enter and Space on a row's action buttons activate that action directly,
+including signed order review from the screener.
+
+Journal trade details use a visible Expand/Collapse button with its expanded
+state and a link to the controlled history row. Enter and Space toggle details
+while keyboard focus stays on the button.
+
 ## Development
 
 Local persistence keeps the portfolio ledger in browser storage, but trading

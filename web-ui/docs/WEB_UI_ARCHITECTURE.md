@@ -58,7 +58,19 @@
 - Calendar headings format date-only events with the active `I18nProvider` locale. Its `EventSourceTag` legend always enumerates `position`, `screener`, `economic`, and `ipo` so a source tag is not silently omitted from the UI.
 - Weekly Review IDs use ISO week-year semantics (`YYYY-Www`) calculated from UTC calendar dates. The review form uses `Field` plus `Textarea`, which supplies stable label/control associations.
 - `ModalShell` owns modal Escape handling, focus trapping, scroll locking, and restoration to the opening control. Help and chart fullscreen surfaces use it instead of ad-hoc overlays.
+  Its focus cycle includes the first native `summary` of each visible `details`;
+  controls inside closed disclosures and hidden/inert content are excluded.
+  Native Tab/Enter disclosure behavior is preserved in order-review and fullscreen dialogs.
 - Tabs use native buttons with `tablist`/`tab`/`tabpanel` relationships, roving `tabIndex`, and Arrow/Home/End navigation. Row-level secondary actions are sibling native buttons; table selections expose `aria-selected`.
+  Selectable-row keyboard handlers only handle keys aimed at the row itself,
+  preserving Enter/Space on nested native actions. Book row actions use `ActionMenu`
+  outside the table's overflow; its labelled button group retains standard Tab
+  behavior, Escape dismissal and focus return without assigning a partial menu role.
+- Book journal history uses a native Expand/Collapse button with `aria-expanded`
+  and `aria-controls` referencing the stable trade-history row. Collapsed history
+  stays hidden, and table rows keep their native semantics. Index checkboxes in
+  `QuickFilterBar` get their accessible names from the associated visible labels,
+  resolved from the localized index resources rather than membership IDs.
 - Frontend styling uses semantic tokens. ESLint rejects hardcoded Tailwind palette utilities, including directional `border-t-*`, `border-r-*`, `border-b-*`, `border-l-*`, `border-x-*`, `border-y-*`, `border-s-*`, and `border-e-*` variants.
 - Today row actions are sibling native buttons in a labelled group. Its `j`/`k` and arrow navigation is scoped to the visible list, tracks source-specific row IDs, and is suspended for editable controls and dialogs.
 

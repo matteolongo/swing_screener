@@ -15,6 +15,13 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Journal trade details now expand with a native keyboard button that announces
+  its expanded state and keeps focus while toggling.
+- Book row actions now open outside the table's clipped overflow, with named
+  keyboard controls, popup dismissal and focus return. Screener and shared table
+  rows preserve Enter/Space activation of their nested action buttons.
+- Dialog keyboard focus now reaches native disclosures and skips controls inside
+  closed or hidden content, while preserving Escape and opening-control focus.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes
   the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,

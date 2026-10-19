@@ -2656,6 +2656,12 @@ export const messagesEn = {
       noEntry: '—',
     },
   },
+  analytics: {
+    tradeHistory: {
+      expand: 'Expand',
+      collapse: 'Collapse',
+    },
+  },
   analyticsPage: {
     title: 'Performance Analytics',
     subtitle: 'Track your trading performance over closed positions.',

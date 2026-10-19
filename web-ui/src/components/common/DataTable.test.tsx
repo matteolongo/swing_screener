@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
+import { renderWithProviders } from '@/test/utils';
+import { t } from '@/i18n/t';
 
 type Row = {
   id: string;
@@ -29,6 +31,27 @@ const columns: DataTableColumn<Row>[] = [
 ];
 
 describe('DataTable', () => {
+  it.each(['{Enter}', ' '])('preserves native child action activation with %s', async (key) => {
+    const onRowClick = vi.fn();
+    const onAction = vi.fn();
+    renderWithProviders(<DataTable
+      rows={[rows[0]]}
+      columns={[...columns, {
+        key: 'action', header: t('common.actions.save'),
+        render: (row) => <button type="button" onClick={(event) => {
+          event.stopPropagation();
+          onAction(row);
+        }}>{t('common.actions.save')}</button>,
+      }]}
+      getRowKey={(row) => row.id}
+      onRowClick={onRowClick}
+    />);
+    screen.getByRole('button', { name: t('common.actions.save') }).focus();
+    await userEvent.keyboard(key);
+    expect(onAction).toHaveBeenCalledWith(rows[0]);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
   it('renders headers and rows', () => {
     render(
       <DataTable

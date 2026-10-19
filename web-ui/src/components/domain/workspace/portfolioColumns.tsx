@@ -1,14 +1,13 @@
 import { type DataTableColumn } from '@/components/common/DataTable';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import ActionMenu from '@/components/common/ActionMenu';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { type Order } from '@/features/portfolio/types';
 import { getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import {
-  ActionsDropdown,
-  DropdownItem,
   TimeStopBadge,
   formatOptionalCurrency,
   formatPnlValue,
@@ -157,12 +156,10 @@ export function buildPortfolioColumns(actions: PortfolioColumnActions): DataTabl
               >
                 {t('positionsPage.updateStop')}
               </Button>
-              <ActionsDropdown>
-                <DropdownItem
-                  label={t('workspacePage.panels.portfolio.analyze')}
-                  onClick={() => actions.onAnalyze(row)}
-                />
-              </ActionsDropdown>
+              <ActionMenu
+                label={`${t('workspacePage.panels.portfolio.columns.actions')} ${row.ticker}`}
+                items={[{ label: t('workspacePage.panels.portfolio.analyze'), onClick: () => actions.onAnalyze(row) }]}
+              />
             </div>
           );
         }
@@ -180,16 +177,17 @@ export function buildPortfolioColumns(actions: PortfolioColumnActions): DataTabl
               >
                 {t('common.actions.fillOrder')}
               </Button>
-              <ActionsDropdown>
-                <DropdownItem
-                  label={actions.cancelPending ? t('common.table.loading') : t('common.actions.cancel')}
-                  className="text-danger"
-                  onClick={() => {
+              <ActionMenu
+                label={`${t('workspacePage.panels.portfolio.columns.actions')} ${row.ticker}`}
+                items={[{
+                  label: actions.cancelPending ? t('common.table.loading') : t('common.actions.cancel'),
+                  className: 'text-danger',
+                  onClick: () => {
                     if (!row.order) return;
                     actions.onCancelOrder(row.order);
-                  }}
-                />
-              </ActionsDropdown>
+                  },
+                }]}
+              />
             </div>
           );
         }

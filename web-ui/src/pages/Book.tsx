@@ -47,11 +47,19 @@ function JournalRow({ trade }: JournalRowProps) {
   return (
     <>
       <tr
-        className="cursor-pointer hover:bg-foreground/5 transition-colors"
-        onClick={() => setExpanded((v) => !v)}
+        className="hover:bg-foreground/5 transition-colors"
       >
         <td className="px-4 py-3 text-sm text-muted whitespace-nowrap">
-          {expanded ? <ChevronDown className="inline h-4 w-4" /> : <ChevronRight className="inline h-4 w-4" />}
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={`trade-history-${trade.positionId}`}
+            onClick={() => setExpanded((value) => !value)}
+            className="inline-flex items-center gap-1 rounded px-1 py-1 text-xs font-medium hover:bg-foreground/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          >
+            {expanded ? <ChevronDown aria-hidden="true" className="h-4 w-4" /> : <ChevronRight aria-hidden="true" className="h-4 w-4" />}
+            {t(expanded ? 'analytics.tradeHistory.collapse' : 'analytics.tradeHistory.expand')}
+          </button>
           <span className="ml-1">{trade.date}</span>
         </td>
         <td className="px-4 py-3 text-sm font-semibold text-foreground">{trade.ticker}</td>
@@ -81,8 +89,7 @@ function JournalRow({ trade }: JournalRowProps) {
         <td className="px-4 py-3 text-sm text-right tabular-nums"><RBadge value={trade.maxR} /></td>
       </tr>
 
-      {expanded && (
-        <tr>
+        <tr id={`trade-history-${trade.positionId}`} hidden={!expanded}>
           <td colSpan={9} className="px-4 pb-4 pt-0 bg-foreground/5">
             <div className="grid gap-4 sm:grid-cols-3 text-sm">
               <div>
@@ -112,7 +119,6 @@ function JournalRow({ trade }: JournalRowProps) {
             </div>
           </td>
         </tr>
-      )}
     </>
   );
 }

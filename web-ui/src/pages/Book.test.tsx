@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -39,6 +39,40 @@ function renderBookWithRouteState(state: unknown) {
 }
 
 describe('Book page route state', () => {
+  it('tabs to journal history and expands and collapses it with Enter and Space while retaining focus', async () => {
+    server.use(http.get(`${API_BASE_URL}/api/portfolio/summary`, () => HttpResponse.json({
+      ...mockPortfolioSummary,
+      analytics: {
+        ...mockPortfolioSummary.analytics,
+        equity_curve: [{
+          position_id: 'keyboard', ticker: 'KEY', date: '2026-01-03', r: 1, max_r: 2,
+          holding_days: 2, cumulative_r: 1, tags: [], entry_price: 100,
+          exit_price: 110, shares: 1, initial_risk: 10, thesis: null, notes: '', lesson: null,
+        }],
+      },
+    })));
+    renderBookWithRouteState({ tab: 'journal' });
+    const toggle = await screen.findByRole('button', { name: t('analytics.tradeHistory.expand') });
+    screen.getByRole('tabpanel', { name: t('bookPage.tabs.journalPerformance') }).focus();
+    await userEvent.tab();
+    expect(toggle).toHaveFocus();
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-controls', 'trade-history-keyboard');
+    expect(toggle.closest('tr')).not.toHaveAttribute('role');
+    const history = document.getElementById('trade-history-keyboard')!;
+    expect(history).not.toBeVisible();
+    await userEvent.keyboard('{Enter}');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAccessibleName(t('analytics.tradeHistory.collapse'));
+    expect(within(history).getByText(t('journalPage.labels.thesis'))).toBeVisible();
+    expect(toggle).toHaveFocus();
+    await userEvent.keyboard(' ');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAccessibleName(t('analytics.tradeHistory.expand'));
+    expect(history).not.toBeVisible();
+    expect(toggle).toHaveFocus();
+  });
+
   it('shows Positions, Orders and Journal & Performance tabs', () => {
     renderBookWithRouteState({ tab: 'positions' });
 
@@ -171,7 +205,8 @@ describe('Book page route state', () => {
     renderBookWithRouteState({ tab: 'journal' });
 
     expect(await screen.findByText('NORISK')).toBeInTheDocument();
-    await userEvent.click(screen.getByText('NORISK'));
+    await userEvent.click(within(screen.getByText('NORISK').closest('tr')!)
+      .getByRole('button', { name: t('analytics.tradeHistory.expand') }));
     expect(await screen.findByText('Breakout retest')).toBeInTheDocument();
     expect(screen.getByText('Exited early')).toBeInTheDocument();
     expect(screen.getByText('Size smaller')).toBeInTheDocument();
