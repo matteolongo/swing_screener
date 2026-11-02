@@ -214,6 +214,9 @@ describe('PortfolioTable symbol analysis', () => {
   it('reopens management from current query data without closing Details', async () => {
     positionsMock.mockReturnValue([makePosition({ shares: 10, version: 1 })]);
     const { rerender } = renderWithProviders(<PortfolioTable />);
+    await userEvent.click(screen.getByRole('button', {
+      name: `${t('workspacePage.panels.portfolio.columns.actions')} TEST`,
+    }));
     await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
 
     positionsMock.mockReturnValue([makePosition({ shares: 5, stopPrice: 95, version: 2 })]);
@@ -227,6 +230,9 @@ describe('PortfolioTable symbol analysis', () => {
   it('removes management controls when the analyzed position leaves open positions', async () => {
     positionsMock.mockReturnValue([makePosition()]);
     const { rerender } = renderWithProviders(<PortfolioTable />);
+    await userEvent.click(screen.getByRole('button', {
+      name: `${t('workspacePage.panels.portfolio.columns.actions')} TEST`,
+    }));
     await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
 
     positionsMock.mockReturnValue([]);
