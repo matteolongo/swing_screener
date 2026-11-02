@@ -8,7 +8,6 @@ import pytest
 
 from swing_screener.data.universe import (
     UniverseConfig,
-    _load_registry_manifest,
     _load_snapshot,
     _check_stale,
     get_universe_benchmark,
@@ -81,7 +80,13 @@ def test_load_broad_market_stocks_non_empty():
 
 
 def test_load_amsterdam_aex_non_empty():
-    tickers = load_universe_from_package("amsterdam_aex", _CFG_NO_BENCH)
+    snapshot = _load_snapshot("amsterdam_aex")
+    reviewed_at = datetime.date.fromisoformat(snapshot["last_reviewed_at"])
+    with patch(
+        "swing_screener.data.universe.datetime.date", wraps=datetime.date
+    ) as mocked_date:
+        mocked_date.today.return_value = reviewed_at
+        tickers = load_universe_from_package("amsterdam_aex", _CFG_NO_BENCH)
     assert len(tickers) >= 10
 
 
@@ -128,6 +133,27 @@ def test_benchmark_unknown_returns_none():
 # ---------------------------------------------------------------------------
 # Stale check
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("age_days", [100, 101])
+def test_index_freshness_limit_is_enforced(age_days):
+    reviewed_at = datetime.date(2026, 7, 22)
+    today = reviewed_at + datetime.timedelta(days=age_days)
+    snapshot = {
+        "id": "amsterdam_aex",
+        "kind": "index",
+        "last_reviewed_at": reviewed_at.isoformat(),
+        "stale_after_days": 100,
+    }
+    with patch(
+        "swing_screener.data.universe.datetime.date", wraps=datetime.date
+    ) as mocked_date:
+        mocked_date.today.return_value = today
+        if age_days > 100:
+            with pytest.raises(RuntimeError, match="stale"):
+                _check_stale(snapshot)
+        else:
+            _check_stale(snapshot)
 
 
 def test_stale_index_hard_fails():

@@ -116,6 +116,10 @@ packaged universe ids after `POST /api/universes/auto-refresh` materializes them
 
 ## Index universe refresh
 
+Packaged membership tests check snapshots at their recorded review date so
+they do not expire as calendar time passes. Separate freshness tests cover
+the index age limit; runtime loading still rejects overdue index snapshots.
+
 Index universes with a `source_adapter` (e.g. the `wikipedia_index_review` indices
 `us_sp500`, `us_nasdaq100`, `us_dow30`, `germany_dax`, `france_cac40`, `uk_ftse100`,
 `spain_ibex35`, `europe_eurostoxx50`, `hongkong_hsi`, `korea_kospi200`,

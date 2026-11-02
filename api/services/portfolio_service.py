@@ -82,7 +82,11 @@ class PortfolioService:
                 "subject": subject,
                 "operation": operation,
                 "resource": resource,
-                "body": body,
+                "body": {
+                    key: value
+                    for key, value in body.items()
+                    if key != "expected_version" or value is not None
+                },
             },
             sort_keys=True,
             separators=(",", ":"),
@@ -163,6 +167,8 @@ class PortfolioService:
                 idempotency_key=idempotency_key, request_hash=request_hash
             )
         self._uow.lock_portfolio_state()
+        if resource != "positions":
+            self._uow.positions.get_position(resource, for_update=True)
         response = action()
         self._uow.idempotency.complete(reservation, status_code=200, response=response)
         return response

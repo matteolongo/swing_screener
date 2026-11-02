@@ -12,7 +12,7 @@ from api.models.portfolio import ClosePositionRequest, PartialCloseRequest
 from api.services.portfolio_service import PortfolioService
 from api.services.orders_service import OrdersService
 from scripts.reconcile_exit_orders import _apply_position_plan
-from swing_screener.errors import ValidationError
+from swing_screener.errors import ConflictError, ValidationError
 
 
 def _position() -> dict[str, object]:
@@ -194,6 +194,31 @@ def test_exit_and_linked_order_reconciliation_roll_back_together(runtime, monkey
     assert position["status"] == "open"
     assert stop_order is not None
     assert stop_order["status"] == "pending"
+
+
+def test_stale_version_does_not_change_reconciled_protection(runtime):
+    with PortfolioUnitOfWork(runtime.session_factory) as uow:
+        _seed_ledger(uow)
+        uow.positions.add_position(_position())
+        uow.orders.add_order(_stop_order())
+
+    request = PartialCloseRequest(shares_closed=5, price=110.0, expected_version=1)
+    with PortfolioUnitOfWork(runtime.session_factory) as uow:
+        PortfolioService(positions_repo=uow.positions, orders_repo=uow.orders, uow=uow,
+                         business_date=lambda: "2026-10-14").partial_close_position(
+            "POS-AAPL-001", request, idempotency_key="first-versioned-exit"
+        )
+
+    with pytest.raises(ConflictError):
+        with PortfolioUnitOfWork(runtime.session_factory) as uow:
+            PortfolioService(positions_repo=uow.positions, orders_repo=uow.orders, uow=uow,
+                             business_date=lambda: "2026-10-14").partial_close_position(
+                "POS-AAPL-001", request, idempotency_key="stale-versioned-exit"
+            )
+
+    with PortfolioUnitOfWork(runtime.session_factory) as uow:
+        assert uow.positions.get_position("POS-AAPL-001")["shares"] == 5
+        assert uow.orders.get_order("ORD-STOP-POS-AAPL-001")["quantity"] == 5
 
 
 def test_partial_exit_idempotency_replay_does_not_reconcile_twice(runtime):

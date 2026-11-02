@@ -124,6 +124,15 @@ port 8888 on an untrusted network.
   different input returns `409`. Stop-price market-data validation runs before
   the idempotent write transaction, then the persisted update is rechecked and
   reserved atomically.
+- Position management requests (`stop`, `close`, `partial-close`, `trail-method`)
+  accept optional `expected_version` (positive integer). The Web UI sends the
+  reviewed position's `version`; mismatches return `409` without ledger changes.
+  The version is checked under the write transaction/position lock. Identical
+  idempotent retries replay before version validation. Omitting the field keeps
+  legacy latest-state validation, which is weaker optimistic concurrency.
+  Trail updates return `position_version` for a subsequent stop request.
+  Stateless commands retain required `expected_revision` and also validate the
+  supplied position version; changed snapshot positions increment their version.
 - `DATABASE_URL` accepts `postgres://` and `postgresql://`; both are normalized
   to SQLAlchemy's `postgresql+psycopg://` dialect URL.
 

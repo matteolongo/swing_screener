@@ -115,6 +115,48 @@ def _post_command(api, snapshot, operation, payload, expected_revision=None):
     )
 
 
+def test_partial_close_increments_snapshot_position_version(command_api):
+    snapshot = _snapshot()
+    response = _post_command(
+        command_api,
+        snapshot,
+        "partial_close",
+        {
+            "position_id": "POS-AAPL-001",
+            "shares_closed": 5,
+            "price": 220,
+            "expected_version": 1,
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["positions"][0]["version"] == 2
+    assert snapshot.positions[0].version == 1
+
+
+@pytest.mark.parametrize(
+    ("operation", "payload"),
+    [
+        ("partial_close", {"shares_closed": 2, "price": 220}),
+        ("close_position", {"exit_price": 220}),
+        ("update_stop", {"new_stop": 195}),
+    ],
+)
+def test_stale_position_version_rejected_even_with_current_snapshot_revision(
+    command_api, operation, payload
+):
+    snapshot = _snapshot()
+    snapshot.positions[0].version = 3
+    before = snapshot.model_dump()
+    response = _post_command(
+        command_api,
+        snapshot,
+        operation,
+        {"position_id": "POS-AAPL-001", "expected_version": 2, **payload},
+    )
+    assert response.status_code == 409, response.text
+    assert snapshot.model_dump() == before
+
+
 def test_manual_draft_can_be_saved_without_scan_approval_and_cancelled(command_api):
     payload = _entry_payload(command_api)
     payload.update(save_as_draft=True, approval_token=None, currency="EUR")

@@ -480,6 +480,14 @@ export const messagesEn = {
     },
   },
   positions: {
+    concurrency: {
+      changed: 'Position {{positionId}} changed: {{shares}} shares, current stop {{stop}} (version {{version}}).',
+      preserved: 'Your input is preserved. Review the current position before submitting again.',
+      review: 'I reviewed the current position',
+      unavailable: 'The current position could not be refreshed. Your draft is preserved; refresh before submitting.',
+      refresh: 'Refresh current position',
+      versionUnavailable: 'The saved position version is unavailable. Refresh and review the position before changing its stop.',
+    },
     rFxAdjusted: 'FX-adj. R',
     rFxAdjustedTooltip: 'R in account currency (EUR), adjusted for FX movement since entry',
     rInitialRisk: 'initial 1R',

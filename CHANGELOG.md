@@ -15,6 +15,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Amsterdam universe membership tests now use the snapshot review date;
+  runtime freshness rejection remains covered at its age-limit boundary.
+- Book Details and reopened position forms now use the current position version.
+  Stale edits fail without ledger changes, preserve typed input and require an
+  explicit review of updated shares/stop before resubmission.
 - Position exits now reconcile their linked local stop and target records in
   the same transaction: scale-outs resize full-position protection, final exits
   cancel remaining local protection, and a filled exit remains historical.

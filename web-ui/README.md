@@ -1,5 +1,10 @@
 # Swing Screener Web UI
 
+Position management keeps current query-owned position versions. A stale edit
+refreshes position data while preserving entered form values and requires an
+explicit review before resubmission. Book and Today selection store IDs, not
+snapshots. Failed refreshes preserve drafts but block writes until recovery.
+
 React 18 + TypeScript frontend for Swing Screener.
 
 ## Pages

@@ -10,6 +10,7 @@ import ManagePositionPanel from './ManagePositionPanel';
 import PositionProtectionNotice from '@/components/domain/orders/PositionProtectionNotice';
 
 const position = {
+  status: 'open', entryDate: '2026-10-01', version: 1,
   positionId: 'POS-1', ticker: 'LRCX', entryPrice: 383.04, stopPrice: 346.3,
   targetPrice: 498.26, shares: 2, perShareRisk: 36.74, rNow: 0.51, daysOpen: 10,
   pnl: 0, pnlPercent: 0, entryValue: 766.08, currentValue: 803.64, totalRisk: 73.48,

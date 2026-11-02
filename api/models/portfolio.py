@@ -117,6 +117,7 @@ class PositionUpdate(BaseModel):
 
 
 class UpdateStopRequest(BaseModel):
+    expected_version: int | None = Field(default=None, ge=1)
     new_stop: float = Field(gt=0, description="New stop price")
     reason: str = Field(default="", description="Reason for update")
 
@@ -133,6 +134,7 @@ class UpdateStopRequest(BaseModel):
 
 
 class UpdateTrailMethodRequest(BaseModel):
+    expected_version: int | None = Field(default=None, ge=1)
     trail_method: TrailMethod
     trail_param: Optional[float] = Field(
         default=None,
@@ -180,6 +182,7 @@ class PartialCloseEventSnapshot(PartialCloseEvent):
 class PartialCloseRequest(BaseModel):
     """Request to partially close an open position."""
 
+    expected_version: int | None = Field(default=None, ge=1)
     shares_closed: int = Field(..., gt=0, description="Number of shares to close")
     price: float = Field(..., gt=0, description="Exit price for this leg")
     fee_eur: Optional[float] = Field(
@@ -202,6 +205,7 @@ class PartialCloseRequest(BaseModel):
 
 
 class ClosePositionRequest(BaseModel):
+    expected_version: int | None = Field(default=None, ge=1)
     exit_price: float = Field(gt=0, description="Exit price")
     fee_eur: Optional[float] = Field(
         default=None,

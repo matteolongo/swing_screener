@@ -211,3 +211,151 @@ def test_reusing_key_for_another_operation_returns_conflict(client):
     )
 
     assert fill.status_code == 409
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "payload"),
+    [
+        ("POST", "partial-close", {"shares_closed": 2, "price": 110}),
+        ("POST", "close", {"exit_price": 110}),
+        ("PUT", "stop", {"new_stop": 97}),
+        ("PATCH", "trail-method", {"trail_method": "manual"}),
+    ],
+)
+def test_stale_position_version_rejects_write_without_changing_ledger(
+    client, monkeypatch, method, path, payload
+):
+    from api.services.portfolio.write import PortfolioWriteService, PreparedStopUpdate
+
+    # Market validation is orthogonal to the version guard and stays offline.
+    monkeypatch.setattr(
+        PortfolioWriteService,
+        "prepare_position_stop",
+        lambda self, position_id, request: PreparedStopUpdate(
+            position_id, request, 95, request.new_stop
+        ),
+    )
+    created = client.post(
+        "/api/portfolio/positions",
+        json=_manual_position_payload(),
+        headers={"Idempotency-Key": "version-create"},
+    ).json()
+    position_id = created["position_id"]
+    first = client.post(
+        f"/api/portfolio/positions/{position_id}/partial-close",
+        json={"shares_closed": 5, "price": 110, "expected_version": created["version"]},
+        headers={"Idempotency-Key": "version-first-exit"},
+    )
+    assert first.status_code == 200, first.text
+    before = client.get(f"/api/portfolio/positions/{position_id}").json()
+    orders_before = client.get("/api/portfolio/orders/local").json()
+
+    stale = client.request(
+        method,
+        f"/api/portfolio/positions/{position_id}/{path}",
+        json={**payload, "expected_version": created["version"]},
+        headers={"Idempotency-Key": f"version-stale-{path}"},
+    )
+
+    assert stale.status_code == 409
+    assert client.get(f"/api/portfolio/positions/{position_id}").json() == before
+    assert client.get("/api/portfolio/orders/local").json() == orders_before
+
+
+def test_versioned_partial_close_retry_replays_before_old_version_rejection(client):
+    created = client.post(
+        "/api/portfolio/positions",
+        json=_manual_position_payload(),
+        headers={"Idempotency-Key": "version-replay-create"},
+    ).json()
+    position_id = created["position_id"]
+    payload = {"shares_closed": 5, "price": 110, "expected_version": created["version"]}
+    headers = {"Idempotency-Key": "version-replay-exit"}
+    first = client.post(
+        f"/api/portfolio/positions/{position_id}/partial-close",
+        json=payload,
+        headers=headers,
+    )
+    retry = client.post(
+        f"/api/portfolio/positions/{position_id}/partial-close",
+        json=payload,
+        headers=headers,
+    )
+    assert first.status_code == retry.status_code == 200
+    assert retry.json() == first.json()
+    assert client.get(f"/api/portfolio/positions/{position_id}").json()["shares"] == 5
+
+
+def test_optional_version_preserves_legacy_idempotency_hash():
+    from api.services.portfolio_service import PortfolioService
+
+    assert (
+        PortfolioService._idempotency_hash(
+            subject="local",
+            operation="update_position_stop",
+            resource="P1",
+            body={"new_stop": 97, "reason": "", "expected_version": None},
+        )
+        == "de7f0857896fc97ec58495214622dea6c2fbd704005b96e9880d64090d4a0617"
+    )
+
+
+def test_stale_stop_version_precedes_snapshot_price_validation(client):
+    created = client.post(
+        "/api/portfolio/positions",
+        json=_manual_position_payload(),
+        headers={"Idempotency-Key": "stale-stop-create"},
+    ).json()
+    position_id = created["position_id"]
+    assert (
+        client.post(
+            f"/api/portfolio/positions/{position_id}/partial-close",
+            json={"shares_closed": 5, "price": 110},
+            headers={"Idempotency-Key": "stale-stop-partial"},
+        ).status_code
+        == 200
+    )
+    response = client.put(
+        f"/api/portfolio/positions/{position_id}/stop",
+        json={"new_stop": 94, "expected_version": 1},
+        headers={"Idempotency-Key": "stale-stop-update"},
+    )
+    assert response.status_code == 409, response.text
+
+
+def test_trail_update_returns_current_version_for_followup_stop_request(client):
+    created = client.post(
+        "/api/portfolio/positions",
+        json=_manual_position_payload(),
+        headers={"Idempotency-Key": "trail-version-create"},
+    ).json()
+    response = client.patch(
+        f"/api/portfolio/positions/{created['position_id']}/trail-method",
+        json={"trail_method": "manual", "expected_version": created["version"]},
+        headers={"Idempotency-Key": "trail-version-update"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["position_version"] == 2
+
+
+def test_competing_versioned_partial_exits_only_apply_once(client):
+    created = client.post(
+        "/api/portfolio/positions", json=_manual_position_payload(),
+        headers={"Idempotency-Key": "competing-version-create"},
+    ).json()
+    position_id = created["position_id"]
+
+    def partial(index):
+        return client.post(
+            f"/api/portfolio/positions/{position_id}/partial-close",
+            json={"shares_closed": 3, "price": 110, "expected_version": 1},
+            headers={"Idempotency-Key": f"competing-version-exit-{index}"},
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(partial, range(2)))
+    assert sorted(response.status_code for response in responses) == [200, 409]
+    position = client.get(f"/api/portfolio/positions/{position_id}").json()
+    assert position["version"] == 2
+    assert position["shares"] == 7
+    assert len(position["partial_closes"]) == 1
