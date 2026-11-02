@@ -1,4 +1,6 @@
+import datetime
 import json
+from unittest.mock import patch
 
 import pytest
 
@@ -54,7 +56,14 @@ def test_load_broad_market_stocks_returns_non_empty():
 
 def test_load_amsterdam_all_returns_non_empty():
     cfg = UniverseConfig(benchmark="^AEX", ensure_benchmark=False)
-    tickers = load_universe_from_package("amsterdam_all", cfg)
+    snapshot = universe_mod._load_snapshot("amsterdam_all")
+    reviewed_at = datetime.date.fromisoformat(snapshot["last_reviewed_at"])
+    # Check packaged membership independently of the runtime freshness policy.
+    with patch(
+        "swing_screener.data.universe.datetime.date", wraps=datetime.date
+    ) as mocked_date:
+        mocked_date.today.return_value = reviewed_at
+        tickers = load_universe_from_package("amsterdam_all", cfg)
     assert len(tickers) > 10
     assert all("." in t for t in tickers)  # All Amsterdam tickers have suffix
 

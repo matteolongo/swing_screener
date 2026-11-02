@@ -8,6 +8,7 @@ describe('Position Helper Functions', () => {
   describe('transformPosition', () => {
     it('transforms snake_case to camelCase', () => {
       const apiResponse: PositionApiResponse = {
+        version: 7,
         ticker: 'AAPL',
         status: 'open',
         entry_date: '2026-01-01',
@@ -45,6 +46,7 @@ describe('Position Helper Functions', () => {
       const result = transformPosition(apiResponse)
 
       expect(result).toEqual({
+        version: 7,
         ticker: 'AAPL',
         status: 'open',
         entryDate: '2026-01-01',
@@ -108,6 +110,7 @@ describe('Position Helper Functions', () => {
       const result = transformPosition(apiResponse)
 
       expect(result.positionId).toBeUndefined()
+      expect(result.version).toBe(1)
       expect(result.sourceOrderId).toBeUndefined()
       expect(result.initialRisk).toBeUndefined()
       expect(result.maxFavorablePrice).toBeUndefined()

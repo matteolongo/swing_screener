@@ -26,6 +26,16 @@ Run the screener after the relevant market close so daily candles are final and 
 ## Current-Price Previews
 The application may use a live or user-supplied price to preview position metrics or stop rules. These previews are read-only decision aids: they do not update a persisted stop, place an order, or replace the post-close review. Apply any accepted action manually through the normal workflow.
 
+## Protective Orders After an Exit
+
+Book Orders lists local protective stops and targets separately from entry
+plans, with their linked position IDs. After recording a scale-out, verify that
+the local protective quantity follows the remaining shares and manually adjust
+the matching broker order. After recording a final exit, local active protection
+is cancelled; manually cancel the matching broker orders too. The success
+reminder identifies the changed local records. Cancelled and filled records
+remain available in the corresponding order-history filters.
+
 ## Non-Negotiables
 - Base final screening and trade decisions on closed end-of-day data.
 - Do not move stops lower.

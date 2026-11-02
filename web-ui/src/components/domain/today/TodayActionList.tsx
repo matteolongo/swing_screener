@@ -154,7 +154,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
     handleClosePosition,
     handlePartialClose,
     handleItemClick,
-  } = useTodayActions(flatItems, selectTodayTicker);
+  } = useTodayActions(flatItems, selectTodayTicker, openPositions, openPositionsQuery.isError);
 
   const positionsCloseCount = review?.positionsClose.length ?? 0;
   const updateStopCount = review?.positionsUpdateStop.length ?? 0;
@@ -429,9 +429,9 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
                     item={item}
                     onClick={(ticker) => handleItemClick(ticker, `stop-${item.positionId}`)}
                     onAction={position ? () => setUpdateStopTarget(position) : undefined}
-                    onAccept={(positionId, stopSuggested, reason) =>
+                    onAccept={position && !openPositionsQuery.isError ? (positionId, stopSuggested, reason) =>
                       handleAcceptStop(positionId, stopSuggested, reason)
-                    }
+                    : undefined}
                     isDone={acceptedStops.has(item.positionId) || doneIds.has(item.positionId)}
                     isAccepting={
                       acceptStopMutation.isPending &&

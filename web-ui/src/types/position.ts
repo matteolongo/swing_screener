@@ -5,6 +5,7 @@ export type PositionStatus = 'open' | 'closed';
 export type TrailMethod = 'sma20' | 'atr' | 'fixed_pct' | 'manual';
 
 export interface UpdateTrailMethodRequest {
+  expectedVersion?: number;
   trailMethod: TrailMethod;
   trailParam?: number | null;
 }
@@ -19,6 +20,7 @@ export interface PartialCloseEvent {
 }
 
 export interface PartialCloseRequest {
+  expectedVersion?: number;
   sharesClosed: number;
   price: number;
   feeEur?: number;
@@ -26,6 +28,7 @@ export interface PartialCloseRequest {
 }
 
 export interface Position {
+  version?: number;
   ticker: string;
   status: PositionStatus;
   entryDate: string;
@@ -91,6 +94,7 @@ export interface PositionUpdateApiResponse {
 }
 
 export interface UpdateStopRequest {
+  expectedVersion?: number;
   newStop: number;
   reason?: string;
   marketPrice?: {
@@ -102,6 +106,7 @@ export interface UpdateStopRequest {
 }
 
 export interface ClosePositionRequest {
+  expectedVersion?: number;
   exitPrice: number;
   feeEur?: number;
   exitFxRate?: number;
@@ -112,6 +117,7 @@ export interface ClosePositionRequest {
 
 // Backend uses snake_case, transform to camelCase
 export interface PositionApiResponse {
+  version?: number;
   ticker: string;
   status: PositionStatus;
   entry_date: string;
@@ -153,6 +159,7 @@ export interface PositionApiResponse {
 
 export function transformPosition(apiPosition: PositionApiResponse): Position {
   return {
+    version: apiPosition.version ?? 1,
     ticker: apiPosition.ticker,
     status: apiPosition.status,
     entryDate: apiPosition.entry_date,
