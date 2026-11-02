@@ -21,6 +21,14 @@ plus selected scan row together. It keeps the saved scan's universe, preset,
 filters and indicator overrides; Last Run stays available for exploration.
 Completion includes a refresh time because a daily candle's date/prices may
 remain unchanged. Errors keep the previous successful candidate snapshot.
+The nearby **Scan quality** summary retains coverage counts and provider/symbol
+warnings. Requested session, observed candle date(s), market freshness and last
+successful request completion are separate facts. Missing legacy metadata stays
+unknown rather than being inferred from the request time. Failed refreshes show
+**Retry scan** and explicitly label retained data. A completed no-candidate scan
+is distinct from a search/hidden-group mismatch, which exposes **Clear candidate
+filters**. `ResultQualitySummary` and `features/screener/resultQuality.ts` own this
+presentation; screening decisions remain backend-owned.
 
 `TodayActionList` shares its refresh, summary and **Ready / All from run**
 controls between expanded and symbol-rail views. Only the active list body
@@ -37,6 +45,13 @@ switch to the current plan. **Approve draft** promotes the same record.
 Cancelled/Filled history filters. Cancel marks an order as not filled without
 discarding its history; submission, broker cancellation and fills stay manual.
 
+Book Orders groups entry plans separately from local protective stop/target
+records. Each record shows its kind and linked position; cancelled/filled
+protection remains discoverable through the matching history filter. Successful
+stop updates, scale-outs and final exits show the changed local record IDs and
+the required manual broker adjustment/cancellation. Failed mutations keep the
+form available and do not show that success reminder.
+
 The Universes **Screener run** section also renders the latest scan's candidate
 table, with its saved display filters. Rows open the selected candidate snapshot
 in the symbol modal. Unpinned scans can therefore be inspected without replacing
@@ -47,6 +62,16 @@ fundamentals, the selected daily bar, and the workspace's fetched price data.
 Fresh analysis clears the badge only when it postdates those dependencies.
 
 ## Pages
+
+Book Details keeps the selected position ID and resolves current query data.
+After a scale-out, reopened management shows the remaining shares without
+closing Details first. Closed/removed positions no longer expose management.
+Stop/scale-out/exit forms preserve typed values on a version conflict, refresh
+the position, and require **I reviewed the current position** before resubmission.
+That review accepts the displayed current shares/stop, not an automatic trade.
+Today management also resolves position IDs from current queries. If the current
+position cannot be refreshed, forms keep the draft, block submission and offer
+**Refresh current position** before the deliberate review step.
 
 | Page | Route | Purpose |
 |------|-------|---------|
@@ -100,7 +125,7 @@ Reusable building blocks live in `components/common/`. Prefer these over hand-ro
 | `Input` / `Select` / `Textarea` | Form controls carrying the canonical `CONTROL_CLASS` (exported from `Input`). `forwardRef`, spread all native props, auto-wire `id` from the surrounding `Field`. Pass only deviations (width, alignment) via `className`. |
 | `CollapsibleSection` | Progressive disclosure. Native `<details>` + chevron, token-styled; `title`, optional `meta`, `defaultOpen`. Used by the Strategy advanced panel and the Universes discovery filters. |
 | `ActionMenu` | Labelled native row-action trigger and portalled button group. Positions from the trigger, flips above near the viewport bottom, clamps horizontal edges, and dismisses on Escape/outside press, focus leaving, scroll or resize. Keeps normal Tab navigation and restores the trigger before activating an action. |
-| `StatsTable` | Presentational 5-column stats table (label + Trades/WinRate/AvgR/Expectancy). Backs `EdgeBreakdownTable` and `RegimeBreakdownTable`; takes translated headers + rows. |
+| `StatsTable` | Presentational 5-column stats table (label + Trades/WinRate/AvgR/Expectancy). Backs `EdgeBreakdownTable` and `RegimeBreakdownTable`; takes translated headers + rows and displays nullable win rates as unavailable. Regime outcomes use canonical shares-weighted R and explain scratch/unknown-risk exclusions. |
 | `RChip` | R-multiple readout: `formatR` + sign color (`getSignColorClass`) in tabular mono. |
 | `Card` / `Button` / `Badge` / `ModalShell` / `TableShell` / `DataTable` | Layout and table chrome. |
 

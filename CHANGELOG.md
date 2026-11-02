@@ -15,13 +15,24 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Journal trade details now expand with a native keyboard button that announces
-  its expanded state and keeps focus while toggling.
-- Book row actions now open outside the table's clipped overflow, with named
-  keyboard controls, popup dismissal and focus return. Screener and shared table
-  rows preserve Enter/Space activation of their nested action buttons.
-- Dialog keyboard focus now reaches native disclosures and skips controls inside
-  closed or hidden content, while preserving Escape and opening-control focus.
+- Today exposes partial scan coverage and provider/symbol warnings, separates
+  candle dates from request completion, and labels cached results during failed
+  refreshes. Loading, empty scans and empty filters have distinct recovery copy.
+- Market-regime performance uses canonical shares-weighted R across all exit
+  legs. Scratches and unknown-risk trades follow Journal semantics; unavailable
+  benchmark data no longer appears as a successful empty result.
+- Amsterdam universe membership tests now use the snapshot review date;
+  runtime freshness rejection remains covered at its age-limit boundary.
+- Book Details and reopened position forms now use the current position version.
+  Stale edits fail without ledger changes, preserve typed input and require an
+  explicit review of updated shares/stop before resubmission.
+- Position exits now reconcile their linked local stop and target records in
+  the same transaction: scale-outs resize full-position protection, final exits
+  cancel remaining local protection, and a filled exit remains historical.
+  Broker changes remain manual.
+- Book Orders now exposes linked local stop/target records and their history.
+  Successful position changes identify affected protection and the manual broker
+  adjustment or cancellation still required.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes
   the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,
@@ -37,6 +48,13 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sync without replacing saved runs. Failed refreshes preserve the prior review.
 - Held-position target R:R now uses the original 1R after a stop move.
 - Screener waiting feedback no longer marks stages complete on a timer.
+- Journal trade details now expand with a native keyboard button that announces
+  its expanded state and keeps focus while toggling.
+- Book row actions now open outside the table's clipped overflow, with named
+  keyboard controls, popup dismissal and focus return. Screener and shared table
+  rows preserve Enter/Space activation of their nested action buttons.
+- Dialog keyboard focus now reaches native disclosures and skips controls inside
+  closed or hidden content, while preserving Escape and opening-control focus.
 
 - Cockpit order-review buttons open the signed-draft ticket, unpinned screener
   results remain available in Universes, and newer daily prices mark cached AI

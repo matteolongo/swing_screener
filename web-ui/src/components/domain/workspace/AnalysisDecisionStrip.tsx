@@ -8,7 +8,8 @@ import type {
 } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
-import { formatCurrency, formatDateTime, formatNumber } from '@/utils/formatters';
+import { formatCurrency, formatNumber } from '@/utils/formatters';
+import { marketDate } from '@/features/screener/resultQuality';
 import { formatWorkflowNextStep, getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 import { getCanonicalOrderDraft } from '@/features/screener/types';
 import type { WorkflowTone } from '@/components/domain/recommendation/workflowPresentation';
@@ -116,6 +117,9 @@ export default function AnalysisDecisionStrip({
   onSaveDraft,
 }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
+  const candleDate = marketDate(candidate?.dataAsOf) ?? marketDate(candidate?.lastBar);
+  const marketStatus = !candleDate ? 'unknown' : candidate?.dataStatus === 'current' ? 'final_close'
+    : candidate?.dataStatus === 'stale' || candidate?.dataStatus === 'intraday' ? candidate.dataStatus : 'unknown';
   const currency = candidate?.currency ?? 'USD';
   const heldMode = Boolean(position);
   const orderDraft = getCanonicalOrderDraft(candidate);
@@ -244,12 +248,10 @@ export default function AnalysisDecisionStrip({
                 : t('recommendation.workflow.nextStep.refresh_data')}
             </button>
             {candidateRefresh.error ? <p role="alert" className="text-sm text-danger">{candidateRefresh.error.message}</p> : null}
-            {candidateRefresh.asOf ? (
-              <p role="status" className="text-xs text-muted">
-                {t('workspacePage.panels.analysis.computeAnalysis.refreshed', { date: formatDateTime(candidateRefresh.asOf) })}
-                {candidateRefresh.freshness === 'intraday' ? ` · ${t('workspacePage.panels.screener.freshness.intraday')}` : null}
-              </p>
-            ) : null}
+            <div role="status" className="space-y-1 text-xs text-muted">
+              <p>{t('screener.quality.candleDate', { date: candleDate ?? t('screener.quality.unknownDate') })}</p>
+              <p>{t(`screener.quality.market.${marketStatus}`)}</p>
+            </div>
           </div>
         ) : null}
 

@@ -54,7 +54,7 @@ describe('TodayActionList holdings', () => {
       isFetching: false,
     };
     positionsQuery.current = {
-      data: [{ positionId: 'POS-1', ticker: 'LRCX', entryPrice: 383.04, stopPrice: 346.3, shares: 2, rNow: 0.51, daysOpen: 10 }],
+      data: [{ positionId: 'POS-1', ticker: 'LRCX', status: 'open', version: 1, entryDate: '2026-06-16', entryPrice: 383.04, stopPrice: 346.3, shares: 2, rNow: 0.51, daysOpen: 10 }],
       isLoading: false,
       error: null,
       refetch: vi.fn(),

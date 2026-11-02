@@ -30,7 +30,7 @@ export function useTodayRefresh() {
     },
     onSuccess: (result, request) => {
       const store = useScreenerStore.getState();
-      const sourceId = store.todayRun?.completedAt ?? store.lastRunContext?.completedAt;
+      const sourceId = store.todayRun ? store.todayRun.completedAt : store.lastRunContext?.completedAt;
       if (!mounted.current || sourceId !== request.sourceId || JSON.stringify(queryClient.getQueryData(queryKeys.strategyActive())) !== request.policy) return;
       const completedAt = new Date().toISOString();
       store.recordTodayRun(result, { ...request.context, displayFilters: store.todayRun?.displayFilters ?? request.context.displayFilters, completedAt });

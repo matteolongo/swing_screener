@@ -124,6 +124,15 @@ port 8888 on an untrusted network.
   different input returns `409`. Stop-price market-data validation runs before
   the idempotent write transaction, then the persisted update is rechecked and
   reserved atomically.
+- Position management requests (`stop`, `close`, `partial-close`, `trail-method`)
+  accept optional `expected_version` (positive integer). The Web UI sends the
+  reviewed position's `version`; mismatches return `409` without ledger changes.
+  The version is checked under the write transaction/position lock. Identical
+  idempotent retries replay before version validation. Omitting the field keeps
+  legacy latest-state validation, which is weaker optimistic concurrency.
+  Trail updates return `position_version` for a subsequent stop request.
+  Stateless commands retain required `expected_revision` and also validate the
+  supplied position version; changed snapshot positions increment their version.
 - `DATABASE_URL` accepts `postgres://` and `postgresql://`; both are normalized
   to SQLAlchemy's `postgresql+psycopg://` dialect URL.
 
@@ -287,6 +296,15 @@ Symbol pool (`/api/pool`):
 
 Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
 
+Scan-quality consumers must keep `total_screened` (resolved requested symbols),
+`total_with_market_data` (symbols with downloaded closes), and
+`total_returned_candidates` (after eligibility/filter/top-N selection) distinct.
+`warnings` names failed provider/symbol inputs where available. `asof_date` is
+the requested session, not the API completion time or proof that every symbol's
+candle is current; candidates' `data_asof` / `last_bar`, `data_status`, and
+`benchmark_last_bar` carry observed content dates. Missing content dates remain
+unknown, and candidate stale status must not be overwritten by HTTP success.
+
 Candle data (screener candidates and watchlist items): `PriceHistoryPoint` now carries optional `open`/`high`/`low`/`volume` alongside `close` (absent fields omitted; backward-compatible). Candidates and watchlist items also expose `patterns` (list of `{bar_index, date, name, direction, key_level, context, volume_ratio, bar_pressure, volume_confirmed}`). The last three are optional volume-pressure annotations: `volume_ratio` (bar volume ÷ trailing 20-bar average), `bar_pressure` (intrabar close-location 0–1), and `volume_confirmed` (true when the pattern fired on elevated, direction-aligned volume; null for neutral patterns or when volume data is insufficient). Screener candidates additionally expose `pattern_stop` / `pattern_stop_reason` — a structural stop derived from a bullish candlestick pattern on the latest bar. When present it becomes the candidate's entry `stop` (and `target`/`rr`/explicit risk fields are recomputed from it; `shares` unchanged); it does not affect ranking.
 
 Backtest (`/api/backtest`):
@@ -373,20 +391,38 @@ Portfolio (`/api/portfolio`):
   `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
 - `GET /api/portfolio/positions/{position_id}`
 - `GET /api/portfolio/positions/{position_id}/metrics`
-- `PUT /api/portfolio/positions/{position_id}/stop` — also replaces the
-  position's pending linked stop order (`ORD-STOP-{position_id}`) at the new
-  stop so the ledger and the position stay on the same stop. Ledger
-  bookkeeping only; broker execution stays manual.
+- `PUT /api/portfolio/positions/{position_id}/stop` — updates the position
+  and its local linked stop record (`ORD-STOP-{position_id}`) in the same
+  transaction. Ledger bookkeeping only; broker execution stays manual.
 - `GET /api/portfolio/positions/{position_id}/stop-suggestion`
 - `GET /api/portfolio/positions/{position_id}/stop-preview` (read-only current-price preview; does not persist a stop change)
 - `PATCH /api/portfolio/positions/{position_id}/trail-method`
 - `POST /api/portfolio/stop-suggestion/compute`
-- `POST /api/portfolio/positions/{position_id}/close`
-- `POST /api/portfolio/positions/{position_id}/partial-close`
+- `POST /api/portfolio/positions/{position_id}/close` — cancels remaining
+  active local stop/take-profit records linked to the position in the same
+  transaction. It does not cancel a broker order.
+- `POST /api/portfolio/positions/{position_id}/partial-close` — resizes a
+  linked full-position local stop/take-profit record to remaining shares in the
+  same transaction. It does not adjust a broker order.
+
+Stop, close, partial-close and protective-order fill responses include
+`linked_order_ids` for other local protective records changed in the operation.
+The filled exit retains its own `filled` status. Partial-close also returns
+`shares_remaining`; stop updates return `new_stop`. Clients show broker
+follow-up only after success, using these IDs. Stateless command responses
+include the changed records in `orders` and their IDs in `affected_order_ids`.
+
 - `GET /api/portfolio/summary` — open-risk/cash summary plus canonical
   closed-trade analytics and configured rendering thresholds.
 - `GET /api/portfolio/earnings-proximity/{ticker}`
-- `GET /api/portfolio/analytics/regime-breakdown`
+- `GET /api/portfolio/analytics/regime-breakdown` — classifies trades by benchmark
+  trend at entry, then reuses canonical portfolio analytics for each group.
+  `avg_r` and `expectancy` include every exit leg weighted by shares and measured
+  against initial risk; fees/FX do not change R. `count` excludes unknown-risk
+  trades. Scratches enter average R but not the win-rate denominator;
+  `win_rate` is `null` when a group contains only scratches. Missing/failed
+  benchmark data returns `503`, not an empty successful result. No eligible
+  closed trades still returns `200` with `regimes: []` without provider I/O.
 - `POST /api/portfolio/orders` — signed entry creation, manual draft save, or
   signed promotion of an existing `draft_order_id`.
 - `GET /api/portfolio/orders/local` — includes the same freshness metadata for
@@ -394,7 +430,9 @@ Portfolio (`/api/portfolio`):
 - `POST /api/portfolio/orders/{order_id}/fill` — filling an entry order also
   creates (or, for add-ons, refreshes) the position's pending linked stop order
   (`ORD-STOP-{position_id}`, `SELL_STOP`, ledger only; broker execution stays
-  manual) and records it in the position's `exit_order_ids`.
+  manual) and records it in the position's `exit_order_ids`. Filling a linked
+  local exit records that exit as filled and reconciles its remaining linked
+  protection in the same transaction; it never sends a broker instruction.
 - `DELETE /api/portfolio/orders/{order_id}` — cancel an unfilled draft, pending,
   or submitted order while preserving history.
 

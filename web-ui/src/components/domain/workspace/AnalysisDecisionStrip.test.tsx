@@ -17,6 +17,13 @@ function buildCandidate(overrides: Partial<SymbolAnalysisCandidate> = {}): Symbo
 }
 
 describe('AnalysisDecisionStrip held trade metrics', () => {
+  it('labels the observed candle as stale rather than the successful review date', () => {
+    render(<AnalysisDecisionStrip ticker="AAPL"
+      candidate={buildCandidate({ lastBar: '2026-10-02', dataAsOf: '2026-10-02', dataStatus: 'stale' })}
+      candidateRefresh={{ onRefresh: vi.fn(), isPending: false, error: null, asOf: '2026-10-14', freshness: 'final_close' }} />);
+    expect(screen.getByText(t('screener.quality.candleDate', { date: '2026-10-02' }))).toBeVisible();
+    expect(screen.getByText(t('screener.quality.market.stale'))).toBeVisible();
+  });
   it.each([100, 110])('preserves initial 1R when the stop reaches %s', (stopPrice) => {
     const position = { ticker: 'AAPL', entryPrice: 100, stopPrice, targetPrice: 130, perShareRisk: 10 } as PositionWithMetrics;
     render(<AnalysisDecisionStrip ticker="AAPL" position={position} />);
