@@ -115,6 +115,7 @@ export default function ScreenerCandidatesTable({
             <tr
               onClick={onRowClick ? () => onRowClick(candidate) : undefined}
               onKeyDown={onRowClick ? (event) => {
+                if (event.target !== event.currentTarget) return;
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
                   onRowClick(candidate);

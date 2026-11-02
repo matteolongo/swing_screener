@@ -59,8 +59,27 @@ const focusableSelector = [
   'textarea:not([disabled])',
   'input:not([disabled])',
   'select:not([disabled])',
+  'summary',
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
+
+function getFocusableElements(dialog: HTMLElement): HTMLElement[] {
+  return Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter((element) => {
+    if (element.closest('[hidden], [inert]') || element.getAttribute('tabindex') === '-1') return false;
+    if (element.tagName === 'SUMMARY') {
+      const details = element.parentElement;
+      if (details?.tagName !== 'DETAILS'
+        || Array.from(details.children).find((child) => child.tagName === 'SUMMARY') !== element) return false;
+    }
+    for (let ancestor = element.parentElement; ancestor && ancestor !== dialog; ancestor = ancestor.parentElement) {
+      if (ancestor.tagName === 'DETAILS' && !ancestor.hasAttribute('open')) {
+        const summary = Array.from(ancestor.children).find((child) => child.tagName === 'SUMMARY');
+        if (!summary?.contains(element)) return false;
+      }
+    }
+    return element.offsetParent !== null || element === document.activeElement;
+  });
+}
 
 interface ModalShellProps {
   title: ReactNode;
@@ -120,7 +139,7 @@ export default function ModalShell({
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
 
-    const firstFocusable = dialog.querySelector<HTMLElement>(focusableSelector);
+    const firstFocusable = getFocusableElements(dialog)[0];
     (firstFocusable ?? dialog).focus();
 
     return () => {
@@ -134,8 +153,7 @@ export default function ModalShell({
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector))
-      .filter((element) => element.offsetParent !== null || element === document.activeElement);
+    const focusable = getFocusableElements(dialog);
     if (focusable.length === 0) {
       event.preventDefault();
       dialog.focus();

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import PortfolioTable from '@/components/domain/workspace/PortfolioTable';
@@ -7,10 +7,16 @@ import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPan
 import { t } from '@/i18n/t';
 import { renderWithProviders } from '@/test/utils';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
+import type { Order } from '@/features/portfolio/types';
 
-const { positionsMock } = vi.hoisted(() => ({
+const { positionsMock, ordersMock } = vi.hoisted(() => ({
   positionsMock: vi.fn(),
+  ordersMock: vi.fn(),
 }));
+
+beforeEach(() => {
+  ordersMock.mockReturnValue([]);
+});
 
 vi.mock('@/components/domain/workspace/SymbolAnalysisContent', () => ({
   default: ({ orderPanel, position }: { position: PositionWithMetrics | null; orderPanel: React.ReactNode | ((candidate: unknown) => React.ReactNode) }) => (
@@ -35,7 +41,7 @@ vi.mock('@/features/portfolio/hooks', () => ({
     isError: false,
   }),
   useOrders: () => ({
-    data: [],
+    data: ordersMock(),
     isLoading: false,
     isFetched: true,
     isError: false,
@@ -134,10 +140,72 @@ describe('PortfolioTable R column', () => {
 });
 
 describe('PortfolioTable symbol analysis', () => {
+  it('dismisses pending actions before reverse Tab reaches Fill Order and keeps its dialog independent', async () => {
+    positionsMock.mockReturnValue([]);
+    const order: Order = {
+      orderId: 'ORDER-QQQ', ticker: 'QQQ', status: 'pending', orderType: 'BUY_LIMIT',
+      quantity: 1, limitPrice: 100, stopPrice: 90, orderDate: '2026-01-01', filledDate: '',
+      entryPrice: 100, notes: '', orderKind: 'entry', parentOrderId: null, positionId: null,
+      tif: 'GTC', quoteCurrency: 'USD',
+    };
+    ordersMock.mockReturnValue([order]);
+    renderWithProviders(<PortfolioTable />);
+    const label = `${t('workspacePage.panels.portfolio.columns.actions')} QQQ`;
+    const trigger = screen.getByRole('button', { name: label });
+    const fill = screen.getByRole('button', { name: t('common.actions.fillOrder') });
+    trigger.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(screen.getByRole('button', { name: t('common.actions.cancel') })).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(trigger).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(fill).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('group', { name: label })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(fill).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    expect(screen.getByRole('dialog', { name: t('order.fillModal.title', { ticker: 'QQQ' }) })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('modal.closeAria') })).toHaveFocus();
+    expect(screen.queryByRole('group', { name: label })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(fill).toHaveFocus();
+      expect(document.body.style.overflow).toBe('');
+    });
+  });
+
+  it('opens labelled row actions with the keyboard and returns focus after analysis', async () => {
+    positionsMock.mockReturnValue([makePosition()]);
+    renderWithProviders(<PortfolioTable />);
+    const trigger = screen.getByRole('button', {
+      name: `${t('workspacePage.panels.portfolio.columns.actions')} TEST`,
+    });
+    trigger.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') })).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    expect(screen.queryByRole('group', { name: trigger.getAttribute('aria-label')! })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('modal.closeAria') })).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+      expect(document.body.style.overflow).toBe('');
+    });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('passes the computed candidate to the modal order panel', async () => {
     positionsMock.mockReturnValue([makePosition()]);
     renderWithProviders(<PortfolioTable />);
 
+    await userEvent.click(screen.getByRole('button', {
+      name: `${t('workspacePage.panels.portfolio.columns.actions')} TEST`,
+    }));
     await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
 
     expect(screen.getByTestId('modal-order-candidate')).toHaveTextContent('TEST');
@@ -146,6 +214,9 @@ describe('PortfolioTable symbol analysis', () => {
   it('reopens management from current query data without closing Details', async () => {
     positionsMock.mockReturnValue([makePosition({ shares: 10, version: 1 })]);
     const { rerender } = renderWithProviders(<PortfolioTable />);
+    await userEvent.click(screen.getByRole('button', {
+      name: `${t('workspacePage.panels.portfolio.columns.actions')} TEST`,
+    }));
     await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
 
     positionsMock.mockReturnValue([makePosition({ shares: 5, stopPrice: 95, version: 2 })]);
@@ -159,6 +230,9 @@ describe('PortfolioTable symbol analysis', () => {
   it('removes management controls when the analyzed position leaves open positions', async () => {
     positionsMock.mockReturnValue([makePosition()]);
     const { rerender } = renderWithProviders(<PortfolioTable />);
+    await userEvent.click(screen.getByRole('button', {
+      name: `${t('workspacePage.panels.portfolio.columns.actions')} TEST`,
+    }));
     await userEvent.click(screen.getByRole('button', { name: t('workspacePage.panels.portfolio.analyze') }));
 
     positionsMock.mockReturnValue([]);

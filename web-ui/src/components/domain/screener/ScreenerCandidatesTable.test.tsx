@@ -87,6 +87,28 @@ function candidate(overrides: Partial<ScreenerCandidate> = {}): ScreenerCandidat
 }
 
 describe('ScreenerCandidatesTable', () => {
+  it.each(['{Enter}', ' '])('reviews the signed order from its child action with %s', async (key) => {
+    server.use(http.get('/api/screener/recurrence', () => HttpResponse.json([])));
+    const ready = candidate({
+      signal: 'breakout',
+      recommendation: { ...candidate().recommendation!, workflowStatus: 'ready', nextStep: { code: 'review_order' } },
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 375.06, stop: 367.7, target: 397.16, shares: 10, rr: 3, quoteCurrency: 'USD', approvalToken: 'signed' },
+    });
+    const onCreateOrder = vi.fn();
+    const onRowClick = vi.fn();
+    renderWithProviders(<ScreenerCandidatesTable
+      candidates={[ready]}
+      onCreateOrder={onCreateOrder}
+      onRecommendationDetails={vi.fn()}
+      onRowClick={onRowClick}
+    />);
+    screen.getByRole('button', { name: t('screener.table.reviewOrderAction') }).focus();
+    await userEvent.keyboard(key);
+    expect(onCreateOrder).toHaveBeenCalledWith(ready);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
   const workflows = {
     ready: { workflowStatus: 'ready', nextStep: { code: 'review_order' } },
     waiting: {

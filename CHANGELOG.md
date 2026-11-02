@@ -51,6 +51,13 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sync without replacing saved runs. Failed refreshes preserve the prior review.
 - Held-position target R:R now uses the original 1R after a stop move.
 - Screener waiting feedback no longer marks stages complete on a timer.
+- Journal trade details now expand with a native keyboard button that announces
+  its expanded state and keeps focus while toggling.
+- Book row actions now open outside the table's clipped overflow, with named
+  keyboard controls, popup dismissal and focus return. Screener and shared table
+  rows preserve Enter/Space activation of their nested action buttons.
+- Dialog keyboard focus now reaches native disclosures and skips controls inside
+  closed or hidden content, while preserving Escape and opening-control focus.
 
 - Cockpit order-review buttons open the signed-draft ticket, unpinned screener
   results remain available in Universes, and newer daily prices mark cached AI

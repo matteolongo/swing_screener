@@ -209,6 +209,25 @@ tab, filter, and query ownership do not move or reset.
 
 ## Testing
 
+### Keyboard interactions
+
+`ModalShell` includes the first native `summary` of each visible `details`
+in its focus cycle. Controls inside closed disclosures and hidden/inert content
+are excluded. Native Tab/Enter behavior is preserved in order-review and fullscreen dialogs.
+
+Selectable-row keyboard handlers only handle keys aimed at the row itself,
+preserving Enter/Space on nested native actions. Book row actions use `ActionMenu`
+outside the table's overflow; its labelled button group retains standard Tab
+behavior, Escape dismissal and focus return without assigning a partial menu role.
+
+Book journal history uses a native Expand/Collapse button with `aria-expanded`
+and `aria-controls` referencing the stable trade-history row. Collapsed history
+stays hidden, and table rows keep their native semantics. Index checkboxes in
+`QuickFilterBar` get their accessible names from the associated visible labels,
+resolved from the localized index resources rather than membership IDs.
+
+### Test conventions
+
 - Component tests use `renderWithProviders()` — wraps React Query client and Zustand stores.
 - API calls mocked via MSW (`src/test/mocks/handlers.ts`).
 - Run all tests: `npm test` (Vitest + React Testing Library).

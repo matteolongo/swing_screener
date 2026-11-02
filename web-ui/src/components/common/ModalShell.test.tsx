@@ -1,9 +1,70 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import ModalShell from '@/components/common/ModalShell'
+import { renderWithProviders } from '@/test/utils'
+import { t } from '@/i18n/t'
 
 describe('ModalShell', () => {
+  it('leaves Tab free to reach the final native summary and wraps back to it', () => {
+    renderWithProviders(
+      <ModalShell title={t('order.review.formTitle')} onClose={() => {}}>
+        <button type="button">{t('common.actions.cancel')}</button>
+        <details>
+          <summary>{t('order.review.brokerStepsTitle')}</summary>
+          <summary>{t('order.review.degiroSetupTitle')}</summary>
+        </details>
+      </ModalShell>,
+    )
+    const lastButton = screen.getByRole('button', { name: t('common.actions.cancel') })
+    const summary = screen.getByText(t('order.review.brokerStepsTitle'))
+    lastButton.focus()
+    expect(fireEvent.keyDown(lastButton, { key: 'Tab' })).toBe(true)
+
+    const close = screen.getByRole('button', { name: t('modal.closeAria') })
+    close.focus()
+    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true })
+    expect(summary).toHaveFocus()
+
+    fireEvent.keyDown(summary, { key: 'Tab' })
+    expect(close).toHaveFocus()
+  })
+
+  it('cycles through opened disclosure controls and restores the opener on Escape', async () => {
+    const user = userEvent.setup()
+    function DisclosureDialog() {
+      const [open, setOpen] = useState(false)
+      return <>
+        <button type="button" onClick={() => setOpen(true)}>{t('order.review.formTitle')}</button>
+        {open && <ModalShell title={t('order.review.formTitle')} onClose={() => setOpen(false)} fullScreen>
+          <button type="button">{t('common.actions.cancel')}</button>
+          <details open>
+            <summary>{t('order.review.brokerStepsTitle')}</summary>
+            <button type="button">{t('common.actions.fillOrder')}</button>
+            <details>
+              <summary>{t('order.review.degiroSetupTitle')}</summary>
+              <button type="button">{t('common.actions.save')}</button>
+            </details>
+            <div hidden><button type="button">{t('common.actions.close')}</button></div>
+          </details>
+        </ModalShell>}
+      </>
+    }
+    renderWithProviders(<DisclosureDialog />)
+    const opener = screen.getByRole('button', { name: t('order.review.formTitle') })
+    await user.click(opener)
+    screen.getByRole('button', { name: t('common.actions.fillOrder') }).focus()
+    expect(fireEvent.keyDown(document.activeElement!, { key: 'Tab' })).toBe(true)
+    const close = screen.getByRole('button', { name: t('modal.closeAria') })
+    close.focus()
+    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true })
+    expect(screen.getByText(t('order.review.degiroSetupTitle'))).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(opener).toHaveFocus()
+  })
+
   it('closes on backdrop click', () => {
     const onClose = vi.fn()
     render(
