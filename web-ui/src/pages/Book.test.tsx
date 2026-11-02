@@ -55,6 +55,8 @@ describe('Book page route state', () => {
     const toggle = await screen.findByRole('button', { name: t('analytics.tradeHistory.expand') });
     screen.getByRole('tabpanel', { name: t('bookPage.tabs.journalPerformance') }).focus();
     await userEvent.tab();
+    expect(screen.getByRole('region', { name: t('journalPage.title') })).toHaveFocus();
+    await userEvent.tab();
     expect(toggle).toHaveFocus();
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(toggle).toHaveAttribute('aria-controls', 'trade-history-keyboard');
