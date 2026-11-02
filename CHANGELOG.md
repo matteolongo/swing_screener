@@ -15,6 +15,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Market-regime performance uses canonical shares-weighted R across all exit
+  legs. Scratches and unknown-risk trades follow Journal semantics; unavailable
+  benchmark data no longer appears as a successful empty result.
 - Amsterdam universe membership tests now use the snapshot review date;
   runtime freshness rejection remains covered at its age-limit boundary.
 - Book Details and reopened position forms now use the current position version.

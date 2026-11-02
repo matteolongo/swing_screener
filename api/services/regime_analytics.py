@@ -1,13 +1,15 @@
 """Regime-conditional performance analytics service."""
+
 from __future__ import annotations
 
 import datetime as dt
 import logging
-from typing import Optional
 
 import pandas as pd
 
 from api.repositories.positions_repo import PositionsRepository
+from swing_screener.errors import ServiceUnavailableError
+from swing_screener.portfolio.analytics import calculate_portfolio_analytics
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +73,11 @@ def label_regime_at_date(
 
     if pd.isna(last_sma_s):
         # Not enough for slow SMA — fall back to fast SMA only
-        return REGIME_TRENDING_UP if last_close > float(last_sma_f) else REGIME_TRENDING_DOWN
+        return (
+            REGIME_TRENDING_UP
+            if last_close > float(last_sma_f)
+            else REGIME_TRENDING_DOWN
+        )
 
     fast = float(last_sma_f)
     slow = float(last_sma_s)
@@ -85,16 +91,6 @@ def label_regime_at_date(
         return REGIME_TRENDING_DOWN
     else:
         return REGIME_CHOPPY
-
-
-def _r_at_close(pos: dict) -> Optional[float]:
-    """R at close using per-share initial risk."""
-    initial_risk = pos.get("initial_risk")
-    exit_price = pos.get("exit_price")
-    entry_price = pos.get("entry_price")
-    if not initial_risk or initial_risk <= 0 or exit_price is None or entry_price is None:
-        return None
-    return (exit_price - entry_price) / initial_risk
 
 
 class RegimeAnalyticsService:
@@ -116,13 +112,11 @@ class RegimeAnalyticsService:
 
         all_positions, _ = self._repo.list_positions()
         closed = [
-            p for p in all_positions
+            p
+            for p in all_positions
             if p.get("status") == "closed"
             and p.get("entry_date")
-            and p.get("entry_price") is not None
-            and p.get("exit_price") is not None
-            and p.get("initial_risk") is not None
-            and (p.get("initial_risk") or 0) > 0
+            and calculate_portfolio_analytics([p]).closed_trade_count
         ]
 
         if not closed:
@@ -143,51 +137,52 @@ class RegimeAnalyticsService:
                 auto_adjust=True,
             )
             if raw is None or raw.empty:
-                logger.warning("No benchmark data returned for %s", benchmark)
-                return {"regimes": [], "benchmark": benchmark}
+                raise ServiceUnavailableError("Benchmark data is unavailable.")
 
-            close_col = raw.get("Close", raw.iloc[:, 0])
+            close_col = raw.get("Close")
+            if close_col is None:
+                raise ServiceUnavailableError(
+                    "Benchmark closing prices are unavailable."
+                )
             if isinstance(close_col, pd.DataFrame):
                 close_col = close_col.iloc[:, 0]
             close_series: pd.Series = close_col.dropna()
+            if close_series.empty:
+                raise ServiceUnavailableError("Benchmark data is unavailable.")
         except Exception as exc:
-            logger.warning("Failed to fetch benchmark %s: %s", benchmark, exc)
-            return {"regimes": [], "benchmark": benchmark}
+            logger.warning("Benchmark data unavailable for %s", benchmark)
+            raise ServiceUnavailableError("Benchmark data is unavailable.") from exc
 
-        regime_r: dict[str, list[float]] = {
+        regime_positions: dict[str, list[dict]] = {
             REGIME_TRENDING_UP: [],
             REGIME_TRENDING_DOWN: [],
             REGIME_CHOPPY: [],
         }
 
         for pos in closed:
-            r = _r_at_close(pos)
-            if r is None:
-                continue
-            regime = label_regime_at_date(close_series, pos["entry_date"], sma_fast, sma_slow)
-            regime_r[regime].append(r)
+            regime = label_regime_at_date(
+                close_series, pos["entry_date"], sma_fast, sma_slow
+            )
+            regime_positions[regime].append(pos)
 
         result_regimes = []
         for regime in _ORDERED_REGIMES:
-            r_values = regime_r[regime]
-            if not r_values:
+            analytics = calculate_portfolio_analytics(regime_positions[regime])
+            if not analytics.closed_trade_count:
                 continue
-            wins = [r for r in r_values if r > 0]
-            losses = [r for r in r_values if r < 0]
-            total = len(r_values)
-            win_rate = (len(wins) / total) * 100
-            avg_win_r = sum(wins) / len(wins) if wins else 0.0
-            avg_loss_r = abs(sum(losses) / len(losses)) if losses else 0.0
-            avg_r = sum(r_values) / total
-            # Breakeven trades (r == 0) are neither wins nor losses; weight
-            # expectancy by explicit win/loss rates so scratches don't inflate p_loss.
-            expectancy = avg_win_r * (len(wins) / total) - avg_loss_r * (len(losses) / total)
-            result_regimes.append({
-                "regime": regime,
-                "count": len(r_values),
-                "win_rate": round(win_rate, 2),
-                "avg_r": round(avg_r, 4),
-                "expectancy": round(expectancy, 4),
-            })
+            average_r = round(analytics.average_r, 4)
+            result_regimes.append(
+                {
+                    "regime": regime,
+                    "count": analytics.closed_trade_count,
+                    "win_rate": (
+                        round(analytics.win_rate, 2)
+                        if analytics.win_rate is not None
+                        else None
+                    ),
+                    "avg_r": average_r,
+                    "expectancy": average_r,
+                }
+            )
 
         return {"regimes": result_regimes, "benchmark": benchmark}

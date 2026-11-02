@@ -64,6 +64,10 @@
 
 ## State
 
+- Regime analytics consume backend-owned canonical trade outcomes. `winRate`
+  may be `null` for scratch-only groups and is rendered as unavailable, never
+  converted to zero. Benchmark-unavailable `503` responses use the query error
+  state, distinct from a successful empty portfolio result.
 - Server state: React Query (auto-caching and invalidation via query keys).
 - Book and Today position selection store IDs, not position snapshots. Still-open Details
   and reopened management forms resolve the current open position from queries;

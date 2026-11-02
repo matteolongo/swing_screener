@@ -110,6 +110,14 @@ Win-rate/profit-factor display statuses, unthresholded journal tag aggregates,
 and a presentation-neutral configured insight verdict are returned alongside
 the sampled edge breakdown.
 
+The API's regime breakdown groups positions by the benchmark trend at entry,
+then calls the same `calculate_portfolio_analytics()` for each group. Partial
+exits therefore contribute shares-weighted R (five shares at +2R and five at
++1.6R produce +1.8R). Scratches count in average R/expectancy but not win rate;
+a scratch-only group has an unavailable win rate, not a zero-percent loss rate.
+Unknown-risk trades are excluded from regime aggregates, just as from Journal
+aggregates. Missing benchmark data is a service error, not a zero-trade result.
+
 ```python
 from swing_screener.portfolio.metrics import (
     calculate_pnl,               # (entry, current, shares) → float

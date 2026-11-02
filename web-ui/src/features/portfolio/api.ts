@@ -884,7 +884,7 @@ function transformPortfolioSummary(data: PortfolioSummaryApiResponse): Portfolio
 export interface RegimeStats {
   regime: 'trending_up' | 'trending_down' | 'choppy';
   count: number;
-  winRate: number;
+  winRate: number | null;
   avgR: number;
   expectancy: number;
 }
@@ -897,7 +897,7 @@ export interface RegimeBreakdownResponse {
 function transformRegimeStats(raw: {
   regime: string;
   count: number;
-  win_rate: number;
+  win_rate: number | null;
   avg_r: number;
   expectancy: number;
 }): RegimeStats {
