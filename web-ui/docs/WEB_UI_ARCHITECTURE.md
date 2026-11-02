@@ -100,6 +100,13 @@ timestamp and `current` status in local mode. It must come from an actual observ
 quote or explicit user observation; adapters do not relabel stored prices as fresh.
 Close and partial-close success invalidate linked order queries as well as position
 and review queries, because canonical commands may replace or cancel exit orders.
+`PositionLifecycleResult` transforms `linked_order_ids` at the API boundary.
+Browser commands return their successful snapshot/affected IDs through the local
+adapter. The Book and Today page boundaries subscribe to lifecycle mutation
+state through `PositionProtectionNotice`, so the manual broker follow-up survives
+a closed position panel or a tab change. It renders only when the latest mutation
+succeeded and reported changed protection (including protective-order fills);
+pending and failed requests do not imply any local or broker action.
 
 ### Symbol workspace ownership
 

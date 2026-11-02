@@ -48,6 +48,12 @@ cannot be submitted or filled. **Cancel order** marks an unfilled draft, pending
 or submitted order as not filled and retains it under **Cancelled**. All broker
 actions remain manual.
 
+Book Orders also lists linked local protective stops and targets, separately
+from entry plans. Position exits reconcile these local records atomically;
+successful changes show the affected IDs and a reminder to adjust/cancel the
+matching broker protection manually. Cancelled and filled protection remains in
+the corresponding history filter.
+
 Held-position metrics use the actual position entry and initial per-share risk
 for 1R, R:R, and risk percentage. **Check live** fetches a new read-only stop
 preview on every click and exposes failures for retry. The scan waiting panel

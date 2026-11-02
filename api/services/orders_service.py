@@ -20,9 +20,11 @@ from swing_screener.errors import (
 )
 
 from api.models.portfolio import (
+    ClosePositionRequest,
     CreateOrderRequest,
     FillOrderRequest,
     FillOrderResponse,
+    PartialCloseRequest,
     Position,
     PortfolioApprovalGate,
     PortfolioOrderApproval,
@@ -48,6 +50,8 @@ from api.services.order_exposure import (
     ProposedExposure,
     build_exposure_snapshot,
 )
+from api.services.portfolio.write import PortfolioWriteService
+from api.services.portfolio.linked_exits import linked_stop_order_id
 from api.db.unit_of_work import PortfolioUnitOfWork
 
 logger = logging.getLogger(__name__)
@@ -55,11 +59,6 @@ logger = logging.getLogger(__name__)
 
 def _resolve_isin(ticker: str) -> Optional[str]:
     return None
-
-
-def linked_stop_order_id(position_id: str) -> str:
-    """Deterministic ledger id for a position's auto-linked stop order."""
-    return f"ORD-STOP-{position_id}"
 
 
 class OrdersService:
@@ -611,6 +610,7 @@ class OrdersService:
     def submit_order(self, order_id: str) -> dict:
         if self._uow is not None:
             self._uow.begin_write()
+            self._uow.lock_portfolio_state()
         order = self._orders_repo.submit_order(order_id)
         if order is None:
             raise NotFoundError(f"Order {order_id} not found")
@@ -621,6 +621,7 @@ class OrdersService:
     def cancel_order(self, order_id: str) -> dict:
         if self._uow is not None:
             self._uow.begin_write()
+            self._uow.lock_portfolio_state()
         order = self._orders_repo.cancel_order(order_id)
         if order is None:
             raise NotFoundError(f"Order {order_id} not found")
@@ -668,6 +669,7 @@ class OrdersService:
         except IntegrityError:
             existing = self._recover_idempotency_race(idempotency_key, request_hash)
             return FillOrderResponse.model_validate(existing.response)
+        self._uow.lock_portfolio_state()
         response = self._fill_order_impl(order_id, request)
         self._uow.idempotency.complete(
             reservation,
@@ -763,6 +765,9 @@ class OrdersService:
             raise NotFoundError(f"Order {order_id} not found")
         if order.get("status") not in ("pending", "submitted"):
             raise ConflictError(f"Order {order_id} is already {order.get('status')}")
+
+        if order.get("order_kind") != "entry":
+            return self._fill_exit_order(order, request)
 
         ticker = order["ticker"]
         stop_price = (
@@ -937,3 +942,71 @@ class OrdersService:
         )
 
         return FillOrderResponse(order_id=order_id, position=Position(**new_position))
+
+    def _fill_exit_order(
+        self,
+        order: dict,
+        request: FillOrderRequest,
+    ) -> FillOrderResponse:
+        position_id = str(order.get("position_id") or "")
+        if not position_id:
+            raise UnprocessableError("Exit order must reference an open position")
+        position = self._positions_repo.get_position(position_id)
+        if position is None or position.get("status") != "open":
+            raise ConflictError(f"Position {position_id} is not open for exit.")
+        if order.get("ticker") != position.get("ticker"):
+            raise UnprocessableError("Exit order ticker must match the position")
+
+        quantity = int(order.get("quantity") or 0)
+        shares = int(position.get("shares") or 0)
+        if quantity <= 0 or quantity > shares:
+            raise UnprocessableError("Exit order quantity exceeds position shares")
+
+        writer = PortfolioWriteService(
+            positions_repo=self._positions_repo,
+            orders_repo=self._orders_repo,
+            config_repo=self._config_repo,
+            begin_write=self._uow.begin_write if self._uow is not None else None,
+            business_date=lambda: request.filled_date,
+        )
+        if quantity == shares:
+            lifecycle = writer.close_position(
+                position_id,
+                ClosePositionRequest(
+                    exit_price=request.filled_price,
+                    fee_eur=request.fee_eur,
+                    exit_fx_rate=request.fill_fx_rate,
+                ),
+                filled_exit_order_id=str(order["order_id"]),
+            )
+        else:
+            lifecycle = writer.partial_close_position(
+                position_id,
+                PartialCloseRequest(
+                    shares_closed=quantity,
+                    price=request.filled_price,
+                    fee_eur=request.fee_eur,
+                    fx_rate=request.fill_fx_rate,
+                ),
+                filled_exit_order_id=str(order["order_id"]),
+            )
+
+        updated_order = self._orders_repo.update_order(
+            str(order["order_id"]),
+            {
+                "status": "filled",
+                "entry_price": request.filled_price,
+                "filled_date": request.filled_date,
+                "fee_eur": request.fee_eur,
+                "fill_fx_rate": request.fill_fx_rate,
+            },
+        )
+        if updated_order is None:
+            raise ConflictError(f"Linked exit order not found: {order['order_id']}")
+        updated_position = self._positions_repo.get_position(position_id)
+        assert updated_position is not None
+        return FillOrderResponse(
+            order_id=str(order["order_id"]),
+            position=Position(**updated_position),
+            linked_order_ids=lifecycle["linked_order_ids"],
+        )

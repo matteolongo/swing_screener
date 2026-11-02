@@ -373,16 +373,27 @@ Portfolio (`/api/portfolio`):
   `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
 - `GET /api/portfolio/positions/{position_id}`
 - `GET /api/portfolio/positions/{position_id}/metrics`
-- `PUT /api/portfolio/positions/{position_id}/stop` — also replaces the
-  position's pending linked stop order (`ORD-STOP-{position_id}`) at the new
-  stop so the ledger and the position stay on the same stop. Ledger
-  bookkeeping only; broker execution stays manual.
+- `PUT /api/portfolio/positions/{position_id}/stop` — updates the position
+  and its local linked stop record (`ORD-STOP-{position_id}`) in the same
+  transaction. Ledger bookkeeping only; broker execution stays manual.
 - `GET /api/portfolio/positions/{position_id}/stop-suggestion`
 - `GET /api/portfolio/positions/{position_id}/stop-preview` (read-only current-price preview; does not persist a stop change)
 - `PATCH /api/portfolio/positions/{position_id}/trail-method`
 - `POST /api/portfolio/stop-suggestion/compute`
-- `POST /api/portfolio/positions/{position_id}/close`
-- `POST /api/portfolio/positions/{position_id}/partial-close`
+- `POST /api/portfolio/positions/{position_id}/close` — cancels remaining
+  active local stop/take-profit records linked to the position in the same
+  transaction. It does not cancel a broker order.
+- `POST /api/portfolio/positions/{position_id}/partial-close` — resizes a
+  linked full-position local stop/take-profit record to remaining shares in the
+  same transaction. It does not adjust a broker order.
+
+Stop, close, partial-close and protective-order fill responses include
+`linked_order_ids` for other local protective records changed in the operation.
+The filled exit retains its own `filled` status. Partial-close also returns
+`shares_remaining`; stop updates return `new_stop`. Clients show broker
+follow-up only after success, using these IDs. Stateless command responses
+include the changed records in `orders` and their IDs in `affected_order_ids`.
+
 - `GET /api/portfolio/summary` — open-risk/cash summary plus canonical
   closed-trade analytics and configured rendering thresholds.
 - `GET /api/portfolio/earnings-proximity/{ticker}`
@@ -394,7 +405,9 @@ Portfolio (`/api/portfolio`):
 - `POST /api/portfolio/orders/{order_id}/fill` — filling an entry order also
   creates (or, for add-ons, refreshes) the position's pending linked stop order
   (`ORD-STOP-{position_id}`, `SELL_STOP`, ledger only; broker execution stays
-  manual) and records it in the position's `exit_order_ids`.
+  manual) and records it in the position's `exit_order_ids`. Filling a linked
+  local exit records that exit as filled and reconciles its remaining linked
+  protection in the same transaction; it never sends a broker instruction.
 - `DELETE /api/portfolio/orders/{order_id}` — cancel an unfilled draft, pending,
   or submitted order while preserving history.
 

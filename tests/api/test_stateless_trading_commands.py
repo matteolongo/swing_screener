@@ -593,20 +593,38 @@ def test_entry_fill_creates_linked_stop_order(command_api):
     assert linked_id in result["affected_order_ids"]
 
 
-def test_stop_update_replaces_linked_stop_price(command_api, market_price):
+@pytest.mark.parametrize("stop_order_id", ["ORD-STOP-POS-AAPL-001", "LEGACY-STOP-1"])
+def test_stop_update_replaces_linked_stop_price(
+    command_api, market_price, stop_order_id
+):
     from api.models.portfolio import TradingOrderSnapshot
 
     snapshot = _snapshot()
     snapshot.orders.append(
         TradingOrderSnapshot.model_validate(
             {
-                "order_id": "ORD-STOP-POS-AAPL-001",
+                "order_id": stop_order_id,
                 "ticker": "AAPL",
                 "status": "pending",
                 "order_type": "SELL_STOP",
                 "order_kind": "stop",
                 "quantity": 10,
                 "stop_price": 190.0,
+                "order_date": "2026-09-08",
+                "position_id": "POS-AAPL-001",
+            }
+        )
+    )
+    snapshot.orders.append(
+        TradingOrderSnapshot.model_validate(
+            {
+                "order_id": "ORD-TARGET-POS-AAPL-001",
+                "ticker": "AAPL",
+                "status": "pending",
+                "order_type": "SELL_LIMIT",
+                "order_kind": "take_profit",
+                "quantity": 20,
+                "limit_price": 220.0,
                 "order_date": "2026-09-08",
                 "position_id": "POS-AAPL-001",
             }
@@ -621,15 +639,24 @@ def test_stop_update_replaces_linked_stop_price(command_api, market_price):
     assert response.status_code == 200, response.text
     result = response.json()
     linked = next(
-        order
-        for order in result["orders"]
-        if order["order_id"] == "ORD-STOP-POS-AAPL-001"
+        order for order in result["orders"] if order["order_id"] == stop_order_id
     )
     assert linked["status"] == "pending"
     assert linked["stop_price"] == 200
     assert linked["quantity"] == 10
     assert result["positions"][0]["stop_price"] == 200
-    assert "ORD-STOP-POS-AAPL-001" in result["affected_order_ids"]
+    assert stop_order_id in result["affected_order_ids"]
+    assert (
+        len([order for order in result["orders"] if order["order_kind"] == "stop"]) == 1
+    )
+    assert stop_order_id in result["positions"][0]["exit_order_ids"]
+    target = next(
+        order
+        for order in result["orders"]
+        if order["order_id"] == "ORD-TARGET-POS-AAPL-001"
+    )
+    assert target["quantity"] == 10
+    assert "ORD-TARGET-POS-AAPL-001" in result["affected_order_ids"]
 
 
 def test_stop_update_creates_missing_linked_stop(command_api, market_price):
@@ -892,6 +919,55 @@ def test_partial_then_final_close_preserves_risk_and_realized_legs(
     assert closed["partial_closes"] == position["partial_closes"]
     assert result["affected_position_ids"] == ["POS-AAPL-001"]
     assert result["affected_order_ids"] == []
+
+
+def test_exit_commands_reconcile_linked_protective_orders(command_api):
+    payload = _snapshot().model_dump(mode="json")
+    payload["orders"].append(
+        {
+            "order_id": "ORD-STOP-POS-AAPL-001",
+            "ticker": "AAPL",
+            "status": "pending",
+            "order_type": "SELL_STOP",
+            "order_kind": "stop",
+            "quantity": 10,
+            "stop_price": 190,
+            "order_date": "2026-09-08",
+            "position_id": "POS-AAPL-001",
+        }
+    )
+    snapshot = TradingStateSnapshot.model_validate(payload)
+
+    partial = _post_command(
+        command_api,
+        snapshot,
+        "partial_close",
+        {"position_id": "POS-AAPL-001", "shares_closed": 5, "price": 220},
+    )
+
+    assert partial.status_code == 200, partial.text
+    linked_after_partial = next(
+        order
+        for order in partial.json()["orders"]
+        if order["order_id"] == "ORD-STOP-POS-AAPL-001"
+    )
+    assert linked_after_partial["quantity"] == 5
+    assert linked_after_partial["status"] == "pending"
+
+    final = _post_command(
+        command_api,
+        TradingStateSnapshot.model_validate(partial.json()),
+        "close_position",
+        {"position_id": "POS-AAPL-001", "exit_price": 230},
+    )
+
+    assert final.status_code == 200, final.text
+    linked_after_final = next(
+        order
+        for order in final.json()["orders"]
+        if order["order_id"] == "ORD-STOP-POS-AAPL-001"
+    )
+    assert linked_after_final["status"] == "cancelled"
 
 
 def test_partial_close_rejects_full_quantity(command_api, market_price):

@@ -7,6 +7,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { server } from '@/test/mocks/server';
 import { t } from '@/i18n/t';
 import ManagePositionPanel from './ManagePositionPanel';
+import PositionProtectionNotice from '@/components/domain/orders/PositionProtectionNotice';
 
 const position = {
   positionId: 'POS-1', ticker: 'LRCX', entryPrice: 383.04, stopPrice: 346.3,
@@ -16,6 +17,39 @@ const position = {
 } as any;
 
 describe('ManagePositionPanel', () => {
+  it('shows the manual protection adjustment only after a successful scale-out', async () => {
+    let fail = true;
+    server.use(http.post(`${API_BASE_URL}/api/portfolio/positions/:id/partial-close`, () => fail
+      ? HttpResponse.json({ detail: 'Scale-out unavailable' }, { status: 503 })
+      : HttpResponse.json({ status: 'ok', linked_order_ids: ['ORD-STOP-POS-1'], shares_remaining: 1 })));
+    const { user } = renderWithProviders(<><PositionProtectionNotice /><ManagePositionPanel position={position} /></>);
+    await user.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.scaleOut') }));
+    const price = screen.getByLabelText(t('positions.partialCloseModal.priceLabel'));
+    fireEvent.submit(price.closest('form')!);
+
+    expect(await screen.findByText('Scale-out unavailable')).toBeVisible();
+    expect(screen.queryByText(t('orders.protection.manualAdjustment'))).not.toBeInTheDocument();
+
+    fail = false;
+    fireEvent.submit(price.closest('form')!);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(t('orders.protection.manualAdjustment'));
+    expect(screen.getByText(t('orders.protection.remainingShares', { shares: 1 }))).toBeVisible();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows the manual protection cancellation after a successful final exit', async () => {
+    server.use(http.post(`${API_BASE_URL}/api/portfolio/positions/:id/close`, () =>
+      HttpResponse.json({ status: 'ok', linked_order_ids: ['ORD-STOP-POS-1'] })));
+    const { user } = renderWithProviders(<><PositionProtectionNotice /><ManagePositionPanel position={position} /></>);
+    await user.click(screen.getByRole('button', { name: t('workspacePage.panels.analysis.managePosition.exit') }));
+    const price = screen.getByLabelText(t('positions.closeModal.exitPrice'));
+    fireEvent.submit(price.closest('form')!);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(t('orders.protection.manualCancellation'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('fetches a new observation on each Check live action', async () => {
     let observations = 0;
     server.use(http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-preview`, () => {

@@ -15,6 +15,7 @@ import AnalyticsPage from './Analytics';
 import WeeklyReviewForm, { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
 import type { WeeklyReview } from '@/features/weeklyReview/api';
 import PendingOrdersTab from '@/components/domain/orders/PendingOrdersTab';
+import PositionProtectionNotice from '@/components/domain/orders/PositionProtectionNotice';
 
 function RBadge({ value }: { value: number | null }) {
   if (value == null) return <span className="text-muted">—</span>;
@@ -447,6 +448,7 @@ export default function Book() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-4">
+      <PositionProtectionNotice />
       {/* Page header */}
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-foreground">

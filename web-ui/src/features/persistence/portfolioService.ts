@@ -175,6 +175,10 @@ export function tradingSnapshotLocal(store = readTradingStore()): TradingSnapsho
 }
 
 type CommandContext = { effective_at: string; new_position_id?: string; market_price?: unknown };
+export type TradingCommandResponse = TradingSnapshotApi & {
+  affected_order_ids?: string[];
+  affected_position_ids?: string[];
+};
 const retryContexts = new Map<string, { fingerprint: string; context: CommandContext }>();
 let commandQueue: Promise<unknown> = Promise.resolve();
 
@@ -183,14 +187,14 @@ export function executeTradingCommandLocal(
   payload: unknown,
   idempotencyKey: string = crypto.randomUUID(),
   marketPrice?: UpdateStopRequest['marketPrice'],
-): Promise<void> {
+): Promise<TradingCommandResponse | undefined> {
   const fingerprint = JSON.stringify({ operation, payload, marketPrice });
   const execute = async () => {
     const before = readTradingStore();
     const previous = before.appliedCommands?.[idempotencyKey];
     if (previous !== undefined) {
       if (previous !== fingerprint) throw new Error('Idempotency key reused for a different request.');
-      return;
+      return undefined;
     }
     const retry = retryContexts.get(idempotencyKey);
     if (retry && retry.fingerprint !== fingerprint) throw new Error('Idempotency key reused for a different request.');
@@ -201,7 +205,7 @@ export function executeTradingCommandLocal(
     };
     retryContexts.set(idempotencyKey, { fingerprint, context });
     const snapshot = tradingSnapshotLocal(before);
-    const response = await fetchJson<TradingSnapshotApi>('/api/portfolio/state/commands', {
+    const response = await fetchJson<TradingCommandResponse>('/api/portfolio/state/commands', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ snapshot, expected_revision: snapshot.revision, command: { operation, payload }, context }),
       errorMessage: 'Failed to apply trading command',
@@ -222,10 +226,11 @@ export function executeTradingCommandLocal(
     };
     writeTradingStore(next);
     retryContexts.delete(idempotencyKey);
+    return response;
   };
   const run = async () => {
     if (!navigator.locks) throw new Error('Browser Web Locks support is required for local trading mutations.');
-    await navigator.locks.request('swing-screener.trading-command', execute);
+    return navigator.locks.request('swing-screener.trading-command', execute);
   };
   const result = commandQueue.then(run, run);
   commandQueue = result.catch(() => undefined);
