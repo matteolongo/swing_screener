@@ -88,6 +88,12 @@ while keyboard focus stays on the button.
 
 ## Development
 
+At widths below 1024px, **Show navigation** in the header opens the same
+navigation in a modal drawer with Escape, focus restoration and scroll locking.
+Header controls, capital/risk values and Book tabs wrap; wide tables scroll
+within their panels. Desktop keeps its sidebar and Today uses stacked panes
+below the existing `xl` breakpoint.
+
 Local persistence keeps the portfolio ledger in browser storage, but trading
 mutations and portfolio metrics require the API. Order creation, submission,
 cancellation, fills, stop updates, partial closes and final closes use canonical

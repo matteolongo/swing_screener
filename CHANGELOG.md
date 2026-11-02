@@ -15,6 +15,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Narrow layouts use an accessible navigation drawer, wrap capital/risk values
+  and Book tabs, and keep wide tables scrolling within their panels.
+
 - Today exposes partial scan coverage and provider/symbol warnings, separates
   candle dates from request completion, and labels cached results during failed
   refreshes. Loading, empty scans and empty filters have distinct recovery copy.
