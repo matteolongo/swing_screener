@@ -21,6 +21,14 @@ plus selected scan row together. It keeps the saved scan's universe, preset,
 filters and indicator overrides; Last Run stays available for exploration.
 Completion includes a refresh time because a daily candle's date/prices may
 remain unchanged. Errors keep the previous successful candidate snapshot.
+The nearby **Scan quality** summary retains coverage counts and provider/symbol
+warnings. Requested session, observed candle date(s), market freshness and last
+successful request completion are separate facts. Missing legacy metadata stays
+unknown rather than being inferred from the request time. Failed refreshes show
+**Retry scan** and explicitly label retained data. A completed no-candidate scan
+is distinct from a search/hidden-group mismatch, which exposes **Clear candidate
+filters**. `ResultQualitySummary` and `features/screener/resultQuality.ts` own this
+presentation; screening decisions remain backend-owned.
 
 `TodayActionList` shares its refresh, summary and **Ready / All from run**
 controls between expanded and symbol-rail views. Only the active list body

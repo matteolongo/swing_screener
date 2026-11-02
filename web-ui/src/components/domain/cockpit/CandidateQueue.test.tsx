@@ -141,6 +141,13 @@ function seedQueue() {
 }
 
 describe('CandidateQueue', () => {
+  it('distinguishes a completed empty scan from filters and provides a visible filter reset', async () => {
+    const { user } = renderWithProviders(<CandidateQueue onSelectTicker={() => {}} />);
+    await user.type(screen.getByRole('searchbox'), 'NO_MATCH');
+    expect(screen.getByText(t('screener.quality.noFilterMatches'))).toBeVisible();
+    await user.click(screen.getByRole('button', { name: t('screener.quality.clearFilters') }));
+    expect(screen.getByRole('button', { name: `${t('cockpit.queue.details')} ADYEN` })).toBeVisible();
+  });
   beforeEach(() => {
     seedQueue();
   });

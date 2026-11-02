@@ -15,6 +15,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Today exposes partial scan coverage and provider/symbol warnings, separates
+  candle dates from request completion, and labels cached results during failed
+  refreshes. Loading, empty scans and empty filters have distinct recovery copy.
 - Market-regime performance uses canonical shares-weighted R across all exit
   legs. Scratches and unknown-risk trades follow Journal semantics; unavailable
   benchmark data no longer appears as a successful empty result.

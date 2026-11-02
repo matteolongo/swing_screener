@@ -7,6 +7,11 @@ snapshots. Failed refreshes preserve drafts but block writes until recovery.
 
 React 18 + TypeScript frontend for Swing Screener.
 
+Today shows requested / with-market-data / returned counts and provider warnings
+from the saved scan. Candle dates and freshness are separate from request
+completion; missing metadata remains unknown, including completion times on
+legacy saved scans. Refresh failures preserve and
+label the previous result, with Retry; empty candidate filters expose reset.
 Regime performance consumes the same shares-weighted trade R as Journal and
 Performance. Scratch-only win rates display as unavailable; unknown-risk trades
 are excluded. A benchmark outage displays the regime error state, not no trades.

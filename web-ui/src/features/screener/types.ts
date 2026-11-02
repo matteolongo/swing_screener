@@ -545,7 +545,7 @@ export interface ScreenerResponse {
   benchmarkTicker?: string;
   benchmarkChangePct?: number;
   benchmarkLastBar?: string;
-  dataFreshness: 'final_close' | 'intraday' | 'degraded' | 'stale' | 'missing';
+  dataFreshness: 'final_close' | 'intraday' | 'degraded' | 'stale' | 'missing' | 'unknown';
   warnings?: string[];
   sameSymbolSuppressedCount?: number;
   sameSymbolAddOnCount?: number;
@@ -872,7 +872,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     benchmarkTicker: apiResponse.benchmark_ticker,
     benchmarkChangePct: apiResponse.benchmark_change_pct,
     benchmarkLastBar: apiResponse.benchmark_last_bar,
-    dataFreshness: apiResponse.data_freshness ?? 'final_close',
+    dataFreshness: apiResponse.data_freshness ?? 'unknown',
     warnings: apiResponse.warnings ?? [],
     sameSymbolSuppressedCount: apiResponse.same_symbol_suppressed_count ?? 0,
     sameSymbolAddOnCount: apiResponse.same_symbol_add_on_count ?? 0,
