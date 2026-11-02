@@ -37,6 +37,13 @@ switch to the current plan. **Approve draft** promotes the same record.
 Cancelled/Filled history filters. Cancel marks an order as not filled without
 discarding its history; submission, broker cancellation and fills stay manual.
 
+Book Orders groups entry plans separately from local protective stop/target
+records. Each record shows its kind and linked position; cancelled/filled
+protection remains discoverable through the matching history filter. Successful
+stop updates, scale-outs and final exits show the changed local record IDs and
+the required manual broker adjustment/cancellation. Failed mutations keep the
+form available and do not show that success reminder.
+
 The Universes **Screener run** section also renders the latest scan's candidate
 table, with its saved display filters. Rows open the selected candidate snapshot
 in the symbol modal. Unpinned scans can therefore be inspected without replacing
@@ -47,6 +54,16 @@ fundamentals, the selected daily bar, and the workspace's fetched price data.
 Fresh analysis clears the badge only when it postdates those dependencies.
 
 ## Pages
+
+Book Details keeps the selected position ID and resolves current query data.
+After a scale-out, reopened management shows the remaining shares without
+closing Details first. Closed/removed positions no longer expose management.
+Stop/scale-out/exit forms preserve typed values on a version conflict, refresh
+the position, and require **I reviewed the current position** before resubmission.
+That review accepts the displayed current shares/stop, not an automatic trade.
+Today management also resolves position IDs from current queries. If the current
+position cannot be refreshed, forms keep the draft, block submission and offer
+**Refresh current position** before the deliberate review step.
 
 | Page | Route | Purpose |
 |------|-------|---------|

@@ -56,14 +56,16 @@ export default function PortfolioTable() {
   const isReady = positionsQuery.isFetched && ordersQuery.isFetched;
   const isError = positionsQuery.isError || ordersQuery.isError;
 
-  const [selectedPosition, setSelectedPosition] = useState<PositionWithMetrics | null>(null);
+  const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
+  const selectedPosition = positions.find(position => position.positionId === selectedPositionId && position.status === 'open') ?? null;
   const [selectedPendingOrder, setSelectedPendingOrder] = useState<Order | null>(null);
   const [showUpdateStopModal, setShowUpdateStopModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showPartialCloseModal, setShowPartialCloseModal] = useState(false);
   const [showFillOrderModal, setShowFillOrderModal] = useState(false);
 
-  const [analyzeTarget, setAnalyzeTarget] = useState<{ ticker: string; position: PositionWithMetrics | null } | null>(null);
+  const [analyzeTarget, setAnalyzeTarget] = useState<{ ticker: string; positionId: string | null } | null>(null);
+  const analyzedPosition = positions.find(position => position.positionId === analyzeTarget?.positionId && position.status === 'open') ?? null;
 
   const [previewPositionId, setPreviewPositionId] = useState<string | null>(null);
   const [previewTicker, setPreviewTicker] = useState<string>('');
@@ -74,15 +76,15 @@ export default function PortfolioTable() {
 
   const updateStopMutation = useUpdateStopMutation(() => {
     setShowUpdateStopModal(false);
-    setSelectedPosition(null);
+    setSelectedPositionId(null);
   });
   const closePositionMutation = useClosePositionMutation(() => {
     setShowCloseModal(false);
-    setSelectedPosition(null);
+    setSelectedPositionId(null);
   });
   const partialClosePositionMutation = usePartialClosePositionMutation(() => {
     setShowPartialCloseModal(false);
-    setSelectedPosition(null);
+    setSelectedPositionId(null);
   });
   const fillOrderMutation = useFillOrderMutation(() => {
     setShowFillOrderModal(false);
@@ -179,7 +181,7 @@ export default function PortfolioTable() {
 
       if (!matchedPosition) { clearPortfolioIntent(); return; }
 
-      setSelectedPosition(matchedPosition);
+      setSelectedPositionId(matchedPosition.positionId ?? null);
       setSelectedPendingOrder(null);
       setShowFillOrderModal(false);
       if (action === 'update-stop') {
@@ -203,7 +205,7 @@ export default function PortfolioTable() {
       if (!matchedOrder) { clearPortfolioIntent(); return; }
 
       setSelectedPendingOrder(matchedOrder);
-      setSelectedPosition(null);
+      setSelectedPositionId(null);
       setShowUpdateStopModal(false);
       setShowCloseModal(false);
       setShowFillOrderModal(true);
@@ -224,20 +226,20 @@ export default function PortfolioTable() {
           setTimeout(() => previewInputRef.current?.focus(), 50);
         },
         onUpdateStop: (position) => {
-          setSelectedPosition(position);
+          setSelectedPositionId(position.positionId ?? null);
           setShowUpdateStopModal(true);
         },
-        onAnalyze: (row) => setAnalyzeTarget({ ticker: row.ticker, position: row.position }),
+        onAnalyze: (row) => setAnalyzeTarget({ ticker: row.ticker, positionId: row.position?.positionId ?? null }),
         onAddOnEntry: (ticker) => {
           setWorkspaceSelection({ ticker, source: 'portfolio', rowId: `portfolio:${ticker.trim().toUpperCase()}` });
           setAnalysisTab('order');
         },
         onPartialClose: (position) => {
-          setSelectedPosition(position);
+          setSelectedPositionId(position.positionId ?? null);
           setShowPartialCloseModal(true);
         },
         onClosePosition: (position) => {
-          setSelectedPosition(position);
+          setSelectedPositionId(position.positionId ?? null);
           setShowCloseModal(true);
         },
         onFillOrder: (order) => {
@@ -308,7 +310,7 @@ export default function PortfolioTable() {
       {analyzeTarget && (
         <PortfolioSymbolModal
           ticker={analyzeTarget.ticker}
-          position={analyzeTarget.position}
+          position={analyzedPosition}
           onBack={() => setAnalyzeTarget(null)}
         />
       )}
@@ -316,7 +318,7 @@ export default function PortfolioTable() {
       {showUpdateStopModal && selectedPosition ? (
         <UpdateStopModalForm
           position={selectedPosition}
-          onClose={() => { setShowUpdateStopModal(false); setSelectedPosition(null); }}
+          onClose={() => { setShowUpdateStopModal(false); setSelectedPositionId(null); }}
           onSubmit={(request) =>
             updateStopMutation.mutate({ positionId: selectedPosition.positionId!, request })
           }
@@ -328,7 +330,7 @@ export default function PortfolioTable() {
       {showCloseModal && selectedPosition ? (
         <ClosePositionModalForm
           position={selectedPosition}
-          onClose={() => { setShowCloseModal(false); setSelectedPosition(null); }}
+          onClose={() => { setShowCloseModal(false); setSelectedPositionId(null); }}
           onSubmit={(request) =>
             closePositionMutation.mutate({ positionId: selectedPosition.positionId!, request })
           }
@@ -340,7 +342,7 @@ export default function PortfolioTable() {
       {showPartialCloseModal && selectedPosition ? (
         <PartialCloseModalForm
           position={selectedPosition}
-          onClose={() => { setShowPartialCloseModal(false); setSelectedPosition(null); }}
+          onClose={() => { setShowPartialCloseModal(false); setSelectedPositionId(null); }}
           onSubmit={(request) =>
             partialClosePositionMutation.mutate({ positionId: selectedPosition.positionId!, request })
           }

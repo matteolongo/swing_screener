@@ -480,6 +480,14 @@ export const messagesEn = {
     },
   },
   positions: {
+    concurrency: {
+      changed: 'Position {{positionId}} changed: {{shares}} shares, current stop {{stop}} (version {{version}}).',
+      preserved: 'Your input is preserved. Review the current position before submitting again.',
+      review: 'I reviewed the current position',
+      unavailable: 'The current position could not be refreshed. Your draft is preserved; refresh before submitting.',
+      refresh: 'Refresh current position',
+      versionUnavailable: 'The saved position version is unavailable. Refresh and review the position before changing its stop.',
+    },
     rFxAdjusted: 'FX-adj. R',
     rFxAdjustedTooltip: 'R in account currency (EUR), adjusted for FX movement since entry',
     rInitialRisk: 'initial 1R',
@@ -2093,6 +2101,26 @@ export const messagesEn = {
     yahooTitle: 'View {{ticker}} on Yahoo Finance',
     orderKindUnknown: 'N/A',
     notesFallback: '-',
+  },
+  orders: {
+    protection: {
+      entryGroup: 'Entry plans',
+      activeGroup: 'Local protective orders',
+      historyGroup: 'Protective order history',
+      kind: {
+        entry: 'Entry',
+        stop: 'Stop',
+        takeProfit: 'Target',
+        unknown: 'Order',
+      },
+      linkedPosition: 'Linked position',
+      manualBoundary: 'These are local ledger records. No broker order is sent, changed, or cancelled here.',
+      manualAdjustment: 'Local protective records were adjusted. Update the matching broker protective order manually.',
+      manualCancellation: 'Local protective records were cancelled. Cancel the matching broker protective order manually.',
+      affectedRecords: 'Local records: {{orders}}',
+      remainingShares: 'Remaining position: {{shares}} shares',
+      updatedStop: 'Recorded stop price: {{price}}',
+    },
   },
   positionsPage: {
     title: 'Positions',

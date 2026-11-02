@@ -1,5 +1,10 @@
 # Swing Screener Web UI
 
+Position management keeps current query-owned position versions. A stale edit
+refreshes position data while preserving entered form values and requires an
+explicit review before resubmission. Book and Today selection store IDs, not
+snapshots. Failed refreshes preserve drafts but block writes until recovery.
+
 React 18 + TypeScript frontend for Swing Screener.
 
 Regime performance consumes the same shares-weighted trade R as Journal and
@@ -51,6 +56,12 @@ order type/currency explicitly replaces the plan while retaining notes. Drafts
 cannot be submitted or filled. **Cancel order** marks an unfilled draft, pending
 or submitted order as not filled and retains it under **Cancelled**. All broker
 actions remain manual.
+
+Book Orders also lists linked local protective stops and targets, separately
+from entry plans. Position exits reconcile these local records atomically;
+successful changes show the affected IDs and a reminder to adjust/cancel the
+matching broker protection manually. Cancelled and filled protection remains in
+the corresponding history filter.
 
 Held-position metrics use the actual position entry and initial per-share risk
 for 1R, R:R, and risk percentage. **Check live** fetches a new read-only stop
