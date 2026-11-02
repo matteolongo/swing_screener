@@ -60,6 +60,13 @@ class InMemoryPositionsRepository:
         self, modify_fn: Callable[[dict[str, Any]], dict[str, Any]]
     ) -> dict[str, Any]:
         updated = modify_fn(self.read())
+        previous = {
+            position.get("position_id"): position for position in self._state._positions
+        }
+        for position in updated.get("positions", []):
+            original = previous.get(position.get("position_id"))
+            if original is not None and position != original:
+                position["version"] = original.get("version", 1) + 1
         self._state._positions = deepcopy(updated.get("positions", []))
         return self.read()
 

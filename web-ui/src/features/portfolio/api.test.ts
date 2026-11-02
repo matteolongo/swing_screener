@@ -1,8 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { closePosition, fetchPositionStopSuggestion, createOrder, fetchOrders, fetchPositions, fetchPositionMetrics, fetchPortfolioSummary, fillOrder, partialClosePosition } from '@/features/portfolio/api';
+import { closePosition, fetchPositionStopSuggestion, createOrder, fetchOrders, fetchPositions, fetchPositionMetrics, fetchPortfolioSummary, fillOrder, partialClosePosition, updatePositionStop, updatePositionTrailMethod } from '@/features/portfolio/api';
 import { createDefaultTradingStore, resetTradingStore, mutateTradingStore, readTradingStore, writeTradingStore } from '@/features/persistence';
+import { t } from '@/i18n/t';
 
 describe('portfolio api', () => {
+  it('rejects a trail response without a committed version instead of allowing an unguarded followup', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+    await expect(updatePositionTrailMethod('POS-1', { trailMethod: 'manual', expectedVersion: 1 }))
+      .rejects.toThrow(t('positions.concurrency.versionUnavailable'));
+  });
+  it.each([
+    () => closePosition('POS-1', { exitPrice: 110, expectedVersion: 42 }),
+    () => partialClosePosition('POS-1', { sharesClosed: 2, price: 110, expectedVersion: 42 }),
+    () => updatePositionStop('POS-1', { newStop: 97, expectedVersion: 42 }),
+    () => updatePositionTrailMethod('POS-1', { trailMethod: 'manual', expectedVersion: 42 }),
+  ])('carries the reviewed position version in management requests %#', async (execute) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"position_version":43}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await execute();
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string).expected_version).toBe(42);
+  });
+
+  it('preserves a position version through the API boundary', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      positions: [{ ticker: 'AAPL', position_id: 'POS-1', status: 'open', entry_date: '2026-10-01',
+        entry_price: 100, stop_price: 95, shares: 5, version: 7 }],
+    }), { status: 200 })));
+    expect((await fetchPositions('open'))[0].version).toBe(7);
+  });
   it('uses the stateless projection for local metrics without recalculating or saving it', async () => {
     vi.stubEnv('VITE_PERSISTENCE_MODE', 'local');
     vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'true');

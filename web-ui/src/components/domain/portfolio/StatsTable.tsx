@@ -1,5 +1,6 @@
 import { cn } from '@/utils/cn';
 import RChip from '@/components/common/RChip';
+import { t } from '@/i18n/t';
 
 export interface StatsTableRow {
   key: string;
@@ -8,7 +9,7 @@ export interface StatsTableRow {
   labelClassName?: string;
   count: number;
   /** Win rate as a percentage (0-100). */
-  winRate: number;
+  winRate: number | null;
   avgR: number;
   expectancy: number;
 }
@@ -51,7 +52,7 @@ export default function StatsTable({ headers, rows }: StatsTableProps) {
                 {row.label}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">{row.count}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{Math.round(row.winRate)}%</td>
+              <td className="px-4 py-3 text-right tabular-nums">{row.winRate == null ? t('common.placeholders.emDash') : `${Math.round(row.winRate)}%`}</td>
               <td className="px-4 py-3 text-right">
                 <RChip value={row.avgR} />
               </td>

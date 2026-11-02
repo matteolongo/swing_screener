@@ -18,6 +18,24 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Narrow layouts use an accessible navigation drawer, wrap capital/risk values
   and Book tabs, and keep wide tables scrolling within their panels.
 
+- Today exposes partial scan coverage and provider/symbol warnings, separates
+  candle dates from request completion, and labels cached results during failed
+  refreshes. Loading, empty scans and empty filters have distinct recovery copy.
+- Market-regime performance uses canonical shares-weighted R across all exit
+  legs. Scratches and unknown-risk trades follow Journal semantics; unavailable
+  benchmark data no longer appears as a successful empty result.
+- Amsterdam universe membership tests now use the snapshot review date;
+  runtime freshness rejection remains covered at its age-limit boundary.
+- Book Details and reopened position forms now use the current position version.
+  Stale edits fail without ledger changes, preserve typed input and require an
+  explicit review of updated shares/stop before resubmission.
+- Position exits now reconcile their linked local stop and target records in
+  the same transaction: scale-outs resize full-position protection, final exits
+  cancel remaining local protection, and a filled exit remains historical.
+  Broker changes remain manual.
+- Book Orders now exposes linked local stop/target records and their history.
+  Successful position changes identify affected protection and the manual broker
+  adjustment or cancellation still required.
 - Today keeps refresh and Ready/All filters visible with a symbol open, removes
   the inactive panel overlap and keeps the no-setup toggle beside the search.
 - Today now reruns its saved scan settings on entry/reload and explicit refresh,

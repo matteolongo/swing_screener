@@ -8,6 +8,8 @@ import Today from './Today';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { runScreener } from '@/features/screener/api';
+import type { ScreenerResponse } from '@/features/screener/types';
+import { formatDateTime } from '@/utils/formatters';
 
 vi.mock('@/features/screener/api', async (original) => ({ ...await original<typeof import('@/features/screener/api')>(), runScreener: vi.fn() }));
 
@@ -566,6 +568,47 @@ function eligibleCockpitCandidate() {
 }
 
 describe('Today page — cockpit composition', () => {
+  it('never borrows another scan completion time for a legacy Today snapshot', async () => {
+    const result = { asofDate: '2026-10-14', totalScreened: 4, totalWithMarketData: 3,
+      dataFreshness: 'final_close', candidates: [eligibleCockpitCandidate()],
+    } as ScreenerResponse;
+    const completedAt = '2026-10-15T20:00:00Z';
+    useScreenerStore.setState({
+      todayRun: { result, request: {}, displayFilters: { recommendedOnly: false, actionFilter: 'all' } },
+      lastRunContext: { request: {}, displayFilters: { recommendedOnly: false, actionFilter: 'all' }, completedAt },
+    });
+    vi.mocked(runScreener).mockRejectedValue(new Error('Simulated provider failure'));
+    renderWithProviders(<Today />);
+    await screen.findByText(t('screener.quality.cachedAfterFailure'));
+    expect(within(screen.getByRole('region', { name: t('screener.quality.title') })).queryByText(
+      t('screener.quality.requestCompleted', { time: formatDateTime(completedAt) }),
+    )).not.toBeInTheDocument();
+  });
+  it('shows partial coverage, provider warnings and the actual old candle separately from refresh success', async () => {
+    vi.mocked(runScreener).mockResolvedValue({ asofDate: '2026-10-14', dataFreshness: 'final_close',
+      totalScreened: 4, totalWithMarketData: 3, totalReturnedCandidates: 1,
+      warnings: ['TEST_PROVIDER_UNAVAILABLE MSFT'],
+      candidates: [{ ...eligibleCockpitCandidate(), lastBar: '2026-10-02', dataAsOf: '2026-10-02', dataStatus: 'stale' }],
+    } as ScreenerResponse);
+    renderWithProviders(<Today />);
+    expect(await screen.findByText(t('screener.quality.partial'))).toBeInTheDocument();
+    expect(screen.getByText(t('screener.quality.counts', { requested: 4, evaluated: 3, matched: 1 }))).toBeInTheDocument();
+    expect(screen.getByText('TEST_PROVIDER_UNAVAILABLE MSFT')).toBeInTheDocument();
+    expect(screen.getAllByText(t('screener.quality.market.stale')).length).toBeGreaterThan(0);
+    expect(screen.getByText(t('screener.quality.candleDate', { date: '2026-10-02' }))).toBeInTheDocument();
+    expect(screen.queryByText(t('cockpit.strip.finalClose'))).not.toBeInTheDocument();
+  });
+  it('keeps the previous result explicitly cached on failure and exposes Retry', async () => {
+    const result = { asofDate: '2026-10-14', totalScreened: 4, totalWithMarketData: 3,
+      dataFreshness: 'final_close', warnings: ['TEST_PROVIDER_UNAVAILABLE MSFT'], candidates: [eligibleCockpitCandidate()],
+    } as ScreenerResponse;
+    useScreenerStore.getState().recordScreenerRun(result, { request: {}, displayFilters: { recommendedOnly: false, actionFilter: 'all' }, completedAt: '2026-10-14T20:00:00Z' }, true);
+    vi.mocked(runScreener).mockRejectedValue(new Error('Simulated provider failure'));
+    renderWithProviders(<Today />);
+    expect(await screen.findByText(t('screener.quality.cachedAfterFailure'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('screener.quality.retry') })).toBeEnabled();
+    expect(useScreenerStore.getState().todayRun?.result).toEqual(result);
+  });
   it('shows strip, queue and opens detail on row select without collapsing the list', async () => {
     vi.mocked(runScreener).mockResolvedValue({ asofDate: '2026-10-07', dataFreshness: 'final_close', candidates: [eligibleCockpitCandidate()] } as never);
     useScreenerStore.setState({

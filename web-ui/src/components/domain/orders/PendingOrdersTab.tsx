@@ -19,6 +19,13 @@ function orderPrice(value: number | null | undefined, currency?: string | null) 
   return isSupportedCurrency(currency) ? formatCurrency(value, currency.trim().toUpperCase()) : value.toFixed(2);
 }
 
+function orderKindLabel(order: Order) {
+  if (order.orderKind === 'entry') return t('orders.protection.kind.entry');
+  if (order.orderKind === 'stop') return t('orders.protection.kind.stop');
+  if (order.orderKind === 'take_profit') return t('orders.protection.kind.takeProfit');
+  return t('orders.protection.kind.unknown');
+}
+
 export default function PendingOrdersTab() {
   const location = useLocation();
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>(location.state?.orderFilter === 'draft' ? 'draft' : 'pending');
@@ -36,11 +43,108 @@ export default function PendingOrdersTab() {
 
   const submitMutation = useSubmitOrderMutation();
 
-  const orders = (ordersQuery.data ?? []).filter((o) => o.orderKind === 'entry');
+  const orders = ordersQuery.data ?? [];
+  const entryOrders = orders.filter((order) => order.orderKind === 'entry');
+  const protectionOrders = orders.filter(
+    (order) => order.orderKind === 'stop' || order.orderKind === 'take_profit',
+  );
   const degiroAvailable = degiroStatusQuery.data?.available ?? false;
 
   const filterTabs: ActiveFilter[] = ['draft', 'pending', 'submitted', 'cancelled', 'filled'];
   const isMutating = submitMutation.isPending || fillMutation.isPending || cancelMutation.isPending;
+  const isHistory = activeFilter === 'cancelled' || activeFilter === 'filled';
+  const lifecycleError = ordersQuery.error ?? submitMutation.error;
+
+  const renderOrderTable = (
+    title: string,
+    records: Order[],
+    options: { protection?: boolean } = {},
+  ) => (
+    <section className="space-y-2" aria-label={title}>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {options.protection ? (
+        <p className="text-xs text-muted">{t('orders.protection.manualBoundary')}</p>
+      ) : null}
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-xs text-muted border-b border-border">
+              <th className="py-2 pr-4 text-left font-medium">{t('pendingOrdersTab.columnTicker')}</th>
+              <th className="py-2 pr-4 text-left font-medium">{t('ordersPage.headers.kind')}</th>
+              <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnShares')}</th>
+              <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnLimit')}</th>
+              <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnStop')}</th>
+              <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnTarget')}</th>
+              <th className="py-2 pr-4 text-left font-medium">{t('orders.protection.linkedPosition')}</th>
+              <th className="py-2 pr-4 text-left font-medium">{t('pendingOrdersTab.columnDate')}</th>
+              <th className="py-2 text-left font-medium">{t('ordersPage.headers.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.map((order) => (
+              <tr
+                key={order.orderId}
+                className="border-b border-border hover:bg-foreground/5"
+              >
+                <td className="py-2 pr-4 font-semibold text-foreground">
+                  {order.ticker}
+                  {order.status === 'submitted' && (
+                    <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                      {t('ordersPage.filter.submitted')}
+                    </span>
+                  )}
+                </td>
+                <td className="py-2 pr-4 text-muted">{orderKindLabel(order)}</td>
+                <td className="py-2 pr-4 text-right text-muted">{order.quantity}</td>
+                <td className="py-2 pr-4 text-right text-muted">
+                  {orderPrice(order.limitPrice, order.quoteCurrency)}
+                </td>
+                <td className="py-2 pr-4 text-right text-muted">
+                  {orderPrice(order.stopPrice, order.quoteCurrency)}
+                </td>
+                <td className="py-2 pr-4 text-right text-muted">{orderPrice(order.targetPrice, order.quoteCurrency)}</td>
+                <td className="py-2 pr-4 text-muted">{order.positionId ?? t('common.placeholders.dash')}</td>
+                <td className="py-2 pr-4 text-muted">{order.orderDate}</td>
+                <td className="py-2">
+                  <div className="flex gap-2">
+                    {order.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => submitMutation.mutate(order.orderId)}
+                        disabled={isMutating}
+                        className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {t('pendingOrdersTab.markSubmitted')}
+                      </button>
+                    )}
+                    {(order.status === 'pending' || order.status === 'submitted') ? <><button
+                      type="button"
+                      onClick={() => setFillDegiroOrder(order)}
+                      disabled={!degiroAvailable || isMutating}
+                      title={!degiroAvailable ? t('pendingOrdersTab.degiroNotConnected') : undefined}
+                      className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {t('pendingOrdersTab.fillViaDegiro')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFillManualOrder(order)}
+                      disabled={isMutating}
+                      className="px-2 py-1 rounded text-xs font-medium bg-foreground/5 text-muted hover:bg-foreground/10"
+                    >
+                      {t('pendingOrdersTab.fillManually')}
+                    </button></> : null}
+                    {order.status === 'draft' ? <button type="button" onClick={() => setReviewDraft(order)} disabled={isMutating} className="rounded px-2 py-1 text-xs font-medium text-primary">{t('manualOrderDraft.review')}</button> : null}
+                    {['draft', 'pending', 'submitted'].includes(order.status) ? <button type="button" onClick={() => { cancelMutation.reset(); setCancelTarget(order); }} disabled={isMutating} className="rounded px-2 py-1 text-xs font-medium text-danger disabled:opacity-40">{t('pendingOrdersTab.cancelOrder')}</button> : null}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 
   if (ordersQuery.isLoading) {
     return <p className="text-sm text-muted py-4">{t('common.table.loading')}</p>;
@@ -66,84 +170,20 @@ export default function PendingOrdersTab() {
         ))}
       </div>
       <p className="mb-3 text-xs text-muted">{t('pendingOrdersTab.lifecycleHelp')}</p>
-      {ordersQuery.error || submitMutation.error ? <p role="alert" className="mb-3 text-sm text-danger">{(ordersQuery.error ?? submitMutation.error)?.message}</p> : null}
+      {lifecycleError ? <p role="alert" className="mb-3 text-sm text-danger">{lifecycleError.message}</p> : null}
 
       {orders.length === 0 ? (
         <p className="text-sm text-muted py-4">{t('pendingOrdersTab.empty')}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-xs text-muted border-b border-border">
-                <th className="py-2 pr-4 text-left font-medium">{t('pendingOrdersTab.columnTicker')}</th>
-                <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnShares')}</th>
-                <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnLimit')}</th>
-                <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnStop')}</th>
-                <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnTarget')}</th>
-                <th className="py-2 pr-4 text-left font-medium">{t('pendingOrdersTab.columnDate')}</th>
-                <th className="py-2 text-left font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr
-                  key={order.orderId}
-                  className="border-b border-border hover:bg-foreground/5"
-                >
-                  <td className="py-2 pr-4 font-semibold text-foreground">
-                    {order.ticker}
-                    {order.status === 'submitted' && (
-                      <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                        {t('ordersPage.filter.submitted')}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2 pr-4 text-right text-muted">{order.quantity}</td>
-                  <td className="py-2 pr-4 text-right text-muted">
-                    {orderPrice(order.limitPrice, order.quoteCurrency)}
-                  </td>
-                  <td className="py-2 pr-4 text-right text-muted">
-                    {orderPrice(order.stopPrice, order.quoteCurrency)}
-                  </td>
-                  <td className="py-2 pr-4 text-right text-muted">{orderPrice(order.targetPrice, order.quoteCurrency)}</td>
-                  <td className="py-2 pr-4 text-muted">{order.orderDate}</td>
-                  <td className="py-2">
-                    <div className="flex gap-2">
-                      {order.status === 'pending' && (
-                        <button
-                          type="button"
-                          onClick={() => submitMutation.mutate(order.orderId)}
-                          disabled={isMutating}
-                          className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {t('pendingOrdersTab.markSubmitted')}
-                        </button>
-                      )}
-                      {(order.status === 'pending' || order.status === 'submitted') ? <><button
-                        type="button"
-                        onClick={() => setFillDegiroOrder(order)}
-                        disabled={!degiroAvailable || isMutating}
-                        title={!degiroAvailable ? t('pendingOrdersTab.degiroNotConnected') : undefined}
-                        className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {t('pendingOrdersTab.fillViaDegiro')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFillManualOrder(order)}
-                        disabled={isMutating}
-                        className="px-2 py-1 rounded text-xs font-medium bg-foreground/5 text-muted hover:bg-foreground/10"
-                      >
-                        {t('pendingOrdersTab.fillManually')}
-                      </button></> : null}
-                      {order.status === 'draft' ? <button type="button" onClick={() => setReviewDraft(order)} disabled={isMutating} className="rounded px-2 py-1 text-xs font-medium text-primary">{t('manualOrderDraft.review')}</button> : null}
-                      {['draft', 'pending', 'submitted'].includes(order.status) ? <button type="button" onClick={() => { cancelMutation.reset(); setCancelTarget(order); }} disabled={isMutating} className="rounded px-2 py-1 text-xs font-medium text-danger disabled:opacity-40">{t('pendingOrdersTab.cancelOrder')}</button> : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-6">
+          {entryOrders.length > 0 ? renderOrderTable(t('orders.protection.entryGroup'), entryOrders) : null}
+          {protectionOrders.length > 0
+            ? renderOrderTable(
+                t(isHistory ? 'orders.protection.historyGroup' : 'orders.protection.activeGroup'),
+                protectionOrders,
+                { protection: true },
+              )
+            : null}
         </div>
       )}
 

@@ -44,13 +44,12 @@ from api.repositories.config_repo import ConfigRepository
 from api.repositories.in_memory_trading_state import InMemoryTradingState
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
-from api.services.orders_service import OrdersService
 from api.services.portfolio.degiro_sync import DeGiroSyncResult, sync_degiro_holdings
 from api.services.portfolio_service import PortfolioService
+from api.services.orders_service import OrdersService
 from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.snapshot_freshness import snapshot_freshness
 from api.services.stateless_trading_service import StatelessTradingService
-from api.utils.files import get_today_str
 from swing_screener.intelligence.cache import read_from_cache
 
 logger = logging.getLogger(__name__)
@@ -199,7 +198,6 @@ async def update_position_stop(
     http_request: Request,
     idempotency_key: str = Depends(require_idempotency_key),
     service: PortfolioService = Depends(get_portfolio_service),
-    orders_service: OrdersService = Depends(get_orders_service),
 ):
     """Update stop price for a position."""
     result = service.update_position_stop(
@@ -208,29 +206,6 @@ async def update_position_stop(
         idempotency_key=idempotency_key,
         subject=_subject(http_request),
     )
-    # Keep the position's linked stop order on the same stop. Ledger
-    # bookkeeping only — broker execution stays manual. Best-effort after the
-    # committed stop update so a ledger hiccup never fails the stop itself.
-    try:
-        position = service.get_position(position_id)
-        orders_service.sync_linked_stop_order(
-            position_id=position_id,
-            ticker=position.ticker,
-            shares=position.shares,
-            stop_price=position.stop_price,
-            business_date=get_today_str(),
-            parent_order_id=position.source_order_id,
-            notes=(
-                "Auto-created from position stop update (was "
-                f"{result.get('old_stop')})"
-            ),
-            quote_currency=position.quote_currency,
-            account_currency=position.account_currency,
-        )
-    except Exception as exc:
-        logger.warning(
-            "Linked stop sync skipped for %s: %s", position_id, exc
-        )
     return result
 
 

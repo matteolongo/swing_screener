@@ -4,6 +4,8 @@ import SymbolDetailPanel from '@/components/domain/cockpit/SymbolDetailPanel';
 import TodayStatsStrip from '@/components/domain/cockpit/TodayStatsStrip';
 import TodayActionList from '@/components/domain/today/TodayActionList';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useScreenerStore } from '@/stores/screenerStore';
+import ResultQualitySummary from '@/components/domain/screener/ResultQualitySummary';
 import { useOrders } from '@/features/portfolio/hooks';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/i18n/t';
@@ -11,6 +13,7 @@ import { useWeeklyReviews } from '@/features/weeklyReview/hooks';
 import { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
 import { useTodayRefresh } from '@/features/screener/useTodayRefresh';
 import Button from '@/components/common/Button';
+import PositionProtectionNotice from '@/components/domain/orders/PositionProtectionNotice';
 import { formatDateTime } from '@/utils/formatters';
 
 // ─── Weekly review nudge ─────────────────────────────────────────────────────
@@ -81,6 +84,9 @@ function PendingOrdersBadge() {
 
 export default function Today() {
   const todayRefresh = useTodayRefresh();
+  const todayRun = useScreenerStore(state => state.todayRun);
+  const lastResult = useScreenerStore(state => state.lastResult);
+  const lastRunContext = useScreenerStore(state => state.lastRunContext);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const workspaceMode = useWorkspaceStore((state) => state.workspaceMode);
   const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
@@ -130,6 +136,7 @@ export default function Today() {
 
   return (
     <div className="min-w-0 mx-auto max-w-[1600px]">
+      <PositionProtectionNotice />
       <TodayStatsStrip />
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p role="status" className="text-xs text-muted">{todayRefresh.isRefreshing
@@ -138,10 +145,11 @@ export default function Today() {
             ? t('todayPage.refresh.updated', { time: formatDateTime(todayRefresh.updatedAt) })
             : t('todayPage.refresh.description')}</p>
         <Button variant="secondary" onClick={todayRefresh.refresh} disabled={todayRefresh.isRefreshing}>
-          {todayRefresh.isRefreshing ? t('todayPage.refresh.running') : t('todayPage.refresh.action')}
+          {todayRefresh.isRefreshing ? t('todayPage.refresh.running') : todayRefresh.error ? t('screener.quality.retry') : t('todayPage.refresh.action')}
         </Button>
       </div>
       {todayRefresh.error ? <p role="alert" className="mt-2 text-sm text-danger">{t('todayPage.refresh.error', { message: todayRefresh.error.message })}</p> : null}
+      <ResultQualitySummary result={todayRun?.result ?? lastResult} completedAt={todayRun ? todayRun.completedAt : lastRunContext?.completedAt} isRefreshing={todayRefresh.isRefreshing} error={todayRefresh.error} />
       <div className="mt-4 grid gap-4 xl:grid-cols-12">
         {/* Left column: attenzioni + candidate queue, always mounted */}
         <div

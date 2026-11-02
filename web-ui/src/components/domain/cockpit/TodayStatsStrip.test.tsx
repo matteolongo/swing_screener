@@ -60,16 +60,24 @@ describe('TodayStatsStrip', () => {
         ],
         totalScreened: 2,
         dataFreshness: 'final_close',
+        benchmarkLastBar: '2026-07-10',
       } as unknown as ScreenerResponse,
     });
   });
 
-  it('shows positions, pending orders, ready count and final_close state', () => {
+  it('shows counts without certifying undated candidates as final', () => {
     renderWithProviders(<TodayStatsStrip />);
     expect(screen.getByText(t('cockpit.strip.positions'))).toBeInTheDocument();
     expect(screen.getByText(t('cockpit.strip.pendingOrders'))).toBeInTheDocument();
     expect(screen.getByText(t('cockpit.strip.ready'))).toBeInTheDocument();
-    expect(screen.getByText(t('cockpit.strip.finalClose'))).toBeInTheDocument();
+    expect(screen.getByText(t('screener.quality.market.unknown'))).toBeInTheDocument();
+  });
+
+  it('shows final close only when the observed candles match the requested session', () => {
+    const previous = useScreenerStore.getState().lastResult!;
+    useScreenerStore.setState({ lastResult: { ...previous, candidates: previous.candidates.map(candidate => ({ ...candidate, lastBar: previous.asofDate, dataStatus: 'current' })) } });
+    renderWithProviders(<TodayStatsStrip />);
+    expect(screen.getByText(t('screener.quality.market.final_close'))).toBeVisible();
   });
 
   it('counts only open positions, excluding closed ones', async () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { renderWithProviders as render } from '@/test/utils';
 import userEvent from '@testing-library/user-event';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import { t } from '@/i18n/t';
@@ -29,14 +30,15 @@ describe('ClosePositionModalForm', () => {
       />,
     );
 
-    await user.type(screen.getByLabelText('Fee (EUR, optional)'), '4.90');
-    await user.type(screen.getByLabelText('Reason'), 'Manual close after alert');
+    await user.type(screen.getByLabelText(t('positions.closeModal.feeEurOptional')), '4.90');
+    await user.type(screen.getByLabelText(t('positions.closeModal.reason')), 'Manual close after alert');
     const form = screen.getByRole('button', { name: t('closePositionModal.confirmClose') }).closest('form');
     expect(form).not.toBeNull();
     fireEvent.submit(form!);
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith({
+        expectedVersion: 1,
         exitPrice: 26.92,
         feeEur: 4.9,
         reason: 'Manual close after alert',

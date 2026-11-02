@@ -19,6 +19,19 @@
 
 ## Contracts
 
+- `features/screener/resultQuality.ts` maps transported scan coverage and market
+  status for presentation only. `ResultQualitySummary` shows requested symbols,
+  symbols with market data, and returned candidates without treating strategy
+  exclusions or top-N trimming as provider failures. Warnings and content dates
+  remain in the persisted run snapshot through navigation/reload.
+  Missing counts/freshness/candle dates stay unavailable/unknown. Explicit stale
+  status or observed candles older than the requested session cannot become
+  final/current merely because a request completed. This is not an eligibility
+  engine or a wall-clock/holiday freshness policy.
+  Today and candidate review show actual candle dates separately from request
+  completion. Fetch state is independent: initial loading, retained data while
+  refreshing, cached-after-failure with Retry, and successful empty results have
+  distinct copy. The strip uses the same market-quality mapping as the summary.
 - Screener candidates preserve `technicalRank`, `confidenceRank`, and final
   `priorityRank`. List ordering reads `priorityRank`; legacy `rank` remains the
   technical-rank alias for older API payloads.
@@ -65,7 +78,23 @@
 
 ## State
 
+- Regime analytics consume backend-owned canonical trade outcomes. `winRate`
+  may be `null` for scratch-only groups and is rendered as unavailable, never
+  converted to zero. Benchmark-unavailable `503` responses use the query error
+  state, distinct from a successful empty portfolio result.
 - Server state: React Query (auto-caching and invalidation via query keys).
+- Book and Today position selection store IDs, not position snapshots. Still-open Details
+  and reopened management forms resolve the current open position from queries;
+  removed/closed positions lose their mutation controls. The API boundary keeps
+  `version` (legacy missing versions normalize to 1), and management submits the
+  explicitly reviewed `expectedVersion` as `expected_version`.
+  A position-ID or version change preserves dirty form input but blocks submission
+  until the user reviews current shares/stop. A `409` refetches position queries,
+  keeps errors and input visible, and never silently reapplies the old request.
+  Failed refreshes retain cached identity and form values, disable writes, and
+  expose a retry. Forms observe the existing open-position query without fetching
+  on mount. Today's quick stop acceptance also sends the current position version.
+  Trail-policy saves return the committed version for the subsequent stop write.
 - Client/UI state: Zustand stores in `src/stores/`.
 - No local persistence by default (`VITE_PERSISTENCE_MODE=api`).
 
@@ -101,6 +130,13 @@ timestamp and `current` status in local mode. It must come from an actual observ
 quote or explicit user observation; adapters do not relabel stored prices as fresh.
 Close and partial-close success invalidate linked order queries as well as position
 and review queries, because canonical commands may replace or cancel exit orders.
+`PositionLifecycleResult` transforms `linked_order_ids` at the API boundary.
+Browser commands return their successful snapshot/affected IDs through the local
+adapter. The Book and Today page boundaries subscribe to lifecycle mutation
+state through `PositionProtectionNotice`, so the manual broker follow-up survives
+a closed position panel or a tab change. It renders only when the latest mutation
+succeeded and reported changed protection (including protective-order fills);
+pending and failed requests do not imply any local or broker action.
 
 ### Symbol workspace ownership
 
@@ -128,6 +164,8 @@ a policy change during a run schedules its replacement when the old run settles.
 Strategy transitions clear persisted actionable runs before dependent queries
 refresh. Watchlist/position detail refresh remains single-symbol even when
 outside the pinned scan. Refresh time is distinct from the daily candle date.
+Legacy saved runs without recorded completion times retain that absence when
+promoted to Today; promotion is not a newly completed request.
 The store also owns the active analysis tab, expanded/split mode, full-screen
 mode, and activity-drawer
 visibility plus a bounded history of 20 request activities per ticker/version
