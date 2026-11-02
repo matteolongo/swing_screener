@@ -81,6 +81,7 @@ export function useCreateOrderMutation(onSuccess?: () => void) {
 export function useFillOrderMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: queryKeys.positionLifecycle('fill'),
     mutationFn: (variables: { orderId: string; request: FillOrderRequest }) =>
       fillOrder(
         variables.orderId,
@@ -190,6 +191,7 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     onError: (error) => refreshPositionOnConflict(queryClient, error),
+    mutationKey: queryKeys.positionLifecycle('adjustment'),
     mutationFn: (variables: { positionId: string; request: UpdateStopRequest }) =>
       updatePositionStop(
         variables.positionId,
@@ -253,6 +255,7 @@ export function useClosePositionMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     onError: (error) => refreshPositionOnConflict(queryClient, error),
+    mutationKey: queryKeys.positionLifecycle('cancellation'),
     mutationFn: (variables: { positionId: string; request: ClosePositionRequest }) =>
       closePosition(
         variables.positionId,
@@ -272,6 +275,7 @@ export function usePartialClosePositionMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     onError: (error) => refreshPositionOnConflict(queryClient, error),
+    mutationKey: queryKeys.positionLifecycle('adjustment'),
     mutationFn: (variables: { positionId: string; request: PartialCloseRequest }) =>
       partialClosePosition(
         variables.positionId,
