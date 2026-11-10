@@ -7,11 +7,10 @@ snapshots. Failed refreshes preserve drafts but block writes until recovery.
 
 React 18 + TypeScript frontend for Swing Screener.
 
-Today shows requested / with-market-data / returned counts and provider warnings
-from the saved scan. Candle dates and freshness are separate from request
-completion; missing metadata remains unknown, including completion times on
-legacy saved scans. Refresh failures preserve and
-label the previous result, with Retry; empty candidate filters expose reset.
+Daily review shows market status and coverage beside portfolio risk. **Scan
+details and data quality** expands the requested, evaluated, and returned
+counts, candle dates, completion time, and provider warnings for the saved scan.
+Refresh failures keep the previous result labelled as cached and offer Retry.
 Regime performance consumes the same shares-weighted trade R as Journal and
 Performance. Scratch-only win rates display as unavailable; unknown-risk trades
 are excluded. A benchmark outage displays the regime error state, not no trades.
@@ -20,17 +19,17 @@ are excluded. A benchmark outage displays the regime error state, not no trades.
 
 | Page | Route | Purpose |
 | --- | --- | --- |
-| Today | `/today` | Automatically refreshed candidate queue, portfolio review, symbol detail, signed order review and manual drafts. Uses the saved scan settings; unpinned exploration stays in Universes. |
+| Daily review | `/today` | Scan quality, portfolio attention, and a ranked candidate queue with expandable symbol research and signed order review |
 | Calendar | `/calendar` | Earnings calendar and upcoming catalyst events |
-| Book | `/book` | Open positions: stop updates, partial close, trail config; order management; trade journal; performance analytics; weekly review |
-| Universes | `/universes` | Full screener run and latest results, explicit pinning for Today, universe management, manual refresh, benchmark, and symbol discovery |
+| Trading book | `/book` | Open positions, order management, trade journal, performance analytics, and weekly review |
+| Scan & universes | `/universes` | Run and pin scans, manage universes, inspect benchmarks, and discover symbols |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Data Sources | `/datasources` | Data source diagnostics: per-source health, live probe, fallback event feed |
 | Onboarding | `/onboarding` | Setup guide |
 
 ## Candidate review
 
-Today force-refreshes its scan on entry/reload and through **Refresh Today**.
+Daily review force-refreshes its scan on entry/reload and through **Refresh review**.
 It reuses the pinned settings (or the last scan/defaults when none are pinned),
 requests the latest daily session, and reloads portfolio, order and watchlist
 queries. A successful run replaces Today's snapshot and its selected candidate
@@ -46,9 +45,10 @@ and signed order draft stay together without replacing saved runs. Wrong-ticker
 or empty single-symbol responses retain the prior review with an error. Intraday
 results remain explicitly labelled.
 
-Today's refresh and **Ready / All from run** controls remain visible when a
-symbol is open. The action list uses its content height so the candidate search,
-**Show no-setup** toggle and queue stay below it without overlapping.
+**Candidate review** owns the **Ready / All from run** filters, company or ticker
+search, and **Show no-setup** toggle. Open a candidate to see its next step and
+expand the trade plan, chart and metrics, or source evidence as needed. The
+portfolio and candidate queues stay mounted during symbol review.
 
 **Needs review** means follow the displayed next step and reason: refresh stale
 data, fix an invalid stop, or define a valid target. Prices alone do not approve
@@ -90,9 +90,9 @@ while keyboard focus stays on the button.
 
 At widths below 1024px, **Show navigation** in the header opens the same
 navigation in a modal drawer with Escape, focus restoration and scroll locking.
-Header controls, capital/risk values and Book tabs wrap; wide tables scroll
-within their panels. Desktop keeps its sidebar and Today uses stacked panes
-below the existing `xl` breakpoint.
+Header controls and Trading book tabs wrap. The **Risk policy** disclosure
+shows account and strategy risk figures on demand. Wide tables scroll within
+their panels, and the review queues and inspector stack below `xl` (1280px).
 
 Local persistence keeps the portfolio ledger in browser storage, but trading
 mutations and portfolio metrics require the API. Order creation, submission,

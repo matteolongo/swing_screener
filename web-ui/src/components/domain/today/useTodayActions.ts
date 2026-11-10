@@ -11,7 +11,7 @@ interface FlatItem {
   id: string;
 }
 
-export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: string) => void, positions: Position[] = [], positionsUnavailable = false) {
+export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: string, rowId: string, focusInspector?: boolean) => void, positions: Position[] = [], positionsUnavailable = false) {
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
   const [acceptedStops, setAcceptedStops] = useState<Set<string>>(new Set());
   const [updateStopTargetId, setUpdateStopTargetId] = useState<string | null>(null);
@@ -88,7 +88,7 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
     (ticker: string, id: string) => {
       focusedIdRef.current = id;
       setFocusedId(id);
-      onTickerSelect(ticker);
+      onTickerSelect(ticker, id);
     },
     [onTickerSelect],
   );
@@ -116,7 +116,7 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
         if (item) {
           focusedIdRef.current = item.id;
           setFocusedId(item.id);
-          onTickerSelect(item.ticker);
+          onTickerSelect(item.ticker, item.id, false);
         }
       } else if (e.key === 'k' || e.key === 'ArrowUp') {
         e.preventDefault();
@@ -125,7 +125,7 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
         if (item) {
           focusedIdRef.current = item.id;
           setFocusedId(item.id);
-          onTickerSelect(item.ticker);
+          onTickerSelect(item.ticker, item.id, false);
         }
       }
     },

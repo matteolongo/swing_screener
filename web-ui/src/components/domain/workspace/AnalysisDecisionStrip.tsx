@@ -1,4 +1,6 @@
 import Badge from '@/components/common/Badge';
+import Button from '@/components/common/Button';
+import CollapsibleSection from '@/components/common/CollapsibleSection';
 import type { ReactNode } from 'react';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type {
@@ -34,6 +36,7 @@ interface AnalysisDecisionStripProps {
   decisionContext?: ReactNode;
   candidateRefresh?: CandidateRefreshControl;
   onSaveDraft?: () => void;
+  disclosePlan?: boolean;
 }
 
 function convictionLabel(conviction: DecisionConviction): string {
@@ -115,6 +118,7 @@ export default function AnalysisDecisionStrip({
   decisionContext,
   candidateRefresh,
   onSaveDraft,
+  disclosePlan = false,
 }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const candleDate = marketDate(candidate?.dataAsOf) ?? marketDate(candidate?.lastBar);
@@ -181,12 +185,28 @@ export default function AnalysisDecisionStrip({
   const visibleSourceItems = sourceItems.filter(
     (item): item is readonly [typeof item[0], DataSourceHealth] => Boolean(item[1])
   );
+  const plan = (
+    <div className="overflow-x-auto">
+      <table className="w-full border-separate border-spacing-1" aria-label={t('workspacePage.overview.tradePlan')}>
+        <tbody>
+          {metricRow(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), stop != null ? formatCurrency(stop, currency) : '—')}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), target != null ? formatCurrency(target, currency) : '—')}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), rr != null ? `${formatNumber(rr, 1)}x` : '—')}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent'), riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
+          {metricRow(t('workspacePage.overview.invalidation'), summary?.explanation?.whatInvalidatesIt?.[0] ?? summary?.mainRisk ?? '—')}
+        </tbody>
+      </table>
+    </div>
+  );
   return (
-    <div className="rounded-xl border border-border bg-surface/95 p-3 shadow-sm">
+    <div className="rounded-xl border border-border bg-background/50 p-3">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-3xl space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
+            {!disclosePlan ? <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-semibold text-foreground">{ticker}</h2>
               {showAnalysisAction ? <Badge variant="primary">{actionLabel(summary.action)}</Badge> : null}
               {candidate?.recommendation ? (
@@ -200,8 +220,8 @@ export default function AnalysisDecisionStrip({
                   {label}: {source.provider || 'unknown'} ({source.status})
                 </Badge>
               ))}
-            </div>
-            <p className="text-xs text-muted">
+            </div> : null}
+            <p className="text-sm text-muted">
               {explanation ?? t('workspacePage.overview.reviewFallback')}
             </p>
             {operationalNextStep ? (
@@ -211,18 +231,19 @@ export default function AnalysisDecisionStrip({
             ) : null}
           </div>
           {(onWatch || onUnwatch) && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={isWatched ? onUnwatch : onWatch}
               disabled={isPendingWatch}
-              className="rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface disabled:opacity-50"
             >
               {isPendingWatch
                 ? t('workspacePage.overview.watchPending')
                 : isWatched
                   ? t('workspacePage.overview.unwatch')
                   : t('workspacePage.overview.watch')}
-            </button>
+            </Button>
           )}
         </div>
 
@@ -230,23 +251,24 @@ export default function AnalysisDecisionStrip({
         {!heldMode && candidate && !canPrepareOrder ? (
           <div className="space-y-1 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
             <p className="font-medium text-warning">{t('manualOrderDraft.orderBlocked')}</p>
-            <p className="text-muted">{t('manualOrderDraft.reviewHelp')}</p>
-            {candidate.recommendation?.reasonsShort?.map((reason) => <p key={reason} className="text-muted">{reason}</p>)}
+            {!disclosePlan && <p className="text-muted">{t('manualOrderDraft.reviewHelp')}</p>}
+            {candidate.recommendation?.reasonsShort?.slice(disclosePlan ? 1 : 0).map((reason) => <p key={reason} className="text-muted">{reason}</p>)}
           </div>
         ) : null}
 
         {candidateRefresh ? (
           <div className="space-y-2">
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={candidateRefresh.onRefresh}
               disabled={candidateRefresh.isPending}
-              className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground/5 disabled:opacity-50"
             >
               {candidateRefresh.isPending
                 ? t('workspacePage.panels.analysis.computeAnalysis.runningAction')
                 : t('recommendation.workflow.nextStep.refresh_data')}
-            </button>
+            </Button>
             {candidateRefresh.error ? <p role="alert" className="text-sm text-danger">{candidateRefresh.error.message}</p> : null}
             <div role="status" className="space-y-1 text-xs text-muted">
               <p>{t('screener.quality.candleDate', { date: candleDate ?? t('screener.quality.unknownDate') })}</p>
@@ -255,33 +277,13 @@ export default function AnalysisDecisionStrip({
           </div>
         ) : null}
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-1" aria-label={t('workspacePage.overview.tradePlan')}>
-            <tbody>
-              {metricRow(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}
-              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), stop != null ? formatCurrency(stop, currency) : '—')}
-              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), target != null ? formatCurrency(target, currency) : '—')}
-              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
-              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), rr != null ? `${formatNumber(rr, 1)}x` : '—')}
-              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent'), riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
-              {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
-              {metricRow(t('workspacePage.overview.invalidation'), summary?.explanation?.whatInvalidatesIt?.[0] ?? summary?.mainRisk ?? '—')}
-            </tbody>
-          </table>
+        {disclosePlan ? (
+          <CollapsibleSection title={t('workspacePage.overview.tradePlan')}>{plan}</CollapsibleSection>
+        ) : plan}
+        <div className="flex flex-wrap gap-2">
+          {canPrepareOrder && onPrepareOrder ? <Button type="button" size="sm" onClick={onPrepareOrder}>{t('analysis.prepareOrder')}</Button> : null}
+          {!heldMode && onSaveDraft ? <Button type="button" size="sm" variant="secondary" onClick={onSaveDraft}>{t('manualOrderDraft.save')}</Button> : null}
         </div>
-
-        {canPrepareOrder && onPrepareOrder && (
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={onPrepareOrder}
-              className="rounded-md bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success"
-            >
-              {t('analysis.prepareOrder')}
-            </button>
-          </div>
-        )}
-        {!heldMode && onSaveDraft ? <button type="button" onClick={onSaveDraft} className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground/5">{t('manualOrderDraft.save')}</button> : null}
       </div>
     </div>
   );

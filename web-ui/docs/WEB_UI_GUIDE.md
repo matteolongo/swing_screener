@@ -1,13 +1,44 @@
 # Web UI Guide
 
 > Status: current.  
-> Last reviewed: 2026-10-02.
+> Last reviewed: 2026-11-10.
 
 ## Purpose
 
 Daily trading workflow through the Swing Screener web interface.
 
-### Cockpit review and exploration
+### Daily review and exploration
+
+**Daily review** (`/today`) opens with the scan's market-data status and the
+portfolio's current risk. The scan summary labels final close, intraday, stale,
+or unknown data separately from coverage. Open **Scan details and data quality**
+to see requested, evaluated, and matched counts, candle dates, request completion
+time, and provider warnings. A failed refresh keeps the previous result visible
+and labels it as cached.
+
+Use the risk, positions, and pending-orders cards to open the corresponding
+Trading book views. **Portfolio attention** places stop and exit reviews before
+pending entries, watchlist triggers, and routine position monitoring. Each
+source can load or fail independently. **Candidate review** is the ranked queue
+for setups and has its own search, Ready / All from run filters, and no-setup
+toggle. The queue's filters apply to the pinned run's display.
+
+The selected symbol has three levels:
+
+1. **Decision & next step** shows the workflow verdict, short reasoning, manual
+   actions, and an expandable trade plan.
+2. **Price, technicals & fundamentals** opens the chart, scan reasoning,
+   technical metrics, and the fundamentals strip.
+3. **Sources, freshness & research** exposes source status, observed and retrieval
+   dates, available AI analysis, and the Intelligence, Backtest, and Volume
+   Zones tools. Opening the inspector alone does not run those tools.
+
+The queues stay available alongside the inspector on wide displays and above
+it on narrow displays. Closing the inspector returns focus to the selected
+row. The shared navigation keeps Daily review, Trading book, Scan & universes,
+and Calendar visible, with Strategy, Data Sources, and Onboarding grouped under
+Setup & diagnostics. The global header keeps strategy selection accessible
+and offers a separate Risk policy disclosure for the capital/risk breakdown.
 
 The queue's **Review order** button and the detail panel's **Prepare order**
 button open the existing signed-draft order ticket in a modal. Closing the ticket
@@ -30,9 +61,8 @@ is distinct from a search/hidden-group mismatch, which exposes **Clear candidate
 filters**. `ResultQualitySummary` and `features/screener/resultQuality.ts` own this
 presentation; screening decisions remain backend-owned.
 
-`TodayActionList` shares its refresh, summary and **Ready / All from run**
-controls between expanded and symbol-rail views. Only the active list body
-occupies space; the candidate search and no-setup toggle remain below the list.
+`TodayActionList` owns the position and order actions and watchlist attention
+items. `CandidateQueue` owns scan filters and selection from the run.
 
 Blocked candidates show the next step and reasons alongside **Save manual
 draft** (`ManualOrderDraftForm`). The form saves quantity, quote currency,
@@ -75,7 +105,7 @@ position cannot be refreshed, forms keep the draft, block submission and offer
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| Today | `/today` | Cockpit composition: `TodayStatsStrip` header (open-position, pending-entry-order, and ready-candidate counts plus the pinned-run final-close/intraday data-state pill), `TodayActionList` attenzioni (open positions, pending entry orders, watchlist-near-trigger items), `CandidateQueue` (`onSelectTicker`, pinned screener run preferred with `lastResult` fallback, loading state via `ScreenerRunningPanel`, search box, no-setup show/hide toggle), and `SymbolDetailPanel` (`ticker`/`onClose`) with a header block (ticker, company, workflow badge, close), a decision block (`AnalysisDecisionStrip`, `DecisionWhyPanel`, `FundamentalsStrip`, plus `ManagePositionPanel` for held symbols), a chart block (`CachedSymbolCandleChart`), and an AI narrative block with collapsed Approfondisci tabs (intelligence, backtest, volume zones). Selection preserves its source, immutable run ID, candidate snapshot, and stable row ID, so the detail panel shows the selected pinned/last-run candidate even when runs diverge. Single-symbol research is workspace-local and does not rewrite either run. Closing the detail panel returns focus to the originating queue control. The queue groups candidates in this order: **Pronti per revisione ordine**, **In attesa del trigger**, **Richiede verifica**, and **Interessanti, nessun setup**. Each row shows one concrete next action from the canonical workflow state; the no-setup group is hidden behind a show/hide toggle, and only candidates with a signed canonical order draft expose the manual **Rivedi ordine** action. Candidate lists keep the server-provided `priorityRank`/`rank`. Today refreshes its current scan settings on entry/reload and on demand. An Advanced exploration scan replaces those settings only when **Use this run for Today's review** is selected in the Screener run section of the Universes page; exploration scans leave the pinned source unchanged. Position/order health follows the canonical open-position and order query lifecycle rather than symbol presence alone; the UI consumes server-derived ledger freshness from `app_config.portfolio_snapshot_stale_after_days` and never treats React Query refetch eligibility as domain staleness. Evidence health comes from structured refresh manifests or saved enrichment diagnostics, never from candidate-summary presence. For a held symbol the Order tab is hidden unless a fresh, canonically allowed add-on or scale-back draft exists, and position management is folded into Overview. Its advisory live preview is explicitly read-only and separated from stop, scale-out, and exit mutations. Failed order and position mutations keep the entered form values available for correction or retry |
+| Daily review | `/today` | Scan status and coverage, backend portfolio heat, position and order counts, portfolio attention, and the ranked candidate queue. See Daily review and exploration above for the inspector levels. |
 | Calendar | `/calendar` | Earnings and catalyst calendar. Position, screener, economic, and IPO events have an explicit legend; date headings use the active `I18nProvider` locale. |
 | Book | `/book` | Three keyboard-operable tabs persisted via `book.activeTab` with `location.state.tab` deep-links (legacy `review`/`performance` map to journal): positions (`PortfolioRiskSummary`, `ConcentrationBar`, `PortfolioPanel` — stop updates, partial close, trail config), orders (`PendingOrdersTab` — create, fill, cancel), and Journal & Performance (trade journal with backend-canonical R rows, aggregates, and insight codes; performance analytics; weekly review). Weekly Review stores ISO week-year IDs (`YYYY-Www`) and uses `Field`-associated textareas. |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run. Detail tabs are keyboard-operable; result rows expose native symbol buttons and preserve selected-row state. The clicked discovery candidate is passed intact into analysis and order review; it is never re-looked-up in the unrelated last-run store, so non-ready discovery rows cannot fall into the manual-symbol order path. The result table shows the canonical next action instead of `decisionSummary.action`. **Pool tab**: refresh-all-universes, rebuild symbol pool, and enrich taxonomy — each with a field-level diff table (`PoolTab` / `PoolDiffTable` / `UniverseRefreshSummary`) |
@@ -149,9 +179,14 @@ Not every control fits a primitive: checkboxes, radios, range sliders, search bo
 ## Typical Workflow
 
 1. Start API and web UI.
-2. **Today** — wait for its automatic refresh, check open positions and unfilled orders, then review candidates using the saved scan settings. Refresh Today reruns those settings without visiting Advanced. Use the Last Run checkbox to update Today's source, or clear it to explore another universe without changing the review. Last Run uses the server-authoritative workflow state: resolve candidates in the ordered **Pronti per revisione ordine**, **In attesa del trigger**, **Richiede verifica**, and collapsed **Interessanti, nessun setup** groups. Follow the localized concrete next action shown for each candidate. **Pronti per revisione ordine** exposes manual **Rivedi ordine**; **In attesa del trigger** exposes it only for the backend-authorized, token-gated pending `BUY_LIMIT` pullback exception. Track the Watchlist and trigger symbol analysis as needed.
-3. Create orders via **Book**.
-4. Next trading day: fill orders and update stops in **Book**.
+2. **Daily review** loads the saved scan settings on entry. Check scan quality
+   and portfolio attention first, then work through the ranked candidate groups.
+   Each row displays the next step from the backend. **Review order** opens the
+   signed plan for an eligible entry, including an eligible pending pullback
+   when the backend issues that plan.
+3. Use **Scan & universes** to explore other universes. Pin a scan when it
+   should become the source for Daily review.
+4. Use **Trading book** to review orders, record broker fills, and manage stops.
 
 Full timing guidance: `docs/product/DAILY_USAGE_GUIDE.md`.
 

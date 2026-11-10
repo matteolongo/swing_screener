@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { t } from '@/i18n/t';
 import { useI18n } from '@/i18n/I18nProvider';
+import WorkspaceIntro from '@/components/layout/WorkspaceIntro';
 import { useCalendarEventsQuery } from '@/features/calendar/hooks';
 import type { CalendarEvent, EventSourceTag } from '@/features/calendar/types';
 
@@ -78,15 +79,8 @@ export default function Calendar() {
   }, [data]);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">
-          {t('calendarPage.title')}
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          {t('calendarPage.subtitle')}
-        </p>
-      </div>
+    <div className="mx-auto min-w-0 max-w-4xl space-y-5 pb-8">
+      <WorkspaceIntro label={t('sidebar.nav.workspace')} title={t('calendarPage.title')} description={t('calendarPage.subtitle')} />
 
       <div className="mb-6 flex flex-wrap gap-3">
         {SOURCE_TAGS.map((tag) => (

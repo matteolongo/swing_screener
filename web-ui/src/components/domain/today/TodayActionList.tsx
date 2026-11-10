@@ -28,15 +28,18 @@ import {
 } from './TodayActionItems';
 
 interface TodayActionListProps {
-  onTickerSelect: (ticker: string) => void;
+  onTickerSelect: (ticker: string, focusInspector?: boolean) => void;
   compact?: boolean;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  portfolioOnly?: boolean;
 }
 
-export default function TodayActionList({ onTickerSelect, compact = false, onRefresh, isRefreshing = false }: TodayActionListProps) {
+export default function TodayActionList({ onTickerSelect, compact = false, onRefresh, isRefreshing = false, portfolioOnly = false }: TodayActionListProps) {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
+  const selectedItemId = useWorkspaceStore((state) => state.selection?.rowId);
   const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
+  const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const {
     todayRun,
     todayRunInitialized,
@@ -57,15 +60,15 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
     const isAddOn = (mode?: string) => mode === 'ADD_ON' || mode === 'SCALE_BACK';
 
     return {
-      candidates: visibleCandidates,
-      newCandidates: visibleCandidates
+      candidates: portfolioOnly ? sourceCandidates : visibleCandidates,
+      newCandidates: portfolioOnly ? [] : visibleCandidates
         .filter((candidate) => isNewOpportunity(candidate.sameSymbol?.mode))
         .map(dailyReviewCandidateFromScreener),
-      addOnCandidates: visibleCandidates
+      addOnCandidates: portfolioOnly ? [] : visibleCandidates
         .filter((candidate) => isAddOn(candidate.sameSymbol?.mode))
         .map(dailyReviewCandidateFromScreener),
     };
-  }, [todayRun]);
+  }, [portfolioOnly, todayRun]);
 
   const composedCandidateTickers = useMemo(
     () => new Set([
@@ -98,7 +101,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
     [review?.positionsHold],
   );
 
-  const selectTodayTicker = useCallback((ticker: string) => {
+  const selectTodayTicker = useCallback((ticker: string, rowId?: string, focusInspector = true) => {
     const normalized = ticker.trim().toUpperCase();
     const candidate = sourceOpportunities.candidates
       .find((item) => item.ticker.toUpperCase() === normalized);
@@ -113,21 +116,22 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
       source,
       runId: candidate ? todayRun?.completedAt : undefined,
       candidate,
-      rowId: candidate
+      rowId: rowId ?? (candidate
         ? `today:${todayRun?.completedAt ?? 'run'}:${normalized}`
-        : position?.positionId ?? `${source}:${normalized}`,
+        : position?.positionId ?? `${source}:${normalized}`),
     });
-    onTickerSelect(normalized);
-  }, [onTickerSelect, openPositions, setWorkspaceSelection, sourceOpportunities.candidates, todayRun?.completedAt, watchlistNearTrigger]);
+    setAnalysisTab('overview');
+    onTickerSelect(normalized, focusInspector);
+  }, [onTickerSelect, openPositions, setAnalysisTab, setWorkspaceSelection, sourceOpportunities.candidates, todayRun?.completedAt, watchlistNearTrigger]);
 
   const flatItems = useMemo(
     () => [
-      ...openPositions.map((i) => ({ ticker: i.ticker, id: `position-${i.positionId ?? i.ticker}` })),
       ...(review?.positionsClose.map((i) => ({ ticker: i.ticker, id: `close-${i.positionId}` })) ?? []),
       ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: `stop-${i.positionId}` })) ?? []),
       ...(review?.positionsExitSignal.map((i) => ({ ticker: i.ticker, id: `exit-${i.positionId}` })) ?? []),
       ...(review?.pendingOrdersReview?.map((i) => ({ ticker: i.ticker, id: `pending-${i.orderId}` })) ?? []),
       ...watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}-${i.watchedAt}` })),
+      ...openPositions.map((i) => ({ ticker: i.ticker, id: `position-${i.positionId ?? i.ticker}` })),
       ...sourceOpportunities.newCandidates.map((i) => ({ ticker: i.ticker, id: `candidate-${i.ticker}-${i.priorityRank ?? i.rank ?? 'unranked'}` })),
       ...sourceOpportunities.addOnCandidates.map((i) => ({ ticker: i.ticker, id: `addon-${i.ticker}-${i.priorityRank ?? i.rank ?? 'unranked'}` })),
     ],
@@ -147,7 +151,6 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
     setCloseTarget,
     trimTarget,
     setTrimTarget,
-    focusedId,
     handleListKeyDown,
     handleAcceptStop,
     handleUpdateStop,
@@ -214,8 +217,9 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
     return rows;
   }, [openPositions, review, sourceOpportunities, watchlistNearTrigger]);
 
-  const isLoadingSources = !todayRunInitialized || isLoading || openPositionsQuery.isLoading || watchlistQuery.isLoading;
-  const isEmpty = !isLoadingSources && openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && pendingOrderCount === 0;
+  const isLoadingSources = (!portfolioOnly && !todayRunInitialized) || isLoading || openPositionsQuery.isLoading || watchlistQuery.isLoading;
+  const hasSourceError = Boolean(error || openPositionsQuery.error || watchlistQuery.error);
+  const isEmpty = !isLoadingSources && !hasSourceError && openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && pendingOrderCount === 0;
 
   const compactRail = compact ? (
       <div
@@ -247,7 +251,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
         <div className="flex items-center gap-2">
           {review && (
             <>
-              <span className="text-xs text-muted">{review.summary.reviewDate}</span>
+              <span className="text-xs text-muted">{t('cockpit.review.portfolioChecked', { date: review.summary.reviewDate })}</span>
             </>
           )}
         </div>
@@ -257,14 +261,14 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
           disabled={isFetching || isRefreshing}
           title={t('dailyReview.header.refreshTitle')}
           aria-label={t('dailyReview.header.refreshTitle')}
-          className="p-1 rounded hover:bg-foreground/5 text-muted disabled:opacity-50"
+          className="grid h-11 w-11 place-items-center rounded hover:bg-foreground/5 text-muted disabled:opacity-50"
         >
-          <RefreshCw className={cn('h-3.5 w-3.5', (isFetching || isRefreshing) && 'animate-spin')} aria-hidden="true" />
+          <RefreshCw className={cn('h-4 w-4', (isFetching || isRefreshing) && 'motion-safe:animate-spin')} aria-hidden="true" />
         </button>
       </div>
 
       {/* Summary chips */}
-      <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-border shrink-0">
+      {(opportunitiesCount > 0 || requiresActionCount > 0 || pendingOrderCount > 0) && <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-border shrink-0">
           {sourceOpportunities.newCandidates.length > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
               {t('dailyReviewBanner.newCandidates', { n: String(sourceOpportunities.newCandidates.length) })}
@@ -285,9 +289,9 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
               {t('todayPage.actionList.pendingOrdersSection')} · {pendingOrderCount}
             </span>
           )}
-      </div>
+      </div>}
 
-      <div className="mx-2 mt-2 rounded border border-border bg-surface/60 px-3 py-2 text-xs">
+      {!portfolioOnly && <div className="mx-2 mt-2 rounded border border-border bg-surface/60 px-3 py-2 text-xs">
         {todayRun ? (
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-muted">
@@ -332,7 +336,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
         ) : (
           <span className="text-muted">{t('todayPage.actionList.noSourceRun')}</span>
         )}
-      </div>
+      </div>}
 
       {compactRail}
 
@@ -362,7 +366,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
             <button type="button" onClick={() => watchlistQuery.refetch()} className="underline">{t('todayPage.actionList.retryWatchlist')}</button>
           </div>
         )}
-        {!todayRunInitialized && (
+        {!portfolioOnly && !todayRunInitialized && (
           <p className="px-2 text-sm text-muted">{t('todayPage.actionList.loadingPinnedCandidates')}</p>
         )}
         {isLoading && (
@@ -380,27 +384,6 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
           </p>
         )}
 
-        {openPositions.length > 0 && (
-          <div className="space-y-1">
-            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary bg-primary/10 rounded">
-              {t('todayPage.actionList.openPositions')} · {openPositions.length}
-            </div>
-            <div className="space-y-0.5">
-              {openPositions.map((position) => (
-                <OpenPositionItem
-                  key={position.positionId}
-                  item={position}
-                  onClick={(ticker) => handleItemClick(ticker, `position-${position.positionId ?? ticker}`)}
-                  isFocused={focusedId === `position-${position.positionId ?? position.ticker}`}
-                  intelligenceSummary={intelligenceByTicker.get(position.ticker)}
-                  trimSuggestion={trimSuggestionByPositionId.get(position.positionId ?? '')}
-                  onTrim={() => setTrimTarget(position)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
         {requiresActionCount > 0 && (
           <div className="space-y-1">
             <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-danger bg-danger/10 rounded">
@@ -416,7 +399,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
                     onClick={(ticker) => handleItemClick(ticker, `close-${item.positionId}`)}
                     onAction={position ? () => setCloseTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
-                    isFocused={focusedId === `close-${item.positionId}`}
+                    isFocused={selectedItemId === `close-${item.positionId}`}
                     intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                   />
                 );
@@ -437,7 +420,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
                       acceptStopMutation.isPending &&
                       acceptStopMutation.variables?.positionId === item.positionId
                     }
-                    isFocused={focusedId === `stop-${item.positionId}`}
+                    isFocused={selectedItemId === `stop-${item.positionId}`}
                   />
                 );
               })}
@@ -457,7 +440,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
                     key={item.positionId}
                     item={item}
                     onClick={(ticker) => handleItemClick(ticker, `exit-${item.positionId}`)}
-                    isFocused={focusedId === `exit-${item.positionId}`}
+                  isFocused={selectedItemId === `exit-${item.positionId}`}
                     intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                   />
                 );
@@ -478,7 +461,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
                     key={item.orderId}
                     item={item}
                     onClick={(ticker) => handleItemClick(ticker, `pending-${item.orderId}`)}
-                    isFocused={focusedId === `pending-${item.orderId}`}
+                    isFocused={selectedItemId === `pending-${item.orderId}`}
                   />
                 );
               })}
@@ -501,10 +484,31 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
                     key={`watch-${item.ticker}-${item.watchedAt}`}
                     item={item}
                     onClick={(ticker) => handleItemClick(ticker, `watch-${item.ticker}-${item.watchedAt}`)}
-                    isFocused={focusedId === `watch-${item.ticker}-${item.watchedAt}`}
+                    isFocused={selectedItemId === `watch-${item.ticker}-${item.watchedAt}`}
                   />
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {openPositions.length > 0 && (
+          <div className="space-y-1">
+            <div className="rounded bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+              {t('todayPage.actionList.openPositions')} · {openPositions.length}
+            </div>
+            <div className="space-y-0.5">
+              {openPositions.map((position) => (
+                <OpenPositionItem
+                  key={position.positionId}
+                  item={position}
+                  onClick={(ticker) => handleItemClick(ticker, `position-${position.positionId ?? ticker}`)}
+                  isFocused={selectedItemId === `position-${position.positionId ?? position.ticker}`}
+                  intelligenceSummary={intelligenceByTicker.get(position.ticker)}
+                  trimSuggestion={trimSuggestionByPositionId.get(position.positionId ?? '')}
+                  onTrim={() => setTrimTarget(position)}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -521,7 +525,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
                     key={`candidate-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
                     item={item}
                     onClick={(ticker) => handleItemClick(ticker, `candidate-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`)}
-                    isFocused={focusedId === `candidate-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
+                    isFocused={selectedItemId === `candidate-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
                   />
                 );
               })}
@@ -532,7 +536,7 @@ export default function TodayActionList({ onTickerSelect, compact = false, onRef
                     item={item}
                     isAddOn
                     onClick={(ticker) => handleItemClick(ticker, `addon-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`)}
-                    isFocused={focusedId === `addon-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
+                    isFocused={selectedItemId === `addon-${item.ticker}-${item.priorityRank ?? item.rank ?? 'unranked'}`}
                   />
                 );
               })}

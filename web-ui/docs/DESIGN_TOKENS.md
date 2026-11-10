@@ -1,4 +1,4 @@
-# Design tokens (instrument dark theme)
+# Design tokens (dark review workspace)
 
 The web UI is **dark-only** and **token-driven**. Every color comes from a semantic
 design token defined in `src/index.css` (`:root`) and bridged to Tailwind in
@@ -15,7 +15,7 @@ design token defined in `src/index.css` (`:root`) and bridged to Tailwind in
 | `text-foreground` | primary text |
 | `text-muted` | secondary / label text |
 | `border-border`, `divide-border` | hairlines |
-| `bg-primary`, `text-primary`, `text-primary-foreground`, `border-primary/40` | the single interactive accent (indigo): active nav, primary buttons, links, focus rings, info |
+| `bg-primary`, `text-primary`, `text-primary-foreground`, `border-primary/40` | the interactive sky accent for active navigation, primary actions, links, and focus rings |
 | `text-success`, `bg-success`, `bg-success/10`, `text-success-foreground` | R / P&L positive, wins, "good" state |
 | `text-danger`, `bg-danger`, `bg-danger/10` | R / P&L negative, losses, destructive |
 | `text-warning`, `bg-warning`, `bg-warning/10`, `border-warning/40` | caution: time-stop, update-stop, validation warnings |

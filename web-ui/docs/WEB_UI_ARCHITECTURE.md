@@ -72,6 +72,14 @@
 - Weekly Review IDs use ISO week-year semantics (`YYYY-Www`) calculated from UTC calendar dates. The review form uses `Field` plus `Textarea`, which supplies stable label/control associations.
 - `ModalShell` owns modal Escape handling, focus trapping, scroll locking, and restoration to the opening control. Help and chart fullscreen surfaces use it instead of ad-hoc overlays.
 - `MainLayout` mounts one shared `Sidebar`: desktop at `lg` (1024px), or a `ModalShell` navigation drawer below it. The real Header trigger exposes its open state and controls the navigation ID. Breakpoint transitions close the drawer; header/summary flex children shrink and wrap without clipping monetary values.
+- `WorkspaceIntro` provides a common page heading and primary action area. The
+  header's risk-policy disclosure uses the active strategy and the canonical
+  portfolio summary. Market status uses the same freshness helper as Daily review.
+- Daily review consumes the existing scan and portfolio read models. Market
+  coverage, canonical portfolio heat, queue workflow status, and order approval
+  remain independent signals. `CandidateQueue` applies the pinned run's
+  persisted display filters. `SymbolDetailPanel` puts the decision first and
+  renders the chart only while its market-data disclosure is open.
 - Tabs use native buttons with `tablist`/`tab`/`tabpanel` relationships, roving `tabIndex`, and Arrow/Home/End navigation. Row-level secondary actions are sibling native buttons; table selections expose `aria-selected`.
 - Frontend styling uses semantic tokens. ESLint rejects hardcoded Tailwind palette utilities, including directional `border-t-*`, `border-r-*`, `border-b-*`, `border-l-*`, `border-x-*`, `border-y-*`, `border-s-*`, and `border-e-*` variants.
 - Today row actions are sibling native buttons in a labelled group. Its `j`/`k` and arrow navigation is scoped to the visible list, tracks source-specific row IDs, and is suspended for editable controls and dialogs.

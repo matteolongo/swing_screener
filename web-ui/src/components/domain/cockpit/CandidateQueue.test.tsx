@@ -169,6 +169,19 @@ describe('CandidateQueue', () => {
     expect(screen.queryByRole('button', { name: `${t('cockpit.queue.reviewOrder')} STM` })).not.toBeInTheDocument();
   });
 
+  it('filters the pinned review queue and restores all visible workflow groups', async () => {
+    const result = useScreenerStore.getState().lastResult!;
+    useScreenerStore.setState({
+      todayRun: { result, request: {}, displayFilters: { recommendedOnly: true, actionFilter: 'all' } },
+    });
+    const { user } = renderWithProviders(<CandidateQueue onSelectTicker={() => {}} />);
+    const all = screen.getByRole('button', { name: t('todayPage.actionList.allSourceCandidates') });
+    expect(screen.queryByRole('button', { name: `${t('cockpit.queue.details')} STM` })).not.toBeInTheDocument();
+    await user.click(all);
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: `${t('cockpit.queue.details')} STM` })).toBeVisible();
+  });
+
   it('requests order review instead of ordinary details from the review button', async () => {
     useWorkspaceStore.setState({ analysisTab: 'overview' });
     const { user } = renderWithProviders(<CandidateQueue onSelectTicker={() => {}} />);

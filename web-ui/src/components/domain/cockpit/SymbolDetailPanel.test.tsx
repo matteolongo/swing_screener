@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, screen, within, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
@@ -198,20 +198,19 @@ describe('SymbolDetailPanel', () => {
     expect(screen.queryByText('Late Adyen')).not.toBeInTheDocument();
   });
 
-  it('renders action, chart and AI summary blocks in order', () => {
-    renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
-    const panel = screen.getByTestId('symbol-detail-panel');
-    const headings = within(panel).getAllByRole('heading', { level: 2 });
-    const texts = headings.map((h) => h.textContent);
-    // AnalysisDecisionStrip owns its own ticker <h2>, so assert relative order
-    // of the three cockpit section headings rather than exclusivity.
-    const idxAction = texts.indexOf(t('cockpit.detail.action'));
-    const idxChart = texts.indexOf(t('cockpit.detail.chart'));
-    const idxAi = texts.indexOf(t('cockpit.detail.ai'));
-    expect(idxAction).toBeGreaterThanOrEqual(0);
-    expect(idxChart).toBeGreaterThan(idxAction);
-    expect(idxAi).toBeGreaterThan(idxChart);
-    expect(screen.getByRole('button', { name: t('cockpit.detail.close') })).toBeInTheDocument();
+  it('shows the decision immediately and opens market and evidence details independently', async () => {
+    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    expect(screen.getByRole('heading', { name: t('cockpit.detail.decisionLevel') })).toBeVisible();
+    const market = screen.getByText(t('cockpit.detail.marketLevel'));
+    const evidence = screen.getByText(t('cockpit.detail.evidenceLevel'));
+    expect(market.closest('details')).not.toHaveAttribute('open');
+    expect(evidence.closest('details')).not.toHaveAttribute('open');
+    await user.click(evidence);
+    expect(evidence.closest('details')).toHaveAttribute('open');
+    expect(screen.getByRole('heading', { name: t('cockpit.detail.sourceDetails') })).toBeVisible();
+    expect(market.closest('details')).not.toHaveAttribute('open');
+    await user.click(market);
+    expect(market.closest('details')).toHaveAttribute('open');
   });
 
   it('shows the existing order-review entry point plus manual-execution microcopy', () => {
@@ -302,9 +301,9 @@ describe('SymbolDetailPanel Today refresh scope', () => {
   });
 });
 
-describe('SymbolDetailPanel Approfondisci live wiring', () => {
+describe('SymbolDetailPanel research wiring', () => {
   beforeEach(() => seedSelectionPinnedFirst('Adyen N.V.', null));
-  it('generates analysis from the Approfondisci tab through the live intelligence endpoint', async () => {
+  it('generates analysis from the intelligence disclosure through the live intelligence endpoint', async () => {
     let postCount = 0;
     server.use(
       http.get(`${API_BASE_URL}/api/intelligence/ADYEN/runs`, () =>
@@ -326,8 +325,9 @@ describe('SymbolDetailPanel Approfondisci live wiring', () => {
       }),
     );
     const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+    await user.click(screen.getByText(t('cockpit.detail.evidenceLevel')));
     await user.click(
-      screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.intelligence') }),
+      screen.getByRole('button', { name: t('workspacePage.panels.analysis.tabs.intelligence') }),
     );
     await user.click(
       screen.getByRole('button', { name: t('workspacePage.intelligence.generate') }),

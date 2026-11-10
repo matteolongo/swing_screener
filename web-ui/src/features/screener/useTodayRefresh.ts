@@ -39,14 +39,25 @@ export function useTodayRefresh() {
       const selection = workspace.selection;
       if (!selection || !['today_run', 'last_run'].includes(selection.source) || selection.runId !== request.sourceId) return;
       const candidate = result.candidates.find((item) => item.ticker.trim().toUpperCase() === selection.ticker);
-      if (candidate) workspace.setWorkspaceSelection({ ...selection, source: 'today_run', runId: completedAt, candidate, rowId: `today_run:${completedAt}:${selection.ticker}` });
+      const fromCandidateQueue = selection.rowId.startsWith(`${selection.source}:`);
+      if (candidate) workspace.setWorkspaceSelection({
+        ...selection,
+        source: 'today_run',
+        runId: completedAt,
+        candidate,
+        rowId: fromCandidateQueue ? `today_run:${completedAt}:${selection.ticker}` : selection.rowId,
+      });
       else workspace.clearSelectedTicker();
     },
     onSettled: () => { pending.current = false; },
   });
 
   function refresh() {
-    if (pending.current || !initialized || !strategy.data) return;
+    if (pending.current || !initialized) return;
+    if (!strategy.data) {
+      void strategy.refetch();
+      return;
+    }
     pending.current = true;
     const store = useScreenerStore.getState();
     const context = store.todayRun ?? store.lastRunContext;
@@ -69,5 +80,10 @@ export function useTodayRefresh() {
     }
   }, [initialized, policy, mutation.isPending]);
 
-  return { refresh, updatedAt, isRefreshing: mutation.isPending || !initialized || strategy.isLoading, error: mutation.error ?? strategy.error };
+  return {
+    refresh,
+    updatedAt,
+    isRefreshing: mutation.isPending || !initialized || (!strategy.data && strategy.isFetching),
+    error: mutation.error ?? strategy.error,
+  };
 }

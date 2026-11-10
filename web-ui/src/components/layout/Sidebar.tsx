@@ -6,6 +6,7 @@ import {
   Database,
   Settings2,
   Activity,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
@@ -17,22 +18,18 @@ type NavigationItem = {
   labelKey: MessageKey;
 };
 
-const cockpitNav: NavigationItem[] = [
+const workspaceNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.today', href: '/today', icon: CalendarCheck },
   { labelKey: 'sidebar.nav.book', href: '/book', icon: BookMarked },
-];
-
-const advancedNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.universes', href: '/universes', icon: Database },
   { labelKey: 'sidebar.nav.calendar', href: '/calendar', icon: CalendarDays },
-  { labelKey: 'sidebar.nav.datasources', href: '/datasources', icon: Activity },
 ];
 
-const settingsNav: NavigationItem = {
-  labelKey: 'sidebar.nav.settings',
-  href: '/strategy',
-  icon: Settings2,
-};
+const toolNav: NavigationItem[] = [
+  { labelKey: 'sidebar.nav.settings', href: '/strategy', icon: Settings2 },
+  { labelKey: 'sidebar.nav.datasources', href: '/datasources', icon: Activity },
+  { labelKey: 'header.gettingStarted', href: '/onboarding', icon: HelpCircle },
+];
 
 interface SidebarProps {
   className?: string;
@@ -43,7 +40,7 @@ function BrandMark({ size = 6 }: { size?: number }) {
   const px = size * 4;
   return (
     <div
-      className="flex items-center justify-center rounded bg-primary shrink-0"
+      className="flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
       style={{ width: px, height: px }}
     >
       <svg
@@ -55,7 +52,7 @@ function BrandMark({ size = 6 }: { size?: number }) {
       >
         <polyline
           points="1,11 4.5,6.5 8,8.5 13,3"
-          stroke="white"
+          stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -73,66 +70,43 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
       onClick={() => onNavigate?.()}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors',
+          'flex min-h-11 items-center gap-2.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
           isActive
-            ? 'bg-primary/10 text-primary'
-            : 'text-muted hover:bg-foreground/5 hover:text-foreground'
+            ? 'border-primary/30 bg-primary/10 text-primary'
+            : 'border-transparent text-muted hover:bg-foreground/5 hover:text-foreground'
         )
       }
     >
-      <item.icon className="w-4 h-4 shrink-0" />
+      <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
       {t(item.labelKey)}
     </NavLink>
   );
 
   return (
-    <aside className={cn('h-full flex flex-col bg-surface border-r border-border', className)}>
-      {/* Brand */}
-      <div className="h-12 px-4 flex items-center gap-2.5 border-b border-border shrink-0">
-        <BrandMark size={6} />
-        <span className="text-[13px] font-semibold text-foreground tracking-tight leading-none">
-          {t('header.brand')}
-        </span>
+    <aside className={cn('flex h-full min-h-0 flex-col border-r border-border bg-surface', className)}>
+      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-5">
+        <BrandMark size={9} />
+        <div className="min-w-0">
+          <p className="text-sm font-bold tracking-tight text-foreground">{t('header.brand')}</p>
+          <p className="mt-0.5 text-xs text-muted">{t('sidebar.versionLabel')}</p>
+        </div>
       </div>
 
       {/* Primary nav */}
       <nav
         id="primary-navigation"
-        className="flex-1 py-2 px-2 space-y-px overflow-y-auto"
+        className="flex-1 space-y-6 overflow-y-auto px-3 py-5"
         aria-label={t('sidebar.navigation')}
       >
-        {cockpitNav.map(renderNavItem)}
-        <details>
-          <summary className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors text-muted hover:bg-foreground/5 hover:text-foreground cursor-pointer">
-            {t('sidebar.nav.advanced')}
-          </summary>
-          <div className="space-y-px">
-            {advancedNav.map(renderNavItem)}
-          </div>
-        </details>
+        <div className="space-y-1">
+          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">{t('sidebar.nav.workspace')}</p>
+          {workspaceNav.map(renderNavItem)}
+        </div>
+        <div className="space-y-1">
+          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">{t('sidebar.nav.tools')}</p>
+          {toolNav.map(renderNavItem)}
+        </div>
       </nav>
-
-      {/* Footer */}
-      <div className="border-t border-border px-2 pt-2 pb-3 shrink-0">
-        <NavLink
-          to={settingsNav.href}
-          onClick={() => onNavigate?.()}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors',
-              isActive
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted hover:bg-foreground/5 hover:text-foreground'
-            )
-          }
-        >
-          <settingsNav.icon className="w-4 h-4 shrink-0" />
-          {t(settingsNav.labelKey)}
-        </NavLink>
-        <p className="text-[11px] text-muted/60 px-3 mt-1.5">
-          {t('sidebar.versionLabel')}
-        </p>
-      </div>
     </aside>
   );
 }

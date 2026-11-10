@@ -31,11 +31,14 @@ describe('Header', () => {
     </AuthProvider>,
   );
 
-  it('shows the compact risk summary', async () => {
-    renderHeader();
+  it('reveals the capital and risk summary on demand', async () => {
+    const { user } = renderHeader();
 
-    await screen.findByRole('combobox', { name: 'Active Strategy' });
-    expect(await screen.findByText(/Risk \/ trade/)).toBeInTheDocument();
+    await screen.findByRole('combobox', { name: t('sidebar.activeStrategy') });
+    const policy = screen.getByText(t('header.riskPolicy'));
+    expect(policy.closest('details')).not.toHaveAttribute('open');
+    await user.click(policy);
+    expect(await screen.findByText(/Risk \/ trade/)).toBeVisible();
   });
 
   it('hides the review-queue badge when the queue is empty', async () => {
@@ -56,10 +59,11 @@ describe('Header', () => {
         candidates: [],
         totalScreened: 0,
         dataFreshness: 'final_close',
+        benchmarkLastBar: '2026-07-10',
       } as unknown as ScreenerResponse,
     });
     renderHeader();
-    expect(screen.getByText(t('cockpit.strip.finalClose'))).toBeInTheDocument();
+    expect(screen.getByText(t('screener.quality.market.final_close'))).toBeInTheDocument();
   });
 
   it('shows the review-queue badge with count and opens the drawer', async () => {

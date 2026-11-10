@@ -65,19 +65,16 @@ describe('TodayStatsStrip', () => {
     });
   });
 
-  it('shows counts without certifying undated candidates as final', () => {
+  it('links to position, order, and candidate review', () => {
     renderWithProviders(<TodayStatsStrip />);
-    expect(screen.getByText(t('cockpit.strip.positions'))).toBeInTheDocument();
-    expect(screen.getByText(t('cockpit.strip.pendingOrders'))).toBeInTheDocument();
-    expect(screen.getByText(t('cockpit.strip.ready'))).toBeInTheDocument();
-    expect(screen.getByText(t('screener.quality.market.unknown'))).toBeInTheDocument();
+    expect(screen.getByText(t('cockpit.strip.positions')).closest('a')).toHaveAttribute('href', '/book');
+    expect(screen.getByText(t('cockpit.strip.pendingOrders')).closest('a')).toHaveAttribute('href', '/book');
+    expect(screen.getByText(t('cockpit.strip.ready')).closest('a')).toHaveAttribute('href', '#candidate-review');
   });
 
-  it('shows final close only when the observed candles match the requested session', () => {
-    const previous = useScreenerStore.getState().lastResult!;
-    useScreenerStore.setState({ lastResult: { ...previous, candidates: previous.candidates.map(candidate => ({ ...candidate, lastBar: previous.asofDate, dataStatus: 'current' })) } });
+  it('shows the portfolio risk status supplied by the backend', async () => {
     renderWithProviders(<TodayStatsStrip />);
-    expect(screen.getByText(t('screener.quality.market.final_close'))).toBeVisible();
+    expect(await screen.findByText(t('cockpit.review.heat.normal'))).toBeVisible();
   });
 
   it('counts only open positions, excluding closed ones', async () => {

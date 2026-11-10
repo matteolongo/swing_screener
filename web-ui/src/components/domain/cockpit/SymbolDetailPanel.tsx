@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { ChevronRight, X } from 'lucide-react';
 import Badge from '@/components/common/Badge';
+import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCandleChart';
@@ -9,9 +11,9 @@ import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisio
 import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
 import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
 import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPanel';
-import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import SymbolIntelligenceTab from '@/components/domain/workspace/SymbolIntelligenceTab';
+import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import VolumeZonesTab from '@/components/domain/workspace/VolumeZonesTab';
 import { useFundamentalSnapshotQuery } from '@/features/fundamentals/hooks';
 import {
@@ -41,16 +43,41 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useCandidateAnalysis } from '@/features/workspaceData/useCandidateAnalysis';
 import ManualOrderDraftForm from '@/components/domain/orders/ManualOrderDraftForm';
+import { formatDateTime } from '@/utils/formatters';
 
 interface SymbolDetailPanelProps {
   ticker: string;
   onClose: () => void;
+  focusRequest?: number | null;
   isRefreshingToday?: boolean;
   onRefreshToday?: () => void;
   todayRefreshError?: Error | null;
 }
 
 type SecondaryTab = 'intelligence' | 'backtest' | 'volumeZones';
+
+function ReviewDepth({ level, title, hint, children, onOpenChange }: {
+  level: string;
+  title: string;
+  hint: string;
+  children: ReactNode;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  return (
+    <details className="group rounded-xl border border-border bg-background/55"
+      onToggle={(event) => onOpenChange?.(event.currentTarget.open)}>
+      <summary className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl p-3 marker:content-none hover:bg-foreground/5 [&::-webkit-details-marker]:hidden">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-xs font-semibold text-primary" aria-hidden="true">{level}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">{title}</span>
+          <span className="block text-xs text-muted">{hint}</span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted group-open:rotate-90" aria-hidden="true" />
+      </summary>
+      <div className="space-y-4 border-t border-border p-3 sm:p-4">{children}</div>
+    </details>
+  );
+}
 
 function workflowBadgeVariant(tone: WorkflowTone): 'success' | 'warning' | 'error' | 'default' {
   switch (tone) {
@@ -65,14 +92,18 @@ function workflowBadgeVariant(tone: WorkflowTone): 'success' | 'warning' | 'erro
   }
 }
 
-export default function SymbolDetailPanel({ ticker, onClose, isRefreshingToday = false, onRefreshToday, todayRefreshError }: SymbolDetailPanelProps) {
+export default function SymbolDetailPanel({ ticker, onClose, focusRequest, isRefreshingToday = false, onRefreshToday, todayRefreshError }: SymbolDetailPanelProps) {
   const normalized = ticker.trim().toUpperCase();
   const selection = useWorkspaceStore((s) => s.selection);
   const selectionVersion = useWorkspaceStore((s) => s.selectionVersion);
   const setAnalysisTab = useWorkspaceStore((s) => s.setAnalysisTab);
   const analysisTab = useWorkspaceStore((s) => s.analysisTab);
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab | null>(null);
+  const [marketOpen, setMarketOpen] = useState(false);
   const [showDraft, setShowDraft] = useState(false);
+  const headingId = useId();
+  const researchId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { setShowDraft(false); }, [normalized, selectionVersion]);
 
   // WorkspaceSelection envelope: the already-selected candidate snapshot travels
@@ -113,8 +144,8 @@ export default function SymbolDetailPanel({ ticker, onClose, isRefreshingToday =
     selectionVersion,
     candidate,
     position,
-    screenerRun: candidate?.lastBar
-      ? { asOf: candidate.lastBar, freshness: candidate.dataStatus === 'intraday' ? 'intraday' : 'final_close' }
+    screenerRun: candidate?.lastBar && (candidate.dataStatus === 'intraday' || candidate.dataStatus === 'current')
+      ? { asOf: candidate.lastBar, freshness: candidate.dataStatus === 'current' ? 'final_close' : 'intraday' }
       : null,
     evidenceRefresh,
     refreshEvidence: () => evidenceRefreshActionRef.current?.(),
@@ -321,15 +352,26 @@ export default function SymbolDetailPanel({ ticker, onClose, isRefreshingToday =
     workspaceData.prices.data?.dataAsOf ?? candidate?.priceHistory?.slice(-1)[0]?.date ?? null,
   ]);
 
+  useEffect(() => {
+    const heading = headingRef.current;
+    if (!focusRequest || !heading || useWorkspaceStore.getState().analysisTab === 'order') return;
+    const bounds = heading.getBoundingClientRect();
+    if (window.matchMedia?.('(max-width: 1279px)').matches || bounds.top < 0 || bounds.bottom > window.innerHeight) {
+      heading.focus();
+    }
+  }, [focusRequest]);
+
   return (
-    <div
+    <aside
       data-testid="symbol-detail-panel"
-      className="fixed inset-0 z-40 flex flex-col gap-3 overflow-y-auto border border-border bg-surface p-3 md:sticky md:top-0 md:h-full md:w-[420px] md:shrink-0"
+      aria-labelledby={headingId}
+      className="min-w-0 space-y-4 rounded-xl border border-primary/30 bg-surface p-3 sm:p-4"
     >
-      <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border border-border bg-surface p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
         <div className="min-w-0">
-          <div className="text-base font-semibold text-foreground">{normalized}</div>
-          {company ? <div className="truncate text-xs text-muted">{company}</div> : null}
+          <p className="text-xs font-semibold tracking-[0.16em] text-primary">{t('cockpit.detail.eyebrow')}</p>
+          <h2 ref={headingRef} id={headingId} tabIndex={-1} className="mt-1 scroll-mt-6 break-all text-3xl font-bold tracking-tight">{normalized}</h2>
+          {company ? <p className="mt-1 break-words text-sm text-muted">{company}</p> : null}
           {candidate?.recommendation ? (
             <div className="mt-1">
               <Badge variant={workflowBadgeVariant(workflowPresentation.tone)}>
@@ -338,20 +380,28 @@ export default function SymbolDetailPanel({ ticker, onClose, isRefreshingToday =
             </div>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={onClose}
           aria-label={t('cockpit.detail.close')}
-          className="shrink-0 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-muted hover:text-foreground"
+          title={t('cockpit.review.backToQueue')}
+          className="shrink-0 gap-2"
         >
+          <X className="h-4 w-4" aria-hidden="true" />
           {t('cockpit.detail.close')}
-        </button>
+        </Button>
       </div>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-foreground">{t('cockpit.detail.action')}</h2>
+        <h3 className="flex items-center gap-3 font-semibold">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-xs text-primary" aria-hidden="true">01</span>
+          {t('cockpit.detail.decisionLevel')}
+        </h3>
         <AnalysisDecisionStrip
           ticker={normalized}
+          disclosePlan
           candidate={candidate}
           position={position}
           onPrepareOrder={canReviewOrder ? () => setAnalysisTab('order') : undefined}
@@ -380,17 +430,6 @@ export default function SymbolDetailPanel({ ticker, onClose, isRefreshingToday =
         {watchError ? (
           <p role="alert" className="text-xs text-danger">{watchError}</p>
         ) : null}
-        <DecisionWhyPanel
-          summary={candidate?.decisionSummary ?? null}
-          recommendation={candidate?.recommendation ?? null}
-          aiSummaryLine={intelligence?.summaryLine ?? null}
-        />
-        <FundamentalsStrip
-          trailingPe={fundamentals?.trailingPe}
-          revenueGrowthYoy={fundamentals?.revenueGrowthYoy}
-          grossMargin={fundamentals?.grossMargin}
-          valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
-        />
         {position ? <ManagePositionPanel position={position} candidate={candidate} /> : null}
         <p className="text-xs text-muted">{t('cockpit.detail.manualNote')}</p>
       </section>
@@ -412,99 +451,107 @@ export default function SymbolDetailPanel({ ticker, onClose, isRefreshingToday =
       ) : null}
       {showDraft ? <ModalShell title={t('manualOrderDraft.title', { ticker: normalized })} onClose={() => setShowDraft(false)} className="max-w-xl" closeOnBackdrop={false}><ManualOrderDraftForm ticker={normalized} candidate={candidate} /></ModalShell> : null}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-foreground">{t('cockpit.detail.chart')}</h2>
-        <div className="rounded-lg border border-border bg-surface p-3">
-          <CachedSymbolCandleChart ticker={normalized} candidate={candidate} benchmarkTicker={candidateAnalysis.benchmarkTicker} width={820} height={220} />
-        </div>
-      </section>
+      <ReviewDepth level="02" title={t('cockpit.detail.marketLevel')} hint={t('cockpit.detail.marketHint')} onOpenChange={setMarketOpen}>
+        {marketOpen ? (
+          <>
+            {candidate?.decisionSummary ? <DecisionWhyPanel summary={candidate.decisionSummary} recommendation={candidate.recommendation} /> : null}
+            <CachedSymbolCandleChart ticker={normalized} candidate={candidate} benchmarkTicker={candidateAnalysis.benchmarkTicker} width={820} height={260} />
+            <FundamentalsStrip
+              trailingPe={fundamentals?.trailingPe}
+              revenueGrowthYoy={fundamentals?.revenueGrowthYoy}
+              grossMargin={fundamentals?.grossMargin}
+              valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
+            />
+            {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
+          </>
+        ) : null}
+      </ReviewDepth>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-foreground">{t('cockpit.detail.ai')}</h2>
-        {aiStale ? (
-          <div>
-            <Badge variant="warning">{t('cockpit.detail.aiStale')}</Badge>
+      <ReviewDepth level="03" title={t('cockpit.detail.evidenceLevel')} hint={t('cockpit.detail.evidenceHint')}>
+        <section className="space-y-2">
+          <h3 className="font-semibold">{t('cockpit.detail.sourceDetails')}</h3>
+          <dl className="divide-y divide-border rounded-lg border border-border bg-surface">
+            {workspaceData.sourceStates.map((source) => (
+              <div key={source.id} className="flex flex-wrap items-start justify-between gap-2 px-3 py-2 text-sm">
+                <dt className="font-medium">{t(`workspacePage.data.sources.${source.id}`)}</dt>
+                <dd className="min-w-0 space-y-1 sm:text-right">
+                  <Badge variant={source.phase === 'failed' ? 'error' : ['partial', 'stale'].includes(source.phase) ? 'warning' : 'default'}>
+                    {t(`workspacePage.data.phases.${source.phase}`)}
+                  </Badge>
+                  {source.provider ? <p className="break-words text-xs text-muted">{source.provider}</p> : null}
+                  {source.dataAsOf ? <p className="text-xs text-muted">{t('cockpit.detail.sourceAsOf', { date: source.dataAsOf })}</p> : null}
+                  {source.fetchedAt ? <p className="text-xs text-muted">{t('cockpit.detail.sourceChecked', { time: formatDateTime(source.fetchedAt) })}</p> : null}
+                  {source.error ? <p className="break-words text-xs text-danger">{source.error.message}</p> : null}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+        <section className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold">{t('cockpit.detail.ai')}</h3>
+            {aiStale ? <Badge variant="warning">{t('cockpit.detail.aiStale')}</Badge> : null}
           </div>
-        ) : null}
-        {displayedIntelligence ? (
-          <NarrativeAnalysisCard
-            intelligence={displayedIntelligence}
-            candidate={candidate}
-            isPosition={Boolean(position)}
-          />
-        ) : (
           <p className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
-            {t('workspacePage.intelligence.empty')}
+            {displayedIntelligence?.summaryLine ?? t('workspacePage.intelligence.empty')}
           </p>
-        )}
-      </section>
+        </section>
 
-      <div className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {t('cockpit.detail.approve')}
-        </h3>
-        <div
-          role="tablist"
-          aria-label={t('cockpit.detail.approve')}
-          className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1"
-        >
-          {(
-            [
-              { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
-              { id: 'backtest', label: t('workspacePage.panels.analysis.tabs.backtest') },
-              { id: 'volumeZones', label: t('workspacePage.panels.analysis.tabs.volumeZones') },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={secondaryTab === tab.id}
-              onClick={() => setSecondaryTab((current) => (current === tab.id ? null : tab.id))}
-              className="whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground"
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        {secondaryTab === 'intelligence' ? (
-          <SymbolIntelligenceTab
-            model={{
-              ticker: normalized,
-              selectionVersion,
-              candidate,
-              position,
-              analysis: displayedIntelligence,
-              intelligenceOutdated: aiStale,
-              sources: workspaceData.sourceStates,
-              trace:
-                runTrace.data?.ticker.trim().toUpperCase() === normalized
-                  ? runTrace.data
-                  : null,
-              isLoadingAnalysis: isIntelligenceLoading,
-              isCachedAnalysis:
-                !intelligenceResult && intelligenceQuery.isFetchedAfterMount === false,
-              isGenerating: intelligenceMutation.isPending,
-              isRefreshingEvidence: evidenceRefreshMutation.isPending,
-              generationError: intelligenceMutation.error,
-              failedGenerationForce: persistedAttemptForce ?? lastAttemptForce,
-              refreshError: evidenceRefreshMutation.error,
-              refreshedEvidence,
-              onRefreshEvidence: handleRefreshEvidence,
-              onGenerate: handleAnalyzeWithAi,
-            }}
-          />
-        ) : null}
-        {secondaryTab === 'backtest' ? <SymbolBacktestTab ticker={normalized} /> : null}
-        {secondaryTab === 'volumeZones' ? (
-          <VolumeZonesTab
-            ticker={normalized}
-            sources={workspaceData.sourceStates.filter(
-              ({ id }) => id === 'prices' || id === 'screener',
-            )}
-          />
-        ) : null}
-      </div>
-    </div>
+        <section className="space-y-2">
+          <h3 className="font-semibold">{t('cockpit.detail.researchTools')}</h3>
+          <div role="group" aria-label={t('cockpit.detail.researchTools')} className="flex flex-wrap gap-1">
+            {(
+              [
+                { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
+                { id: 'backtest', label: t('workspacePage.panels.analysis.tabs.backtest') },
+                { id: 'volumeZones', label: t('workspacePage.panels.analysis.tabs.volumeZones') },
+              ] as const
+            ).map((tool) => (
+              <Button
+                key={tool.id}
+                type="button"
+                variant={secondaryTab === tool.id ? 'primary' : 'secondary'}
+                size="sm"
+                aria-expanded={secondaryTab === tool.id}
+                aria-controls={researchId}
+                onClick={() => setSecondaryTab((current) => (current === tool.id ? null : tool.id))}
+              >
+                {tool.label}
+              </Button>
+            ))}
+          </div>
+          <div id={researchId}>
+            {secondaryTab === 'intelligence' ? (
+              <SymbolIntelligenceTab
+                model={{
+                  ticker: normalized,
+                  selectionVersion,
+                  candidate,
+                  position,
+                  analysis: displayedIntelligence,
+                  intelligenceOutdated: aiStale,
+                  sources: workspaceData.sourceStates,
+                  trace: runTrace.data?.ticker.trim().toUpperCase() === normalized ? runTrace.data : null,
+                  isLoadingAnalysis: isIntelligenceLoading,
+                  isCachedAnalysis: !intelligenceResult && intelligenceQuery.isFetchedAfterMount === false,
+                  isGenerating: intelligenceMutation.isPending,
+                  isRefreshingEvidence: evidenceRefreshMutation.isPending,
+                  generationError: intelligenceMutation.error,
+                  failedGenerationForce: persistedAttemptForce ?? lastAttemptForce,
+                  refreshError: evidenceRefreshMutation.error,
+                  refreshedEvidence,
+                  onRefreshEvidence: handleRefreshEvidence,
+                  onGenerate: handleAnalyzeWithAi,
+                }}
+              />
+            ) : null}
+            {secondaryTab === 'backtest' ? <SymbolBacktestTab ticker={normalized} /> : null}
+            {secondaryTab === 'volumeZones' ? (
+              <VolumeZonesTab ticker={normalized} sources={workspaceData.sourceStates.filter(({ id }) => id === 'prices' || id === 'screener')} />
+            ) : null}
+          </div>
+        </section>
+      </ReviewDepth>
+    </aside>
   );
 }

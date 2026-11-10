@@ -66,33 +66,36 @@ export default function MainLayout() {
   ]);
 
   return (
-    <div className="min-h-dvh flex flex-col bg-background">
-      <Header navigation={!isDesktop ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={t('header.showNavigation')}
-          aria-expanded={navigationOpen}
-          aria-controls="primary-navigation"
-          onClick={() => setNavigationOpen(true)}
+    <div className="flex min-h-dvh bg-background">
+      <a href="#main-content" className="sr-only z-40 rounded-md bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
+        {t('sidebar.skipToMain')}
+      </a>
+      {isDesktop ? <Sidebar className="sticky top-0 h-dvh w-52 shrink-0 self-start" /> : navigationOpen ? (
+        <ModalShell
+          title={t('sidebar.navigation')}
+          onClose={closeNavigation}
+          closeAriaLabel={t('header.hideNavigation')}
+          fullScreen
+          className="max-w-sm mr-auto"
+          contentClassName="p-0"
         >
-          <Menu className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      ) : undefined} />
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {isDesktop ? <Sidebar className="w-56 shrink-0" /> : navigationOpen ? (
-          <ModalShell
-            title={t('sidebar.navigation')}
-            onClose={closeNavigation}
-            closeAriaLabel={t('header.hideNavigation')}
-            fullScreen
-            className="max-w-sm mr-auto"
-            contentClassName="p-0"
+          <Sidebar onNavigate={closeNavigation} />
+        </ModalShell>
+      ) : null}
+      <div className="min-w-0 flex-1">
+        <Header navigation={!isDesktop ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={t('header.showNavigation')}
+            aria-expanded={navigationOpen}
+            aria-controls="primary-navigation"
+            onClick={() => setNavigationOpen(true)}
           >
-            <Sidebar onNavigate={closeNavigation} />
-          </ModalShell>
-        ) : null}
-        <main className="flex-1 min-w-0 overflow-y-auto bg-background p-4 lg:p-6">
+            <Menu className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        ) : undefined} />
+        <main id="main-content" tabIndex={-1} className="min-w-0 bg-background px-4 py-5 sm:px-6 lg:px-7 lg:py-7">
           <Outlet />
         </main>
       </div>

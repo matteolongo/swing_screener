@@ -122,11 +122,11 @@ export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary
       role="group"
       aria-label={item.ticker}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-primary/40',
+        'flex w-full flex-wrap items-center gap-x-3 rounded-lg border-l-2 border-primary/40 px-3 py-1 text-left transition-colors hover:bg-foreground/5',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <button type="button" onClick={() => onClick(item.ticker)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <button type="button" onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -152,7 +152,7 @@ export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary
         <button
           type="button"
           onClick={onTrim}
-          className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20 shrink-0 cursor-pointer"
+          className="min-h-11 rounded bg-warning/10 px-2 text-xs text-warning hover:bg-warning/20"
         >
           {t('todayPage.actionList.trimAction')}
         </button>
@@ -176,12 +176,12 @@ export function CloseItem({ item, onClick, onAction, isDone, isFocused, intellig
       role="group"
       aria-label={item.ticker}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-danger/40',
+        'flex w-full flex-wrap items-center gap-x-3 rounded-lg border-l-2 border-danger/40 px-3 py-1 text-left transition-colors hover:bg-foreground/5',
         isDone && 'opacity-50',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <button type="button" onClick={() => onClick(item.ticker)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <button type="button" onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -194,14 +194,14 @@ export function CloseItem({ item, onClick, onAction, isDone, isFocused, intellig
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <AiSignalBadge summary={intelligenceSummary} />
       <EarningsBadge ticker={item.ticker} />
-      <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
+      <span className="basis-full break-words text-xs text-muted">{item.reason}</span>
       {isDone ? (
         <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
       ) : null}
       </button>
       {!isDone && onAction ? (
         <button type="button" onClick={onAction}
-          className="text-xs px-2 py-0.5 rounded bg-danger/10 text-danger hover:bg-danger/20 shrink-0 cursor-pointer"
+          className="min-h-11 rounded bg-danger/10 px-2 text-xs text-danger hover:bg-danger/20"
         >
           {t('todayPage.actionList.closeAction')}
         </button>
@@ -226,12 +226,12 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
       role="group"
       aria-label={item.ticker}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-warning/40',
+        'flex w-full flex-wrap items-center gap-x-3 rounded-lg border-l-2 border-warning/40 px-3 py-1 text-left transition-colors hover:bg-foreground/5',
         isDone && 'opacity-50',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <button type="button" onClick={() => onClick(item.ticker)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <button type="button" onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -244,7 +244,7 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
       <EarningsBadge ticker={item.ticker} />
-      <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
+      <span className="basis-full break-words text-xs text-muted">{item.reason}</span>
       {isDone ? (
         <span className="text-xs font-medium text-success shrink-0">
           {t('todayPage.actionList.acceptStopDone')}
@@ -255,7 +255,7 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
         <button type="button" disabled={isAccepting}
           onClick={() => onAccept(item.positionId, item.stopSuggested, item.reason)}
           className={cn(
-            'text-xs px-2 py-0.5 rounded shrink-0 cursor-pointer',
+            'min-h-11 rounded px-2 text-xs',
             'bg-warning/10 text-warning',
             'hover:bg-warning/20',
             isAccepting && 'opacity-50 cursor-not-allowed',
@@ -265,7 +265,7 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
         </button>
       ) : !isDone && onAction ? (
         <button type="button" onClick={onAction}
-          className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20 shrink-0 cursor-pointer"
+          className="min-h-11 rounded bg-warning/10 px-2 text-xs text-warning hover:bg-warning/20"
         >
           {t('todayPage.actionList.updateAction')}
         </button>
@@ -371,8 +371,9 @@ export function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }
     <button
       type="button"
       onClick={() => onClick(item.ticker)}
+      aria-current={isFocused || undefined}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-warning/40',
+        'flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border-l-2 border-warning/40 px-3 py-2 text-left transition-colors hover:bg-foreground/5',
         isFocused && 'ring-1 ring-primary',
       )}
     >
@@ -387,7 +388,7 @@ export function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }
       </span>
       <AiSignalBadge summary={intelligenceSummary} />
       <EarningsBadge ticker={item.ticker} />
-      <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
+      <span className="basis-full break-words text-xs text-muted">{item.reason}</span>
     </button>
   );
 }
@@ -398,8 +399,9 @@ export function WatchlistNearTriggerItem({ item, onClick, isFocused }: { item: W
     <button
       type="button"
       onClick={() => onClick(item.ticker)}
+      aria-current={isFocused || undefined}
       className={cn(
-        'w-full text-left flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-warning/40',
+        'flex min-h-11 w-full flex-wrap items-start gap-x-3 gap-y-1 rounded-lg border-l-2 border-warning/40 px-3 py-2 text-left transition-colors hover:bg-foreground/5',
         isFocused && 'ring-1 ring-primary',
       )}
     >
@@ -409,7 +411,7 @@ export function WatchlistNearTriggerItem({ item, onClick, isFocused }: { item: W
       <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning">
         {t('todayPage.actionList.watchlistNearTrigger')}
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-28">
         <div className="text-xs font-semibold tabular-nums text-warning">
           {distance != null
             ? t('watchlist.pipeline.distanceToBuyZone', { value: `${distance >= 0 ? '+' : ''}${formatNumber(distance, 1)}%` })
@@ -439,8 +441,9 @@ export function PendingOrderItem({ item, onClick, isFocused }: PendingOrderItemP
     <button
       type="button"
       onClick={() => onClick(item.ticker)}
+      aria-current={isFocused || undefined}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2',
+        'flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border-l-2 px-3 py-2 text-left transition-colors hover:bg-foreground/5',
         isStale ? 'border-warning/40' : 'border-border',
         isFocused && 'ring-1 ring-primary',
       )}
@@ -460,7 +463,7 @@ export function PendingOrderItem({ item, onClick, isFocused }: PendingOrderItemP
         {t('todayPage.actionList.pendingOrdersDaysPending', { n: String(item.daysPending) })}
       </span>
       {item.note && (
-        <span className="text-xs text-muted truncate flex-1">
+        <span className="basis-full break-words text-xs text-muted">
           {item.note}
         </span>
       )}

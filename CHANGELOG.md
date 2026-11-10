@@ -7,6 +7,13 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Rebuild the web workspace around Daily review. Surface scan quality and
+  portfolio risk first, separate portfolio attention from ranked candidates,
+  and open symbol research in layers from the next decision to the underlying
+  market data and evidence.
+
 ### Added
 
 - Manual entry drafts save a proposed entry, stop, target, quantity, currency
