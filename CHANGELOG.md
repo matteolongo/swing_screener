@@ -22,6 +22,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Restore Alpaca market-data requests with `alpaca-py` 0.45 by using the
+  SDK's timeframe unit for multi-minute bars.
 - Narrow layouts use an accessible navigation drawer, wrap capital/risk values
   and Book tabs, and keep wide tables scrolling within their panels.
 

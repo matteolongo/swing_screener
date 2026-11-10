@@ -128,17 +128,17 @@ class AlpacaDataProvider(MarketDataProvider):
 
     def _parse_timeframe(self, interval: str):
         """Convert interval string to Alpaca TimeFrame."""
-        from alpaca.data.timeframe import TimeFrame  # lazy
+        from alpaca.data.timeframe import TimeFrame, TimeFrameUnit  # lazy
 
         interval_map = {
             "1m": TimeFrame.Minute,
             "1min": TimeFrame.Minute,
-            "5m": TimeFrame(5, "Min"),
-            "5min": TimeFrame(5, "Min"),
-            "15m": TimeFrame(15, "Min"),
-            "15min": TimeFrame(15, "Min"),
-            "30m": TimeFrame(30, "Min"),
-            "30min": TimeFrame(30, "Min"),
+            "5m": TimeFrame(5, TimeFrameUnit.Minute),
+            "5min": TimeFrame(5, TimeFrameUnit.Minute),
+            "15m": TimeFrame(15, TimeFrameUnit.Minute),
+            "15min": TimeFrame(15, TimeFrameUnit.Minute),
+            "30m": TimeFrame(30, TimeFrameUnit.Minute),
+            "30min": TimeFrame(30, TimeFrameUnit.Minute),
             "1h": TimeFrame.Hour,
             "1hr": TimeFrame.Hour,
             "1hour": TimeFrame.Hour,
