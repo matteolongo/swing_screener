@@ -1,5 +1,5 @@
 import { ReactElement } from 'react'
-import { render, RenderOptions, waitFor } from '@testing-library/react'
+import { fireEvent, render, RenderOptions, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
@@ -62,6 +62,17 @@ export async function waitForQueriesToSettle(queryClient: QueryClient) {
       throw new Error('Queries still fetching')
     }
   })
+}
+
+export function openNativeDisclosure(label: HTMLElement) {
+  const details = label.closest('summary')?.parentElement
+  if (details?.tagName !== 'DETAILS') {
+    throw new Error('Expected a native disclosure summary')
+  }
+
+  // Happy DOM does not implement the browser's default summary activation.
+  details.setAttribute('open', '')
+  fireEvent(details, new Event('toggle'))
 }
 
 // Re-export everything from testing-library

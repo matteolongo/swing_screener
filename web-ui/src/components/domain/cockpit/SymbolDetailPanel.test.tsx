@@ -3,7 +3,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
-import { renderWithProviders } from '@/test/utils';
+import { openNativeDisclosure, renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import SymbolDetailPanel from './SymbolDetailPanel';
 import { useScreenerStore } from '@/stores/screenerStore';
@@ -198,18 +198,18 @@ describe('SymbolDetailPanel', () => {
     expect(screen.queryByText('Late Adyen')).not.toBeInTheDocument();
   });
 
-  it('shows the decision immediately and opens market and evidence details independently', async () => {
-    const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
+  it('shows the decision immediately and reveals market and evidence details independently', () => {
+    renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
     expect(screen.getByRole('heading', { name: t('cockpit.detail.decisionLevel') })).toBeVisible();
     const market = screen.getByText(t('cockpit.detail.marketLevel'));
     const evidence = screen.getByText(t('cockpit.detail.evidenceLevel'));
     expect(market.closest('details')).not.toHaveAttribute('open');
     expect(evidence.closest('details')).not.toHaveAttribute('open');
-    await user.click(evidence);
+    openNativeDisclosure(evidence);
     expect(evidence.closest('details')).toHaveAttribute('open');
     expect(screen.getByRole('heading', { name: t('cockpit.detail.sourceDetails') })).toBeVisible();
     expect(market.closest('details')).not.toHaveAttribute('open');
-    await user.click(market);
+    openNativeDisclosure(market);
     expect(market.closest('details')).toHaveAttribute('open');
   });
 
@@ -325,7 +325,7 @@ describe('SymbolDetailPanel research wiring', () => {
       }),
     );
     const { user } = renderWithProviders(<SymbolDetailPanel ticker="ADYEN" onClose={() => {}} />);
-    await user.click(screen.getByText(t('cockpit.detail.evidenceLevel')));
+    openNativeDisclosure(screen.getByText(t('cockpit.detail.evidenceLevel')));
     await user.click(
       screen.getByRole('button', { name: t('workspacePage.panels.analysis.tabs.intelligence') }),
     );

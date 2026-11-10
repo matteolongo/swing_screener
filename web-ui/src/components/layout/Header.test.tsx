@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '@/test/utils';
+import { openNativeDisclosure, renderWithProviders } from '@/test/utils';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
 import { messagesEn } from '@/i18n/messages.en';
@@ -32,12 +32,12 @@ describe('Header', () => {
   );
 
   it('reveals the capital and risk summary on demand', async () => {
-    const { user } = renderHeader();
+    renderHeader();
 
     await screen.findByRole('combobox', { name: t('sidebar.activeStrategy') });
     const policy = screen.getByText(t('header.riskPolicy'));
     expect(policy.closest('details')).not.toHaveAttribute('open');
-    await user.click(policy);
+    openNativeDisclosure(policy);
     expect(await screen.findByText(/Risk \/ trade/)).toBeVisible();
   });
 

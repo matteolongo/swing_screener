@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, fireEvent, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
-import { renderWithProviders } from '@/test/utils';
+import { openNativeDisclosure, renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import Today from './Today';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -592,11 +592,11 @@ describe('Today page — cockpit composition', () => {
       warnings: ['TEST_PROVIDER_UNAVAILABLE MSFT'],
       candidates: [{ ...eligibleCockpitCandidate(), lastBar: '2026-10-02', dataAsOf: '2026-10-02', dataStatus: 'stale' }],
     } as ScreenerResponse);
-    const { user } = renderWithProviders(<Today />);
+    renderWithProviders(<Today />);
     expect(await screen.findByText(t('screener.quality.partial'))).toBeInTheDocument();
     const scanDetails = screen.getByText(t('cockpit.review.scanDetails'));
     expect(scanDetails.closest('details')).not.toHaveAttribute('open');
-    await user.click(scanDetails);
+    openNativeDisclosure(scanDetails);
     expect(screen.getByText(t('screener.quality.counts', { requested: 4, evaluated: 3, matched: 1 }))).toBeVisible();
     expect(screen.getByText('TEST_PROVIDER_UNAVAILABLE MSFT')).toBeVisible();
     expect(screen.getAllByText(t('screener.quality.market.stale')).length).toBeGreaterThan(0);
