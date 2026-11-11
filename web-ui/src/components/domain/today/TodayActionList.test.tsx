@@ -1,19 +1,16 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import TodayActionList from './TodayActionList';
 import { useScreenerStore, type TodayRunSnapshot } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
-const { reviewQuery, positionsQuery, watchlistQuery } = vi.hoisted(() => ({
+const { reviewQuery, positionsQuery } = vi.hoisted(() => ({
   reviewQuery: {
     current: null as any,
   },
   positionsQuery: {
-    current: null as any,
-  },
-  watchlistQuery: {
     current: null as any,
   },
 }));
@@ -21,7 +18,6 @@ const { reviewQuery, positionsQuery, watchlistQuery } = vi.hoisted(() => ({
 // Minimal daily-review payload: one open position that is NO_ACTION (hold).
 vi.mock('@/features/dailyReview/api', () => ({
   usePortfolioReview: () => reviewQuery.current,
-  useWatchlistNearTrigger: () => watchlistQuery.current,
 }));
 
 vi.mock('@/features/portfolio/hooks', async (orig) => {
@@ -60,13 +56,7 @@ describe('TodayActionList holdings', () => {
       refetch: vi.fn(),
       isFetching: false,
     };
-    watchlistQuery.current = {
-      data: [],
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-      isFetching: false,
-    };
+    useWorkspaceStore.getState().clearSelectedTicker();
     useScreenerStore.setState({
       lastResult: null,
       lastRunContext: null,
@@ -82,113 +72,26 @@ describe('TodayActionList holdings', () => {
     expect(screen.getAllByText('LRCX')).toHaveLength(1);
   });
 
-  it('renders the symbol rail with shared controls when compact', () => {
-    useWorkspaceStore.setState({ selectedTicker: 'LRCX' });
-    renderWithProviders(<TodayActionList compact onTickerSelect={() => {}} />);
-
-    expect(screen.getByTestId('symbol-rail-list')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /LRCX/i })).toHaveAttribute('aria-current', 'true');
-    expect(screen.getByRole('button', {
-      name: t('dailyReview.header.refreshTitle'),
-    })).toBeInTheDocument();
-  });
-
-  it('keeps source filters usable while a symbol is selected', async () => {
-    useWorkspaceStore.setState({ selectedTicker: 'LRCX' });
-    useScreenerStore.setState({ todayRun: {
-      request: { preset: 'eu_blue_chips' },
-      displayFilters: { recommendedOnly: true, actionFilter: 'all' },
-      completedAt: '2026-06-26T20:00:00Z',
-      result: { asofDate: '2026-06-26', candidates: [] },
-    } as unknown as TodayRunSnapshot });
-    const { user } = renderWithProviders(<TodayActionList compact onTickerSelect={() => {}} />);
-
-    await user.click(screen.getByRole('button', { name: t('todayPage.actionList.allSourceCandidates') }));
-    expect(useScreenerStore.getState().todayRun?.displayFilters.recommendedOnly).toBe(false);
-    await user.click(screen.getByRole('button', { name: t('todayPage.actionList.readyFilter') }));
-    expect(useScreenerStore.getState().todayRun?.displayFilters.recommendedOnly).toBe(true);
-    expect(screen.getByRole('button', { name: /LRCX/i })).toHaveAttribute('aria-current', 'true');
-  });
-
-  it('prioritizes an urgent close over the generic held-position row', () => {
-    reviewQuery.current.data.positionsClose = [{
-      ticker: 'LRCX',
-      positionId: 'POS-1',
-      reason: 'Stop breached',
-    }];
-    renderWithProviders(<TodayActionList compact onTickerSelect={() => {}} />);
-
-    const rail = screen.getByTestId('symbol-rail-list');
-    expect(within(rail).getByText(t('todayPage.actionList.close'))).toBeInTheDocument();
-    expect(within(rail).getByText('Stop breached')).toBeInTheDocument();
-    expect(within(rail).queryByText(t('todayPage.actionList.openPositions')))
-      .not.toBeInTheDocument();
-  });
-
-  it('keeps loaded positions, pinned candidates, and watchlist visible when review refresh fails', () => {
-    reviewQuery.current = {
-      ...reviewQuery.current,
-      data: undefined,
-      error: new Error('review unavailable'),
-    };
-    useScreenerStore.setState({
-      todayRun: {
-        request: { preset: 'us_large_cap_equities' },
-        displayFilters: { recommendedOnly: true, actionFilter: 'all' },
-        completedAt: '2026-07-10T20:00:00Z',
-        result: {
-          asofDate: '2026-07-10',
-          candidates: [{
-            ticker: 'PINNED', currency: 'USD', close: 100, sma20: null, sma50: null, sma200: null,
-            atr: 1, momentum6m: 0, momentum12m: 0, relStrength: 0, score: 1, confidence: 90, rank: 1, rr: 2,
-            recommendation: { verdict: 'RECOMMENDED', workflowStatus: 'ready', nextStep: { code: 'review_order' } },
-          }],
-          totalScreened: 1, dataFreshness: 'final_close',
-        },
-      } as unknown as TodayRunSnapshot,
-    });
-    watchlistQuery.current.data = [{
+  it('preserves watchlist row identity when the symbol is also in the scan', async () => {
+    reviewQuery.current.data.watchlistNearTrigger = [{
       ticker: 'WATCHED', watchedAt: '2026-07-10', source: 'manual', priceHistory: [],
     }];
+    const candidate = { ticker: 'WATCHED', currency: 'USD' };
+    useScreenerStore.setState({ todayRun: {
+      request: {},
+      displayFilters: { recommendedOnly: false, actionFilter: 'all' },
+      completedAt: 'run-1',
+      result: { candidates: [candidate] },
+    } as unknown as TodayRunSnapshot });
 
-    renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
+    const { user } = renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
+    await user.click(screen.getByRole('button', { name: /WATCHED/ }));
 
-    expect(screen.getByText('LRCX')).toBeInTheDocument();
-    expect(screen.getByText('PINNED')).toBeInTheDocument();
-    expect(screen.getByText('WATCHED')).toBeInTheDocument();
-    expect(screen.getByText(/review unavailable/i)).toBeInTheDocument();
-  });
-
-  it('keeps watchlist rows that have no composed candidate row', () => {
-    watchlistQuery.current.data = [{ ticker: 'MANAGED', watchedAt: '2026-07-10', source: 'manual', priceHistory: [] }];
-    useScreenerStore.setState({
-      todayRun: {
-        request: { preset: 'us_large_cap_equities' },
-        displayFilters: { recommendedOnly: true, actionFilter: 'all' },
-        completedAt: '2026-07-10T20:00:00Z',
-        result: {
-          asofDate: '2026-07-10',
-          candidates: [
-            {
-              ticker: 'PINNED', currency: 'USD', close: 100, sma20: null, sma50: null, sma200: null,
-              atr: 1, momentum6m: 0, momentum12m: 0, relStrength: 0, score: 1, confidence: 90, rank: 1, rr: 2,
-              recommendation: { verdict: 'RECOMMENDED', workflowStatus: 'ready', nextStep: { code: 'review_order' } },
-            },
-            {
-              ticker: 'MANAGED', currency: 'USD', close: 100, sma20: null, sma50: null, sma200: null,
-              atr: 1, momentum6m: 0, momentum12m: 0, relStrength: 0, score: 1, confidence: 90, rank: 2, rr: 2,
-              recommendation: { verdict: 'RECOMMENDED', workflowStatus: 'ready', nextStep: { code: 'review_order' } },
-              sameSymbol: { mode: 'MANAGE_ONLY' },
-            },
-          ],
-          totalScreened: 2, dataFreshness: 'final_close',
-        },
-      } as unknown as TodayRunSnapshot,
+    expect(useWorkspaceStore.getState().selection).toMatchObject({
+      ticker: 'WATCHED', source: 'today_watchlist', rowId: 'watch-WATCHED-2026-07-10',
+      candidate, runId: 'run-1',
     });
-
-    renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
-
-    expect(screen.getByText('MANAGED')).toBeInTheDocument();
+    expect(screen.queryByText('UNPINNED')).not.toBeInTheDocument();
   });
 
   it('opens trim from the canonical open-position row when review metadata recommends it', async () => {
@@ -212,65 +115,13 @@ describe('TodayActionList holdings', () => {
     expect(screen.getAllByText(new RegExp(`${t('todayPage.actionList.pendingOrdersSection')} · 1`))).toHaveLength(2);
   });
 
-  it('shows loading state for each source independently', () => {
-    useScreenerStore.setState({ todayRunInitialized: false });
+  it('shows loading state for each portfolio source independently', () => {
     reviewQuery.current.isLoading = true;
     positionsQuery.current.isLoading = true;
-    watchlistQuery.current.isLoading = true;
 
     renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
 
-    expect(screen.getByText(t('todayPage.actionList.loadingPinnedCandidates'))).toBeInTheDocument();
     expect(screen.getByText(t('todayPage.actionList.loadingReview'))).toBeInTheDocument();
     expect(screen.getByText(t('todayPage.actionList.loadingPositions'))).toBeInTheDocument();
-    expect(screen.getByText(t('todayPage.actionList.loadingWatchlist'))).toBeInTheDocument();
-  });
-
-  it('renders opportunities from the pinned run, not candidate rows returned by portfolio refresh', () => {
-    useScreenerStore.setState({
-      todayRun: {
-        request: { preset: 'us_large_cap_equities' },
-        displayFilters: { recommendedOnly: true, actionFilter: 'all' },
-        completedAt: '2026-07-10T20:00:00Z',
-        result: {
-          asofDate: '2026-07-10',
-          candidates: [{
-            ticker: 'PINNED',
-            currency: 'USD',
-            close: 100,
-            sma20: null,
-            sma50: null,
-            sma200: null,
-            atr: 1,
-            momentum6m: 0,
-            momentum12m: 0,
-            relStrength: 0,
-            score: 1,
-            confidence: 90,
-            rank: 1,
-            rr: 2,
-            recommendation: {
-              verdict: 'RECOMMENDED',
-              workflowStatus: 'ready',
-              nextStep: { code: 'review_order' },
-            },
-          }],
-          totalScreened: 1,
-          dataFreshness: 'final_close',
-        },
-      } as unknown as TodayRunSnapshot,
-    });
-
-    renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
-
-    expect(screen.getByText('PINNED')).toBeInTheDocument();
-    expect(screen.queryByText('UNPINNED')).not.toBeInTheDocument();
-    expect(screen.getByText(t('todayPage.actionList.sourceRun', {
-      source: 'us_large_cap_equities',
-      date: '2026-07-10',
-    }))).toBeInTheDocument();
-    expect(screen.getByRole('button', {
-      name: t('todayPage.actionList.readyFilter'),
-    })).toBeInTheDocument();
   });
 });

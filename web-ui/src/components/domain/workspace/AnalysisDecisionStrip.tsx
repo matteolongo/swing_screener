@@ -10,6 +10,7 @@ import type {
 } from '@/features/screener/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
+import { isSupportedCurrency } from '@/types/currency';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import { marketDate } from '@/features/screener/resultQuality';
 import { formatWorkflowNextStep, getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
@@ -124,9 +125,12 @@ export default function AnalysisDecisionStrip({
   const candleDate = marketDate(candidate?.dataAsOf) ?? marketDate(candidate?.lastBar);
   const marketStatus = !candleDate ? 'unknown' : candidate?.dataStatus === 'current' ? 'final_close'
     : candidate?.dataStatus === 'stale' || candidate?.dataStatus === 'intraday' ? candidate.dataStatus : 'unknown';
-  const currency = candidate?.currency ?? 'USD';
   const heldMode = Boolean(position);
   const orderDraft = getCanonicalOrderDraft(candidate);
+  const currency = heldMode ? candidate?.currency : orderDraft?.quoteCurrency ?? candidate?.currency;
+  const formatPlanPrice = (value: number | null) => value != null && isSupportedCurrency(currency)
+    ? formatCurrency(value, currency.trim().toUpperCase())
+    : formatNumber(value);
   const canPrepareOrder = Boolean(orderDraft);
   const showAnalysisAction = summary && (
     !candidate?.recommendation ||
@@ -175,7 +179,7 @@ export default function AnalysisDecisionStrip({
       ? t('workspacePage.panels.analysis.decisionSummary.tradePlan.plannedEntry')
       : t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose');
   const closeSecondary = usesSuggestedEntry && isPositiveNumber(closeEntry)
-    ? `${t('workspacePage.panels.analysis.decisionSummary.tradePlan.close')} ${formatCurrency(closeEntry, currency)}`
+    ? `${t('workspacePage.panels.analysis.decisionSummary.tradePlan.close')} ${formatPlanPrice(closeEntry)}`
     : undefined;
   const sourceItems = [
     [t('workspacePage.overview.sources.market'), candidate?.dataSourceSummary?.marketData],
@@ -189,13 +193,13 @@ export default function AnalysisDecisionStrip({
     <div className="overflow-x-auto">
       <table className="w-full border-separate border-spacing-1" aria-label={t('workspacePage.overview.tradePlan')}>
         <tbody>
-          {metricRow(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}
-          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), stop != null ? formatCurrency(stop, currency) : '—')}
-          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), target != null ? formatCurrency(target, currency) : '—')}
+          {metricRow(entryLabel, formatPlanPrice(entry), closeSecondary)}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), formatPlanPrice(stop))}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), formatPlanPrice(target))}
           {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
           {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), rr != null ? `${formatNumber(rr, 1)}x` : '—')}
           {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent'), riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
-          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
+          {metricRow(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), formatPlanPrice(oneR))}
           {metricRow(t('workspacePage.overview.invalidation'), summary?.explanation?.whatInvalidatesIt?.[0] ?? summary?.mainRisk ?? '—')}
         </tbody>
       </table>

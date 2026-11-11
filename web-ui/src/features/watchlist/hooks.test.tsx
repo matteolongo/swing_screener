@@ -94,7 +94,7 @@ describe('watchlist hooks', () => {
       source: 'screener',
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlist() });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlistPipeline() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.dailyReviewPrefix() });
   });
 
   it('unwatches symbol and invalidates watchlist queries', async () => {
@@ -112,6 +112,6 @@ describe('watchlist hooks', () => {
 
     expect(mockedUnwatchSymbol).toHaveBeenCalledWith('AAPL');
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlist() });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlistPipeline() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.dailyReviewPrefix() });
   });
 });

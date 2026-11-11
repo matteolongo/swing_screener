@@ -28,7 +28,7 @@ describe('AnalysisDecisionStrip held trade metrics', () => {
     const position = { ticker: 'AAPL', entryPrice: 100, stopPrice, targetPrice: 130, perShareRisk: 10 } as PositionWithMetrics;
     render(<AnalysisDecisionStrip ticker="AAPL" position={position} />);
     const row = screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR')).closest('tr')!;
-    expect(within(row).getByText(formatCurrency(10, 'USD'))).toBeVisible();
+    expect(within(row).getByText('10.00')).toBeVisible();
   });
 
   it('keeps an add-on draft separate from the held trade metrics', () => {
@@ -43,6 +43,35 @@ describe('AnalysisDecisionStrip held trade metrics', () => {
     expect(metric('workspacePage.panels.analysis.decisionSummary.tradePlan.entry')).toHaveTextContent(formatCurrency(100, 'USD'));
     expect(metric('workspacePage.panels.analysis.decisionSummary.tradePlan.rr')).toHaveTextContent('3.0x');
     expect(metric('workspacePage.panels.analysis.decisionSummary.tradePlan.riskPercent')).toHaveTextContent('10.00%');
+  });
+});
+
+describe('AnalysisDecisionStrip plan currency', () => {
+  it('preserves numeric prices when the candidate currency is unknown', () => {
+    render(<AnalysisDecisionStrip ticker="AAPL" candidate={buildCandidate({
+      currency: 'UNKNOWN', entry: 101, stop: 90, suggestedOrderPrice: 100,
+    })} />);
+
+    expect(screen.getByRole('row', { name: /100\.00/ })).toHaveTextContent('100.00');
+    expect(screen.getByText(`${t('workspacePage.panels.analysis.decisionSummary.tradePlan.close')} 101.00`)).toBeVisible();
+    expect(screen.getByText('90.00')).toBeVisible();
+  });
+
+  it('uses the signed quote currency for the draft and preserves held prices without a known currency', () => {
+    const candidate = buildCandidate({
+      currency: 'UNKNOWN',
+      recommendation: { workflowStatus: 'ready', nextStep: { code: 'review_order' } } as SymbolAnalysisCandidate['recommendation'],
+      executionEligibility: { allowed: true, mode: 'ready', reason: null },
+      canonicalOrderDraft: { orderType: 'BUY_STOP', entry: 120, stop: 110, target: 140, shares: 1, rr: 2, quoteCurrency: 'EUR', approvalToken: 'signed' },
+    });
+    const { rerender } = render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} />);
+    expect(screen.getByText(formatCurrency(120, 'EUR'))).toBeVisible();
+    expect(screen.getByText(formatCurrency(110, 'EUR'))).toBeVisible();
+
+    const position = { ticker: 'AAPL', entryPrice: 100, stopPrice: 95, targetPrice: 130, perShareRisk: 10 } as PositionWithMetrics;
+    rerender(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} position={position} />);
+    expect(screen.getByText('100.00')).toBeVisible();
+    expect(screen.getByText('95.00')).toBeVisible();
   });
 });
 
@@ -431,7 +460,8 @@ describe('AnalysisDecisionStrip held position', () => {
     const position = { positionId: 'POS-1', ticker: 'AAPL', entryPrice: 100,
       stopPrice: 105, targetPrice: 140, initialRisk: 12 } as any;
     render(<AnalysisDecisionStrip ticker="AAPL" position={position} />);
-    expect(screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR')).closest('tr')).toHaveTextContent('$12.00');
+    const row = screen.getByText(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR')).closest('tr')!;
+    expect(within(row).getByText('12.00')).toBeVisible();
   });
 
   it('keeps held entry and original 1R when an add-on draft is available', () => {

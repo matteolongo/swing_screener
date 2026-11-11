@@ -7,6 +7,16 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep keyboard focus on the active portfolio row, show rejected stop updates
+  and incomplete reviews, and retain portfolio selections when a scan changes.
+- Separate scan progress from portfolio refresh and share one review request
+  between holdings and watchlist attention.
+- Show price history failures with a retry, retain cached provider history,
+  display prices with unknown currencies, and keep Book filters usable on
+  narrow screens and during loads.
+
 ### Changed
 
 - Rebuild the web workspace around Daily review. Surface scan quality and

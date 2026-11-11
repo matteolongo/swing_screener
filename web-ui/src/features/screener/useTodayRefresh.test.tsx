@@ -59,6 +59,19 @@ describe('Today refresh', () => {
     expect(useScreenerStore.getState().lastResult?.candidates[0].entry).toBe(50);
   });
 
+  it.each(['today_position', 'today_watchlist'] as const)('keeps a %s row selected when the refreshed scan drops its ticker', async (source) => {
+    useWorkspaceStore.getState().setWorkspaceSelection({
+      ticker: 'OUTSIDE', source, rowId: 'row-1', runId: 'previous',
+      candidate: { ...response(50).candidates[0], ticker: 'OUTSIDE' },
+    });
+    setup();
+
+    await waitFor(() => expect(useScreenerStore.getState().todayRun).not.toBeNull());
+    expect(useWorkspaceStore.getState().selection).toEqual({
+      ticker: 'OUTSIDE', source, rowId: 'row-1', candidate: undefined, runId: undefined,
+    });
+  });
+
   it('runs again for each explicit refresh and waits for persistence initialization', async () => {
     useScreenerStore.setState({ todayRunInitialized: false });
     const { result } = setup();

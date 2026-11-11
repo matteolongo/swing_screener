@@ -27,7 +27,6 @@ export async function invalidateStrategyDependentQueries(queryClient: QueryClien
     queryClient.invalidateQueries({ queryKey: queryKeys.portfolioSummary() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.openPositionsIntelligence() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.watchlist() }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.watchlistPipeline() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.dailyReviewPrefix() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.earningsProximity() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.regimeBreakdown() }),

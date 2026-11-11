@@ -182,7 +182,7 @@ export default function Today() {
             </div>
             <PendingOrdersBadge />
             <div data-testid="today-action-list">
-              <TodayActionList onTickerSelect={handleTickerSelect} onRefresh={todayRefresh.refresh} isRefreshing={todayRefresh.isRefreshing} portfolioOnly />
+              <TodayActionList onTickerSelect={handleTickerSelect} />
             </div>
           </section>
           <section id="candidate-review" aria-labelledby="candidate-review-title" tabIndex={-1}

@@ -37,7 +37,6 @@ export const queryKeys = {
   positionStopPreview: (positionId: string) =>
     ['positions', positionId, 'stop-preview'] as const,
   watchlist: () => ['watchlist'] as const,
-  watchlistPipeline: () => ['watchlist-pipeline'] as const,
   fundamentalsSnapshot: (symbol?: string) =>
     ['fundamentals-snapshot', symbol ?? null] as const,
   intelligence: {

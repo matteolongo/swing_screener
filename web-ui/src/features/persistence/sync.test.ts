@@ -20,19 +20,16 @@ describe('registerTradingStoreSync', () => {
     useScreenerStore.getState().invalidateActionableRuns();
   });
 
-  it('invalidates review and watchlist pipeline after another tab writes the ledger', async () => {
+  it('invalidates portfolio and watchlist review after another tab writes the ledger', async () => {
     const queryClient = new QueryClient();
     const reviewKey = queryKeys.dailyReview(0, 'portfolio');
-    const watchlistKey = queryKeys.watchlistPipeline();
     queryClient.setQueryData(reviewKey, { summary: {} });
-    queryClient.setQueryData(watchlistKey, []);
     const unregister = registerTradingStoreSync(queryClient);
 
     dispatchTradingStoreStorageEvent({ activeStrategyId: 'same' }, { activeStrategyId: 'same' });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(queryClient.getQueryState(reviewKey)?.isInvalidated).toBe(true);
-    expect(queryClient.getQueryState(watchlistKey)?.isInvalidated).toBe(true);
     unregister();
   });
 

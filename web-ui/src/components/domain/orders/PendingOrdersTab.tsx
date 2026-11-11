@@ -146,23 +146,19 @@ export default function PendingOrdersTab() {
     </section>
   );
 
-  if (ordersQuery.isLoading) {
-    return <p className="text-sm text-muted py-4">{t('common.table.loading')}</p>;
-  }
-
   return (
     <>
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-4">
+      <div className="mb-4 flex flex-wrap gap-2">
         {filterTabs.map((f) => (
           <button
             key={f}
             type="button"
+            aria-pressed={activeFilter === f}
             onClick={() => setActiveFilter(f)}
             className={
               activeFilter === f
-                ? 'px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary'
-                : 'px-3 py-1 rounded-full text-xs font-medium text-muted hover:text-muted'
+                ? 'min-h-11 rounded-full bg-primary/10 px-3 text-xs font-semibold text-primary'
+                : 'min-h-11 rounded-full px-3 text-xs font-medium text-muted hover:text-foreground'
             }
           >
             {t(`ordersPage.filter.${f}`)}
@@ -172,7 +168,9 @@ export default function PendingOrdersTab() {
       <p className="mb-3 text-xs text-muted">{t('pendingOrdersTab.lifecycleHelp')}</p>
       {lifecycleError ? <p role="alert" className="mb-3 text-sm text-danger">{lifecycleError.message}</p> : null}
 
-      {orders.length === 0 ? (
+      {ordersQuery.isLoading ? (
+        <p role="status" className="py-4 text-sm text-muted">{t('common.table.loading')}</p>
+      ) : orders.length === 0 ? (
         <p className="text-sm text-muted py-4">{t('pendingOrdersTab.empty')}</p>
       ) : (
         <div className="space-y-6">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   useUpdateStopMutation,
   useClosePositionMutation,
@@ -6,14 +6,8 @@ import {
 } from '@/features/portfolio/hooks';
 import type { ClosePositionRequest, PartialCloseRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
 
-interface FlatItem {
-  ticker: string;
-  id: string;
-}
-
-export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: string, rowId: string, focusInspector?: boolean) => void, positions: Position[] = [], positionsUnavailable = false) {
+export function useTodayActions(onTickerSelect: (ticker: string, rowId: string, focusInspector?: boolean) => void, positions: Position[] = [], positionsUnavailable = false) {
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
-  const [acceptedStops, setAcceptedStops] = useState<Set<string>>(new Set());
   const [updateStopTargetId, setUpdateStopTargetId] = useState<string | null>(null);
   const [closeTargetId, setCloseTargetId] = useState<string | null>(null);
   const [trimTargetId, setTrimTargetId] = useState<string | null>(null);
@@ -24,8 +18,6 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
   const setUpdateStopTarget = (position: Position | null) => setUpdateStopTargetId(position?.positionId ?? null);
   const setCloseTarget = (position: Position | null) => setCloseTargetId(position?.positionId ?? null);
   const setTrimTarget = (position: Position | null) => setTrimTargetId(position?.positionId ?? null);
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-  const focusedIdRef = useRef(focusedId);
 
   const acceptStopMutation = useUpdateStopMutation();
   const updateStopMutation = useUpdateStopMutation();
@@ -35,10 +27,9 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
   const handleAcceptStop = useCallback(
     (positionId: string, stopSuggested: number, reason: string) => {
       const position = positions.find(item => item.positionId === positionId && item.status === 'open');
-      if (!position || positionsUnavailable) return;
+      if (!position || positionsUnavailable || acceptStopMutation.isPending || position.stopPrice >= stopSuggested) return;
       acceptStopMutation.mutate(
         { positionId, request: { newStop: stopSuggested, reason, expectedVersion: position.version ?? 1 } },
-        { onSuccess: () => setAcceptedStops((prev) => new Set([...prev, positionId])) },
       );
     },
     [acceptStopMutation, positions, positionsUnavailable],
@@ -51,7 +42,6 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
         {
           onSuccess: () => {
             setUpdateStopTargetId(null);
-            setDoneIds((prev) => new Set([...prev, position.positionId!]));
           },
         },
       );
@@ -84,57 +74,30 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
     [partialCloseMutation],
   );
 
-  const handleItemClick = useCallback(
-    (ticker: string, id: string) => {
-      focusedIdRef.current = id;
-      setFocusedId(id);
-      onTickerSelect(ticker, id);
+  const handleListKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const forward = event.key === 'j' || event.key === 'ArrowDown';
+      if (!forward && event.key !== 'k' && event.key !== 'ArrowUp') return;
+
+      const selector = 'button[data-review-row-id]';
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>(selector);
+      if (!button) return;
+      const rows = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>(selector));
+      const currentIndex = rows.indexOf(button);
+      if (currentIndex < 0) return;
+      event.preventDefault();
+
+      const next = rows[currentIndex + (forward ? 1 : -1)];
+      if (!next?.dataset.reviewTicker || !next.dataset.reviewRowId) return;
+      next.focus();
+      onTickerSelect(next.dataset.reviewTicker, next.dataset.reviewRowId, false);
     },
     [onTickerSelect],
   );
 
-  useEffect(() => {
-    focusedIdRef.current = focusedId;
-  }, [focusedId]);
-
-  useEffect(() => {
-    if (focusedId && !flatItems.some((item) => item.id === focusedId)) {
-      focusedIdRef.current = null;
-      setFocusedId(null);
-    }
-  }, [flatItems, focusedId]);
-
-  const handleListKeyDown = useCallback(
-    (e: ReactKeyboardEvent<HTMLElement>) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"]')) return;
-      const currentIndex = flatItems.findIndex((item) => item.id === focusedIdRef.current);
-      if (e.key === 'j' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        const next = Math.min(currentIndex + 1, flatItems.length - 1);
-        const item = flatItems[next];
-        if (item) {
-          focusedIdRef.current = item.id;
-          setFocusedId(item.id);
-          onTickerSelect(item.ticker, item.id, false);
-        }
-      } else if (e.key === 'k' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        const prev = Math.max(currentIndex === -1 ? 0 : currentIndex - 1, 0);
-        const item = flatItems[prev];
-        if (item) {
-          focusedIdRef.current = item.id;
-          setFocusedId(item.id);
-          onTickerSelect(item.ticker, item.id, false);
-        }
-      }
-    },
-    [flatItems, onTickerSelect],
-  );
-
   return {
     doneIds,
-    acceptedStops,
     acceptStopMutation,
     updateStopMutation,
     closePositionMutation,
@@ -145,12 +108,10 @@ export function useTodayActions(flatItems: FlatItem[], onTickerSelect: (ticker: 
     setCloseTarget,
     trimTarget,
     setTrimTarget,
-    focusedId,
     handleListKeyDown,
     handleAcceptStop,
     handleUpdateStop,
     handleClosePosition,
     handlePartialClose,
-    handleItemClick,
   };
 }

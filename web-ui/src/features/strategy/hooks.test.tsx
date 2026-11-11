@@ -62,7 +62,6 @@ describe('strategy mutation cache invalidation', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.positionMetrics() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.portfolioSummary() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.watchlist() });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.watchlistPipeline() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['dailyReview'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['screener'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['backtest'] });

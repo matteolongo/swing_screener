@@ -1,7 +1,7 @@
 /**
  * Daily Review API client and React Query hooks
  */
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
 import { queryKeys } from '@/lib/queryKeys';
@@ -130,17 +130,9 @@ export function usePortfolioReview() {
   });
 }
 
-/** Read the backend-owned near-trigger slice regardless of persistence mode. */
-export async function getWatchlistNearTrigger() {
-  return (await getDailyReview(1)).watchlistNearTrigger;
-}
-
-/** Backend-filtered watchlist rows for Today's near-trigger section. */
-export function useWatchlistNearTrigger() {
-  return useQuery({
-    queryKey: queryKeys.watchlistPipeline(),
-    queryFn: getWatchlistNearTrigger,
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
-  });
+export async function refetchTodayPortfolio(queryClient: QueryClient): Promise<void> {
+  await Promise.all(
+    [queryKeys.dailyReviewPrefix(), queryKeys.positions(), queryKeys.orders(), queryKeys.portfolioSummary()]
+      .map((queryKey) => queryClient.refetchQueries({ queryKey, type: 'active' })),
+  );
 }
