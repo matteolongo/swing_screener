@@ -38,10 +38,8 @@ export function useTodayRefresh() {
   const completedAt = useScreenerStore((state) => state.todayRun?.completedAt);
   const policy = strategy.data ? JSON.stringify(strategy.data) : null;
   const scan = useQuery({
-    queryKey: queryKeys.todayScan(policy, new Date().toISOString().slice(0, 10)),
+    queryKey: queryKeys.todayScan(policy),
     enabled: initialized && policy !== null,
-    staleTime: Infinity,
-    gcTime: Infinity,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

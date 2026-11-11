@@ -46,9 +46,10 @@ preserves the selected symbol; submission remains manual and retains the existin
 backend eligibility checks and error feedback.
 
 `features/screener/useTodayRefresh` runs on Today entry/reload and its refresh
-controls. It waits for persisted settings and shares one scan per strategy and
-UTC day through the query cache. Navigation reuses an in-flight or completed
-scan. Explicit refresh runs the saved settings again. Portfolio data refreshes
+controls. It waits for persisted settings and shares scans per strategy through
+the query cache. Navigation reuses an in-flight or still-fresh completed scan,
+using the application's existing query freshness window. Explicit refresh runs
+the saved settings again. Portfolio data refreshes
 in parallel. Scan completion is reported
 independently of portfolio results. The Today snapshot and selected candidate
 update together. Selecting a holding, pending order, or watched ticker keeps that

@@ -4,6 +4,7 @@ import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
 import { renderWithProviders, screen, userEvent, waitFor } from '@/test/utils';
 import { t } from '@/i18n/t';
+import { formatDateTime } from '@/utils/formatters';
 import VolumeZonesTab from './VolumeZonesTab';
 
 function payload(overrides: Record<string, unknown> = {}) {
@@ -256,7 +257,7 @@ describe('VolumeZonesTab', () => {
 
     expect(await screen.findByText('polygon')).toBeVisible();
     expect(screen.getByText('2026-07-25')).toBeVisible();
-    expect(screen.getByText(new Date('2026-07-28T10:30:00+00:00').toLocaleString())).toBeVisible();
+    expect(screen.getByText(formatDateTime('2026-07-28T10:30:00+00:00'))).toBeVisible();
     expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.latestCandleDate'))).toBeVisible();
     expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.fetchedAt'))).toBeVisible();
   });

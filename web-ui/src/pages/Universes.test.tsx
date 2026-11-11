@@ -72,6 +72,7 @@ describe('Universes page', () => {
 
   it('shares cached and refreshed fundamentals between research tabs and the canonical cache', async () => {
     let refreshes = 0;
+    const refreshedPe = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(25);
     server.use(http.get(`${API_BASE_URL}/api/fundamentals/snapshot/AAPL`, ({ request }) => {
       if (new URL(request.url).searchParams.get('refresh') === 'true') refreshes += 1;
       if (refreshes > 1) return HttpResponse.json({ detail: 'Fundamentals source unavailable' }, { status: 503 });
@@ -89,11 +90,11 @@ describe('Universes page', () => {
     expect(await within(modal).findByText(t('workspacePage.overview.fundamentalsSummary', { pe: '21.0', growth: '—', margin: '—' }))).toBeVisible();
     await user.click(within(modal).getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.fundamentals') }));
     await user.click(await within(modal).findByRole('button', { name: t('workspacePage.fundamentals.refresh') }));
-    expect(await within(modal).findByText('25.00')).toBeVisible();
+    expect(await within(modal).findByText(refreshedPe)).toBeVisible();
     expect(queryClient.getQueryData(queryKeys.fundamentalsSnapshot('AAPL'))).toMatchObject({ symbol: 'AAPL', trailingPe: 25 });
     await user.click(within(modal).getByRole('button', { name: t('workspacePage.fundamentals.refresh') }));
     expect(await within(modal).findByText('Fundamentals source unavailable')).toBeVisible();
-    expect(within(modal).getByText('25.00')).toBeVisible();
+    expect(within(modal).getByText(refreshedPe)).toBeVisible();
     await user.click(within(modal).getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.overview') }));
     expect(within(modal).getByText(t('workspacePage.overview.fundamentalsSummary', { pe: '25.0', growth: '—', margin: '—' }))).toBeVisible();
   });
@@ -103,6 +104,7 @@ describe('Universes page', () => {
       currency: 'EUR' as const, entry: 173.09, stop: 147.97, target: 223.33, shares: 8 };
     useScreenerStore.getState().recordScreenerRun({ ...transformScreenerResponse(mockScreenerResults), candidates: [candidate] },
       { request: {}, displayFilters: { recommendedOnly: false, actionFilter: 'all' } }, false);
+    const savedCandidate = useScreenerStore.getState().lastResult?.candidates[0];
     let payload: Record<string, unknown> | undefined;
     server.use(http.post(`${API_BASE_URL}/api/portfolio/orders`, async ({ request }) => {
       payload = await request.json() as Record<string, unknown>;
@@ -123,7 +125,7 @@ describe('Universes page', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: t('manualOrderDraft.title', { ticker: 'AAPL' }) })).not.toBeInTheDocument();
     expect(modal).toBeVisible();
-    expect(useScreenerStore.getState().lastResult?.candidates[0]).toEqual(candidate);
+    expect(useScreenerStore.getState().lastResult?.candidates[0]).toEqual(savedCandidate);
   });
 
   it('distinguishes the next-run source setting from saved exploration results', async () => {
@@ -133,7 +135,7 @@ describe('Universes page', () => {
       { request: {}, displayFilters: { recommendedOnly: false, actionFilter: 'all' } }, false);
     const { user } = renderWithProviders(<Universes />);
     const section = screen.getByTestId('screener-run-section');
-    expect(within(section).getByText(t('screener.controls.useForTodayShort'))).toBeVisible();
+    expect(await within(section).findByText(t('screener.controls.useForTodayShort'))).toBeVisible();
     expect(within(section).getByText(t('screener.summary.notTodaySource'))).toBeVisible();
     await user.click(within(section).getByRole('button', { name: t('screener.summary.useForToday') }));
     expect(within(section).queryByText(t('screener.summary.notTodaySource'))).not.toBeInTheDocument();
