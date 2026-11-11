@@ -27,17 +27,24 @@ def get_calendar_service(
 @router.get("/calendar/events", response_model=CalendarEventsResponse)
 def get_calendar_events(
     days_ahead: int = Query(default=60, ge=1, le=90),
+    candidate_tickers: str | None = Query(
+        default=None, max_length=4096,
+        pattern=r"^(?:[A-Za-z0-9][A-Za-z0-9.-]{0,15}(?:,[A-Za-z0-9][A-Za-z0-9.-]{0,15})*)?$",
+    ),
     service: CalendarService = Depends(get_calendar_service),
 ) -> CalendarEventsResponse:
     """
     Get upcoming calendar events (earnings, economic events) for positions and screener candidates.
 
     Args:
-        days_ahead: Number of days to look ahead (1-90, default 30)
+        days_ahead: Number of days to look ahead (1-90, default 60)
+        candidate_tickers: Comma-separated current review symbols; omitted uses legacy snapshots.
         service: Injected CalendarService
 
     Returns:
         CalendarEventsResponse with sorted events and days_ahead
     """
-    events = service.get_events(days_ahead=days_ahead)
-    return CalendarEventsResponse(events=events, days_ahead=days_ahead)
+    tickers = None if candidate_tickers is None else {
+        ticker.upper() for ticker in candidate_tickers.split(",") if ticker
+    }
+    return service.get_events(days_ahead=days_ahead, candidate_tickers=tickers)

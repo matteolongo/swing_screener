@@ -43,8 +43,8 @@
   map missing or unsupported response values to explicit `UNKNOWN`; they never
   substitute USD. Daily Review also preserves nullable plans, evaluation errors,
   candle pressure, provenance, and setup-quality inputs. Workspace health maps
-  current/final data to fresh, intraday/degraded/missing data to partial, and
-  stale data to stale.
+  immutable screener snapshots to cached, intraday/degraded/missing data to
+  partial, and stale data to stale.
 
 - API payloads arrive as `snake_case`. Transform functions in `src/types/` convert to `camelCase` before use in components. Never use raw API shape inside components.
 - Candidate workflow state is server-authoritative. Components consume
@@ -69,6 +69,10 @@
   or cancelled records never expose submit/fill actions.
 - All user-facing strings go through `src/i18n/`. No hardcoded copy in components or tests.
 - Calendar headings format date-only events with the active `I18nProvider` locale. Its `EventSourceTag` legend always enumerates `position`, `screener`, `economic`, and `ipo` so a source tag is not silently omitted from the UI.
+  Calendar sends the pinned Today candidate tickers explicitly (including an
+  empty set) and includes them in the query key. It never starts a scan. Source
+  warnings retain successful events, suppress the misleading empty-state claim,
+  and expose a retry for incomplete or unavailable calendar coverage.
 - Weekly Review IDs use ISO week-year semantics (`YYYY-Www`) calculated from UTC calendar dates. The review form uses `Field` plus `Textarea`, which supplies stable label/control associations.
 - `ModalShell` owns modal Escape handling, focus trapping, scroll locking, and restoration to the opening control. Help and chart fullscreen surfaces use it instead of ad-hoc overlays.
 - `MainLayout` mounts one shared `Sidebar`: desktop at `lg` (1024px), or a `ModalShell` navigation drawer below it. The real Header trigger exposes its open state and controls the navigation ID. Breakpoint transitions close the drawer; header/summary flex children shrink and wrap without clipping monetary values.
@@ -195,6 +199,11 @@ fundamentals replaces the canonical snapshot shared by Overview and
 Fundamentals and can mark older intelligence outdated. Source health is a
 current snapshot derived from server-owned provenance and content dates; it is
 separate from request activity history.
+`SymbolAnalysisContent` also uses the canonical fundamentals query and refresh
+mutation when its caller supplies no workspace model, including Universes and
+Book research modals. It filters snapshots by ticker and scopes refresh state to
+that ticker. Its manual draft modal passes the currently displayed candidate to
+`ManualOrderDraftForm`; draft saving remains separate from signed order review.
 
 The sticky workspace header, per-source status bar, and activity drawer expose
 provider, data/fetch time, cached/stale/partial states, active work, and durable
@@ -222,6 +231,9 @@ tab, filter, and query ownership do not move or reset.
 `ModalShell` includes the first native `summary` of each visible `details`
 in its focus cycle. Controls inside closed disclosures and hidden/inert content
 are excluded. Native Tab/Enter behavior is preserved in order-review and fullscreen dialogs.
+When one dialog contains another, only the inner dialog handles Escape and Tab
+wrapping; closing it restores its opener without closing the parent or unlocking
+document scrolling early.
 
 Selectable-row keyboard handlers only handle keys aimed at the row itself,
 preserving Enter/Space on nested native actions. Book row actions use `ActionMenu`

@@ -31,6 +31,7 @@ export async function invalidateStrategyDependentQueries(queryClient: QueryClien
     queryClient.invalidateQueries({ queryKey: queryKeys.earningsProximity() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.regimeBreakdown() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.screenerPrefix() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.todayScanPrefix(), refetchType: 'none' }),
     queryClient.invalidateQueries({ queryKey: queryKeys.backtest() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.intelligencePrefix() }),
   ]);

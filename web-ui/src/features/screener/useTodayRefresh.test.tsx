@@ -19,9 +19,10 @@ const response = (entry: number) => ({
   candidates: [{ ticker: 'STMPA.PA', entry, currency: 'EUR' }],
 } as ScreenerResponse);
 
-function setup() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  client.setQueryData(queryKeys.strategyActive(), transformStrategy(mockStrategies[0]));
+function setup(client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })) {
+  if (!client.getQueryData(queryKeys.strategyActive())) {
+    client.setQueryData(queryKeys.strategyActive(), transformStrategy(mockStrategies[0]));
+  }
   const wrapper = ({ children }: PropsWithChildren) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   return { ...renderHook(() => useTodayRefresh(), { wrapper }), client };
 }
@@ -33,6 +34,27 @@ beforeEach(() => {
 });
 
 describe('Today refresh', () => {
+  it('shares an in-flight scan across navigation and keeps its completion after remount', async () => {
+    let resolve!: (data: ScreenerResponse) => void;
+    vi.mocked(runScreener).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    const first = setup();
+    await waitFor(() => expect(runScreener).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    const second = setup(first.client);
+    expect(second.result.current.isRefreshing).toBe(true);
+    expect(runScreener).toHaveBeenCalledTimes(1);
+    await act(async () => resolve(response(51)));
+    await waitFor(() => expect(second.result.current.isRefreshing).toBe(false));
+    expect(second.result.current.updatedAt).toBeTruthy();
+    expect(useScreenerStore.getState().todayRun?.result.candidates[0].entry).toBe(51);
+    second.unmount();
+
+    const third = setup(first.client);
+    expect(third.result.current.isRefreshing).toBe(false);
+    expect(runScreener).toHaveBeenCalledTimes(1);
+    expect(third.result.current.updatedAt).toBeTruthy();
+  });
   it('refreshes a legacy Today snapshot without borrowing another run timestamp', async () => {
     useScreenerStore.setState({
       todayRun: { result: response(50), request: { tickers: ['STMPA.PA'] }, displayFilters: { recommendedOnly: false, actionFilter: 'all' } },
@@ -84,6 +106,7 @@ describe('Today refresh', () => {
     await waitFor(() => expect(result.current.isRefreshing).toBe(false));
     act(() => result.current.refresh());
     await waitFor(() => expect(runScreener).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(result.current.isRefreshing).toBe(false));
   });
 
   it('keeps the last successful snapshot on failure and supports retry', async () => {

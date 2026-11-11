@@ -119,4 +119,15 @@ describe('useScreenerStore', () => {
     expect(useScreenerStore.getState().todayRun?.result.candidates[0].ticker).toBe('SAVED');
     expect(useScreenerStore.getState().todayRun?.completedAt).toBeUndefined();
   });
+
+  it('finishes hydration when a saved Today run has no initialization flag', () => {
+    const saved = { result: response([candidate('SAVED', 1)]), request: {},
+      displayFilters: { recommendedOnly: false, actionFilter: 'all' as const } };
+    useScreenerStore.setState({ todayRun: saved, todayRunInitialized: false });
+
+    act(() => useScreenerStore.getState().initializeTodayRunFromLegacyResult());
+
+    expect(useScreenerStore.getState().todayRunInitialized).toBe(true);
+    expect(useScreenerStore.getState().todayRun).toBe(saved);
+  });
 });

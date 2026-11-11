@@ -77,4 +77,16 @@ describe('runScreener async polling', () => {
     await vi.advanceTimersByTimeAsync(1000);
     await expectation;
   });
+
+  it('times out a synchronous request that never returns', async () => {
+    vi.stubGlobal('fetch', vi.fn((_url, init: RequestInit) => new Promise((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    })));
+    const request = runScreener({ tickers: ['AAPL'] });
+    const expectation = expect(request).rejects.toThrow(/timed out/i);
+
+    await vi.advanceTimersByTimeAsync(31 * 60 * 1000);
+
+    await expectation;
+  });
 });

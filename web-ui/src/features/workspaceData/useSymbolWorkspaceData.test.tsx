@@ -301,7 +301,7 @@ describe('useSymbolWorkspaceData', () => {
     );
 
     expect(result.current.sourceStates.find(({ id }) => id === 'screener')).toMatchObject({
-      phase: 'fresh',
+      phase: 'cached',
       provider: 'polygon',
       dataAsOf: '2026-07-28',
     });
@@ -313,7 +313,7 @@ describe('useSymbolWorkspaceData', () => {
   });
 
   it.each([
-    ['current', [], 'fresh'],
+    ['current', [], 'cached'],
     ['intraday', [], 'partial'],
     ['current', ['cached_market_data'], 'partial'],
     ['stale', [], 'stale'],

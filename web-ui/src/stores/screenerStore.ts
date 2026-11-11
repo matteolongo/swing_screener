@@ -94,9 +94,9 @@ export const useScreenerStore = create<ScreenerStore>()(
         })),
       initializeTodayRunFromLegacyResult: () => {
         const { todayRunInitialized, todayRun, lastResult } = get();
-        if (todayRunInitialized || todayRun) return;
+        if (todayRunInitialized) return;
         set({ todayRunInitialized: true });
-        if (lastResult) get().setTodayRunFromLastRun();
+        if (!todayRun && lastResult) get().setTodayRunFromLastRun();
       },
       invalidateActionableRuns: () => set({
         lastResult: null,
