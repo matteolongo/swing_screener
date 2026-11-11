@@ -141,6 +141,32 @@ describe('PendingOrdersTab', () => {
     expect(await screen.findByText(t('pendingOrdersTab.empty'))).toBeInTheDocument();
   });
 
+  it('preserves the order filter and keyboard focus while the selected status loads', async () => {
+    let finishLoading!: () => void;
+    const loading = new Promise<void>((resolve) => { finishLoading = resolve; });
+    server.use(http.get('*/api/portfolio/orders/local', async ({ request }) => {
+      if (new URL(request.url).searchParams.get('status') === 'submitted') await loading;
+      return HttpResponse.json({ orders: [], asof: '2026-04-27' });
+    }));
+    const { user } = renderWithProviders(<PendingOrdersTab />);
+    await screen.findByText(t('pendingOrdersTab.empty'));
+    const submitted = screen.getByRole('button', { name: t('ordersPage.filter.submitted') });
+
+    try {
+      submitted.focus();
+      await user.keyboard('{Enter}');
+      expect(await screen.findByRole('status')).toHaveTextContent(t('common.table.loading'));
+      expect(submitted).toHaveFocus();
+      expect(submitted).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: t('ordersPage.filter.pending') })).toBeEnabled();
+    } finally {
+      finishLoading();
+    }
+
+    await screen.findByText(t('pendingOrdersTab.empty'));
+    expect(submitted).toHaveFocus();
+  });
+
   it('shows fill manually button', async () => {
     server.use(
       http.get('*/api/portfolio/orders/local', () =>

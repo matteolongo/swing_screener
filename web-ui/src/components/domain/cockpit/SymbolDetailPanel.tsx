@@ -112,12 +112,12 @@ export default function SymbolDetailPanel({ ticker, onClose, focusRequest, isRef
   const selectedCandidate =
     selection?.ticker === normalized ? (selection.candidate ?? null) : null;
   const benchmarkTicker = useScreenerStore((state) => {
-    if (state.todayRun && selection?.source === 'today_run' && selection.runId === state.todayRun.completedAt) return state.todayRun.result.benchmarkTicker ?? null;
+    if (state.todayRun && selection?.source !== 'last_run' && selection?.runId === state.todayRun.completedAt) return state.todayRun.result.benchmarkTicker ?? null;
     if (selection?.source === 'last_run' && selection.runId === state.lastRunContext?.completedAt) return state.lastResult?.benchmarkTicker ?? null;
     return null;
   });
   const runRequest = useScreenerStore((state) => {
-    if (state.todayRun && selection?.source === 'today_run' && selection.runId === state.todayRun.completedAt) return state.todayRun.request;
+    if (state.todayRun && selection?.source !== 'last_run' && selection?.runId === state.todayRun.completedAt) return state.todayRun.request;
     if (selection?.source === 'last_run' && selection.runId === state.lastRunContext?.completedAt) return state.lastRunContext?.request;
     return undefined;
   });

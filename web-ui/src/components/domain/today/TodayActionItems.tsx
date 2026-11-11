@@ -2,11 +2,9 @@ import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import { formatNumber, getSignColorClass } from '@/utils/formatters';
-import { formatWorkflowNextStep, getWorkflowPresentation } from '@/components/domain/recommendation/workflowPresentation';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
 import { useEarningsProximity } from '@/features/portfolio/hooks';
 import type {
-  DailyReviewCandidate,
   DailyReviewPositionClose,
   DailyReviewPositionExitSignal,
   DailyReviewPositionUpdate,
@@ -86,27 +84,6 @@ export function AiSignalBadge({ summary }: { summary: OpenPositionIntelligenceSu
   );
 }
 
-export function VolumeDot({ ratio }: { ratio: number | undefined }) {
-  if (ratio == null) return null;
-  if (ratio >= 1.5) {
-    return (
-      <span
-        className="inline-block w-2 h-2 rounded-full bg-success shrink-0"
-        title={t('todayPage.actionList.volumeStrongTitle', { ratio: ratio.toFixed(1) })}
-      />
-    );
-  }
-  if (ratio < 0.8) {
-    return (
-      <span
-        className="inline-block w-2 h-2 rounded-full bg-foreground/10 shrink-0"
-        title={t('todayPage.actionList.volumeWeakTitle', { ratio: ratio.toFixed(1) })}
-      />
-    );
-  }
-  return null;
-}
-
 export interface OpenPositionItemProps {
   item: PositionWithMetrics;
   onClick: (ticker: string) => void;
@@ -126,7 +103,7 @@ export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <button type="button" onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
+      <button type="button" data-review-row-id={`position-${item.positionId ?? item.ticker}`} data-review-ticker={item.ticker} onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -181,7 +158,7 @@ export function CloseItem({ item, onClick, onAction, isDone, isFocused, intellig
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <button type="button" onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
+      <button type="button" data-review-row-id={`close-${item.positionId}`} data-review-ticker={item.ticker} onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -217,10 +194,13 @@ export interface UpdateStopItemProps {
   onAccept?: (positionId: string, stopSuggested: number, reason: string) => void;
   isDone?: boolean;
   isAccepting?: boolean;
+  acceptDisabled?: boolean;
+  acceptError?: string;
+  onRefresh?: () => void;
   isFocused?: boolean;
 }
 
-export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting, isFocused }: UpdateStopItemProps) {
+export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting, acceptDisabled, acceptError, onRefresh, isFocused }: UpdateStopItemProps) {
   return (
     <div
       role="group"
@@ -231,7 +211,7 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <button type="button" onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
+      <button type="button" data-review-row-id={`stop-${item.positionId}`} data-review-ticker={item.ticker} onClick={() => onClick(item.ticker)} aria-current={isFocused || undefined} className="flex min-h-11 min-w-0 flex-1 basis-40 flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left">
       <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
@@ -252,7 +232,7 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
       ) : null}
       </button>
       {!isDone && onAccept ? (
-        <button type="button" disabled={isAccepting}
+        <button type="button" disabled={isAccepting || acceptDisabled}
           onClick={() => onAccept(item.positionId, item.stopSuggested, item.reason)}
           className={cn(
             'min-h-11 rounded px-2 text-xs',
@@ -261,7 +241,7 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
             isAccepting && 'opacity-50 cursor-not-allowed',
           )}
         >
-          {isAccepting ? '…' : t('todayPage.actionList.acceptStop')}
+          {isAccepting ? t('todayPage.actionList.acceptingStop') : t('todayPage.actionList.acceptStop')}
         </button>
       ) : !isDone && onAction ? (
         <button type="button" onClick={onAction}
@@ -270,91 +250,14 @@ export function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAc
           {t('todayPage.actionList.updateAction')}
         </button>
       ) : null}
-    </div>
-  );
-}
-
-export interface CandidateItemProps {
-  item: DailyReviewCandidate;
-  isAddOn?: boolean;
-  onClick: (ticker: string) => void;
-  isFocused?: boolean;
-}
-
-const WORKFLOW_BADGE_STYLES = {
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
-  danger: 'bg-danger/10 text-danger',
-  neutral: 'bg-foreground/5 text-muted',
-} as const;
-
-// Primary badge: the canonical workflow next step.
-function candidateActionBadge(item: DailyReviewCandidate) {
-  const workflow = getWorkflowPresentation(item.recommendation);
-  return (
-    <span className={cn('text-xs font-medium px-1.5 py-0.5 rounded', WORKFLOW_BADGE_STYLES[workflow.tone])}>
-      {formatWorkflowNextStep(item.recommendation?.nextStep)}
-    </span>
-  );
-}
-
-// Secondary flag: same-symbol context (you already held / hold this name). It
-// annotates the action, it does not replace it.
-function candidateModeFlag(item: DailyReviewCandidate, isAddOn?: boolean) {
-  const mode = item.sameSymbol?.mode;
-  if (mode === 'RE_ENTRY') {
-    return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-success/10 text-success">
-        {t('todayPage.actionList.reEnter')}
-      </span>
-    );
-  }
-  if (mode === 'SCALE_BACK') {
-    return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground/10 text-muted">
-        {t('todayPage.actionList.scaleBack')}
-      </span>
-    );
-  }
-  if (isAddOn || mode === 'ADD_ON') {
-    return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground/10 text-muted">
-        {t('todayPage.actionList.addOn')}
-      </span>
-    );
-  }
-  return null;
-}
-
-export function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps) {
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => onClick(item.ticker)}
-        className={cn(
-          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-primary/40',
-          isFocused && 'ring-1 ring-primary',
-        )}
-      >
-        <span className="text-sm font-semibold text-foreground min-w-[60px]">
-          {item.ticker}
-        </span>
-        {candidateActionBadge(item)}
-        {candidateModeFlag(item, isAddOn)}
-        <span className="text-xs text-muted tabular-nums">
-          {t('todayPage.actionList.riskReward', { value: formatNumber(item.rReward, 2) })}
-        </span>
-        {item.confidence != null && (
-          <span className="text-xs text-muted tabular-nums shrink-0">
-            {t('todayPage.actionList.candidateConfidence', { pct: String(Math.round(item.confidence)) })}
-          </span>
-        )}
-        <VolumeDot ratio={item.volumeRatio} />
-        {item.name && (
-          <span className="text-xs text-muted truncate flex-1">{item.name}</span>
-        )}
-      </button>
+      {acceptError && !isDone && (
+        <div role="alert" className="basis-full break-words text-xs text-danger">
+          {t('todayPage.actionList.acceptStopFailed', { message: acceptError })}
+          <button type="button" onClick={onRefresh} className="ml-2 min-h-11 underline">
+            {t('todayPage.actionList.refreshPortfolio')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -370,6 +273,8 @@ export function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }
   return (
     <button
       type="button"
+      data-review-row-id={`exit-${item.positionId}`}
+      data-review-ticker={item.ticker}
       onClick={() => onClick(item.ticker)}
       aria-current={isFocused || undefined}
       className={cn(
@@ -398,6 +303,8 @@ export function WatchlistNearTriggerItem({ item, onClick, isFocused }: { item: W
   return (
     <button
       type="button"
+      data-review-row-id={`watch-${item.ticker}-${item.watchedAt}`}
+      data-review-ticker={item.ticker}
       onClick={() => onClick(item.ticker)}
       aria-current={isFocused || undefined}
       className={cn(
@@ -440,6 +347,8 @@ export function PendingOrderItem({ item, onClick, isFocused }: PendingOrderItemP
   return (
     <button
       type="button"
+      data-review-row-id={`pending-${item.orderId}`}
+      data-review-ticker={item.ticker}
       onClick={() => onClick(item.ticker)}
       aria-current={isFocused || undefined}
       className={cn(

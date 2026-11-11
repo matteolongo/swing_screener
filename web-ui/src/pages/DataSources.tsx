@@ -77,9 +77,18 @@ export default function DataSources() {
         </section>
       ))}
 
-      {eventsQuery.isError
-        ? <p role="alert" className="text-sm text-warning">{t('datasources.fallbacks.loadError')}</p>
-        : eventsQuery.isSuccess ? <FallbackFeed events={eventsQuery.data} /> : null}
+      {eventsQuery.isError ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4">
+          <p role="alert" className="text-sm text-warning">
+            {t(eventsQuery.data ? 'datasources.fallbacks.refreshError' : 'datasources.fallbacks.loadError')}
+          </p>
+          <Button type="button" size="sm" variant="secondary" disabled={eventsQuery.isFetching}
+            onClick={() => void eventsQuery.refetch()}>
+            {t('datasources.fallbacks.retry')}
+          </Button>
+        </div>
+      ) : null}
+      {eventsQuery.data ? <FallbackFeed events={eventsQuery.data} /> : null}
       <CacheSection />
     </div>
   );

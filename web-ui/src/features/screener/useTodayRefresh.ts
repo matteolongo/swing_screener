@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { refetchTodayPortfolio } from '@/features/dailyReview/api';
 import { runScreener } from './api';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { queryKeys } from '@/lib/queryKeys';
@@ -20,14 +21,8 @@ export function useTodayRefresh() {
   }, []);
 
   const mutation = useMutation({
-    mutationFn: async ({ context }: { context: ScreenerRunContext; sourceId?: string; policy: string }) => {
-      const [response] = await Promise.all([
-        runScreener(context.request),
-        ...[queryKeys.dailyReviewPrefix(), queryKeys.watchlistPipeline(), queryKeys.positions(), queryKeys.orders(), queryKeys.portfolioSummary()]
-          .map((queryKey) => queryClient.refetchQueries({ queryKey, type: 'active' })),
-      ]);
-      return response;
-    },
+    mutationFn: ({ context }: { context: ScreenerRunContext; sourceId?: string; policy: string }) =>
+      runScreener(context.request),
     onSuccess: (result, request) => {
       const store = useScreenerStore.getState();
       const sourceId = store.todayRun ? store.todayRun.completedAt : store.lastRunContext?.completedAt;
@@ -37,17 +32,25 @@ export function useTodayRefresh() {
       setUpdatedAt(completedAt);
       const workspace = useWorkspaceStore.getState();
       const selection = workspace.selection;
-      if (!selection || !['today_run', 'last_run'].includes(selection.source) || selection.runId !== request.sourceId) return;
+      if (!selection) return;
+      const fromPortfolio = selection.source === 'today_position' || selection.source === 'today_watchlist';
+      const fromScan = selection.source === 'today_run' || selection.source === 'last_run';
+      if (!fromPortfolio && (!fromScan || selection.runId !== request.sourceId)) return;
+
       const candidate = result.candidates.find((item) => item.ticker.trim().toUpperCase() === selection.ticker);
-      const fromCandidateQueue = selection.rowId.startsWith(`${selection.source}:`);
-      if (candidate) workspace.setWorkspaceSelection({
-        ...selection,
-        source: 'today_run',
-        runId: completedAt,
-        candidate,
-        rowId: fromCandidateQueue ? `today_run:${completedAt}:${selection.ticker}` : selection.rowId,
-      });
-      else workspace.clearSelectedTicker();
+      if (fromPortfolio) {
+        workspace.setWorkspaceSelection({ ...selection, candidate, runId: candidate ? completedAt : undefined });
+      } else if (candidate) {
+        workspace.setWorkspaceSelection({
+          ...selection,
+          source: 'today_run',
+          runId: completedAt,
+          candidate,
+          rowId: selection.rowId.startsWith(`${selection.source}:`) ? `today_run:${completedAt}:${selection.ticker}` : selection.rowId,
+        });
+      } else {
+        workspace.clearSelectedTicker();
+      }
     },
     onSettled: () => { pending.current = false; },
   });
@@ -59,6 +62,7 @@ export function useTodayRefresh() {
       return;
     }
     pending.current = true;
+    void refetchTodayPortfolio(queryClient);
     const store = useScreenerStore.getState();
     const context = store.todayRun ?? store.lastRunContext;
     mutation.mutate({
