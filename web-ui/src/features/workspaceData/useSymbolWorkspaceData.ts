@@ -312,7 +312,7 @@ export function useSymbolWorkspaceData({
             || validCandidate.dataSourceSummary?.marketData?.status === 'degraded'
             || !screenerRun
             || !validCandidate.dataSourceSummary?.marketData?.provider
-            ? 'partial' : 'fresh',
+            ? 'partial' : 'cached',
       {
         provider: validCandidate?.dataSourceSummary?.marketData?.provider ?? null,
         dataAsOf: validCandidate?.lastBar ?? screenerRun?.asOf ?? null,

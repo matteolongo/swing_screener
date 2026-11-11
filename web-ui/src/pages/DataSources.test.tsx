@@ -18,6 +18,8 @@ describe('DataSources page', () => {
             { id: 'company_ir_rss', display_name: 'Company IR RSS', domain: 'intelligence', role: 'primary',
               requires: null, configured: true, probeable: true, canary_market: null,
               note: null, last_probe: null },
+            { id: 'finnhub', display_name: 'Finnhub', domain: 'fundamentals', role: 'enrichment',
+              configured: true, probeable: true, last_probe: { id: 'finnhub', status: 'ok' } },
           ],
         }),
       ),
@@ -29,6 +31,7 @@ describe('DataSources page', () => {
     expect(await screen.findByText('Yahoo Finance')).toBeInTheDocument();
     expect(await screen.findByText('Company IR RSS')).toBeInTheDocument();
     expect(screen.getByText(t('datasources.title'))).toBeInTheDocument();
+    expect(screen.getByText(t('datasources.quoteProbeScope'))).toBeVisible();
   });
 
   it('shows a retryable error when Test all fails', async () => {

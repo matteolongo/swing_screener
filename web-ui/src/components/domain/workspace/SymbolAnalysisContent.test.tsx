@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { useState } from 'react';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
@@ -105,6 +105,39 @@ function CandidateOrderHarness({ workflowStatus }: { workflowStatus: 'ready' | '
 }
 
 describe('SymbolAnalysisContent candidate order transition', () => {
+  it('runs fundamentals when no initial snapshot is available', async () => {
+    let refreshes = 0;
+    server.use(http.get(`${API_BASE_URL}/api/fundamentals/snapshot/AAPL`, ({ request }) => {
+      if (new URL(request.url).searchParams.get('refresh') !== 'true') {
+        return HttpResponse.json({ detail: 'No cached snapshot' }, { status: 404 });
+      }
+      refreshes += 1;
+      return HttpResponse.json({
+        symbol: 'AAPL', asof_date: '2026-11-10', provider: 'sec_edgar', updated_at: '2026-11-10T20:00:00Z',
+        instrument_type: 'equity', supported: true, coverage_status: 'supported', freshness_status: 'current',
+        company_name: 'Apple Inc.', trailing_pe: 21,
+      });
+    }));
+    const { user } = renderWithProviders(<SymbolAnalysisContent ticker="AAPL" activeTab="fundamentals" onTabChange={() => {}} />);
+    const run = await screen.findByRole('button', { name: t('workspacePage.fundamentals.run') });
+    await waitFor(() => expect(run).toBeEnabled());
+    await user.click(run);
+    expect(await screen.findByText('Apple Inc.')).toBeVisible();
+    expect(refreshes).toBe(1);
+    expect(screen.getByRole('button', { name: t('workspacePage.fundamentals.refresh') })).toBeEnabled();
+  });
+
+  it('does not render a cached fundamentals snapshot for another symbol', async () => {
+    server.use(http.get(`${API_BASE_URL}/api/fundamentals/snapshot/AAPL`, () => HttpResponse.json({
+      symbol: 'MSFT', asof_date: '2026-11-10', provider: 'sec_edgar', updated_at: '2026-11-10T20:00:00Z',
+      instrument_type: 'equity', supported: true, coverage_status: 'supported', freshness_status: 'current',
+      company_name: 'Wrong company', trailing_pe: 99,
+    })));
+    renderWithProviders(<SymbolAnalysisContent ticker="AAPL" activeTab="fundamentals" onTabChange={() => {}} />);
+    expect(await screen.findByText(t('workspacePage.fundamentals.noSnapshot'))).toBeVisible();
+    expect(screen.queryByText('Wrong company')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('workspacePage.fundamentals.run') })).toBeEnabled();
+  });
   it('passes the refreshed signed draft to order review', async () => {
     const recommendation = {
       verdict: 'RECOMMENDED', reasons_short: [], reasons_detailed: [],
@@ -225,7 +258,7 @@ describe('SymbolAnalysisContent volume zones tab', () => {
 
     renderWithProviders(<SymbolAnalysisHarness />);
     await userEvent.click(screen.getByRole('tab', { name: t('workspacePage.panels.analysis.tabs.volumeZones') }));
-    expect(await screen.findByText('Long')).toBeInTheDocument();
+    expect(await screen.findByText(t('workspacePage.panels.analysis.volumeZones.actions.long'))).toBeInTheDocument();
     expect(screen.getByText(/Approximate volume profile/)).toBeInTheDocument();
   });
 });

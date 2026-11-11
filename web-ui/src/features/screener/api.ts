@@ -49,24 +49,34 @@ export function toScreenerRequestPayload(request: ScreenerRequest): Record<strin
 
 export async function runScreener(request: ScreenerRequest): Promise<ScreenerResponse> {
   const apiRequest = toScreenerRequestPayload(request);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), POLL_BUDGET_MS);
 
-  const res = await apiFetch(API_ENDPOINTS.screenerRun, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(apiRequest),
-  });
+  try {
+    const res = await apiFetch(API_ENDPOINTS.screenerRun, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(apiRequest),
+      signal: controller.signal,
+    });
 
-  if (res.status === 202) {
-    const launchPayload: ScreenerRunLaunchResponseAPI = await res.json();
-    return pollScreenerRunResult(launchPayload.job_id);
+    if (res.status === 202) {
+      const launchPayload: ScreenerRunLaunchResponseAPI = await res.json();
+      return await pollScreenerRunResult(launchPayload.job_id, controller.signal);
+    }
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to run screener');
+    }
+    const apiResponse: ScreenerResponseAPI = await res.json();
+    return transformScreenerResponse(apiResponse);
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('Screener run timed out. Please try again.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Failed to run screener');
-  }
-  const apiResponse: ScreenerResponseAPI = await res.json();
-  return transformScreenerResponse(apiResponse);
 }
 
 // Cold-cache runs on large universes can take well over two minutes, so the
@@ -75,14 +85,14 @@ const POLL_BUDGET_MS = 30 * 60 * 1000;
 const POLL_INITIAL_DELAY_MS = 1000;
 const POLL_MAX_DELAY_MS = 5000;
 
-async function pollScreenerRunResult(jobId: string): Promise<ScreenerResponse> {
+async function pollScreenerRunResult(jobId: string, signal: AbortSignal): Promise<ScreenerResponse> {
   const startedAt = Date.now();
   let delayMs = POLL_INITIAL_DELAY_MS;
 
   while (Date.now() - startedAt < POLL_BUDGET_MS) {
     const statusPayload = await fetchJson<ScreenerRunStatusResponseAPI>(
       API_ENDPOINTS.screenerRunStatus(jobId),
-      { errorMessage: 'Failed to fetch screener run status' }
+      { errorMessage: 'Failed to fetch screener run status', signal }
     );
     if (statusPayload.status === 'completed' && statusPayload.result) {
       return transformScreenerResponse(statusPayload.result);

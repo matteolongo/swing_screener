@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { transformCalendarEvent } from './types';
+import { transformCalendarEvent, transformCalendarEventsResponse } from './types';
 
 describe('calendar transforms', () => {
+  it('preserves source failures and accepts legacy responses', () => {
+    expect(transformCalendarEventsResponse({ events: [], days_ahead: 60 }).warnings).toEqual([]);
+    expect(transformCalendarEventsResponse({
+      events: [], days_ahead: 60,
+      warnings: [{ event_type: 'earnings', code: 'source_unavailable', tickers: ['MSFT'] }],
+    }).warnings).toEqual([{ eventType: 'earnings', code: 'source_unavailable', tickers: ['MSFT'] }]);
+  });
+
   it('maps enriched event metadata and current event literals', () => {
     const event = transformCalendarEvent({
       date: '2026-06-10',

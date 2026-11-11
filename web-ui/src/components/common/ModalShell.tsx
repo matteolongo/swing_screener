@@ -118,6 +118,7 @@ export default function ModalShell({
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      if (dialogRef.current?.querySelector('[role="dialog"][aria-modal="true"]')) return;
       event.preventDefault();
       onClose();
     };
@@ -152,6 +153,7 @@ export default function ModalShell({
 
     const dialog = dialogRef.current;
     if (!dialog) return;
+    if (dialog.querySelector('[role="dialog"][aria-modal="true"]')) return;
 
     const focusable = getFocusableElements(dialog);
     if (focusable.length === 0) {

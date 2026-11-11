@@ -10,7 +10,7 @@ from typing import Optional
 
 import httpx
 
-from api.models.calendar import CalendarEvent
+from api.models.calendar import CalendarEvent, CalendarEventsResponse, CalendarSourceWarning
 from api.repositories.positions_repo import PositionsRepository
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,12 @@ FINNHUB_EARNINGS_URL = "https://finnhub.io/api/v1/calendar/earnings"
 FINNHUB_ECONOMIC_URL = "https://finnhub.io/api/v1/calendar/economic"
 FINNHUB_IPO_URL = "https://finnhub.io/api/v1/calendar/ipo"
 FINNHUB_DIVIDEND_URL = "https://finnhub.io/api/v1/calendar/dividend"
+
+
+class _SourceUnavailable(Exception):
+    def __init__(self, events: list[CalendarEvent], tickers: set[str]):
+        self.events = events
+        self.tickers = tickers
 
 
 class CalendarService:
@@ -32,21 +38,39 @@ class CalendarService:
         self._data_dir = data_dir
         self._finnhub_api_key = finnhub_api_key
 
-    def get_events(self, days_ahead: int = 30) -> list[CalendarEvent]:
+    def get_events(
+        self, days_ahead: int = 30, candidate_tickers: Optional[set[str]] = None
+    ) -> CalendarEventsResponse:
         today = dt.date.today()
         end = today + dt.timedelta(days=days_ahead)
 
         position_tickers = self._get_position_tickers()
-        screener_tickers = self._get_screener_tickers()
+        screener_tickers = (
+            self._get_screener_tickers() if candidate_tickers is None else candidate_tickers
+        )
         all_tickers = position_tickers | screener_tickers
 
         events: list[CalendarEvent] = []
-        events.extend(self._batch_fetch_earnings(all_tickers, position_tickers, today, end))
-        events.extend(self._fetch_economic_events(today, end))
-        events.extend(self._fetch_ipo_events(today, end))
-        events.extend(self._fetch_dividend_events(position_tickers, today, end))
-
-        return sorted(events, key=lambda e: e.date)
+        warnings: list[CalendarSourceWarning] = []
+        sources = [
+            ("earnings", lambda: self._batch_fetch_earnings(all_tickers, position_tickers, today, end)),
+            ("economic", lambda: self._fetch_economic_events(today, end)),
+            ("ipo", lambda: self._fetch_ipo_events(today, end)),
+            ("dividend", lambda: self._fetch_dividend_events(position_tickers, today, end)),
+        ]
+        for event_type, fetch in sources:
+            try:
+                events.extend(fetch())
+            except _SourceUnavailable as exc:
+                events.extend(exc.events)
+                warnings.append(CalendarSourceWarning(event_type=event_type, tickers=sorted(exc.tickers)))
+            except Exception:
+                # Provider exceptions may contain credential-bearing request URLs.
+                logger.info("Calendar %s source unavailable", event_type)
+                warnings.append(CalendarSourceWarning(event_type=event_type))
+        return CalendarEventsResponse(
+            events=sorted(events, key=lambda e: e.date), days_ahead=days_ahead, warnings=warnings
+        )
 
     def _get_position_tickers(self) -> set[str]:
         positions, _ = self._positions_repo.list_positions(status="open")
@@ -87,6 +111,7 @@ class CalendarService:
         end: dt.date,
     ) -> list[CalendarEvent]:
         events: list[CalendarEvent] = []
+        failed_tickers: set[str] = set()
         try:
             with ThreadPoolExecutor(max_workers=12) as pool:
                 futures = {
@@ -113,11 +138,16 @@ class CalendarService:
                             eps_estimate=eps_estimate,
                             eps_actual=eps_actual,
                         ))
-                    except Exception as exc:
-                        logger.debug("Finnhub earnings failed for %s: %s", ticker, exc)
-        except Exception as exc:
-            logger.info("Finnhub earnings batch failed, falling back to yfinance: %s", exc)
+                    except Exception:
+                        failed_tickers.add(ticker)
+        except Exception:
+            logger.info("Finnhub earnings batch unavailable; trying yfinance")
             return self._batch_fetch_earnings_yfinance(all_tickers, position_tickers, start, end)
+        if failed_tickers:
+            try:
+                events.extend(self._batch_fetch_earnings_yfinance(failed_tickers, position_tickers, start, end))
+            except _SourceUnavailable as exc:
+                raise _SourceUnavailable(events + exc.events, exc.tickers) from None
         return events
 
     def _fetch_earnings_for_finnhub(
@@ -142,7 +172,7 @@ class CalendarService:
         upcoming = [
             item for item in items
             if item.get("date") and (d := _parse_date(item["date"])) is not None
-            and d >= today
+            and max(today, start) <= d <= end
         ]
         if not upcoming:
             return None
@@ -160,6 +190,7 @@ class CalendarService:
         end: dt.date,
     ) -> list[CalendarEvent]:
         events: list[CalendarEvent] = []
+        failed_tickers: set[str] = set()
         with ThreadPoolExecutor(max_workers=12) as pool:
             futures = {pool.submit(self._fetch_earnings_for, t): t for t in all_tickers}
             for future in as_completed(futures):
@@ -178,8 +209,10 @@ class CalendarService:
                             confidence=0.55,
                             source_url=f"https://finance.yahoo.com/quote/{ticker}/calendar",
                         ))
-                except Exception as exc:
-                    logger.debug("Earnings fetch failed for %s: %s", ticker, exc)
+                except Exception:
+                    failed_tickers.add(ticker)
+        if failed_tickers:
+            raise _SourceUnavailable(events, failed_tickers)
         return events
 
     def _fetch_earnings_for(self, ticker: str) -> Optional[dt.date]:
@@ -199,7 +232,7 @@ class CalendarService:
 
     def _fetch_economic_events(self, start: dt.date, end: dt.date) -> list[CalendarEvent]:
         if not self._finnhub_api_key:
-            return []
+            raise _SourceUnavailable([], set())
         try:
             resp = httpx.get(
                 FINNHUB_ECONOMIC_URL,
@@ -226,13 +259,13 @@ class CalendarService:
                 for item in items
                 if item.get("time") and item.get("impact") == "high"
             ]
-        except Exception as exc:
-            logger.info("Economic events fetch skipped: %s", exc)
-            return []
+        except Exception:
+            logger.info("Calendar economic source unavailable")
+            raise _SourceUnavailable([], set()) from None
 
     def _fetch_ipo_events(self, start: dt.date, end: dt.date) -> list[CalendarEvent]:
         if not self._finnhub_api_key:
-            return []
+            raise _SourceUnavailable([], set())
         try:
             resp = httpx.get(
                 FINNHUB_IPO_URL,
@@ -259,9 +292,9 @@ class CalendarService:
                 for item in items
                 if item.get("date") and item.get("status") in {"priced", "filed"}
             ]
-        except Exception as exc:
-            logger.info("IPO calendar fetch skipped: %s", exc)
-            return []
+        except Exception:
+            logger.info("Calendar IPO source unavailable")
+            raise _SourceUnavailable([], set()) from None
 
     def _fetch_dividend_events(
         self,
@@ -269,9 +302,12 @@ class CalendarService:
         start: dt.date,
         end: dt.date,
     ) -> list[CalendarEvent]:
-        if not self._finnhub_api_key or not position_tickers:
+        if not position_tickers:
             return []
+        if not self._finnhub_api_key:
+            raise _SourceUnavailable([], position_tickers)
         events: list[CalendarEvent] = []
+        failed_tickers: set[str] = set()
         with ThreadPoolExecutor(max_workers=8) as pool:
             futures = {
                 pool.submit(self._fetch_dividends_for, t, start, end): t
@@ -281,8 +317,10 @@ class CalendarService:
                 ticker = futures[future]
                 try:
                     events.extend(future.result())
-                except Exception as exc:
-                    logger.debug("Dividend fetch failed for %s: %s", ticker, exc)
+                except Exception:
+                    failed_tickers.add(ticker)
+        if failed_tickers:
+            raise _SourceUnavailable(events, failed_tickers)
         return events
 
     def _fetch_dividends_for(

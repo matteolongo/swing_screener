@@ -32,6 +32,9 @@ export default function SourceCard({ source, onTest, testing }: Props) {
         <span className="text-[11px] uppercase tracking-wide text-muted">{source.role}</span>
       </div>
       {source.note && <span className="text-xs text-muted">{source.note}</span>}
+      {source.id === 'finnhub' && (
+        <p className="text-xs text-muted">{t('datasources.quoteProbeScope')}</p>
+      )}
       {!source.configured && !source.note && (
         <span className="text-xs text-muted">{t('datasources.notConfigured')}</span>
       )}

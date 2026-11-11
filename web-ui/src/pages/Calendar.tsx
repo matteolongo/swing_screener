@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { t } from '@/i18n/t';
 import { useI18n } from '@/i18n/I18nProvider';
 import WorkspaceIntro from '@/components/layout/WorkspaceIntro';
+import Button from '@/components/common/Button';
+import { useScreenerStore } from '@/stores/screenerStore';
 import { useCalendarEventsQuery } from '@/features/calendar/hooks';
 import type { CalendarEvent, EventSourceTag } from '@/features/calendar/types';
 
@@ -65,7 +67,10 @@ function DateGroup({ date, events, locale }: { date: string; events: CalendarEve
 export default function Calendar() {
   const daysAhead = 60;
   const { locale } = useI18n();
-  const { data, isLoading, isError } = useCalendarEventsQuery(daysAhead);
+  const todayRun = useScreenerStore((state) => state.todayRun);
+  const candidateTickers = todayRun?.result.candidates.map((candidate) => candidate.ticker) ?? [];
+  const { data, isLoading, isError, isFetching, refetch } = useCalendarEventsQuery(daysAhead, candidateTickers);
+  const hasWarnings = Boolean(data?.warnings.length);
 
   const grouped = useMemo(() => {
     if (!data) return [];
@@ -96,10 +101,23 @@ export default function Calendar() {
       {isLoading && (
         <p className="text-sm text-muted">{t('calendarPage.loadingText')}</p>
       )}
-      {isError && (
-        <p className="text-sm text-danger">{t('calendarPage.errorText')}</p>
+      {(isError || hasWarnings) && (
+        <div role="alert" className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-4">
+          <p className="text-sm text-foreground">
+            {t(isError ? 'calendarPage.errorText' : data?.events.length ? 'calendarPage.partialText' : 'calendarPage.unavailableText')}
+          </p>
+          {data?.warnings.map((warning) => (
+            <p key={warning.eventType} className="text-sm text-muted">
+              {t(`calendarPage.sources.${warning.eventType}`)}
+              {warning.tickers.length > 0 && `: ${warning.tickers.join(', ')}`}
+            </p>
+          ))}
+          <Button variant="secondary" size="sm" disabled={isFetching} onClick={() => void refetch()}>
+            {t('calendarPage.retry')}
+          </Button>
+        </div>
       )}
-      {!isLoading && !isError && grouped.length === 0 && (
+      {!isLoading && !isError && !hasWarnings && grouped.length === 0 && (
         <p className="text-sm text-muted">
           {t('calendarPage.empty' as any, { days: String(daysAhead) })}
         </p>

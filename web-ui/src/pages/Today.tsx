@@ -157,7 +157,7 @@ export default function Today() {
         <ResultQualitySummary result={todayRun?.result ?? lastResult} completedAt={todayRun ? todayRun.completedAt : lastRunContext?.completedAt}
           isRefreshing={todayRefresh.isRefreshing} error={todayRefresh.error} source={scanSource} />
         <p role="status" className="px-1 text-xs text-muted">
-          {todayRefresh.isRefreshing ? t('todayPage.refresh.running') : todayRefresh.updatedAt
+          {todayRefresh.isRefreshing ? t('todayPage.refresh.runningHint') : todayRefresh.updatedAt
             ? t('todayPage.refresh.updated', { time: formatDateTime(todayRefresh.updatedAt) })
             : t('todayPage.refresh.description')}
         </p>

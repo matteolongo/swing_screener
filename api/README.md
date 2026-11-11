@@ -510,7 +510,21 @@ Market Data (`/api/market-data`):
 - `GET /api/market-data/{ticker}/volume-analysis` — read-only advisory volume-zone analysis for one symbol. Query params: `interval` (default `1d`), `lookback` (default `120`), and `min_rr` (default `2.0`); the response echoes all three parameters with the normalized `symbol` so clients can validate query identity. Uses the configured market-data provider's OHLCV bars only. A valid empty provider result remains `200` with an empty/no-trade analysis; a provider exception returns sanitized structured `502 market_data_provider_failed` so clients can expose a retry. The endpoint returns an approximate bar-based profile warning and does not affect screener ranking, sizing, positions, or orders.
 
 Calendar:
-- `GET /api/calendar/events`
+- `GET /api/calendar/events` — read-only earnings, high-impact economic, IPO,
+  and holding-dividend events. `days_ahead` accepts 1–90 (default 60).
+  Optional `candidate_tickers` is a comma-separated list of symbols (up to
+  16 letters/numbers/dots/hyphens each, normalized to uppercase; 4096 characters
+  total). When supplied, it replaces legacy review-file candidates; an empty
+  value explicitly requests no candidates. Omission retains the latest persisted
+  default review fallback. Open positions remain included. The browser sends
+  its pinned Today candidates; this endpoint never starts a scan or saves state.
+  Returns `{events, days_ahead, warnings}`. Warnings contain `event_type`, stable
+  `code: "source_unavailable"`, and affected `tickers` (empty for market-wide
+  sources). Unconfigured or failed sources produce warnings rather than a false
+  empty success; successful events remain available. Failed Finnhub earnings
+  symbols retry through the existing yfinance fallback, and only unrecovered
+  symbols are warned. Provider exceptions and credential-bearing URLs are never
+  exposed in warnings or application logs.
 
 Weekly Reviews (`/api/weekly-reviews`):
 - `GET /api/weekly-reviews`

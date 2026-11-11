@@ -46,8 +46,11 @@ preserves the selected symbol; submission remains manual and retains the existin
 backend eligibility checks and error feedback.
 
 `features/screener/useTodayRefresh` runs on Today entry/reload and its refresh
-controls. It waits for persisted settings, force-fetches the latest daily
-session, and refetches portfolio data in parallel. Scan completion is reported
+controls. It waits for persisted settings and shares scans per strategy through
+the query cache. Navigation reuses an in-flight or still-fresh completed scan,
+using the application's existing query freshness window. Explicit refresh runs
+the saved settings again. Portfolio data refreshes
+in parallel. Scan completion is reported
 independently of portfolio results. The Today snapshot and selected candidate
 update together. Selecting a holding, pending order, or watched ticker keeps that
 row selected if it leaves the scan. The Portfolio attention refresh control
@@ -57,6 +60,9 @@ Scan refresh keeps the saved universe, preset, filters and indicator overrides.
 Last Run stays available for exploration.
 Completion includes a refresh time because a daily candle's date/prices may
 remain unchanged. Errors keep the previous successful candidate snapshot.
+The existing 30-minute scan deadline covers synchronous requests and async
+polling. Saved screener source data is labelled cached, with its candle date,
+and retains explicit stale or partial provenance.
 The nearby **Scan quality** summary retains coverage counts and provider/symbol
 warnings. Requested session, observed candle date(s), market freshness and last
 successful request completion are separate facts. Missing legacy metadata stays
@@ -91,6 +97,13 @@ The Universes **Screener run** section also renders the latest scan's candidate
 table, with its saved display filters. Rows open the selected candidate snapshot
 in the symbol modal. Unpinned scans can therefore be inspected without replacing
 Today's pinned review source. The separate discovery screener remains independent.
+The source checkbox and collapsed-form chip describe the next run; the exploration
+banner describes the saved result and retains its separate pin action. Research
+modals load and refresh the canonical fundamentals snapshot shared with Today.
+Blocked candidates expose **Save manual draft** in the modal; closing the draft
+keeps the selected candidate available and never grants order approval. Volume Zones
+formats prices and volume shares and translates action, bias, setup and zone-role
+codes, with unavailable values shown explicitly.
 
 The AI stale badge compares the displayed analysis generation time with newer
 fundamentals, the selected daily bar, and the workspace's fetched price data.

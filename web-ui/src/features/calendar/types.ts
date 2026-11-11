@@ -17,6 +17,7 @@ export interface CalendarEventAPI {
 export interface CalendarEventsResponseAPI {
   events: CalendarEventAPI[];
   days_ahead: number;
+  warnings?: { event_type: EventType; code: 'source_unavailable'; tickers: string[] }[];
 }
 
 export interface CalendarEvent {
@@ -35,6 +36,7 @@ export interface CalendarEvent {
 export interface CalendarEventsResponse {
   events: CalendarEvent[];
   daysAhead: number;
+  warnings: { eventType: EventType; code: 'source_unavailable'; tickers: string[] }[];
 }
 
 export function transformCalendarEvent(api: CalendarEventAPI): CalendarEvent {
@@ -58,5 +60,10 @@ export function transformCalendarEventsResponse(
   return {
     events: api.events.map(transformCalendarEvent),
     daysAhead: api.days_ahead,
+    warnings: (api.warnings ?? []).map((warning) => ({
+      eventType: warning.event_type,
+      code: warning.code,
+      tickers: warning.tickers,
+    })),
   };
 }

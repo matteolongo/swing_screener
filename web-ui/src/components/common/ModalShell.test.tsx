@@ -1,12 +1,47 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { StrictMode, useState } from 'react'
 import ModalShell from '@/components/common/ModalShell'
 import { renderWithProviders } from '@/test/utils'
 import { t } from '@/i18n/t'
 
 describe('ModalShell', () => {
+  it('keeps nested dialog focus and closes only the inner dialog, including after remount', async () => {
+    function NestedDialogs() {
+      const [outerOpen, setOuterOpen] = useState(true)
+      const [innerOpen, setInnerOpen] = useState(false)
+      return outerOpen && <ModalShell title={t('order.review.formTitle')} onClose={() => setOuterOpen(false)}>
+        <button type="button" onClick={() => setInnerOpen(true)}>{t('manualOrderDraft.save')}</button>
+        {innerOpen && <ModalShell title={t('manualOrderDraft.title', { ticker: 'AAPL' })} onClose={() => setInnerOpen(false)}>
+          <button type="button">{t('common.actions.save')}</button>
+        </ModalShell>}
+      </ModalShell>
+    }
+    const originalOverflow = document.body.style.overflow
+    const { user } = renderWithProviders(<StrictMode><NestedDialogs /></StrictMode>)
+    const opener = screen.getByRole('button', { name: t('manualOrderDraft.save') })
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await user.click(opener)
+      const inner = screen.getByRole('dialog', { name: t('manualOrderDraft.title', { ticker: 'AAPL' }) })
+      const close = within(inner).getByRole('button', { name: t('modal.closeAria') })
+      const save = within(inner).getByRole('button', { name: t('common.actions.save') })
+      close.focus()
+      fireEvent.keyDown(close, { key: 'Tab', shiftKey: true })
+      expect(save).toHaveFocus()
+      fireEvent.keyDown(save, { key: 'Tab' })
+      expect(close).toHaveFocus()
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(screen.queryByRole('dialog', { name: t('manualOrderDraft.title', { ticker: 'AAPL' }) })).not.toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: t('order.review.formTitle') })).toBeVisible()
+      expect(opener).toHaveFocus()
+      expect(document.body.style.overflow).toBe('hidden')
+    }
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.body.style.overflow).toBe(originalOverflow)
+  })
+
   it('leaves Tab free to reach the final native summary and wraps back to it', () => {
     renderWithProviders(
       <ModalShell title={t('order.review.formTitle')} onClose={() => {}}>

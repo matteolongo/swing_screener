@@ -18,6 +18,8 @@ export const queryKeys = {
   weeklyReviews: () => ['weekly-reviews'] as const,
   weeklyReview: (weekId?: string | null) => ['weekly-review', weekId ?? null] as const,
   screenerPrefix: () => ['screener'] as const,
+  todayScanPrefix: () => ['today-scan'] as const,
+  todayScan: (policy: string | null) => ['today-scan', policy] as const,
   screenerRecurrence: () => ['screener', 'recurrence'] as const,
   backtest: () => ['backtest'] as const,
   intelligencePrefix: () => ['intelligence'] as const,
@@ -52,8 +54,8 @@ export const queryKeys = {
     evidence: (ticker: string) => ['intelligence', 'evidence', ticker] as const,
     evidenceLatest: (ticker: string) => ['intelligence', 'evidence-latest', ticker] as const,
   },
-  calendarEvents: (daysAhead?: number) =>
-    ['calendar-events', daysAhead ?? 30] as const,
+  calendarEvents: (daysAhead?: number, candidateTickers?: string[]) =>
+    ['calendar-events', daysAhead ?? 30, candidateTickers ?? null] as const,
   openPositionsIntelligence: () => ['openPositionsIntelligence'] as const,
   tickerCandles: (ticker?: string | null) => ['ticker-candles', ticker ?? null] as const,
   volumeAnalysis: (ticker: string | null | undefined, lookback: number, minRr: number) =>
