@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from swing_screener.utils.date_helpers import market_today
 from swing_screener.fundamentals.models import FundamentalPillarScore, FundamentalSnapshot
 from swing_screener.recommendation.models import (
     CatalystLabel,
@@ -672,7 +673,7 @@ def _drivers(
                 from datetime import datetime
                 mrq = getattr(snapshot, "most_recent_quarter", None)
                 if mrq:
-                    age_days = (datetime.utcnow().date() - datetime.fromisoformat(mrq).date()).days
+                    age_days = (market_today() - datetime.fromisoformat(mrq).date()).days
                     months = max(1, round(age_days / 30))
                     _append_unique(warnings, f"Fundamentals data is {months} months old.")
                 else:

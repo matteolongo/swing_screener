@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date
 from pathlib import Path
 import time
 from typing import Any, Optional
@@ -24,6 +23,7 @@ from swing_screener.fundamentals.models import (
     FundamentalSeriesPoint,
     ProviderFundamentalsRecord,
 )
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -403,7 +403,7 @@ class DegiroFundamentalsProvider:
 
         return ProviderFundamentalsRecord(
             symbol=symbol,
-            asof_date=date.today().isoformat(),
+            asof_date=market_today().isoformat(),
             provider=self.name,
             instrument_type="equity",
             data_region=data_region,

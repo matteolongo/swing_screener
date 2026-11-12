@@ -37,6 +37,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Use the US market date (America/New_York) wherever the app needs "today":
+  order and ledger dates, days open, stop and snapshot freshness, review
+  dates, calendar windows and provider lookbacks. A post-close review after
+  UTC midnight no longer lands on the next calendar day. Timestamps that used
+  `utcnow()` or a naive `now()` are now explicit UTC with the same format.
 - Stop calling API routes the backend no longer serves. Symbol Overview no
   longer requests `/api/catalysts/*` and reports catalysts as an unavailable
   dependency on every symbol. Pending orders no longer show a permanently

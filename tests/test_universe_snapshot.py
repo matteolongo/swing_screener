@@ -5,6 +5,7 @@ import warnings
 from unittest.mock import patch
 
 import pytest
+from swing_screener.utils.date_helpers import market_today
 
 from swing_screener.data.universe import (
     UniverseConfig,
@@ -82,10 +83,7 @@ def test_load_broad_market_stocks_non_empty():
 def test_load_amsterdam_aex_non_empty():
     snapshot = _load_snapshot("amsterdam_aex")
     reviewed_at = datetime.date.fromisoformat(snapshot["last_reviewed_at"])
-    with patch(
-        "swing_screener.data.universe.datetime.date", wraps=datetime.date
-    ) as mocked_date:
-        mocked_date.today.return_value = reviewed_at
+    with patch("swing_screener.data.universe.market_today", return_value=reviewed_at):
         tickers = load_universe_from_package("amsterdam_aex", _CFG_NO_BENCH)
     assert len(tickers) >= 10
 
@@ -145,10 +143,7 @@ def test_index_freshness_limit_is_enforced(age_days):
         "last_reviewed_at": reviewed_at.isoformat(),
         "stale_after_days": 100,
     }
-    with patch(
-        "swing_screener.data.universe.datetime.date", wraps=datetime.date
-    ) as mocked_date:
-        mocked_date.today.return_value = today
+    with patch("swing_screener.data.universe.market_today", return_value=today):
         if age_days > 100:
             with pytest.raises(RuntimeError, match="stale"):
                 _check_stale(snapshot)
@@ -185,7 +180,7 @@ def test_stale_curated_warns_but_does_not_raise():
 
 
 def test_fresh_snapshot_does_not_raise_or_warn():
-    today = datetime.date.today().isoformat()
+    today = market_today().isoformat()
     fresh_snapshot = {
         "id": "amsterdam_aex",
         "kind": "index",
@@ -354,10 +349,7 @@ def test_asian_universe_loads_real_constituents(uid, probe, min_count):
 
     # This test validates the checked-in membership snapshot.  Freshness is
     # time-dependent runtime behavior and is covered separately above.
-    with patch(
-        "swing_screener.data.universe.datetime.date", wraps=datetime.date
-    ) as mocked_date:
-        mocked_date.today.return_value = reviewed_at
+    with patch("swing_screener.data.universe.market_today", return_value=reviewed_at):
         tickers = load_universe_from_package(uid)
 
     assert len(tickers) >= min_count

@@ -15,6 +15,7 @@ from swing_screener.fundamentals.models import (
     ProviderFundamentalsRecord,
 )
 from swing_screener.utils.coerce import float_or_none
+from swing_screener.utils.date_helpers import market_today
 
 
 def _coerce_iso_date(value: Any) -> str | None:
@@ -480,7 +481,7 @@ class YfinanceFundamentalsProvider:
 
         return ProviderFundamentalsRecord(
             symbol=symbol,
-            asof_date=date.today().isoformat(),
+            asof_date=market_today().isoformat(),
             provider=self.name,
             instrument_type=instrument_type,
             data_region=data_region,

@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import replace
-from datetime import date
 from typing import Optional
 
 from swing_screener.backtest import BacktestConfig, run_event_study
@@ -35,6 +34,7 @@ from api.models.backtest import (
     SetupMetricsModel,
     TradeModel,
 )
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class BacktestService:
             raise ValidationError("At least one ticker is required.")
 
         start = (request.start or DEFAULT_START).strip()
-        end = (request.end or date.today().isoformat()).strip()
+        end = (request.end or market_today().isoformat()).strip()
 
         try:
             ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start, end_date=end)

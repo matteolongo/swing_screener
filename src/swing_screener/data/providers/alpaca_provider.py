@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import time
 import hashlib
@@ -18,6 +18,7 @@ from swing_screener.data.source_health import (
     ProbeResult,
 )
 from swing_screener.data.providers._probe import ohlcv_canary_probe
+from swing_screener.utils.date_helpers import market_today
 
 
 class AlpacaDataProvider(MarketDataProvider):
@@ -189,7 +190,7 @@ class AlpacaDataProvider(MarketDataProvider):
             raise ValueError("tickers list is empty")
 
         end_dt = pd.Timestamp(end_date).date()
-        is_live_edge_request = end_dt >= date.today()
+        is_live_edge_request = end_dt >= market_today()
 
         # Check cache first for historical windows only.
         # For "today/live-edge" requests, bypass stale same-day cache so
@@ -314,7 +315,7 @@ class AlpacaDataProvider(MarketDataProvider):
             ConnectionError: If Alpaca API fails
         """
         # Fetch last 1 day of data to get latest close
-        end = datetime.now()
+        end = datetime.now(UTC).replace(tzinfo=None)
         start = end - timedelta(days=5)  # Go back a few days to ensure we get data
 
         try:

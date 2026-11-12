@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import datetime as dt
 import json
 import os
 from dataclasses import dataclass, field
@@ -11,6 +10,7 @@ from urllib.parse import quote, urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 from swing_screener.utils.logging_config import get_logger
+from swing_screener.utils.date_helpers import market_today
 
 logger = get_logger(__name__)
 
@@ -395,7 +395,7 @@ def discover_with_yahoo_predefined(
 
     return SymbolDiscoveryResult(
         provider="yahoo_predefined",
-        source_asof=dt.date.today().isoformat(),
+        source_asof=market_today().isoformat(),
         source_documents=[
             {
                 "label": "Yahoo Finance predefined screener endpoint",
@@ -495,7 +495,7 @@ def discover_with_eodhd_exchange(
 
     return SymbolDiscoveryResult(
         provider="eodhd_exchange",
-        source_asof=dt.date.today().isoformat(),
+        source_asof=market_today().isoformat(),
         source_documents=documents,
         filters=_query_filters(query),
         symbols=symbols,

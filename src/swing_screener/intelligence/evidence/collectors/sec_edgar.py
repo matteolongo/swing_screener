@@ -10,6 +10,7 @@ from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.intelligence.evidence.config import EvidenceConfig, load_evidence_config
 from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.intelligence.evidence.registry import register
+from swing_screener.utils.date_helpers import market_today
 
 _TICKER_MAP_CACHE: dict[str, tuple[str, str | None]] | None = None
 
@@ -142,7 +143,7 @@ class SecEdgarCatalystCollector:
         started = time.perf_counter()
         cfg = load_evidence_config()
         try:
-            items = cls.collect(canary, asof_date=date.today(), cfg=cfg, get_json=_default_get_json(cfg))
+            items = cls.collect(canary, asof_date=market_today(), cfg=cfg, get_json=_default_get_json(cfg))
             elapsed = (time.perf_counter() - started) * 1000.0
             return ProbeResult(
                 id=cls.SOURCE_ID,

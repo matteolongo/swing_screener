@@ -17,6 +17,7 @@ from api.models.recommendation import (
 )
 from api.models.screener import SameSymbolCandidateContext, ScreenerCandidate
 from swing_screener.risk.currency import normalize_currency_code
+from swing_screener.utils.date_helpers import market_today
 
 
 def _parse_date(value: object) -> Optional[date]:
@@ -311,7 +312,7 @@ class SameSymbolReentryEvaluator:
         if matching_position is None:
             # Check for a recently-closed position → RE_ENTRY
             if closed_positions:
-                cutoff = date.today() - timedelta(days=reentry_lookback_days)
+                cutoff = market_today() - timedelta(days=reentry_lookback_days)
                 recently_closed = next(
                     (
                         pos

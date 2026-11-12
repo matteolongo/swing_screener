@@ -21,6 +21,7 @@ from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.intelligence.evidence.config import EvidenceConfig
 from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.intelligence.evidence.registry import register
+from swing_screener.utils.date_helpers import market_today
 
 _BASE_URL = "https://api.polygon.io/v2/reference/news"
 _ENV_KEY = "POLYGON_IO_API_KEY"
@@ -139,7 +140,7 @@ class PolygonNewsCollector:
         cfg = load_evidence_config()
         started = time.perf_counter()
         try:
-            items = cls.collect(canary, asof_date=date.today(), cfg=cfg)
+            items = cls.collect(canary, asof_date=market_today(), cfg=cfg)
             elapsed = (time.perf_counter() - started) * 1000.0
             return ProbeResult(
                 id=cls.SOURCE_ID,

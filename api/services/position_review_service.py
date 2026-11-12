@@ -21,6 +21,7 @@ from swing_screener.intelligence.evidence.collect import collect_evidence
 from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.intelligence.models import SymbolIntelligence
 from swing_screener.intelligence.cache import read_latest_from_cache
+from swing_screener.utils.date_helpers import market_today
 
 
 _BULLISH_ACTIONS = {"BUY_NOW", "BUY_ON_PULLBACK", "WAIT_FOR_BREAKOUT", "TACTICAL_ONLY"}
@@ -510,7 +511,7 @@ class PositionReviewService:
     def _nearest_event_days(self, intelligence: SymbolIntelligence | None) -> int | None:
         if intelligence is None:
             return None
-        today = dt.date.today()
+        today = market_today()
         upcoming: list[int] = []
         for event in intelligence.upcoming_events:
             if not event.date:

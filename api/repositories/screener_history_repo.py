@@ -1,9 +1,9 @@
 """Screener history repository — tracks which tickers appear each day."""
 from __future__ import annotations
 from dataclasses import dataclass
-from datetime import date
 from pathlib import Path
 from api.utils.file_lock import locked_read_json, locked_read_modify_write, locked_write_json
+from swing_screener.utils.date_helpers import market_today
 
 @dataclass
 class ScreenerHistoryRepository:
@@ -51,7 +51,7 @@ class ScreenerHistoryRepository:
                 ticker_dates.setdefault(ticker, []).append(d)
 
         results = []
-        today = date.today().isoformat()
+        today = market_today().isoformat()
         for ticker, dates in ticker_dates.items():
             dates_sorted = sorted(dates)
             days_seen = len(dates_sorted)

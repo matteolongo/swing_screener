@@ -14,6 +14,7 @@ import httpx
 from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.fundamentals.models import ProviderFundamentalsRecord
 from swing_screener.utils.coerce import float_or_none
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ class FinnhubEnrichmentClient:
 
     def _fetch_insider_transactions(self, symbol: str) -> tuple[int | None, int | None]:
         """Returns (net_shares_90d, transaction_count_90d). net_shares > 0 = net buy."""
-        from_date = (dt.date.today() - dt.timedelta(days=90)).isoformat()
+        from_date = (market_today() - dt.timedelta(days=90)).isoformat()
         try:
             data = self._get("/stock/insider-transactions", {"symbol": symbol, "from": from_date})
             rows = data.get("data") or []
@@ -169,7 +170,7 @@ class FinnhubEnrichmentClient:
 
     def _fetch_upgrade_downgrade_net(self, symbol: str) -> int | None:
         """Net analyst actions (upgrades minus downgrades) in the last 30 days."""
-        cutoff = dt.date.today() - dt.timedelta(days=30)
+        cutoff = market_today() - dt.timedelta(days=30)
         from_date = cutoff.isoformat()
         try:
             items = self._get("/stock/upgrade-downgrade", {"symbol": symbol, "from": from_date})

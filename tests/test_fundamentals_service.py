@@ -381,12 +381,9 @@ class _BrokenSecProvider:
 def test_fundamentals_service_builds_supported_quarterly_snapshot_with_high_trust(tmp_path, monkeypatch):
     import datetime as _dt
 
-    class _FrozenDatetime(_dt.datetime):
-        @classmethod
-        def utcnow(cls):
-            return cls(2026, 3, 18)
-
-    monkeypatch.setattr("swing_screener.fundamentals.scoring.datetime", _FrozenDatetime)
+    monkeypatch.setattr(
+        "swing_screener.fundamentals.scoring.market_today", lambda: _dt.date(2026, 3, 18)
+    )
 
     service = FundamentalsAnalysisService(
         storage=FundamentalsStorage(tmp_path / "fundamentals"),

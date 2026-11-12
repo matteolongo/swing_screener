@@ -9,7 +9,7 @@ of returning 404, and only terminal jobs are evicted when the store is full.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import cache
 import json
 import logging
@@ -30,7 +30,7 @@ ResultT = TypeVar("ResultT", bound=BaseModel)
 
 
 def _now_iso() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat()
+    return datetime.now(UTC).replace(microsecond=0, tzinfo=None).isoformat()
 
 
 class JobStore(Generic[JobT]):

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import datetime as dt
 from typing import Callable, Optional
 
 from swing_screener.data.symbol_discovery import YAHOO_EXCHANGE_TO_MIC
+from swing_screener.utils.date_helpers import market_today
 
 # MIC -> (country_code, timezone)
 MIC_TO_COUNTRY_TZ: dict[str, tuple[str, str]] = {
@@ -87,7 +87,7 @@ def enrich_symbol(
     if not mic or not currency or mic not in MIC_TO_COUNTRY_TZ:
         return None
     country, timezone = MIC_TO_COUNTRY_TZ[mic]
-    today = dt.date.today().isoformat()
+    today = market_today().isoformat()
     return {
         "symbol": sym,
         "exchange_mic": mic,

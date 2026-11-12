@@ -24,6 +24,7 @@ from swing_screener.data.source_health import (
 )
 from swing_screener.data.providers._probe import ohlcv_canary_probe
 from swing_screener.utils import normalize_tickers
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -538,7 +539,7 @@ class YfinanceProvider(MarketDataProvider):
 
         # Determine actual end date for yfinance call
         actual_end = end_date if end_date else None
-        end_for_coverage = end_date or (date.today() + timedelta(days=1)).isoformat()
+        end_for_coverage = end_date or (market_today() + timedelta(days=1)).isoformat()
 
         cached_frames: list[pd.DataFrame] = []
         stale_fallback: dict[str, Path] = {}
@@ -723,11 +724,9 @@ class YfinanceProvider(MarketDataProvider):
         """
         self._last_fetch_used_stale_cache = False
         # Yfinance end param is exclusive - add 1 day to include end_date.
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-        end_dt_inclusive = end_dt + timedelta(days=1)
-        end_date_adjusted = end_dt_inclusive.strftime("%Y-%m-%d")
-        request_end = end_dt.date()
-        today = date.today()
+        request_end = date.fromisoformat(end_date)
+        end_date_adjusted = (request_end + timedelta(days=1)).isoformat()
+        today = market_today()
         # Historical windows never change, so their cache never expires. For
         # "today/live-edge" requests, reuse the cache only within a short TTL
         # so repeated runs are fast but post-close bars still show up.

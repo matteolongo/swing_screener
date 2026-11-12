@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
+from swing_screener.utils.date_helpers import market_today
 
 try:
     from importlib import resources as importlib_resources
@@ -161,7 +162,7 @@ def _freshness_payload(snapshot: dict) -> dict:
             "is_stale": False,
         }
 
-    days_since_review = max((datetime.date.today() - reviewed_date).days, 0)
+    days_since_review = max((market_today() - reviewed_date).days, 0)
     if not stale_after:
         return {
             "days_since_review": days_since_review,
@@ -198,7 +199,7 @@ def _check_stale(snapshot: dict) -> None:
         reviewed_date = datetime.date.fromisoformat(str(last_reviewed))
     except ValueError:
         return
-    age_days = (datetime.date.today() - reviewed_date).days
+    age_days = (market_today() - reviewed_date).days
     if age_days > stale_after:
         msg = (
             f"Universe '{uid}' is stale: last reviewed {last_reviewed} "
@@ -451,7 +452,7 @@ def refresh_package_universe(universe_id: str, *, apply: bool = False) -> dict:
     proposed_snapshot["source_asof"] = preview.source_asof
     proposed_snapshot["source_adapter"] = preview.source_adapter
     proposed_snapshot["source_documents"] = preview.source_documents
-    proposed_snapshot["last_reviewed_at"] = datetime.date.today().isoformat()
+    proposed_snapshot["last_reviewed_at"] = market_today().isoformat()
     rules = dict(proposed_snapshot.get("rules") or {})
     exchange_mics = sorted(
         {

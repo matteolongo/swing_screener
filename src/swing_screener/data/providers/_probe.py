@@ -2,17 +2,18 @@
 from __future__ import annotations
 
 import time
-from datetime import date, timedelta
+from datetime import timedelta
 
 import pandas as pd
 
 from swing_screener.data.source_health import ProbeResult
+from swing_screener.utils.date_helpers import market_today
 
 
 def ohlcv_canary_probe(provider, canary: str, source_id: str) -> ProbeResult:
     """Fetch a short recent OHLCV window for `canary` and grade reachability."""
-    end = date.today().isoformat()
-    start = (date.today() - timedelta(days=10)).isoformat()
+    end = market_today().isoformat()
+    start = (market_today() - timedelta(days=10)).isoformat()
     started = time.perf_counter()
     try:
         df = provider.fetch_ohlcv([canary], start_date=start, end_date=end)

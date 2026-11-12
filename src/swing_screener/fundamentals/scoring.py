@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import date, datetime, timezone
 
+from swing_screener.utils.date_helpers import market_today
 from swing_screener.data.source_health import DataSourceHealth
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import (
@@ -96,7 +97,7 @@ def _freshness_status(most_recent_quarter: str | None, stale_after_days: int) ->
     if not most_recent_quarter:
         return "unknown"
     try:
-        age_days = (datetime.utcnow().date() - datetime.fromisoformat(most_recent_quarter).date()).days
+        age_days = (market_today() - datetime.fromisoformat(most_recent_quarter).date()).days
     except ValueError:
         return "unknown"
     return "stale" if age_days > stale_after_days else "current"
@@ -846,7 +847,7 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         )
     except ValueError:
         report_date = None
-    today = datetime.utcnow().date()
+    today = market_today()
     freshness_pen = _freshness_penalty_from_date(report_date, today)
 
     pillar_score_map: dict[str, float | None] = {
@@ -925,7 +926,7 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
 def build_provider_error_snapshot(symbol: str, provider: str, error: str) -> FundamentalSnapshot:
     return FundamentalSnapshot(
         symbol=symbol,
-        asof_date=datetime.utcnow().date().isoformat(),
+        asof_date=market_today().isoformat(),
         provider=provider,
         updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         supported=True,

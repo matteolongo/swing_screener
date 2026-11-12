@@ -6,6 +6,7 @@ import pytest
 
 from api.models.calendar import CalendarEvent
 from api.services.calendar_service import CalendarService
+from swing_screener.utils.date_helpers import market_today
 
 
 def _make_positions_repo(tickers: list[str]):
@@ -21,7 +22,7 @@ def test_get_events_returns_earnings_for_open_positions(tmp_path):
     repo = _make_positions_repo(["AAPL"])
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path)
 
-    fake_date = dt.date.today() + dt.timedelta(days=10)
+    fake_date = market_today() + dt.timedelta(days=10)
     with patch.object(svc, "_fetch_earnings_for", return_value=fake_date):
         events = svc.get_events(days_ahead=30).events
 
@@ -38,7 +39,7 @@ def test_get_events_source_tag_screener_for_review_symbol(tmp_path):
     repo = _make_positions_repo([])
     reviews_dir = tmp_path / "daily_reviews"
     reviews_dir.mkdir()
-    review_date = dt.date.today().isoformat()
+    review_date = market_today().isoformat()
     review_file = reviews_dir / f"daily_review_{review_date}_default.json"
     review_file.write_text(
         json.dumps({
@@ -48,7 +49,7 @@ def test_get_events_source_tag_screener_for_review_symbol(tmp_path):
     )
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path)
 
-    fake_date = dt.date.today() + dt.timedelta(days=5)
+    fake_date = market_today() + dt.timedelta(days=5)
     with patch.object(svc, "_fetch_earnings_for", return_value=fake_date):
         events = svc.get_events(days_ahead=30).events
 
@@ -62,7 +63,7 @@ def test_get_events_excludes_past_earnings(tmp_path):
     repo = _make_positions_repo(["AAPL"])
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path)
 
-    past_date = dt.date.today() - dt.timedelta(days=1)
+    past_date = market_today() - dt.timedelta(days=1)
     with patch.object(svc, "_fetch_earnings_for", return_value=past_date):
         events = svc.get_events(days_ahead=30).events
 
@@ -73,7 +74,7 @@ def test_get_events_excludes_earnings_beyond_window(tmp_path):
     repo = _make_positions_repo(["AAPL"])
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path)
 
-    far_date = dt.date.today() + dt.timedelta(days=60)
+    far_date = market_today() + dt.timedelta(days=60)
     with patch.object(svc, "_fetch_earnings_for", return_value=far_date):
         events = svc.get_events(days_ahead=30).events
 
@@ -96,7 +97,7 @@ def test_get_events_position_beats_screener_tag(tmp_path):
     repo = _make_positions_repo(["AAPL"])
     reviews_dir = tmp_path / "daily_reviews"
     reviews_dir.mkdir()
-    review_date = dt.date.today().isoformat()
+    review_date = market_today().isoformat()
     review_file = reviews_dir / f"daily_review_{review_date}_default.json"
     review_file.write_text(
         json.dumps({
@@ -106,7 +107,7 @@ def test_get_events_position_beats_screener_tag(tmp_path):
     )
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path)
 
-    fake_date = dt.date.today() + dt.timedelta(days=5)
+    fake_date = market_today() + dt.timedelta(days=5)
     with patch.object(svc, "_fetch_earnings_for", return_value=fake_date):
         events = svc.get_events(days_ahead=30).events
 
@@ -180,7 +181,7 @@ def test_earnings_from_finnhub_includes_eps_estimate(tmp_path):
         finnhub_api_key="test_key",
     )
 
-    fake_date = dt.date.today() + dt.timedelta(days=10)
+    fake_date = market_today() + dt.timedelta(days=10)
 
     resp = MagicMock()
     resp.json.return_value = {
@@ -219,7 +220,7 @@ def test_earnings_falls_back_to_yfinance_when_no_finnhub_key(tmp_path):
     repo = _make_positions_repo(["AAPL"])
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key=None)
 
-    fake_date = dt.date.today() + dt.timedelta(days=10)
+    fake_date = market_today() + dt.timedelta(days=10)
     with patch.object(svc, "_fetch_earnings_for", return_value=fake_date) as mock_yf:
         with patch.object(svc, "_fetch_economic_events", return_value=[]):
             events = svc.get_events(days_ahead=30).events
@@ -234,7 +235,6 @@ def test_earnings_falls_back_to_yfinance_when_no_finnhub_key(tmp_path):
 
 def test_earnings_finnhub_per_ticker_failure_uses_yfinance(tmp_path):
     """A per-ticker Finnhub failure uses the existing yfinance fallback."""
-    import datetime as dt
     from api.services.calendar_service import CalendarService
 
     repo = _make_positions_repo(["AAPL"])
@@ -245,7 +245,7 @@ def test_earnings_finnhub_per_ticker_failure_uses_yfinance(tmp_path):
     )
 
     with patch("api.services.calendar_service.httpx.get", side_effect=Exception("network")):
-        with patch.object(svc, "_fetch_earnings_for", return_value=dt.date.today()) as mock_yf:
+        with patch.object(svc, "_fetch_earnings_for", return_value=market_today()) as mock_yf:
             with patch.object(svc, "_fetch_economic_events", return_value=[]):
                 with patch.object(svc, "_fetch_ipo_events", return_value=[]):
                     with patch.object(svc, "_fetch_dividend_events", return_value=[]):
@@ -259,7 +259,7 @@ def test_earnings_finnhub_per_ticker_failure_uses_yfinance(tmp_path):
 def test_current_candidates_override_legacy_review_without_running_scan(tmp_path):
     svc = CalendarService(_make_positions_repo(["AAPL"]), tmp_path)
     with patch.object(svc, "_get_screener_tickers", return_value={"OLD"}) as legacy:
-        with patch.object(svc, "_fetch_earnings_for", return_value=dt.date.today()) as fetch:
+        with patch.object(svc, "_fetch_earnings_for", return_value=market_today()) as fetch:
             response = svc.get_events(candidate_tickers={"MSFT"})
     legacy.assert_not_called()
     assert {call.args[0] for call in fetch.call_args_list} == {"AAPL", "MSFT"}
@@ -277,7 +277,7 @@ def test_explicit_empty_candidates_do_not_read_legacy_review(tmp_path):
 
 def test_source_failure_preserves_events_and_never_logs_credentials(tmp_path, caplog):
     svc = CalendarService(_make_positions_repo([]), tmp_path, "fake-secret-marker")
-    event = CalendarEvent(date=dt.date.today().isoformat(), event_type="ipo", title="IPO", source_tag="ipo")
+    event = CalendarEvent(date=market_today().isoformat(), event_type="ipo", title="IPO", source_tag="ipo")
     with patch.object(svc, "_fetch_ipo_events", return_value=[event]):
         with patch("api.services.calendar_service.httpx.get", side_effect=Exception(
             "https://provider.invalid/?token=fake-secret-marker"
@@ -295,7 +295,7 @@ def test_failed_fallback_retains_other_ticker_earnings(tmp_path):
     def finnhub(ticker, start, end):
         if ticker == "FAIL":
             raise RuntimeError("unavailable")
-        return dt.date.today(), None, None
+        return market_today(), None, None
     with patch.object(svc, "_fetch_earnings_for_finnhub", side_effect=finnhub):
         with patch.object(svc, "_fetch_earnings_for", side_effect=RuntimeError("unavailable")):
             with patch.object(svc, "_fetch_economic_events", return_value=[]):
@@ -314,7 +314,7 @@ def test_ipo_events_returned_when_finnhub_key_set(tmp_path):
     repo = _make_positions_repo([])
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key="test_key")
 
-    ipo_date = (dt.date.today() + dt.timedelta(days=5)).isoformat()
+    ipo_date = (market_today() + dt.timedelta(days=5)).isoformat()
     resp = MagicMock()
     resp.json.return_value = {
         "ipoCalendar": [
@@ -361,7 +361,7 @@ def test_ipo_speculative_status_excluded(tmp_path):
     repo = _make_positions_repo([])
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key="test_key")
 
-    ipo_date = (dt.date.today() + dt.timedelta(days=5)).isoformat()
+    ipo_date = (market_today() + dt.timedelta(days=5)).isoformat()
     resp = MagicMock()
     resp.json.return_value = {
         "ipoCalendar": [
@@ -387,7 +387,7 @@ def test_dividend_events_only_for_position_tickers(tmp_path):
     repo = _make_positions_repo(["AAPL"])
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key="test_key")
 
-    div_date = (dt.date.today() + dt.timedelta(days=7)).isoformat()
+    div_date = (market_today() + dt.timedelta(days=7)).isoformat()
     resp = MagicMock()
     resp.json.return_value = {
         "dividendCalendar": [{"date": div_date, "amount": 0.25}]
@@ -418,7 +418,7 @@ def test_economic_events_include_finnhub_provenance_and_confidence(tmp_path):
     repo = _make_positions_repo([])
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key="test_key")
 
-    event_date = dt.date.today() + dt.timedelta(days=3)
+    event_date = market_today() + dt.timedelta(days=3)
     resp = MagicMock()
     resp.json.return_value = {
         "economicCalendar": [

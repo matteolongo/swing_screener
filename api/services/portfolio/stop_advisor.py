@@ -19,6 +19,7 @@ from api.repositories.config_repo import ConfigRepository
 from api.db.repositories import SqlPositionsRepository
 from api.services.portfolio._helpers import to_state_position
 from api.utils.files import get_today_str
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ class PositionStopAdvisor:
 
         manage_cfg = self._resolve_manage_cfg(None)
         start_date = _calc_start_date(position.get("entry_date"), manage_cfg.trail_sma)
-        yesterday = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+        yesterday = (market_today() - dt.timedelta(days=1)).isoformat()
 
         try:
             ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=yesterday)
@@ -175,7 +176,7 @@ class PositionStopAdvisor:
                     f"Failed to fetch live price for {ticker}: {exc}",
                 ) from exc
 
-        today_idx = pd.Timestamp(dt.date.today())
+        today_idx = pd.Timestamp(market_today())
         for field in ["Open", "High", "Low", "Close", "Volume"]:
             col = (field, ticker)
             if col in ohlcv.columns:

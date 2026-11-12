@@ -36,6 +36,7 @@ from swing_screener.portfolio.metrics import (
 )
 from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 from swing_screener.risk.currency import convert_via_eurusd
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -428,7 +429,7 @@ class PortfolioReadService:
             entry_dt = dt.date.fromisoformat(str(entry_date))
         except ValueError:
             return 0
-        return max((dt.date.today() - entry_dt).days, 0)
+        return max((market_today() - entry_dt).days, 0)
 
     def list_positions(
         self,

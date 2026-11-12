@@ -15,6 +15,7 @@ from swing_screener.intelligence.models import (
     SymbolIntelligenceRequest,
     SourceEvidence,
 )
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -356,7 +357,7 @@ def enrich_with_technicals(
 def _default_polygon_fetch(ticker: str):
     """Fetch a recent Polygon OHLCV frame for one ticker, or None if unconfigured."""
     import os
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     api_key = os.getenv("POLYGON_IO_API_KEY")
     if not api_key:
@@ -364,8 +365,8 @@ def _default_polygon_fetch(ticker: str):
     from swing_screener.data.providers.polygon_provider import PolygonProvider
 
     provider = PolygonProvider(api_key=api_key)
-    end = date.today().isoformat()
-    start = (date.today() - timedelta(days=400)).isoformat()
+    end = market_today().isoformat()
+    start = (market_today() - timedelta(days=400)).isoformat()
     return provider.fetch_ohlcv([ticker], start, end)
 
 
@@ -411,7 +412,7 @@ def enrich_with_polygon_prices(
                 updates["price_asof"] = str(last_index)
                 try:
                     last_date = last_index.date() if hasattr(last_index, "date") else date.fromisoformat(str(last_index)[:10])
-                    age_days = (date.today() - last_date).days
+                    age_days = (market_today() - last_date).days
                     updates["price_status"] = "current" if 0 <= age_days <= 3 else "stale"
                 except (TypeError, ValueError):
                     updates["price_status"] = "unknown"

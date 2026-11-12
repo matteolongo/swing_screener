@@ -13,6 +13,7 @@ import httpx
 from api.models.calendar import CalendarEvent, CalendarEventsResponse, CalendarSourceWarning
 from api.db.repositories import SqlPositionsRepository
 from swing_screener.utils.coerce import float_or_none
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class CalendarService:
     def get_events(
         self, days_ahead: int = 30, candidate_tickers: Optional[set[str]] = None
     ) -> CalendarEventsResponse:
-        today = dt.date.today()
+        today = market_today()
         end = today + dt.timedelta(days=days_ahead)
 
         position_tickers = self._get_position_tickers()
@@ -169,7 +170,7 @@ class CalendarService:
         )
         resp.raise_for_status()
         items = resp.json().get("earningsCalendar", [])
-        today = dt.date.today()
+        today = market_today()
         upcoming = [
             item for item in items
             if item.get("date") and (d := _parse_date(item["date"])) is not None
@@ -219,7 +220,7 @@ class CalendarService:
     def _fetch_earnings_for(self, ticker: str) -> Optional[dt.date]:
         import yfinance
 
-        today = dt.date.today()
+        today = market_today()
         calendar = yfinance.Ticker(ticker).calendar or {}
         earnings_dates = calendar.get("Earnings Date", [])
         if not isinstance(earnings_dates, list):

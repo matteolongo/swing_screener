@@ -22,7 +22,7 @@ class StrategyService:
         self._repo = strategy_repo
 
     def _now_iso(self) -> str:
-        return dt.datetime.now().replace(microsecond=0).isoformat()
+        return dt.datetime.now(dt.UTC).replace(microsecond=0, tzinfo=None).isoformat()
 
     def _require_strategy(self, strategy_id: str) -> dict:
         strategy = self._repo.get_strategy(strategy_id)

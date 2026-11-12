@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -17,6 +17,7 @@ from swing_screener.data.source_health import (
     SourceDescriptor,
 )
 from swing_screener.data.providers._probe import ohlcv_canary_probe
+from swing_screener.utils.date_helpers import market_today
 
 _BASE_URL = "https://api.polygon.io"
 _SOURCE_ID = "polygon"
@@ -140,7 +141,7 @@ class PolygonProvider(MarketDataProvider):
             and modified_at < cache_policy.fresh_after_utc.astimezone(timezone.utc)
         ):
             return False
-        if end_date < date.today().isoformat():
+        if end_date < market_today().isoformat():
             return True
         cache_age_s = time.time() - modified_at.timestamp()
         return cache_age_s <= self._cache_ttl_days * 86400

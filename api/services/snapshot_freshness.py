@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from swing_screener.utils.date_helpers import market_today
 
 
 def snapshot_freshness(
@@ -16,7 +17,7 @@ def snapshot_freshness(
         snapshot_date = dt.date.fromisoformat(asof)
     except (TypeError, ValueError):
         return "stale"
-    current_date = today or dt.date.today()
+    current_date = today or market_today()
     return (
         "stale" if (current_date - snapshot_date).days > stale_after_days else "fresh"
     )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 import hashlib
 import json
 import os
@@ -10,6 +9,7 @@ from typing import Iterable
 
 from swing_screener.data.symbol_discovery import SymbolDiscoveryQuery, SymbolDiscoveryResult, discover_symbols
 from swing_screener.data.universe import normalize_tickers
+from swing_screener.utils.date_helpers import market_today
 
 _AUTO_STORE_PATH_OVERRIDE: str | None = None
 
@@ -179,7 +179,7 @@ def materialize_auto_universe(
         if not passed and symbol not in pinned_set:
             continue
         seen.add(symbol)
-        registry_updates[symbol] = {**item, "last_seen_at": dt.date.today().isoformat(), "provider": result.provider}
+        registry_updates[symbol] = {**item, "last_seen_at": market_today().isoformat(), "provider": result.provider}
         members.append(
             {
                 "symbol": symbol,
@@ -195,7 +195,7 @@ def materialize_auto_universe(
     for symbol in pinned:
         if symbol not in seen:
             members.append({"symbol": symbol, "source": "pinned", "inclusion_reasons": ["pinned"]})
-            registry_updates.setdefault(symbol, {"symbol": symbol, "last_seen_at": dt.date.today().isoformat(), "provider": "pinned"})
+            registry_updates.setdefault(symbol, {"symbol": symbol, "last_seen_at": market_today().isoformat(), "provider": "pinned"})
 
     if not members:
         raise ValueError("Auto-universe materialization produced no symbols after filtering.")
@@ -211,7 +211,7 @@ def materialize_auto_universe(
         "source": result.provider,
         "source_asof": result.source_asof,
         "source_documents": result.source_documents,
-        "last_reviewed_at": dt.date.today().isoformat(),
+        "last_reviewed_at": market_today().isoformat(),
         "member_count": len(members),
         "filter_definition_hash": _filter_definition_hash(request),
         "filters": {**result.filters, "auto_filters": request.filters.__dict__},

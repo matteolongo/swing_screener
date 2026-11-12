@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import datetime as dt
 import html
-import json
 import re
 from dataclasses import dataclass, field
 from typing import Callable, Iterable
@@ -15,6 +13,7 @@ from swing_screener.data.wikipedia_sources import (
     WIKIPEDIA_INDEX_CONFIG,
     fetch_index_constituents,
 )
+from swing_screener.utils.date_helpers import market_today
 
 
 SEPTEMBER_2025_REVIEW_URL = (
@@ -322,7 +321,7 @@ def refresh_index_from_wikipedia(
     constituents: list[dict] = []
     new_records: list[dict] = []
     notes: list[str] = []
-    today = dt.date.today().isoformat()
+    today = market_today().isoformat()
 
     for row in rows:
         rec = instrument_master.get(row.symbol)
