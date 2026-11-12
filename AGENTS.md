@@ -45,8 +45,7 @@ If a doc contradicts the code, the code is right — fix the doc as part of your
 uv sync
 # or: python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 
-# Tests (run before and after changes)
-pytest -q
+# Tests: run only the files affected by your change (full suite runs in CI)
 pytest tests/test_ranking.py -q          # single file
 pytest -k "test_position_sizing" -q      # by name pattern
 pytest -m "not integration" -q          # skip tests requiring API keys
@@ -65,7 +64,7 @@ cd web-ui && npm install
 
 npm run dev          # dev server (Vite)
 npm run build        # production build
-npm test             # Vitest (run before and after changes)
+npm test             # full Vitest run (CI only; locally pass a path)
 npm run typecheck    # tsc --noEmit
 npm run lint         # ESLint strict, zero warnings allowed
 npm run test:coverage
@@ -73,10 +72,12 @@ npx vitest run src/features/portfolio  # single directory
 npx vitest -t "renders positions"      # by test name
 ```
 
-### Full test suite before committing
-```bash
-pytest -q && cd web-ui && npm test
-```
+### Local test scope
+Run locally only the tests affected by your change (the test files for the
+modules you touched, e.g. `pytest tests/api/test_order_fill.py -q` or
+`npx vitest run src/components/domain/orders`), plus typecheck/lint for the
+layer you changed. **Never run the full suite locally** (`pytest -q`, `npm test`
+without a path): the full backend and frontend runs are always left to CI.
 
 ## Versioning and releases
 
