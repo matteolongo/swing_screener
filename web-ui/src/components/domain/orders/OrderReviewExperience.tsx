@@ -1,6 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
@@ -13,7 +11,11 @@ import {
   type ReviewSectionId,
 } from '@/components/domain/orders/orderReviewHelpers';
 
-import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
+import {
+  validateCandidateOrder,
+  type CandidateOrderErrors,
+  type CandidateOrderFormValues,
+} from '@/components/domain/orders/schemas';
 import { getSetupExecutionGuidance } from '@/features/orders/setupGuidance';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
 import type { CanonicalOrderDraft, SameSymbolCandidateContext } from '@/features/screener/types';
@@ -75,17 +77,20 @@ export default function OrderReviewExperience({
     typeof context.close === 'number' && Number.isFinite(context.close) && context.close > 0 ? context.close : null;
   const decisionGates = context.recommendation?.decisionGates;
 
-  const form = useForm<CandidateOrderFormValues>({
-    resolver: zodResolver(candidateOrderSchema),
-    defaultValues: {
-      orderType: defaultOrderType,
-      quantity: suggestedShares,
-      limitPrice: suggestedEntry,
-      stopPrice: suggestedStop,
-      targetPrice: suggestedTarget,
+  // Numeric fields stay strings while editing so partial input like "12." survives re-render.
+  const defaultDraft = useMemo(
+    () => ({
+      quantity: String(suggestedShares),
+      limitPrice: String(suggestedEntry),
+      stopPrice: String(suggestedStop),
+      targetPrice: suggestedTarget == null ? '' : String(suggestedTarget),
       notes: defaultNotes,
-    },
-  });
+    }),
+    [defaultNotes, suggestedEntry, suggestedShares, suggestedStop, suggestedTarget],
+  );
+  const [draft, setDraft] = useState(defaultDraft);
+  const [errors, setErrors] = useState<CandidateOrderErrors>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,27 +99,46 @@ export default function OrderReviewExperience({
   const [tradeThesis, setTradeThesis] = useState('');
 
   useEffect(() => {
-    form.reset({
-      orderType: defaultOrderType,
-      quantity: suggestedShares,
-      limitPrice: suggestedEntry,
-      stopPrice: suggestedStop,
-      targetPrice: suggestedTarget,
-      notes: defaultNotes,
-    });
+    setDraft(defaultDraft);
+    setErrors({});
+    setSubmitAttempted(false);
     setSubmissionError(null);
     setSubmitSucceeded(false);
     setIsSubmitting(false);
     setActiveSection('decision');
     setTradeThesis('');
-  }, [defaultNotes, defaultOrderType, form, suggestedEntry, suggestedShares, suggestedStop, suggestedTarget, normalizedTicker]);
+  }, [defaultDraft, normalizedTicker]);
 
-  const orderType = form.watch('orderType') ?? defaultOrderType;
+  const orderType = defaultOrderType;
+  const values: CandidateOrderFormValues = {
+    orderType,
+    quantity: Number(draft.quantity),
+    limitPrice: Number(draft.limitPrice),
+    stopPrice: Number(draft.stopPrice),
+    targetPrice: draft.targetPrice.trim() === '' ? undefined : Number(draft.targetPrice),
+    notes: draft.notes,
+  };
+  const updateDraft = (field: keyof typeof draft, value: string) => {
+    const next = { ...draft, [field]: value };
+    setDraft(next);
+    if (submitAttempted) {
+      setErrors(
+        validateCandidateOrder({
+          orderType,
+          quantity: Number(next.quantity),
+          limitPrice: Number(next.limitPrice),
+          stopPrice: Number(next.stopPrice),
+          targetPrice: next.targetPrice.trim() === '' ? undefined : Number(next.targetPrice),
+          notes: next.notes,
+        }),
+      );
+    }
+  };
   const guidanceSignal = context.signal;
   const guidance = getSetupExecutionGuidance(guidanceSignal, orderType);
-  const quantity = form.watch('quantity') ?? 0;
-  const limitPrice = form.watch('limitPrice') ?? 0;
-  const stopPrice = form.watch('stopPrice') ?? 0;
+  const quantity = values.quantity;
+  const limitPrice = values.limitPrice;
+  const stopPrice = values.stopPrice;
   const triggerPriceLabel =
     orderType === 'BUY_STOP' ? t('order.candidateModal.triggerPrice') : t('order.candidateModal.limitPrice');
   const invalidationRules = context.recommendation?.thesis?.invalidationRules ?? [];
@@ -133,7 +157,14 @@ export default function OrderReviewExperience({
     [normalizedTicker],
   );
 
-  const handleSubmit = form.handleSubmit(async (values) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitAttempted(true);
+    const validationErrors = validateCandidateOrder(values);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
     setSubmissionError(null);
     setSubmitSucceeded(false);
 
@@ -175,7 +206,7 @@ export default function OrderReviewExperience({
     } finally {
       setIsSubmitting(false);
     }
-  });
+  };
 
   return (
     <div className="space-y-4">
@@ -221,11 +252,7 @@ export default function OrderReviewExperience({
                   <label htmlFor={fieldIds.orderType} className="mb-1 block text-xs font-medium">
                     {t('order.candidateModal.orderType')}
                   </label>
-                  <Select
-                    id={fieldIds.orderType}
-                    disabled
-                    {...form.register('orderType')}
-                  >
+                  <Select id={fieldIds.orderType} disabled value={orderType} onChange={() => undefined}>
                     <option value="BUY_LIMIT">{t('order.candidateModal.orderTypeOptions.buyLimit')}</option>
                     <option value="BUY_STOP">{t('order.candidateModal.orderTypeOptions.buyStop')}</option>
                   </Select>
@@ -239,10 +266,11 @@ export default function OrderReviewExperience({
                     id={fieldIds.quantity}
                     type="number"
                     min="1"
-                    {...form.register('quantity', { valueAsNumber: true })}
+                    value={draft.quantity}
+                    onChange={(event) => updateDraft('quantity', event.target.value)}
                   />
-                  {form.formState.errors.quantity ? (
-                    <p className="mt-1 text-xs text-danger">{form.formState.errors.quantity.message}</p>
+                  {errors.quantity ? (
+                    <p className="mt-1 text-xs text-danger">{errors.quantity}</p>
                   ) : null}
                 </div>
               </div>
@@ -261,13 +289,14 @@ export default function OrderReviewExperience({
                     type="number"
                     step="0.01"
                     min="0.01"
-                    {...form.register('limitPrice', { valueAsNumber: true })}
+                    value={draft.limitPrice}
+                    onChange={(event) => updateDraft('limitPrice', event.target.value)}
                   />
                   {orderType === 'BUY_STOP' ? (
                     <p className="mt-1 text-xs text-muted">{t('order.candidateModal.buyStopHint')}</p>
                   ) : null}
-                  {form.formState.errors.limitPrice ? (
-                    <p className="mt-1 text-xs text-danger">{form.formState.errors.limitPrice.message}</p>
+                  {errors.limitPrice ? (
+                    <p className="mt-1 text-xs text-danger">{errors.limitPrice}</p>
                   ) : null}
                 </div>
 
@@ -280,10 +309,11 @@ export default function OrderReviewExperience({
                     type="number"
                     step="0.01"
                     min="0.01"
-                    {...form.register('stopPrice', { valueAsNumber: true })}
+                    value={draft.stopPrice}
+                    onChange={(event) => updateDraft('stopPrice', event.target.value)}
                   />
-                  {form.formState.errors.stopPrice ? (
-                    <p className="mt-1 text-xs text-danger">{form.formState.errors.stopPrice.message}</p>
+                  {errors.stopPrice ? (
+                    <p className="mt-1 text-xs text-danger">{errors.stopPrice}</p>
                   ) : null}
                 </div>
 
@@ -296,12 +326,11 @@ export default function OrderReviewExperience({
                     type="number"
                     step="0.01"
                     min="0.01"
-                    {...form.register('targetPrice', {
-                      setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
-                    })}
+                    value={draft.targetPrice}
+                    onChange={(event) => updateDraft('targetPrice', event.target.value)}
                   />
-                  {form.formState.errors.targetPrice ? (
-                    <p className="mt-1 text-xs text-danger">{form.formState.errors.targetPrice.message}</p>
+                  {errors.targetPrice ? (
+                    <p className="mt-1 text-xs text-danger">{errors.targetPrice}</p>
                   ) : null}
                 </div>
               </div>
@@ -313,7 +342,8 @@ export default function OrderReviewExperience({
                 <Textarea
                   id={fieldIds.notes}
                   rows={3}
-                  {...form.register('notes')}
+                  value={draft.notes}
+                  onChange={(event) => updateDraft('notes', event.target.value)}
                 />
               </div>
 

@@ -7,7 +7,7 @@ import Select from '@/components/common/Select';
 import Textarea from '@/components/common/Textarea';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useCreateOrderMutation } from '@/features/portfolio/hooks';
-import { candidateOrderSchema } from './schemas';
+import { validateCandidateOrder, type CandidateOrderFormValues } from './schemas';
 import { isSupportedCurrency, SUPPORTED_CURRENCY_CODES } from '@/types/currency';
 import { t } from '@/i18n/t';
 
@@ -18,19 +18,20 @@ export default function ManualOrderDraftForm({ ticker, candidate }: { ticker: st
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const values = new FormData(event.currentTarget);
-    const plan = candidateOrderSchema.safeParse({
-      orderType: values.get('orderType'), quantity: Number(values.get('quantity')),
+    const plan: CandidateOrderFormValues = {
+      orderType: values.get('orderType') === 'BUY_STOP' ? 'BUY_STOP' : 'BUY_LIMIT', quantity: Number(values.get('quantity')),
       limitPrice: Number(values.get('entry')), stopPrice: Number(values.get('stop')),
       targetPrice: Number(values.get('target')), notes: String(values.get('notes') ?? ''),
-    });
+    };
+    const [planError] = Object.values(validateCandidateOrder(plan));
     const currency = values.get('currency');
-    if (!plan.success || !isSupportedCurrency(currency)) {
-      setError(!plan.success ? plan.error.issues[0].message : t('manualOrderDraft.currencyError'));
+    if (planError || !isSupportedCurrency(currency)) {
+      setError(planError ?? t('manualOrderDraft.currencyError'));
       return;
     }
     setError(null);
     try {
-      await mutation.mutateAsync({ ticker, ...plan.data, currency, saveAsDraft: true, orderKind: 'entry' });
+      await mutation.mutateAsync({ ticker, ...plan, currency, saveAsDraft: true, orderKind: 'entry' });
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : t('order.candidateModal.createError'));
     }

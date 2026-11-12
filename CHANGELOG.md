@@ -28,6 +28,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   portfolio write lock and `asof` dates to `portfolio_state`. A database that
   never completed the JSON import must finish it on an earlier release first.
 
+- Drop `react-hook-form`, `@hookform/resolvers` and `zod` from the web UI. The
+  order review form, their only user, validates with a plain function and keeps
+  the same field errors.
+
 ### Fixed
 
 - Stop calling API routes the backend no longer serves. Symbol Overview no
