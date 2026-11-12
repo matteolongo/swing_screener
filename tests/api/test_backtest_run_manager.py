@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 
 from api.models.backtest import BacktestMetricsModel, EventStudyResponse
-from api.services.backtest_run_manager import BacktestRunManager
+from api.services.run_jobs import BacktestRunManager
 
 
 def _response() -> EventStudyResponse:

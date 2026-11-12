@@ -9,7 +9,7 @@ import pytest
 
 from api.repositories.symbol_pool_repo import SymbolPoolRepository
 from api.services import pool_admin_service as svc
-from api.services.pool_enrich_run_manager import PoolEnrichRunManager
+from api.services.run_jobs import PoolEnrichRunManager
 
 
 def test_compute_pool_diff_additions_removals_modifications():

@@ -21,7 +21,7 @@ import datetime
 import threading
 from typing import Optional
 
-from api.services.pool_enrich_run_manager import (
+from api.services.run_jobs import (
     ProgressReporter,
     get_pool_enrich_run_manager,
 )

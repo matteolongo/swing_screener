@@ -89,7 +89,7 @@ class BacktestService:
         return _to_response(tickers, start, end, request.config, result)
 
     def start_run_async(self, request: EventStudyRequest) -> BacktestRunLaunchResponse:
-        from api.services.backtest_run_manager import get_backtest_run_manager
+        from api.services.run_jobs import get_backtest_run_manager
 
         def _run() -> EventStudyResponse:
             return self.run_event_study(request)
@@ -107,7 +107,7 @@ class BacktestService:
         )
 
     def get_run_status(self, job_id: str) -> BacktestRunStatusResponse:
-        from api.services.backtest_run_manager import get_backtest_run_manager
+        from api.services.run_jobs import get_backtest_run_manager
         from swing_screener.errors import NotFoundError
 
         job = get_backtest_run_manager().get_job(job_id)
