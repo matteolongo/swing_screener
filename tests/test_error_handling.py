@@ -171,3 +171,25 @@ class TestInputValidation:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_validation_error_with_nan_input_still_renders_json():
+    import asyncio
+    import json
+
+    from pydantic import BaseModel, Field, ValidationError
+    from starlette.requests import Request
+
+    from api.main import global_exception_handler
+
+    class Score(BaseModel):
+        score: float = Field(le=1)
+
+    with pytest.raises(ValidationError) as caught:
+        Score.model_validate({"score": float("nan")})
+    request = Request({"type": "http", "method": "GET", "path": "/api/fundamentals/X", "headers": []})
+
+    response = asyncio.run(global_exception_handler(request, caught.value))
+
+    assert response.status_code == 422
+    assert json.loads(response.body)["detail"][0]["loc"] == ["score"]

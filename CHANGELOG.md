@@ -37,6 +37,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Stop the fundamentals snapshot endpoint from failing with a 500 when a
+  provider returns a NaN or infinite metric (seen on `SAN.MC`). Non-finite
+  metrics now count as missing, so the affected pillar reads `unavailable`;
+  snapshots cached with NaN are cleaned on read; and validation-error
+  responses no longer echo raw inputs that JSON cannot encode.
 - Use the US market date (America/New_York) wherever the app needs "today":
   order and ledger dates, days open, stop and snapshot freshness, review
   dates, calendar windows and provider lookbacks. A post-close review after

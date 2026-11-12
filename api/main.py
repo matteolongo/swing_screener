@@ -236,7 +236,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         get_metrics_collector().record_validation_failure()
         return JSONResponse(
             status_code=422,
-            content={"detail": exc.errors()},
+            # Inputs can hold NaN/inf, which JSON cannot encode.
+            content={"detail": exc.errors(include_input=False, include_url=False)},
         )
     
     # For unexpected errors: log full details server-side, return generic message
