@@ -16,13 +16,15 @@ describe('ResultQualitySummary', () => {
       <ResultQualitySummary result={result} isRefreshing={false} error={null} />
     </>, { route: '/today' });
     const summary = screen.getByText(t('cockpit.review.scanDetails')).closest('summary')!;
+    const details = summary.parentElement as HTMLDetailsElement;
     const link = screen.getByRole('link', { name: t('screener.quality.inspect') });
     await user.click(link);
-    expect(summary.parentElement).toHaveAttribute('open');
+    // Happy DOM does not reflect details.open to the attribute.
+    expect(details.open).toBe(true);
     expect(summary).toHaveFocus();
-    summary.parentElement!.removeAttribute('open');
+    details.open = false;
     await user.click(link);
-    expect(summary.parentElement).toHaveAttribute('open');
+    expect(details.open).toBe(true);
     expect(summary).toHaveFocus();
   });
   it('identifies stale symbols and benchmark and offers an explicit refresh', async () => {
