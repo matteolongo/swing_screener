@@ -1,7 +1,6 @@
 # tests/test_calendar_service.py
 from __future__ import annotations
 import datetime as dt
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
 
@@ -24,7 +23,7 @@ def test_get_events_returns_earnings_for_open_positions(tmp_path):
 
     fake_date = dt.date.today() + dt.timedelta(days=10)
     with patch.object(svc, "_fetch_earnings_for", return_value=fake_date):
-        events = svc.get_events(days_ahead=30)
+        events = svc.get_events(days_ahead=30).events
 
     earnings = [e for e in events if e.event_type == "earnings"]
     assert len(earnings) == 1
@@ -51,7 +50,7 @@ def test_get_events_source_tag_screener_for_review_symbol(tmp_path):
 
     fake_date = dt.date.today() + dt.timedelta(days=5)
     with patch.object(svc, "_fetch_earnings_for", return_value=fake_date):
-        events = svc.get_events(days_ahead=30)
+        events = svc.get_events(days_ahead=30).events
 
     earnings = [e for e in events if e.event_type == "earnings"]
     assert len(earnings) == 1
@@ -65,7 +64,7 @@ def test_get_events_excludes_past_earnings(tmp_path):
 
     past_date = dt.date.today() - dt.timedelta(days=1)
     with patch.object(svc, "_fetch_earnings_for", return_value=past_date):
-        events = svc.get_events(days_ahead=30)
+        events = svc.get_events(days_ahead=30).events
 
     assert not any(e.event_type == "earnings" for e in events)
 
@@ -76,7 +75,7 @@ def test_get_events_excludes_earnings_beyond_window(tmp_path):
 
     far_date = dt.date.today() + dt.timedelta(days=60)
     with patch.object(svc, "_fetch_earnings_for", return_value=far_date):
-        events = svc.get_events(days_ahead=30)
+        events = svc.get_events(days_ahead=30).events
 
     assert not any(e.event_type == "earnings" for e in events)
 
@@ -86,7 +85,7 @@ def test_get_events_no_crash_on_earnings_fetch_failure(tmp_path):
     svc = CalendarService(positions_repo=repo, data_dir=tmp_path)
 
     with patch.object(svc, "_fetch_earnings_for", side_effect=Exception("network error")):
-        events = svc.get_events(days_ahead=30)
+        events = svc.get_events(days_ahead=30).events
 
     assert isinstance(events, list)
 
@@ -109,7 +108,7 @@ def test_get_events_position_beats_screener_tag(tmp_path):
 
     fake_date = dt.date.today() + dt.timedelta(days=5)
     with patch.object(svc, "_fetch_earnings_for", return_value=fake_date):
-        events = svc.get_events(days_ahead=30)
+        events = svc.get_events(days_ahead=30).events
 
     earnings = [e for e in events if e.ticker == "AAPL"]
     assert len(earnings) == 1
@@ -201,7 +200,7 @@ def test_earnings_from_finnhub_includes_eps_estimate(tmp_path):
         with patch.object(svc, "_fetch_economic_events", return_value=[]):
             with patch.object(svc, "_fetch_ipo_events", return_value=[]):
                 with patch.object(svc, "_fetch_dividend_events", return_value=[]):
-                    events = svc.get_events(days_ahead=30)
+                    events = svc.get_events(days_ahead=30).events
 
     earnings = [e for e in events if e.event_type == "earnings"]
     assert len(earnings) == 1
@@ -223,7 +222,7 @@ def test_earnings_falls_back_to_yfinance_when_no_finnhub_key(tmp_path):
     fake_date = dt.date.today() + dt.timedelta(days=10)
     with patch.object(svc, "_fetch_earnings_for", return_value=fake_date) as mock_yf:
         with patch.object(svc, "_fetch_economic_events", return_value=[]):
-            events = svc.get_events(days_ahead=30)
+            events = svc.get_events(days_ahead=30).events
 
     mock_yf.assert_called()
     earnings = [e for e in events if e.event_type == "earnings"]
@@ -233,8 +232,8 @@ def test_earnings_falls_back_to_yfinance_when_no_finnhub_key(tmp_path):
     assert earnings[0].confidence == pytest.approx(0.55)
 
 
-def test_earnings_finnhub_per_ticker_failure_is_skipped(tmp_path):
-    """A per-ticker Finnhub failure is silently skipped; no pool-wide yfinance fallback."""
+def test_earnings_finnhub_per_ticker_failure_uses_yfinance(tmp_path):
+    """A per-ticker Finnhub failure uses the existing yfinance fallback."""
     import datetime as dt
     from api.services.calendar_service import CalendarService
 
@@ -246,16 +245,65 @@ def test_earnings_finnhub_per_ticker_failure_is_skipped(tmp_path):
     )
 
     with patch("api.services.calendar_service.httpx.get", side_effect=Exception("network")):
-        with patch.object(svc, "_fetch_earnings_for") as mock_yf:
+        with patch.object(svc, "_fetch_earnings_for", return_value=dt.date.today()) as mock_yf:
             with patch.object(svc, "_fetch_economic_events", return_value=[]):
                 with patch.object(svc, "_fetch_ipo_events", return_value=[]):
                     with patch.object(svc, "_fetch_dividend_events", return_value=[]):
-                        events = svc.get_events(days_ahead=30)
+                        events = svc.get_events(days_ahead=30).events
 
-    # Per-ticker failure is swallowed — no fallback to yfinance, no crash
-    mock_yf.assert_not_called()
+    mock_yf.assert_called_once_with("AAPL")
     assert isinstance(events, list)
-    assert not any(e.event_type == "earnings" for e in events)
+    assert any(e.event_type == "earnings" and e.provider == "yfinance" for e in events)
+
+
+def test_current_candidates_override_legacy_review_without_running_scan(tmp_path):
+    svc = CalendarService(_make_positions_repo(["AAPL"]), tmp_path)
+    with patch.object(svc, "_get_screener_tickers", return_value={"OLD"}) as legacy:
+        with patch.object(svc, "_fetch_earnings_for", return_value=dt.date.today()) as fetch:
+            response = svc.get_events(candidate_tickers={"MSFT"})
+    legacy.assert_not_called()
+    assert {call.args[0] for call in fetch.call_args_list} == {"AAPL", "MSFT"}
+    assert {event.ticker for event in response.events} == {"AAPL", "MSFT"}
+
+
+def test_explicit_empty_candidates_do_not_read_legacy_review(tmp_path):
+    svc = CalendarService(_make_positions_repo([]), tmp_path)
+    with patch.object(svc, "_get_screener_tickers") as legacy:
+        response = svc.get_events(candidate_tickers=set())
+    legacy.assert_not_called()
+    assert response.events == []
+    assert {warning.event_type for warning in response.warnings} == {"economic", "ipo"}
+
+
+def test_source_failure_preserves_events_and_never_logs_credentials(tmp_path, caplog):
+    svc = CalendarService(_make_positions_repo([]), tmp_path, "fake-secret-marker")
+    event = CalendarEvent(date=dt.date.today().isoformat(), event_type="ipo", title="IPO", source_tag="ipo")
+    with patch.object(svc, "_fetch_ipo_events", return_value=[event]):
+        with patch("api.services.calendar_service.httpx.get", side_effect=Exception(
+            "https://provider.invalid/?token=fake-secret-marker"
+        )):
+            with caplog.at_level("DEBUG", logger="api.services.calendar_service"):
+                response = svc.get_events()
+    assert response.events == [event]
+    assert [warning.event_type for warning in response.warnings] == ["economic"]
+    assert "fake-secret-marker" not in caplog.text
+    assert "fake-secret-marker" not in response.model_dump_json()
+
+
+def test_failed_fallback_retains_other_ticker_earnings(tmp_path):
+    svc = CalendarService(_make_positions_repo([]), tmp_path, "test-key")
+    def finnhub(ticker, start, end):
+        if ticker == "FAIL":
+            raise RuntimeError("unavailable")
+        return dt.date.today(), None, None
+    with patch.object(svc, "_fetch_earnings_for_finnhub", side_effect=finnhub):
+        with patch.object(svc, "_fetch_earnings_for", side_effect=RuntimeError("unavailable")):
+            with patch.object(svc, "_fetch_economic_events", return_value=[]):
+                with patch.object(svc, "_fetch_ipo_events", return_value=[]):
+                    response = svc.get_events(candidate_tickers={"OK", "FAIL"})
+    assert [event.ticker for event in response.events] == ["OK"]
+    assert response.warnings[0].event_type == "earnings"
+    assert response.warnings[0].tickers == ["FAIL"]
 
 
 def test_ipo_events_returned_when_finnhub_key_set(tmp_path):
@@ -279,7 +327,7 @@ def test_ipo_events_returned_when_finnhub_key_set(tmp_path):
         with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
             with patch.object(svc, "_fetch_economic_events", return_value=[]):
                 with patch.object(svc, "_fetch_dividend_events", return_value=[]):
-                    events = svc.get_events(days_ahead=30)
+                    events = svc.get_events(days_ahead=30).events
 
     ipos = [e for e in events if e.event_type == "ipo"]
     assert len(ipos) == 1
@@ -300,7 +348,7 @@ def test_ipo_events_skipped_when_no_finnhub_key(tmp_path):
     with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
         with patch.object(svc, "_fetch_economic_events", return_value=[]):
             with patch.object(svc, "_fetch_dividend_events", return_value=[]):
-                events = svc.get_events(days_ahead=30)
+                events = svc.get_events(days_ahead=30).events
 
     assert not any(e.event_type == "ipo" for e in events)
 
@@ -326,7 +374,7 @@ def test_ipo_speculative_status_excluded(tmp_path):
         with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
             with patch.object(svc, "_fetch_economic_events", return_value=[]):
                 with patch.object(svc, "_fetch_dividend_events", return_value=[]):
-                    events = svc.get_events(days_ahead=30)
+                    events = svc.get_events(days_ahead=30).events
 
     assert not any(e.event_type == "ipo" for e in events)
 
@@ -350,7 +398,7 @@ def test_dividend_events_only_for_position_tickers(tmp_path):
         with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
             with patch.object(svc, "_fetch_economic_events", return_value=[]):
                 with patch.object(svc, "_fetch_ipo_events", return_value=[]):
-                    events = svc.get_events(days_ahead=30)
+                    events = svc.get_events(days_ahead=30).events
 
     divs = [e for e in events if e.event_type == "dividend"]
     assert len(divs) == 1
@@ -387,7 +435,7 @@ def test_economic_events_include_finnhub_provenance_and_confidence(tmp_path):
         with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
             with patch.object(svc, "_fetch_ipo_events", return_value=[]):
                 with patch.object(svc, "_fetch_dividend_events", return_value=[]):
-                    events = svc.get_events(days_ahead=30)
+                    events = svc.get_events(days_ahead=30).events
 
     economic = [e for e in events if e.event_type == "economic"]
     assert len(economic) == 1
@@ -406,6 +454,6 @@ def test_dividend_events_skipped_when_no_finnhub_key(tmp_path):
     with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
         with patch.object(svc, "_fetch_economic_events", return_value=[]):
             with patch.object(svc, "_fetch_ipo_events", return_value=[]):
-                events = svc.get_events(days_ahead=30)
+                events = svc.get_events(days_ahead=30).events
 
     assert not any(e.event_type == "dividend" for e in events)

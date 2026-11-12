@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
+import WorkspaceIntro from '@/components/layout/WorkspaceIntro';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import { useStrategyValidationQuery } from '@/features/strategy/hooks';
 import { toStrategyUpdateRequest } from '@/features/strategy/types';
@@ -105,12 +106,8 @@ export default function StrategyPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{t('strategyPage.header.title')}</h1>
-          <p className="text-sm text-muted mt-1">{t('strategyPage.header.subtitle')}</p>
-        </div>
-        <div className="flex gap-2">
+      <WorkspaceIntro label={t('sidebar.nav.tools')} title={t('strategyPage.header.title')} description={t('strategyPage.header.subtitle')} action={
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
             onClick={handleReset}
@@ -125,7 +122,7 @@ export default function StrategyPage() {
             {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.actions.saveChanges')}
           </Button>
         </div>
-      </div>
+      } />
 
       <StrategyCapitalRiskSummary strategy={draft} />
 

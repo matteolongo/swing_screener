@@ -22,15 +22,16 @@ const rows = [
 function Harness() {
   const [items, setItems] = useState(rows);
   const [selected, setSelected] = useState('');
-  const actions = useTodayActions(items, setSelected);
+  const actions = useTodayActions((_, id) => setSelected(id));
   return (
     <div>
       <div onKeyDown={actions.handleListKeyDown}>
         {items.map((item) => (
-          <button key={item.id} onClick={() => actions.handleItemClick(item.ticker, item.id)}>
-            {item.id}{actions.focusedId === item.id ? '*' : ''}
+          <button key={item.id} data-review-row-id={item.id} data-review-ticker={item.ticker} onClick={() => setSelected(item.id)}>
+            {item.id}{selected === item.id ? '*' : ''}
           </button>
         ))}
+        <button type="button">Accept stop</button>
         <input aria-label="input" />
         <div contentEditable aria-label="editable" />
         <div role="textbox" tabIndex={0} aria-label="textbox" />
@@ -46,7 +47,7 @@ describe('useTodayActions keyboard navigation', () => {
   it('resolves open management targets by ID after a position refresh', () => {
     const original: Position = { ticker: 'TEST', positionId: 'POS-1', version: 1,
       status: 'open', entryDate: '2026-10-01', entryPrice: 100, stopPrice: 95, shares: 10 };
-    const { result, rerender } = renderHook(({ positions }) => useTodayActions(rows, vi.fn(), positions), {
+    const { result, rerender } = renderHook(({ positions }) => useTodayActions(vi.fn(), positions), {
       initialProps: { positions: [original] },
     });
     act(() => result.current.setTrimTarget(original));
@@ -59,16 +60,20 @@ describe('useTodayActions keyboard navigation', () => {
   it('carries the current position version when accepting a suggested stop', () => {
     const original: Position = { ticker: 'TEST', positionId: 'POS-1', version: 7,
       status: 'open', entryDate: '2026-10-01', entryPrice: 100, stopPrice: 95, shares: 10 };
-    const { result } = renderHook(() => useTodayActions(rows, vi.fn(), [original]));
+    const { result } = renderHook(() => useTodayActions(vi.fn(), [original]));
     act(() => result.current.handleAcceptStop('POS-1', 97, 'manual review'));
     expect(mutateStop).toHaveBeenCalledWith({
       positionId: 'POS-1', request: { newStop: 97, reason: 'manual review', expectedVersion: 7 },
-    }, expect.any(Object));
+    });
   });
   it('suspends shortcuts in editable controls and dialogs', async () => {
     const { user } = renderWithProviders(<Harness />);
     await user.click(screen.getByRole('button', { name: 'close-1' }));
 
+    const accept = screen.getByRole('button', { name: 'Accept stop' });
+    accept.focus();
+    expect(fireEvent.keyDown(accept, { key: 'ArrowDown' })).toBe(true);
+    expect(accept).toHaveFocus();
     for (const target of ['input', 'editable', 'textbox', 'dialog']) {
       fireEvent.keyDown(screen.getByLabelText(target), { key: 'j' });
       expect(screen.getByRole('button', { name: 'close-1*' })).toBeInTheDocument();
@@ -82,7 +87,6 @@ describe('useTodayActions keyboard navigation', () => {
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'pending-2*' }), { key: 'k' });
 
-    expect(screen.getByRole('button', { name: 'close-3*' })).toBeInTheDocument();
-    expect(screen.getByText('NEXT')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'close-3*' })).toHaveFocus();
   });
 });

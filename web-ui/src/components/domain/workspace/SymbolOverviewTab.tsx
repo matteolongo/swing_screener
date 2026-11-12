@@ -31,6 +31,7 @@ export interface SymbolOverviewModel {
   onOpenFundamentals: () => void;
   onOpenIntelligence: () => void;
   onPrepareOrder?: () => void;
+  onSaveDraft?: () => void;
   isWatched?: boolean;
   isPendingWatch?: boolean;
   onWatch?: () => void;
@@ -70,6 +71,7 @@ export default function SymbolOverviewTab({ model }: { model: SymbolOverviewMode
         candidate={candidate}
         position={position}
         onPrepareOrder={model.onPrepareOrder}
+        onSaveDraft={model.onSaveDraft}
         isWatched={model.isWatched}
         isPendingWatch={model.isPendingWatch}
         onWatch={model.onWatch}

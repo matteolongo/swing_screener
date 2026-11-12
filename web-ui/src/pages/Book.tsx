@@ -9,6 +9,7 @@ import { usePortfolioSummary } from '@/features/portfolio/hooks';
 import type { PortfolioAnalytics } from '@/features/portfolio/api';
 import { useWeeklyReviews } from '@/features/weeklyReview/hooks';
 import { cn } from '@/utils/cn';
+import WorkspaceIntro from '@/components/layout/WorkspaceIntro';
 import { formatCurrency, formatNumber, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 import AnalyticsPage from './Analytics';
@@ -455,20 +456,10 @@ export default function Book() {
   };
 
   return (
-    <div className="min-w-0 mx-auto max-w-[1200px] py-4 sm:px-4">
+    <div className="mx-auto min-w-0 max-w-[1440px] space-y-5 pb-8">
+      <WorkspaceIntro label={t('bookPage.eyebrow')} title={t('bookPage.title')} description={t('bookPage.subtitle')} />
       <PositionProtectionNotice />
-      {/* Page header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-foreground">
-          {t('bookPage.title')}
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          {t('bookPage.subtitle')}
-        </p>
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex flex-wrap gap-2 mb-6" role="tablist" aria-label={t('bookPage.title')}>
+      <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-surface p-1" role="tablist" aria-label={t('bookPage.title')}>
         {tabs.map(({ key, label }, index) => (
           <button
             key={key}
@@ -481,10 +472,10 @@ export default function Book() {
             onClick={() => setActiveTab(key)}
             onKeyDown={(event) => handleTabKeyDown(event, index)}
             className={cn(
-              'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+              'min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
               activeTab === key
                 ? 'bg-primary/10 text-primary font-semibold'
-                : 'text-muted hover:text-muted'
+                : 'text-muted hover:bg-foreground/5 hover:text-foreground'
             )}
           >
             {label}

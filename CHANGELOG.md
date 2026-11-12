@@ -7,6 +7,34 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Make the market-data badge open scan details with stale symbol/benchmark
+  dates, an explanation of the requested session, and a refresh action.
+- Finish Daily review scans reliably across navigation, initialize older saved
+  runs, and apply the scan deadline to synchronous requests.
+- Connect fundamentals and manual draft actions in symbol research. Preserve
+  the parent dialog when closing nested research dialogs.
+- Show Calendar source failures and retry controls, include current review
+  candidates, and sanitize provider error logging.
+- Label saved screener data and quote-only probes accurately, clarify the next
+  scan destination, and format volume-zone prices and labels consistently.
+
+- Keep keyboard focus on the active portfolio row, show rejected stop updates
+  and incomplete reviews, and retain portfolio selections when a scan changes.
+- Separate scan progress from portfolio refresh and share one review request
+  between holdings and watchlist attention.
+- Show price history failures with a retry, retain cached provider history,
+  display prices with unknown currencies, and keep Book filters usable on
+  narrow screens and during loads.
+
+### Changed
+
+- Rebuild the web workspace around Daily review. Surface scan quality and
+  portfolio risk first, separate portfolio attention from ranked candidates,
+  and open symbol research in layers from the next decision to the underlying
+  market data and evidence.
+
 ### Added
 
 - Manual entry drafts save a proposed entry, stop, target, quantity, currency
@@ -15,6 +43,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Restore Alpaca market-data requests with `alpaca-py` 0.45 by using the
+  SDK's timeframe unit for multi-minute bars.
 - Narrow layouts use an accessible navigation drawer, wrap capital/risk values
   and Book tabs, and keep wide tables scrolling within their panels.
 

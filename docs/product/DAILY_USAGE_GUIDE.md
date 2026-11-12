@@ -8,12 +8,12 @@ Use Swing Screener to prepare next-day trades from end-of-day data. The system i
 
 ## Primary Workflow (Web UI)
 1. Start backend and web UI.
-2. Open the Dashboard and review portfolio summary.
-3. Run the Screener for your universe.
-4. Create orders for candidates you accept.
-5. Review risk and submit orders.
-6. Next trading day: execute at your broker, then mark fills in the UI.
-7. Manage positions and update stops per the plan.
+2. Open **Daily review** and check market-data coverage, portfolio risk, and items that need attention.
+3. To change the daily universe, run a scan in **Scan & universes** and pin it for Daily review.
+4. Open a candidate to see its next step. Expand its plan, chart, or evidence for more detail.
+5. Review eligible orders and record the decision in **Trading book**.
+6. Execute at your broker manually, then record fills in **Trading book**.
+7. Review positions and update stops according to the plan.
 
 Reference: `../../web-ui/docs/WEB_UI_GUIDE.md`.
 

@@ -4,6 +4,7 @@ import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
 import { renderWithProviders, screen, userEvent, waitFor } from '@/test/utils';
 import { t } from '@/i18n/t';
+import { formatDateTime } from '@/utils/formatters';
 import VolumeZonesTab from './VolumeZonesTab';
 
 function payload(overrides: Record<string, unknown> = {}) {
@@ -99,9 +100,45 @@ describe('VolumeZonesTab', () => {
       ),
     );
     renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
-    expect(await screen.findByText('Long')).toBeInTheDocument();
+    expect(await screen.findByText(t('workspacePage.panels.analysis.volumeZones.actions.long'))).toBeInTheDocument();
     expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.confidence'))).toBeInTheDocument();
     expect(screen.getByText(/Approximate volume profile/)).toBeInTheDocument();
+  });
+
+  it('formats plan prices and zone shares and translates analysis codes', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () => HttpResponse.json(payload({
+        trade_plan: { direction: 'long', entry: 173.08999633789062, stop: 147.9746422268717, target: null, rr: null },
+        volume_zones: [{ kind: 'hvn', role: 'buyer_defense', price_low: 170, price_high: 175, center: 173.08999633789062, volume_share: 0.183333333333 }],
+      }))),
+      candleSuccess(),
+    );
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+    expect(await screen.findByText(`${t('workspacePage.panels.analysis.volumeZones.entry')}: 173.09`)).toBeVisible();
+    expect(screen.getByText(`${t('workspacePage.panels.analysis.volumeZones.stop')}: 147.97`)).toBeVisible();
+    expect(screen.getByText(`${t('workspacePage.panels.analysis.volumeZones.target')}: ${t('workspacePage.panels.analysis.volumeZones.unavailable')}`)).toBeVisible();
+    expect(screen.getByText(`${t('workspacePage.panels.analysis.volumeZones.setup')}: ${t('workspacePage.panels.analysis.volumeZones.setups.hvnSupportRetest')}`)).toBeVisible();
+    expect(screen.getByText(`${t('workspacePage.panels.analysis.volumeZones.bias')}: ${t('workspacePage.panels.analysis.volumeZones.biases.bullish')}`)).toBeVisible();
+    expect(screen.getByRole('cell', { name: t('workspacePage.panels.analysis.volumeZones.roles.buyerDefense') })).toBeVisible();
+    expect(screen.getByRole('cell', { name: '173.09' })).toBeVisible();
+    expect(screen.getByRole('cell', { name: '18.3%' })).toBeVisible();
+  });
+
+  it('renders unknown enum values and absent numbers as unavailable', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/market-data/AAPL/volume-analysis`, () => HttpResponse.json(payload({
+        action: 'future_action', market_bias: 'future_bias', setup_type: '__proto__', confidence_score: null,
+        volume_zones: [{ kind: 'future_kind', role: 'future_role', center: null, volume_share: null }],
+      }))),
+      candleSuccess(),
+    );
+    renderWithProviders(<VolumeZonesTab ticker="AAPL" />);
+    const unavailable = t('workspacePage.panels.analysis.volumeZones.unavailable');
+    expect(await screen.findByText(`${t('workspacePage.panels.analysis.volumeZones.bias')}: ${unavailable}`)).toBeVisible();
+    expect(screen.getByText(`${t('workspacePage.panels.analysis.volumeZones.setup')}: ${unavailable}`)).toBeVisible();
+    expect(screen.getAllByRole('cell', { name: unavailable })).toHaveLength(4);
+    expect(screen.queryByText('future_action')).not.toBeInTheDocument();
+    expect(screen.queryByText('__proto__')).not.toBeInTheDocument();
   });
 
   it('shows the load-error state on failure', async () => {
@@ -220,7 +257,7 @@ describe('VolumeZonesTab', () => {
 
     expect(await screen.findByText('polygon')).toBeVisible();
     expect(screen.getByText('2026-07-25')).toBeVisible();
-    expect(screen.getByText(new Date('2026-07-28T10:30:00+00:00').toLocaleString())).toBeVisible();
+    expect(screen.getByText(formatDateTime('2026-07-28T10:30:00+00:00'))).toBeVisible();
     expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.latestCandleDate'))).toBeVisible();
     expect(screen.getByText(t('workspacePage.panels.analysis.volumeZones.fetchedAt'))).toBeVisible();
   });
@@ -295,7 +332,7 @@ describe('VolumeZonesTab', () => {
     renderWithProviders(<VolumeZonesTab ticker="AAPL" lookback={90} minRr={2.5} />);
 
     expect(await screen.findByText('90')).toBeVisible();
-    expect(screen.getByText('2.5')).toBeVisible();
+    expect(screen.getByText('2.50')).toBeVisible();
     expect(requestedSearch).toBe('?lookback=90&min_rr=2.5');
   });
 });

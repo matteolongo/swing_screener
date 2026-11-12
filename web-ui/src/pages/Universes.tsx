@@ -36,6 +36,7 @@ import { useLocalStorage } from '@/hooks';
 import { useOpenPositions } from '@/features/portfolio/hooks';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
+import WorkspaceIntro from '@/components/layout/WorkspaceIntro';
 
 interface CandidateReview {
   candidate: ScreenerCandidate;
@@ -447,17 +448,9 @@ export default function Universes() {
   };
 
   return (
-    <div className="mx-auto max-w-[1680px] px-4 py-4">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-foreground">{t('universesPage.title')}</h1>
-        <p className="mt-1 text-sm text-muted">
-          {t('universesPage.subtitle')}
-        </p>
-      </div>
-
-      <div className="mb-4">
-        <ScreenerRunSection />
-      </div>
+    <div className="mx-auto min-w-0 max-w-[1440px] space-y-5 pb-8">
+      <WorkspaceIntro label={t('universesPage.eyebrow')} title={t('universesPage.title')} description={t('universesPage.subtitle')} />
+      <ScreenerRunSection />
 
       <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
         <UniverseListSidebar
@@ -470,7 +463,7 @@ export default function Universes() {
 
         {/* Tabbed detail panel */}
         <div>
-          <div className="flex border-b border-border mb-4" role="tablist" aria-label={t('universesPage.title')}>
+          <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-border bg-surface p-1" role="tablist" aria-label={t('universesPage.title')}>
             {DETAIL_TABS.map((tab, index) => (
               <button
                 key={tab.id}
@@ -483,10 +476,10 @@ export default function Universes() {
                 onClick={() => setActiveDetailTab(tab.id)}
                 onKeyDown={(event) => handleDetailTabKeyDown(event, index)}
                 className={cn(
-                  'px-4 py-2.5 text-sm font-medium transition-colors',
+                  'min-h-11 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                   activeDetailTab === tab.id
-                    ? 'border-b-2 border-primary text-primary'
-                    : 'text-muted hover:text-foreground',
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted hover:bg-foreground/5 hover:text-foreground',
                 )}
               >
                 {tab.label}

@@ -5,12 +5,17 @@ import { screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
+import { t } from '@/i18n/t';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { CachedSymbolCandleChart } from './CachedSymbolCandleChart';
 import type { ScreenerResponse } from '@/features/screener/types';
+
+const candleUrl = `${API_BASE_URL}/api/market-data/AAA/candles`;
+const candle = { date: '2025-01-01', open: 100, high: 101, low: 99, close: 100, volume: 1000 };
 
 function seedStore(barCount: number) {
   const start = new Date('2025-01-01T00:00:00Z');
@@ -93,17 +98,41 @@ describe('CachedSymbolCandleChart', () => {
     expect(screen.queryByRole('button', { name: '1W' })).not.toBeInTheDocument();
   });
 
-  it('fetches direct candles for a selected symbol without a candidate snapshot', async () => {
+  it('distinguishes loading from an empty direct candle response', async () => {
     seedStore(300);
-    let requests = 0;
-    server.use(http.get(`${API_BASE_URL}/api/market-data/AAA/candles`, () => {
-      requests += 1;
-      return HttpResponse.json({ ticker: 'AAA', price_history: [], patterns: [] });
-    }));
+    server.use(http.get(candleUrl, () => HttpResponse.json({ ticker: 'AAA', price_history: [], patterns: [] })));
     useWorkspaceStore.getState().setWorkspaceSelection({
       ticker: 'AAA', source: 'today_position', rowId: 'position:AAA',
     });
     renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
-    await waitFor(() => expect(requests).toBe(1));
+
+    expect(screen.getByRole('status')).toHaveTextContent(t('chart.loading'));
+    expect(await screen.findByText(t('chart.empty'))).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('retries a failed direct candle load from the chart', async () => {
+    server.use(http.get(candleUrl, () => HttpResponse.json({ detail: 'Unavailable' }, { status: 503 })));
+    const { user } = renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('chart.loadError'));
+    server.use(http.get(candleUrl, () => HttpResponse.json({ ticker: 'AAA', price_history: [candle], patterns: [] })));
+    await user.click(screen.getByRole('button', { name: t('workspacePage.data.retryPrices') }));
+
+    expect(await screen.findByTestId('candle-chart-container')).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps direct candles visible when a background refresh fails', async () => {
+    server.use(http.get(candleUrl, () => HttpResponse.json({ ticker: 'AAA', price_history: [candle], patterns: [] })));
+    const { queryClient } = renderWithProviders(<CachedSymbolCandleChart ticker="AAA" />);
+    const chart = await screen.findByTestId('candle-chart-container');
+
+    server.use(http.get(candleUrl, () => HttpResponse.json({ detail: 'Unavailable' }, { status: 503 })));
+    await queryClient.invalidateQueries({ queryKey: queryKeys.tickerCandles('AAA') });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('chart.refreshError'));
+    expect(chart).toBeVisible();
+    expect(screen.getByRole('button', { name: t('workspacePage.data.retryPrices') })).toBeEnabled();
   });
 });

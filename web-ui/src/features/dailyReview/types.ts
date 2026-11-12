@@ -7,7 +7,6 @@ import {
   type DecisionSummary,
   type DecisionSummaryAPI,
   type SameSymbolCandidateContext,
-  type ScreenerCandidate,
 } from '@/features/screener/types';
 import { type WatchItem, type WatchItemAPI, transformWatchItem } from '@/features/watchlist/types';
 import { normalizeReportingCurrency } from '@/types/currency';
@@ -201,56 +200,6 @@ export interface DailyReviewCandidate {
   recommendation?: Recommendation;
   decisionSummary?: DecisionSummary;
   sameSymbol?: SameSymbolCandidateContext;
-}
-
-/**
- * Today renders opportunities from the exact saved screener response. This
- * adapter lets it reuse the existing candidate row without asking the backend
- * to run a second screener solely to reshape the data.
- */
-export function dailyReviewCandidateFromScreener(candidate: ScreenerCandidate): DailyReviewCandidate {
-  return {
-    ticker: candidate.ticker,
-    currency: candidate.currency,
-    rank: candidate.rank,
-    priorityRank: candidate.priorityRank,
-    confidence: candidate.confidence,
-    signal: candidate.signal ?? 'UNKNOWN',
-    close: candidate.close,
-    score: candidate.score,
-    atr: candidate.atr,
-    sma20: candidate.sma20 ?? undefined,
-    sma50: candidate.sma50 ?? undefined,
-    sma200: candidate.sma200 ?? undefined,
-    momentum6m: candidate.momentum6m,
-    momentum12m: candidate.momentum12m,
-    relStrength: candidate.relStrength,
-    entry: candidate.entry ?? null,
-    stop: candidate.stop ?? null,
-    shares: candidate.shares ?? null,
-    rReward: candidate.rr ?? null,
-    name: candidate.name ?? null,
-    sector: candidate.sector ?? null,
-    dataStatus: candidate.dataStatus ?? 'unknown',
-    dataAsOf: candidate.dataAsOf,
-    degradedReasons: candidate.degradedReasons ?? [],
-    intelligenceAsOf: candidate.intelligenceAsOf,
-    rawTechnicalRank: candidate.rawTechnicalRank,
-    combinedPriorityScore: candidate.combinedPriorityScore,
-    sma20Slope: candidate.sma20Slope,
-    sma50Slope: candidate.sma50Slope,
-    consolidationTightness: candidate.consolidationTightness,
-    closeLocationInRange: candidate.closeLocationInRange,
-    aboveBreakoutExtension: candidate.aboveBreakoutExtension,
-    breakoutVolumeConfirmation: candidate.breakoutVolumeConfirmation,
-    volumeRatio: candidate.volumeRatio,
-    suggestedOrderType: candidate.suggestedOrderType,
-    suggestedOrderPrice: candidate.suggestedOrderPrice,
-    executionNote: candidate.executionNote,
-    recommendation: candidate.recommendation,
-    decisionSummary: candidate.decisionSummary,
-    sameSymbol: candidate.sameSymbol,
-  };
 }
 
 export interface TrimSuggestion {

@@ -1,5 +1,7 @@
 import { useState, useEffect, useId, useRef, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
+import ModalShell from '@/components/common/ModalShell';
+import ManualOrderDraftForm from '@/components/domain/orders/ManualOrderDraftForm';
 import {
   findRunByAttemptId,
   resolveRunId,
@@ -24,6 +26,7 @@ import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useCandidateAnalysis } from '@/features/workspaceData/useCandidateAnalysis';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import { useFundamentalSnapshotQuery, useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -70,17 +73,21 @@ export default function SymbolAnalysisContent({
   benchmarkTicker = null,
   runRequest,
   intelligenceWorkflow,
-  fundamentals = {
-    data: undefined,
-    isLoading: false,
-    isFetching: false,
-    isError: false,
-    error: null,
-    isRefreshing: false,
-    refreshError: null,
-    onRefresh: () => undefined,
-  },
+  fundamentals: suppliedFundamentals,
 }: SymbolAnalysisContentProps) {
+  const normalizedTicker = ticker.trim().toUpperCase();
+  const fundamentalsQuery = useFundamentalSnapshotQuery(suppliedFundamentals ? undefined : normalizedTicker);
+  const refreshFundamentals = useRefreshFundamentalSnapshotMutation();
+  const refreshMatchesTicker = refreshFundamentals.variables === normalizedTicker;
+  const fundamentals = suppliedFundamentals ?? {
+    ...fundamentalsQuery,
+    data: fundamentalsQuery.data?.symbol?.trim().toUpperCase() === normalizedTicker
+      ? fundamentalsQuery.data : undefined,
+    isRefreshing: refreshMatchesTicker && refreshFundamentals.isPending,
+    refreshError: refreshMatchesTicker ? refreshFundamentals.error : null,
+    onRefresh: () => refreshFundamentals.mutate(normalizedTicker),
+  };
+  const [showDraft, setShowDraft] = useState(false);
   const currentSession = `${ticker.trim().toUpperCase()}:${selectionVersion}`;
   const candidateAnalysis = useCandidateAnalysis(ticker, incomingCandidate, selectionVersion, benchmarkTicker, runRequest);
   const candidate = candidateAnalysis.candidate;
@@ -118,6 +125,7 @@ export default function SymbolAnalysisContent({
   const isIntelligenceLoading = !intelligenceResult && intelligenceLatest.isLoading;
 
   useEffect(() => {
+    setShowDraft(false);
     currentSessionRef.current = currentSession;
   }, [currentSession]);
 
@@ -431,6 +439,7 @@ export default function SymbolAnalysisContent({
                 onOpenFundamentals: () => onTabChange('fundamentals'),
                 onOpenIntelligence: () => onTabChange('intelligence'),
                 onPrepareOrder: canReviewOrder ? () => onTabChange('order') : undefined,
+                onSaveDraft: !heldMode && candidate && !canReviewOrder ? () => setShowDraft(true) : undefined,
                 isWatched,
                 isPendingWatch: isWatchPending,
                 onWatch: handleWatch,
@@ -439,6 +448,12 @@ export default function SymbolAnalysisContent({
             />
           </>
         )}
+
+        {showDraft ? (
+          <ModalShell title={t('manualOrderDraft.title', { ticker })} onClose={() => setShowDraft(false)} className="max-w-xl" closeOnBackdrop={false}>
+            <ManualOrderDraftForm ticker={ticker} candidate={candidate} />
+          </ModalShell>
+        ) : null}
 
         {activeTab === 'order' ? (typeof orderPanel === 'function' ? orderPanel(candidate) : orderPanel) : null}
 

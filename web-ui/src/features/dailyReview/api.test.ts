@@ -4,7 +4,7 @@ import { fetchJson } from '@/lib/fetchJson';
 import { getActiveStrategyLocal, getAllOrdersLocal, getAllPositionsLocal, isLocalPersistenceMode, listWatchlistLocal } from '@/features/persistence';
 import defaultStrategy from '@/features/persistence/defaultStrategyFixture.json';
 import { transformStrategy, type StrategyAPI } from '@/features/strategy/types';
-import { getDailyReview, getWatchlistNearTrigger } from './api';
+import { getDailyReview } from './api';
 
 vi.mock('@/lib/fetchJson', () => ({ fetchJson: vi.fn() }));
 vi.mock('@/features/persistence', () => ({
@@ -15,7 +15,7 @@ vi.mock('@/features/persistence', () => ({
   isLocalPersistenceMode: vi.fn(),
 }));
 
-describe('getWatchlistNearTrigger', () => {
+describe('getDailyReview', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isLocalPersistenceMode).mockReturnValue(true);
@@ -51,7 +51,7 @@ describe('getWatchlistNearTrigger', () => {
   });
 
   it('computes the near-trigger slice from the local watchlist snapshot', async () => {
-    await expect(getWatchlistNearTrigger()).resolves.toEqual([
+    await expect(getDailyReview().then((review) => review.watchlistNearTrigger)).resolves.toEqual([
       expect.objectContaining({ ticker: 'NEAR', distanceToTriggerPct: -1 }),
     ]);
 
@@ -66,10 +66,10 @@ describe('getWatchlistNearTrigger', () => {
 
   it('uses persisted review state in API mode', async () => {
     vi.mocked(isLocalPersistenceMode).mockReturnValue(false);
-    await expect(getWatchlistNearTrigger()).resolves.toEqual([
+    await expect(getDailyReview().then((review) => review.watchlistNearTrigger)).resolves.toEqual([
       expect.objectContaining({ ticker: 'NEAR', distanceToTriggerPct: -1 }),
     ]);
-    expect(fetchJson).toHaveBeenCalledWith(`${API_ENDPOINTS.dailyReview}?top_n=1&include_candidates=false`, expect.any(Object));
+    expect(fetchJson).toHaveBeenCalledWith(`${API_ENDPOINTS.dailyReview}?top_n=200&include_candidates=false`, expect.any(Object));
     expect(listWatchlistLocal).not.toHaveBeenCalled();
   });
 

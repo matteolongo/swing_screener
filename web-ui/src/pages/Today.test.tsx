@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, fireEvent, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
-import { renderWithProviders } from '@/test/utils';
+import { openNativeDisclosure, renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import Today from './Today';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -89,8 +89,10 @@ describe('Today page — keyboard navigation syncs with click', () => {
 
     expect(useWorkspaceStore.getState().selectedTicker).toBe('MSFT');
     expect(
-      within(screen.getByTestId('symbol-rail-list')).getByRole('button', { name: /MSFT/i }),
-    ).toHaveAttribute('aria-current', 'true');
+      within(screen.getByTestId('symbol-detail-panel')).getByRole('heading', { name: 'MSFT' }),
+    ).toBeVisible();
+    expect(within(screen.getByTestId('today-action-list')).getByRole('button', { name: /MSFT/i }))
+      .toHaveAttribute('aria-current', 'true');
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(
       consoleErrorSpy.mock.calls.some(([message]) =>
@@ -190,7 +192,7 @@ describe('Today page — pending orders badge', () => {
       )
     );
     renderWithProviders(<Today />);
-    await screen.findByRole('heading').catch(() => null); // wait for render
+    await screen.findByRole('heading', { name: t('cockpit.review.title') });
     expect(
       screen.queryByText(t('todayPage.pendingBadge.singular', { count: '1' }))
     ).not.toBeInTheDocument();
@@ -592,8 +594,11 @@ describe('Today page — cockpit composition', () => {
     } as ScreenerResponse);
     renderWithProviders(<Today />);
     expect(await screen.findByText(t('screener.quality.partial'))).toBeInTheDocument();
-    expect(screen.getByText(t('screener.quality.counts', { requested: 4, evaluated: 3, matched: 1 }))).toBeInTheDocument();
-    expect(screen.getByText('TEST_PROVIDER_UNAVAILABLE MSFT')).toBeInTheDocument();
+    const scanDetails = screen.getByText(t('cockpit.review.scanDetails'));
+    expect(scanDetails.closest('details')).not.toHaveAttribute('open');
+    openNativeDisclosure(scanDetails);
+    expect(screen.getByText(t('screener.quality.counts', { requested: 4, evaluated: 3, matched: 1 }))).toBeVisible();
+    expect(screen.getByText('TEST_PROVIDER_UNAVAILABLE MSFT')).toBeVisible();
     expect(screen.getAllByText(t('screener.quality.market.stale')).length).toBeGreaterThan(0);
     expect(screen.getByText(t('screener.quality.candleDate', { date: '2026-10-02' }))).toBeInTheDocument();
     expect(screen.queryByText(t('cockpit.strip.finalClose'))).not.toBeInTheDocument();
@@ -606,7 +611,9 @@ describe('Today page — cockpit composition', () => {
     vi.mocked(runScreener).mockRejectedValue(new Error('Simulated provider failure'));
     renderWithProviders(<Today />);
     expect(await screen.findByText(t('screener.quality.cachedAfterFailure'))).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: t('screener.quality.retry') })).toBeEnabled();
+    openNativeDisclosure(screen.getByText(t('cockpit.review.scanDetails')));
+    expect(within(screen.getByRole('region', { name: t('screener.quality.title') }))
+      .getByRole('button', { name: t('screener.quality.retry') })).toBeEnabled();
     expect(useScreenerStore.getState().todayRun?.result).toEqual(result);
   });
   it('shows strip, queue and opens detail on row select without collapsing the list', async () => {

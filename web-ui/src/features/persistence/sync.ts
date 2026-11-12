@@ -49,7 +49,6 @@ export function registerTradingStoreSync(queryClient: QueryClient): () => void {
       queryClient.invalidateQueries({ queryKey: queryKeys.portfolioSummary() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.positionMetrics() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.watchlist() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.watchlistPipeline() }),
       invalidateDailyReviewQueries(queryClient),
     ]);
   };

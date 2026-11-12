@@ -84,13 +84,13 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('groups secondary pages under a collapsed Avanzate section', () => {
+  it('keeps scans and diagnostics discoverable from primary navigation', () => {
     renderSidebar();
     expect(screen.getByRole('link', { name: t('sidebar.nav.today') })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: t('sidebar.nav.book') })).toBeInTheDocument();
-    const advanced = screen.getByText(t('sidebar.nav.advanced'));
-    expect(advanced).toBeInTheDocument();
+    expect(screen.getByText(t('sidebar.nav.tools'))).toBeInTheDocument();
     expect(screen.getByRole('link', { name: t('sidebar.nav.universes') })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t('sidebar.nav.datasources') })).toBeInTheDocument();
   });
 
   it('opens from the real header and restores focus and scroll on Escape', async () => {
@@ -125,7 +125,6 @@ describe('Sidebar', () => {
     const { user } = renderLayout();
     const trigger = screen.getByRole('button', { name: t('header.showNavigation') });
     await user.click(trigger);
-    if (key === 'sidebar.nav.universes') await user.click(screen.getByText(t('sidebar.nav.advanced')));
     await user.click(screen.getByRole('link', { name: t(key) }));
     await waitFor(() => expect(screen.getByTestId('route-location')).toHaveTextContent(path));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

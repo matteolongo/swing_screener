@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '@/test/utils';
+import { openNativeDisclosure, renderWithProviders } from '@/test/utils';
 import { server } from '@/test/mocks/server';
 import { API_BASE_URL } from '@/lib/api';
 import { messagesEn } from '@/i18n/messages.en';
@@ -31,11 +31,14 @@ describe('Header', () => {
     </AuthProvider>,
   );
 
-  it('shows the compact risk summary', async () => {
+  it('reveals the capital and risk summary on demand', async () => {
     renderHeader();
 
-    await screen.findByRole('combobox', { name: 'Active Strategy' });
-    expect(await screen.findByText(/Risk \/ trade/)).toBeInTheDocument();
+    await screen.findByRole('combobox', { name: t('sidebar.activeStrategy') });
+    const policy = screen.getByText(t('header.riskPolicy'));
+    expect(policy.closest('details')).not.toHaveAttribute('open');
+    openNativeDisclosure(policy);
+    expect(await screen.findByText(/Risk \/ trade/)).toBeVisible();
   });
 
   it('hides the review-queue badge when the queue is empty', async () => {
@@ -56,10 +59,12 @@ describe('Header', () => {
         candidates: [],
         totalScreened: 0,
         dataFreshness: 'final_close',
+        benchmarkLastBar: '2026-07-10',
       } as unknown as ScreenerResponse,
     });
     renderHeader();
-    expect(screen.getByText(t('cockpit.strip.finalClose'))).toBeInTheDocument();
+    expect(screen.getByText(t('screener.quality.market.final_close'))).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: new RegExp(t('screener.quality.inspect')) })).toHaveAttribute('href', '/today#scan-data-quality');
   });
 
   it('shows the review-queue badge with count and opens the drawer', async () => {

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import Badge from '@/components/common/Badge';
 import Select from '@/components/common/Select';
@@ -14,8 +15,9 @@ import {
 import { useScreenerStore } from '@/stores/screenerStore';
 import { formatDate } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
-import { LogOut } from 'lucide-react';
+import { ChevronRight, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { getResultMarketStatus } from '@/features/screener/resultQuality';
 
 export default function Header({ navigation }: { navigation?: ReactNode }) {
   const now = new Date();
@@ -37,7 +39,8 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
   const todayRunResult = useScreenerStore((s) => s.todayRun?.result);
   const lastResultFallback = useScreenerStore((s) => s.lastResult);
   const reviewSource = todayRunResult ?? lastResultFallback;
-  const isFinal = (reviewSource?.dataFreshness ?? 'intraday') === 'final_close';
+  const marketStatus = getResultMarketStatus(reviewSource);
+  const isFinal = marketStatus === 'final_close';
   const hasQueryError =
     reviewQueueQuery.isError ||
     portfolioSummaryQuery.isError ||
@@ -47,9 +50,7 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
   const hasHealthError = hasQueryError || hasActionError;
   const healthLabel = hasHealthError
     ? t('header.dataHealth.partial')
-    : isFinal
-      ? t('cockpit.strip.finalClose')
-      : t('cockpit.strip.intradayPreview');
+    : t(`screener.quality.market.${marketStatus}`);
   const healthClass = hasHealthError
     ? 'border-danger/40 bg-danger/10 text-danger'
     : isFinal
@@ -80,10 +81,12 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
   });
 
   return (
-    <header className="min-h-12 px-4 py-2 border-b border-border bg-surface flex flex-wrap items-center gap-x-4 gap-y-2 shrink-0">
+    <header className="flex min-h-[77px] flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-surface px-4 py-3 sm:px-6">
       {navigation}
-      <div className="min-w-0 flex-1 basis-40 max-w-xs">
+      <div className="min-w-0 flex-1 basis-32 sm:max-w-xs">
+        <label htmlFor="workspace-active-strategy" className="mb-1 block text-xs font-semibold text-muted">{t('sidebar.activeStrategy')}</label>
         <Select
+          id="workspace-active-strategy"
           value={activeId}
           onChange={(e) => {
             if (e.target.value && e.target.value !== activeId) {
@@ -92,7 +95,7 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
           }}
           aria-label={t('sidebar.activeStrategy')}
           className={cn(
-            'h-7 px-2 py-0 text-[13px] rounded',
+            'min-h-11 rounded-lg px-2 py-1 text-sm',
             'focus:ring-1 focus:border-primary',
             'disabled:opacity-50'
           )}
@@ -119,9 +122,11 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
             hasHealthError ? 'bg-danger' : isFinal ? 'bg-success' : 'bg-warning',
           )}
         />
-        <span
+        <Link
+          to="/today#scan-data-quality"
+          aria-label={`${healthLabel}. ${t('screener.quality.inspect')}`}
           className={cn(
-            'min-w-0 inline-flex flex-wrap items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-medium',
+            'inline-flex min-h-11 min-w-0 flex-wrap items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
             healthClass,
           )}
         >
@@ -129,31 +134,40 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
           {reviewSource ? (
             <span className="font-normal text-muted">{formatDate(reviewSource.asofDate)}</span>
           ) : null}
-        </span>
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
       </div>
 
-      <div className="min-w-0 flex flex-1 basis-full flex-wrap items-center gap-3 lg:basis-0">
+      <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-3 sm:basis-0 sm:justify-end">
         {reviewCount > 0 && (
           <button
             type="button"
             onClick={() => setReviewOpen(true)}
             aria-label={t('reviewQueue.badgeLabel')}
-            className="inline-flex items-center"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-foreground/5"
           >
             <Badge variant="warning">{reviewCount}</Badge>
           </button>
         )}
         <ReviewQueueDrawer open={reviewOpen} onClose={() => setReviewOpen(false)} />
-        <StrategyCapitalRiskSummary
-          strategy={activeStrategyQuery.data}
-          equitySnapshot={portfolioSummaryQuery.data ? {
-            effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
-            realizedPnl: portfolioSummaryQuery.data.realizedPnl,
-          } : undefined}
-          variant="compact"
-          className="min-w-0 flex-1 basis-64 max-w-[42rem]"
-        />
-        <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
+        <details className="group relative">
+          <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 text-xs font-medium marker:content-none hover:bg-foreground/5 [&::-webkit-details-marker]:hidden">
+            <Shield className="h-4 w-4 text-primary" aria-hidden="true" />
+            {t('header.riskPolicy')}
+            <ChevronRight className="h-4 w-4 text-muted group-open:rotate-90" aria-hidden="true" />
+          </summary>
+          <div className="z-20 mt-2 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-3 shadow-lg sm:absolute sm:right-0 sm:w-80">
+            <StrategyCapitalRiskSummary
+              strategy={activeStrategyQuery.data}
+              equitySnapshot={portfolioSummaryQuery.data ? {
+                effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
+                realizedPnl: portfolioSummaryQuery.data.realizedPnl,
+              } : undefined}
+              variant="compact"
+            />
+          </div>
+        </details>
+        <div className="hidden flex-wrap items-center gap-1.5 text-xs text-muted 2xl:flex">
           <span>{dateStr}</span>
           <span className="font-mono">{timeStr}</span>
         </div>
@@ -165,7 +179,7 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
             title={t('sidebar.signOut')}
             aria-label={t('sidebar.signOut')}
             onClick={handleLogout}
-            className="grid h-7 w-7 place-items-center rounded text-muted hover:bg-foreground/5 hover:text-foreground"
+            className="grid h-11 w-11 place-items-center rounded-lg text-muted hover:bg-foreground/5 hover:text-foreground"
           >
             <LogOut size={15} aria-hidden="true" />
           </button>

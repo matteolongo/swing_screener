@@ -11,10 +11,25 @@ import { VolumeAnalysisIdentityError } from '@/features/volumeZones/types';
 import { t } from '@/i18n/t';
 import type { MessageKey } from '@/i18n/types';
 import type { WorkspaceSourceState } from '@/features/workspaceData/types';
+import { formatDateTime, formatNumber } from '@/utils/formatters';
 import SourceHealthSummary from './SourceHealthSummary';
 
 const K = 'workspacePage.panels.analysis.volumeZones';
 const tk = (leaf: string) => t(`${K}.${leaf}` as MessageKey);
+const valueLabels: Record<string, MessageKey> = {
+  Long: `${K}.actions.long`, Short: `${K}.actions.short`, Watch: `${K}.actions.watch`, 'No Trade': `${K}.actions.noTrade`,
+  bullish: `${K}.biases.bullish`, bearish: `${K}.biases.bearish`, neutral: `${K}.biases.neutral`,
+  hvn_support_retest: `${K}.setups.hvnSupportRetest`, poc_support_retest: `${K}.setups.pocSupportRetest`,
+  hvn_resistance_retest: `${K}.setups.hvnResistanceRetest`, poc_resistance_retest: `${K}.setups.pocResistanceRetest`,
+  buyer_defense: `${K}.roles.buyerDefense`, seller_defense: `${K}.roles.sellerDefense`,
+  poc: `${K}.poc`, hvn: `${K}.hvn`, lvn: `${K}.lvn`,
+};
+const valueLabel = (value: string | null | undefined) => {
+  const key = value != null && Object.prototype.hasOwnProperty.call(valueLabels, value) ? valueLabels[value] : undefined;
+  return key ? t(key) : tk('unavailable');
+};
+const finiteNumber = (value: number | null | undefined, decimals = 2) =>
+  typeof value === 'number' && Number.isFinite(value) ? formatNumber(value, decimals) : tk('unavailable');
 const CandleChart = lazy(() =>
   import('@/components/domain/market/CandleChart').then((module) => ({ default: module.CandleChart })),
 );
@@ -79,8 +94,8 @@ export default function VolumeZonesTab({
 
   const candleIdentityMismatch = candlesQuery.error instanceof TickerCandlesIdentityError;
   const unavailable = tk('unavailable');
-  const fetchedAt = candlesQuery.data?.fetchedAt
-    ? new Date(candlesQuery.data.fetchedAt).toLocaleString()
+  const fetchedAt = candlesQuery.data?.fetchedAt && Number.isFinite(Date.parse(candlesQuery.data.fetchedAt))
+    ? formatDateTime(candlesQuery.data.fetchedAt)
     : unavailable;
 
   return (
@@ -132,30 +147,30 @@ export default function VolumeZonesTab({
       {analysis && <div className="rounded-lg border border-border bg-surface p-3">
         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{tk('summary')}</div>
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          <span className="text-lg font-semibold">{analysis.action}</span>
+          <span className="text-lg font-semibold">{valueLabel(analysis.action)}</span>
           <span>
-            {tk('bias')}: {analysis.marketBias}
+            {tk('bias')}: {valueLabel(analysis.marketBias)}
           </span>
           <span>
-            {tk('setup')}: {analysis.setupType || tk('noSetup')}
+            {tk('setup')}: {!analysis.setupType || analysis.setupType === 'none' ? tk('noSetup') : valueLabel(analysis.setupType)}
           </span>
           <span>
-            <span>{tk('confidence')}</span>: {analysis.confidenceScore}
+            <span>{tk('confidence')}</span>: {finiteNumber(analysis.confidenceScore, 1)}
           </span>
         </div>
         {analysis.tradePlan.entry != null && (
           <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted">
             <span>
-              {tk('entry')}: {analysis.tradePlan.entry}
+              {tk('entry')}: {finiteNumber(analysis.tradePlan.entry)}
             </span>
             <span>
-              {tk('stop')}: {analysis.tradePlan.stop}
+              {tk('stop')}: {finiteNumber(analysis.tradePlan.stop)}
             </span>
             <span>
-              {tk('target')}: {analysis.tradePlan.target}
+              {tk('target')}: {finiteNumber(analysis.tradePlan.target)}
             </span>
             <span>
-              {tk('rr')}: {analysis.tradePlan.rr?.toFixed(2)}
+              {tk('rr')}: {finiteNumber(analysis.tradePlan.rr)}
             </span>
           </div>
         )}
@@ -183,10 +198,10 @@ export default function VolumeZonesTab({
               </div>
               <div>
                 <span>{tk('analysisParameters')}</span>: <span>{tk('lookback')}</span>{' '}
-                <span>{lookback}</span>
+                <span>{finiteNumber(lookback, 0)}</span>
               </div>
               <div>
-                <span>{tk('minRr')}</span>: <span>{minRr}</span>
+                <span>{tk('minRr')}</span>: <span>{finiteNumber(minRr)}</span>
               </div>
             </>
           )}
@@ -228,10 +243,10 @@ export default function VolumeZonesTab({
           <tbody>
             {analysis.volumeZones.map((zone, index) => (
               <tr className="border-b border-border last:border-0" key={`${zone.kind}-${zone.center}-${index}`}>
-                <td className="px-3 py-2 uppercase">{zone.kind}</td>
-                <td className="px-3 py-2">{zone.role}</td>
-                <td className="px-3 py-2 tabular-nums">{zone.center}</td>
-                <td className="px-3 py-2 tabular-nums">{(zone.volumeShare * 100).toFixed(1)}%</td>
+                <td className="px-3 py-2 uppercase">{valueLabel(zone.kind)}</td>
+                <td className="px-3 py-2">{valueLabel(zone.role)}</td>
+                <td className="px-3 py-2 tabular-nums">{finiteNumber(zone.center)}</td>
+                <td className="px-3 py-2 tabular-nums">{typeof zone.volumeShare === 'number' && Number.isFinite(zone.volumeShare) ? `${formatNumber(zone.volumeShare * 100, 1)}%` : unavailable}</td>
               </tr>
             ))}
           </tbody>

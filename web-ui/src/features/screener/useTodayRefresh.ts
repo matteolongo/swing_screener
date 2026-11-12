@@ -1,73 +1,88 @@
-import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { refetchTodayPortfolio } from '@/features/dailyReview/api';
 import { runScreener } from './api';
+import type { ScreenerResponse } from './types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { queryKeys } from '@/lib/queryKeys';
-import { useScreenerStore, type ScreenerRunContext } from '@/stores/screenerStore';
+import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+
+function refreshSelection(result: ScreenerResponse, sourceId: string | undefined, completedAt: string) {
+  const workspace = useWorkspaceStore.getState();
+  const selection = workspace.selection;
+  if (!selection) return;
+  const fromPortfolio = selection.source === 'today_position' || selection.source === 'today_watchlist';
+  const fromScan = selection.source === 'today_run' || selection.source === 'last_run';
+  if (!fromPortfolio && (!fromScan || selection.runId !== sourceId)) return;
+
+  const candidate = result.candidates.find((item) => item.ticker.trim().toUpperCase() === selection.ticker);
+  if (fromPortfolio) {
+    workspace.setWorkspaceSelection({ ...selection, candidate, runId: candidate ? completedAt : undefined });
+  } else if (candidate) {
+    workspace.setWorkspaceSelection({
+      ...selection,
+      source: 'today_run',
+      runId: completedAt,
+      candidate,
+      rowId: selection.rowId.startsWith(`${selection.source}:`) ? `today_run:${completedAt}:${selection.ticker}` : selection.rowId,
+    });
+  } else {
+    workspace.clearSelectedTicker();
+  }
+}
 
 export function useTodayRefresh() {
   const queryClient = useQueryClient();
   const strategy = useActiveStrategyQuery();
   const initialized = useScreenerStore((state) => state.todayRunInitialized);
-  const startedForPolicy = useRef<string | null>(null);
-  const mounted = useRef(true);
-  const pending = useRef(false);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  useEffect(() => {
-    mounted.current = true;
-    return () => { mounted.current = false; };
-  }, []);
-
-  const mutation = useMutation({
-    mutationFn: async ({ context }: { context: ScreenerRunContext; sourceId?: string; policy: string }) => {
-      const [response] = await Promise.all([
-        runScreener(context.request),
-        ...[queryKeys.dailyReviewPrefix(), queryKeys.watchlistPipeline(), queryKeys.positions(), queryKeys.orders(), queryKeys.portfolioSummary()]
-          .map((queryKey) => queryClient.refetchQueries({ queryKey, type: 'active' })),
-      ]);
-      return response;
-    },
-    onSuccess: (result, request) => {
+  const completedAt = useScreenerStore((state) => state.todayRun?.completedAt);
+  const policy = strategy.data ? JSON.stringify(strategy.data) : null;
+  const scan = useQuery({
+    queryKey: queryKeys.todayScan(policy),
+    enabled: initialized && policy !== null,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
       const store = useScreenerStore.getState();
-      const sourceId = store.todayRun ? store.todayRun.completedAt : store.lastRunContext?.completedAt;
-      if (!mounted.current || sourceId !== request.sourceId || JSON.stringify(queryClient.getQueryData(queryKeys.strategyActive())) !== request.policy) return;
+      const context = store.todayRun ?? store.lastRunContext;
+      const sourceId = context?.completedAt;
+      const request = { ...context?.request, asofDate: undefined, forceRefresh: true };
+      void refetchTodayPortfolio(queryClient);
+      // The query owns completion so navigation does not restart or discard a run.
+      const result = await runScreener(request);
+      const current = useScreenerStore.getState();
+      const currentSource = current.todayRun ?? current.lastRunContext;
+      if (currentSource?.completedAt !== sourceId ||
+        JSON.stringify(queryClient.getQueryData(queryKeys.strategyActive())) !== policy) {
+        return { completedAt: null };
+      }
+
       const completedAt = new Date().toISOString();
-      store.recordTodayRun(result, { ...request.context, displayFilters: store.todayRun?.displayFilters ?? request.context.displayFilters, completedAt });
-      setUpdatedAt(completedAt);
-      const workspace = useWorkspaceStore.getState();
-      const selection = workspace.selection;
-      if (!selection || !['today_run', 'last_run'].includes(selection.source) || selection.runId !== request.sourceId) return;
-      const candidate = result.candidates.find((item) => item.ticker.trim().toUpperCase() === selection.ticker);
-      if (candidate) workspace.setWorkspaceSelection({ ...selection, source: 'today_run', runId: completedAt, candidate, rowId: `today_run:${completedAt}:${selection.ticker}` });
-      else workspace.clearSelectedTicker();
+      current.recordTodayRun(result, {
+        request,
+        displayFilters: current.todayRun?.displayFilters ?? context?.displayFilters ??
+          { recommendedOnly: false, actionFilter: 'all' },
+        completedAt,
+      });
+      refreshSelection(result, sourceId, completedAt);
+      return { completedAt };
     },
-    onSettled: () => { pending.current = false; },
   });
 
   function refresh() {
-    if (pending.current || !initialized || !strategy.data) return;
-    pending.current = true;
-    const store = useScreenerStore.getState();
-    const context = store.todayRun ?? store.lastRunContext;
-    mutation.mutate({
-      context: {
-        request: { ...context?.request, asofDate: undefined, forceRefresh: true },
-        displayFilters: context?.displayFilters ?? { recommendedOnly: false, actionFilter: 'all' },
-        completedAt: context?.completedAt ?? '',
-      },
-      sourceId: context?.completedAt,
-      policy: JSON.stringify(strategy.data),
-    });
+    if (scan.isFetching || !initialized) return;
+    if (!strategy.data) {
+      void strategy.refetch();
+      return;
+    }
+    void scan.refetch();
   }
 
-  const policy = strategy.data ? JSON.stringify(strategy.data) : null;
-  useEffect(() => {
-    if (initialized && policy && !mutation.isPending && startedForPolicy.current !== policy) {
-      startedForPolicy.current = policy;
-      refresh();
-    }
-  }, [initialized, policy, mutation.isPending]);
-
-  return { refresh, updatedAt, isRefreshing: mutation.isPending || !initialized || strategy.isLoading, error: mutation.error ?? strategy.error };
+  return {
+    refresh,
+    updatedAt: completedAt ?? scan.data?.completedAt ?? null,
+    isRefreshing: scan.isFetching || !initialized || (!strategy.data && strategy.isFetching),
+    error: scan.error ?? strategy.error,
+  };
 }

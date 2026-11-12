@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react';
+import Button from '@/components/common/Button';
+import WorkspaceIntro from '@/components/layout/WorkspaceIntro';
 import { t } from '@/i18n/t';
 import type { MessageKey } from '@/i18n/types';
 import { useDataSources, useFallbackEvents, useProbeSourceMutation, useProbeAllMutation } from '@/features/datasources/hooks';
@@ -41,23 +43,26 @@ export default function DataSources() {
   })).filter((g) => g.items.length > 0);
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-base font-semibold text-foreground">{t('datasources.title')}</h1>
-          <p className="text-xs text-muted">{t('datasources.subtitle')}</p>
-        </div>
-        <button
+    <div className="mx-auto min-w-0 max-w-[1440px] space-y-5 pb-8">
+      <WorkspaceIntro label={t('sidebar.nav.tools')} title={t('datasources.title')} description={t('datasources.subtitle')} action={
+        <Button
           type="button"
           onClick={() => probeAll.mutate()}
           disabled={probeAll.isPending}
-          className="text-xs font-medium text-primary hover:underline disabled:text-muted"
         >
           {probeAll.isPending ? t('datasources.testing') : t('datasources.testAll')}
-        </button>
-      </header>
+        </Button>
+      } />
       {probeAllError ? <p role="alert" className="text-sm text-danger">{probeAllError}</p> : null}
       {probeOneError ? <p role="alert" className="text-sm text-danger">{probeOneError}</p> : null}
+      {sourcesQuery.isLoading ? <p role="status" className="text-sm text-muted">{t('datasources.loading')}</p> : null}
+      {sourcesQuery.isError ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4">
+          <p role="alert" className="text-sm text-warning">{t('datasources.loadError')}</p>
+          <Button type="button" size="sm" variant="secondary" onClick={() => void sourcesQuery.refetch()}>{t('workspacePage.data.retry')}</Button>
+        </div>
+      ) : null}
+      {sourcesQuery.isSuccess && sources.length === 0 ? <p role="status" className="text-sm text-muted">{t('datasources.empty')}</p> : null}
 
       {grouped.map((group) => (
         <section key={group.domain}>
@@ -72,7 +77,18 @@ export default function DataSources() {
         </section>
       ))}
 
-      <FallbackFeed events={eventsQuery.data ?? []} />
+      {eventsQuery.isError ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4">
+          <p role="alert" className="text-sm text-warning">
+            {t(eventsQuery.data ? 'datasources.fallbacks.refreshError' : 'datasources.fallbacks.loadError')}
+          </p>
+          <Button type="button" size="sm" variant="secondary" disabled={eventsQuery.isFetching}
+            onClick={() => void eventsQuery.refetch()}>
+            {t('datasources.fallbacks.retry')}
+          </Button>
+        </div>
+      ) : null}
+      {eventsQuery.data ? <FallbackFeed events={eventsQuery.data} /> : null}
       <CacheSection />
     </div>
   );

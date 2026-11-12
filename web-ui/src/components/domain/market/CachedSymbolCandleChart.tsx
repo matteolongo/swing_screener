@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
+import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
 import type { CandlePattern, PriceHistoryPoint } from '@/features/screener/types';
 import {
@@ -47,14 +48,14 @@ const OVERLAY_CHIPS: {
   { key: 'keyLevels', label: 'Key', color: '#7C8CF8', titleKey: 'chart.overlays.keyLevels' },
 ];
 
-function ChartLoadingFallback({ height }: { height?: number }) {
+function ChartPlaceholder({ height, message = t('chart.loading') }: { height?: number; message?: string }) {
   return (
     <div
       className="flex w-full items-center justify-center rounded border border-border bg-surface text-sm text-muted"
       style={{ height: height ?? 360 }}
       role="status"
     >
-      {t('chart.loading')}
+      {message}
     </div>
   );
 }
@@ -148,9 +149,11 @@ export function CachedSymbolCandleChart({ ticker, candidate: selectedCandidate, 
   const benchmarkLabel = candidate ? benchmarkTicker : null;
 
   // A snapshot without bars still needs the canonical candle query.
-  const candlesQuery = useTickerCandles(candidate?.priceHistory?.length ? null : symbol);
+  const snapshotBars = candidate?.priceHistory;
+  const usesFallback = !snapshotBars?.length;
+  const candlesQuery = useTickerCandles(usesFallback ? symbol : null);
 
-  const bars = candidate?.priceHistory?.length ? candidate.priceHistory : candlesQuery.data?.priceHistory ?? EMPTY_BARS;
+  const bars = usesFallback ? candlesQuery.data?.priceHistory ?? EMPTY_BARS : snapshotBars;
   const patterns = candidate?.patterns ?? candlesQuery.data?.patterns ?? EMPTY_PATTERNS;
   const benchmarkBars = candidate?.benchmarkPriceHistory ?? EMPTY_BARS;
   const outperformancePct = candidate?.benchmarkOutperformancePct ?? null;
@@ -207,14 +210,46 @@ export function CachedSymbolCandleChart({ ticker, candidate: selectedCandidate, 
     onToggleOverlay: toggleOverlay,
   };
 
+  const fallbackFailed = usesFallback && candlesQuery.isError;
+  const hasBars = bars.length > 0;
+
+  function renderChart(chartWidth?: number, chartHeight?: number) {
+    return (
+      <>
+        {fallbackFailed && (
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
+            <p role="alert">{t(hasBars ? 'chart.refreshError' : 'chart.loadError')}</p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void candlesQuery.refetch()}
+              disabled={candlesQuery.isFetching}
+            >
+              {t('workspacePage.data.retryPrices')}
+            </Button>
+          </div>
+        )}
+        {hasBars && (
+          <>
+            <ChartToolbar {...toolbarProps} />
+            <Suspense fallback={<ChartPlaceholder height={chartHeight} />}>
+              <CandleChart {...sharedChartProps} width={chartWidth} height={chartHeight} />
+            </Suspense>
+          </>
+        )}
+        {!hasBars && !fallbackFailed && (
+          <ChartPlaceholder height={chartHeight} message={candlesQuery.isLoading ? undefined : t('chart.empty')} />
+        )}
+      </>
+    );
+  }
+
   const overlayHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.7) : 600;
 
   return (
     <div className={cn('w-full', className)}>
-      <ChartToolbar {...toolbarProps} />
-      <Suspense fallback={<ChartLoadingFallback height={height} />}>
-        <CandleChart {...sharedChartProps} width={width} height={height} />
-      </Suspense>
+      {renderChart(width, height)}
       {fullscreen && (
         <ModalShell
           title={t('chart.fullscreen')}
@@ -223,10 +258,7 @@ export function CachedSymbolCandleChart({ ticker, candidate: selectedCandidate, 
           fullScreen
           contentClassName="p-4"
         >
-          <ChartToolbar {...toolbarProps} />
-          <Suspense fallback={<ChartLoadingFallback height={overlayHeight} />}>
-            <CandleChart {...sharedChartProps} width={1280} height={overlayHeight} />
-          </Suspense>
+          {renderChart(1280, overlayHeight)}
         </ModalShell>
       )}
     </div>

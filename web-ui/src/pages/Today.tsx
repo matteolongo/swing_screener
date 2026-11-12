@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ClipboardCheck, Crosshair, RefreshCw, X } from 'lucide-react';
 import CandidateQueue from '@/components/domain/cockpit/CandidateQueue';
 import SymbolDetailPanel from '@/components/domain/cockpit/SymbolDetailPanel';
 import TodayStatsStrip from '@/components/domain/cockpit/TodayStatsStrip';
@@ -14,7 +15,9 @@ import { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewF
 import { useTodayRefresh } from '@/features/screener/useTodayRefresh';
 import Button from '@/components/common/Button';
 import PositionProtectionNotice from '@/components/domain/orders/PositionProtectionNotice';
+import WorkspaceIntro from '@/components/layout/WorkspaceIntro';
 import { formatDateTime } from '@/utils/formatters';
+import { cn } from '@/utils/cn';
 
 // ─── Weekly review nudge ─────────────────────────────────────────────────────
 
@@ -41,10 +44,10 @@ function WeeklyReviewNudge() {
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        className="text-xs text-primary hover:text-primary shrink-0"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded text-primary hover:bg-primary/10"
         aria-label={t('todayPage.weeklyNudge.dismiss')}
       >
-        ✕
+        <X className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
   );
@@ -66,7 +69,6 @@ function PendingOrdersBadge() {
   return (
     <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2">
       <span className="text-sm text-warning">
-        <span aria-hidden="true">⏳ </span>
         <span>{label}</span>
       </span>
       <button
@@ -88,22 +90,21 @@ export default function Today() {
   const lastResult = useScreenerStore(state => state.lastResult);
   const lastRunContext = useScreenerStore(state => state.lastRunContext);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
-  const workspaceMode = useWorkspaceStore((state) => state.workspaceMode);
   const setWorkspaceSelection = useWorkspaceStore((state) => state.setWorkspaceSelection);
   const clearSelectedTicker = useWorkspaceStore((state) => state.clearSelectedTicker);
+  const [focusRequest, setFocusRequest] = useState<number | null>(null);
   const originControlRef = useRef<HTMLElement | null>(null);
   const originTickerRef = useRef<string | null>(null);
   const previousSelectionRef = useRef(selectedTicker);
 
-  const compact = Boolean(selectedTicker && workspaceMode === 'expanded');
-
-  const handleTickerSelect = useCallback((ticker: string) => {
+  const handleTickerSelect = useCallback((ticker: string, focusInspector = true) => {
     const normalized = ticker.trim().toUpperCase();
-    if (document.activeElement instanceof HTMLElement) {
+    if (!focusInspector && document.activeElement instanceof HTMLElement) {
       originControlRef.current = document.activeElement;
     }
     originTickerRef.current = normalized || null;
     if (!normalized) return;
+    setFocusRequest((previous) => focusInspector ? (previous ?? 0) + 1 : null);
     // CandidateQueue and TodayActionList already write the full
     // WorkspaceSelection envelope (ticker, source, runId, candidate, rowId)
     // via setWorkspaceSelection before invoking this callback. Only ensure a
@@ -127,64 +128,81 @@ export default function Today() {
         const replacement = [...(queue?.querySelectorAll<HTMLElement>('button') ?? [])].find(
           (control) => control.textContent?.includes(originTickerRef.current ?? ''),
         );
-        replacement?.focus();
+        (replacement ?? document.getElementById('candidate-review'))?.focus();
         originControlRef.current = replacement ?? null;
       }
     }
     previousSelectionRef.current = selectedTicker;
   }, [selectedTicker]);
 
+  const scanSource = todayRun
+    ? t('cockpit.review.pinned', { source: todayRun.request.preset ?? t('cockpit.review.customScan') })
+    : t('cockpit.review.lastRun');
+
   return (
-    <div className="min-w-0 mx-auto max-w-[1600px]">
-      <PositionProtectionNotice />
-      <TodayStatsStrip />
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <p role="status" className="text-xs text-muted">{todayRefresh.isRefreshing
-          ? t('todayPage.refresh.running')
-          : todayRefresh.updatedAt
-            ? t('todayPage.refresh.updated', { time: formatDateTime(todayRefresh.updatedAt) })
-            : t('todayPage.refresh.description')}</p>
-        <Button variant="secondary" onClick={todayRefresh.refresh} disabled={todayRefresh.isRefreshing}>
+    <div className="mx-auto min-w-0 max-w-[1440px] space-y-6 pb-8">
+      <WorkspaceIntro label={t('cockpit.review.eyebrow')} title={t('cockpit.review.title')} description={t('cockpit.review.description')} action={
+        <Button onClick={todayRefresh.refresh} disabled={todayRefresh.isRefreshing} className="gap-2">
+          <RefreshCw className={cn('h-4 w-4', todayRefresh.isRefreshing && 'motion-safe:animate-spin')} aria-hidden="true" />
           {todayRefresh.isRefreshing ? t('todayPage.refresh.running') : todayRefresh.error ? t('screener.quality.retry') : t('todayPage.refresh.action')}
         </Button>
+      } />
+      <PositionProtectionNotice />
+      <div className="space-y-3">
+        {todayRefresh.error ? (
+          <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {t('todayPage.refresh.error', { message: todayRefresh.error.message })}
+          </p>
+        ) : null}
+        <ResultQualitySummary result={todayRun?.result ?? lastResult} completedAt={todayRun ? todayRun.completedAt : lastRunContext?.completedAt}
+          isRefreshing={todayRefresh.isRefreshing} error={todayRefresh.error} source={scanSource} onRefresh={todayRefresh.refresh} />
+        <p role="status" className="px-1 text-xs text-muted">
+          {todayRefresh.isRefreshing ? t('todayPage.refresh.runningHint') : todayRefresh.updatedAt
+            ? t('todayPage.refresh.updated', { time: formatDateTime(todayRefresh.updatedAt) })
+            : t('todayPage.refresh.description')}
+        </p>
       </div>
-      {todayRefresh.error ? <p role="alert" className="mt-2 text-sm text-danger">{t('todayPage.refresh.error', { message: todayRefresh.error.message })}</p> : null}
-      <ResultQualitySummary result={todayRun?.result ?? lastResult} completedAt={todayRun ? todayRun.completedAt : lastRunContext?.completedAt} isRefreshing={todayRefresh.isRefreshing} error={todayRefresh.error} />
-      <div className="mt-4 grid gap-4 xl:grid-cols-12">
-        {/* Left column: attenzioni + candidate queue, always mounted */}
-        <div
-          className="min-w-0 flex flex-col gap-4 xl:col-span-7"
+      <TodayStatsStrip />
+      <WeeklyReviewNudge />
+
+      <div className={cn('grid min-w-0 items-start gap-5', selectedTicker && 'xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]')}>
+        <div className={cn('grid min-w-0 items-start gap-5', !selectedTicker && 'xl:grid-cols-[minmax(0,4fr)_minmax(0,5fr)]')}
           onClickCapture={(event) => {
-            const control = (event.target as HTMLElement).closest<HTMLElement>('button, [role="button"]');
+            const control = (event.target as HTMLElement).closest<HTMLElement>('button');
             if (control) originControlRef.current = control;
           }}
         >
-          <div>
-            <WeeklyReviewNudge />
-            <PendingOrdersBadge />
-          </div>
-          <div data-testid="today-action-list">
-            <TodayActionList compact={compact} onTickerSelect={handleTickerSelect} onRefresh={todayRefresh.refresh} isRefreshing={todayRefresh.isRefreshing} />
-          </div>
-          <CandidateQueue onSelectTicker={handleTickerSelect} isRefreshing={todayRefresh.isRefreshing} />
-        </div>
-
-        {/* Right column: detail panel or empty state */}
-        <div className="min-w-0 flex flex-col xl:col-span-5">
-          {selectedTicker ? (
-            <SymbolDetailPanel ticker={selectedTicker} onClose={clearSelectedTicker} isRefreshingToday={todayRefresh.isRefreshing} onRefreshToday={todayRefresh.refresh} todayRefreshError={todayRefresh.error} />
-          ) : (
-            <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center gap-3">
-              <div className="text-4xl select-none">📊</div>
-              <p className="text-sm font-medium text-muted">
-                {t('workspacePage.panels.analysis.empty')}
-              </p>
-              <p className="text-xs text-muted max-w-xs">
-                {t('workspacePage.emptyDescription')}
-              </p>
+          <section aria-labelledby="portfolio-attention" className="min-w-0 rounded-xl border border-border bg-surface">
+            <div className="flex items-start gap-3 border-b border-border px-4 py-4">
+              <ClipboardCheck className="mt-1 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+              <div className="min-w-0">
+                <h2 id="portfolio-attention" className="text-base font-semibold">{t('cockpit.review.attentionTitle')}</h2>
+                <p className="mt-1 text-sm text-muted">{t('cockpit.review.attentionDescription')}</p>
+              </div>
             </div>
-          )}
+            <PendingOrdersBadge />
+            <div data-testid="today-action-list">
+              <TodayActionList onTickerSelect={handleTickerSelect} />
+            </div>
+          </section>
+          <section id="candidate-review" aria-labelledby="candidate-review-title" tabIndex={-1}
+            className="min-w-0 scroll-mt-6 rounded-xl border border-border bg-surface">
+            <div className="flex items-start gap-3 border-b border-border px-4 py-4">
+              <Crosshair className="mt-1 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+              <div className="min-w-0">
+                <h2 id="candidate-review-title" className="text-base font-semibold">{t('cockpit.review.candidatesTitle')}</h2>
+                <p className="mt-1 text-sm text-muted">{t('cockpit.review.candidatesDescription')}</p>
+              </div>
+            </div>
+            <div className="p-3">
+              <CandidateQueue onSelectTicker={handleTickerSelect} isRefreshing={todayRefresh.isRefreshing} />
+            </div>
+          </section>
         </div>
+        {selectedTicker ? (
+          <SymbolDetailPanel ticker={selectedTicker} onClose={clearSelectedTicker} focusRequest={focusRequest}
+            isRefreshingToday={todayRefresh.isRefreshing} onRefreshToday={todayRefresh.refresh} todayRefreshError={todayRefresh.error} />
+        ) : null}
       </div>
     </div>
   );

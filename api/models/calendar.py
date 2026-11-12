@@ -17,6 +17,13 @@ class CalendarEvent(BaseModel):
     eps_actual: Optional[float] = None
 
 
+class CalendarSourceWarning(BaseModel):
+    event_type: Literal["earnings", "economic", "ipo", "dividend"]
+    code: Literal["source_unavailable"] = "source_unavailable"
+    tickers: list[str] = Field(default_factory=list)
+
+
 class CalendarEventsResponse(BaseModel):
     events: list[CalendarEvent]
     days_ahead: int
+    warnings: list[CalendarSourceWarning] = Field(default_factory=list)
