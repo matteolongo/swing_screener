@@ -30,7 +30,7 @@ def test_build_daily_report_normalizes_direct_dataframe_input(monkeypatch):
         return pd.DataFrame()
 
     monkeypatch.setattr(
-        "swing_screener.strategy.orchestrator.build_strategy_report",
+        "swing_screener.strategy.modules.momentum.build_strategy_report",
         fake_build_strategy_report,
     )
 

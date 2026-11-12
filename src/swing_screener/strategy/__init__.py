@@ -1,6 +1,5 @@
 """Strategy domain package."""
 
-from swing_screener.strategy.base import StrategyModule
 from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.strategy.config import (
     build_entry_config,
@@ -19,10 +18,8 @@ from swing_screener.strategy.storage import (
     save_strategies,
     set_active_strategy_id,
 )
-from swing_screener.strategy.registry import get_strategy_module, list_strategy_modules, register
 
 __all__ = [
-    "StrategyModule",
     "ReportConfig",
     "DEFAULT_STRATEGY_ID",
     "build_entry_config",
@@ -37,7 +34,4 @@ __all__ = [
     "load_strategies",
     "save_strategies",
     "set_active_strategy_id",
-    "get_strategy_module",
-    "list_strategy_modules",
-    "register",
 ]

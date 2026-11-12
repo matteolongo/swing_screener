@@ -201,7 +201,7 @@ def strategy_signature(cfg: ReportConfig) -> str:
     """Stable short hash of the config that affects per-symbol features.
 
     Only ``universe``, ``signals`` and ``risk`` participate. Ranking weights,
-    ``top_n``, ``only_active_signals`` and ``strategy_module`` are excluded so
+    ``top_n`` and ``only_active_signals`` are excluded so
     that changing them still reuses cached per-symbol features.
     """
     payload = {

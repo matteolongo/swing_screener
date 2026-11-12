@@ -69,4 +69,3 @@ class ReportConfig:
     execution: ExecutionConfig = field(default_factory=ExecutionConfig)
     confidence: ConfidenceConfig = field(default_factory=_default_confidence_config)
     only_active_signals: bool = False
-    strategy_module: str = "momentum"

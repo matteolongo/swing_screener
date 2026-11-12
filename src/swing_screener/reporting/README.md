@@ -41,7 +41,7 @@ for w in warnings:
 ## Functions
 
 ### `build_daily_report(ohlcv, cfg, exclude_tickers, ..., market_phase="unknown")`
-Delegates to `strategy.orchestrator.build_strategy_report()`. Returns a DataFrame indexed by ticker with columns including `signal`, `score`, `entry`, `stop`, `shares`, `realized_risk`, etc. `market_phase` participates in evaluation-cache identity so intraday rows cannot satisfy a final-close cache lookup.
+Delegates to `strategy.modules.momentum.build_strategy_report()`. Returns a DataFrame indexed by ticker with columns including `signal`, `score`, `entry`, `stop`, `shares`, `realized_risk`, etc. `market_phase` participates in evaluation-cache identity so intraday rows cannot satisfy a final-close cache lookup.
 When `cfg` is omitted, a fresh `ReportConfig` is resolved at call time so
 runtime YAML overrides are not captured during module import.
 
@@ -74,7 +74,7 @@ Requires an externally supplied `sector_map` (for example, from
 
 ## See Also
 
-- `strategy/orchestrator.py` — actual report construction logic
+- `strategy/modules/momentum.py` — actual report construction logic
 - `strategy/report_config.py` — `ReportConfig` (account size, risk params, plugin settings)
 - `execution/guidance.py` — adds entry/stop guidance columns to the report
 - `risk/position_sizing.py` — computes `entry`, `stop`, `shares`, `realized_risk`
