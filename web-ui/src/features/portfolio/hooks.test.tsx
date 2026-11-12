@@ -11,10 +11,7 @@ vi.mock('@/features/portfolio/api', () => ({
   submitOrder: vi.fn(),
   fetchPositions: vi.fn(),
   fetchPositionStopSuggestion: vi.fn(),
-  fetchDegiroStatus: vi.fn(),
-  fetchDegiroOrderHistory: vi.fn(),
   updatePositionStop: vi.fn(),
-  fillOrderFromDegiro: vi.fn(),
   closePosition: vi.fn(),
   partialClosePosition: vi.fn(),
 }))
@@ -31,7 +28,6 @@ import * as queryInvalidation from '@/lib/queryInvalidation'
 import {
   useCreateOrderMutation,
   useFillOrderMutation,
-  useFillFromDegiroMutation,
   useSubmitOrderMutation,
   useCancelOrderMutation,
   useOrders,
@@ -156,18 +152,6 @@ describe('portfolio hooks', () => {
 
     await act(async () => {
       await result.current.mutateAsync({ orderId: 'ORD-1', request: { filledPrice: 190, filledDate: '2026-09-11' } })
-    })
-
-    expect(mockedInvalidateOrderLifecycleQueries).toHaveBeenCalledWith(queryClient, true)
-  })
-
-  it('invalidates cached daily review and positions after a DeGiro fill transition', async () => {
-    const queryClient = createQueryClient()
-    vi.mocked(portfolioApi.fillOrderFromDegiro).mockResolvedValue({} as any)
-    const { result } = renderHook(() => useFillFromDegiroMutation(), { wrapper: createWrapper(queryClient) })
-
-    await act(async () => {
-      await result.current.mutateAsync({ orderId: 'ORD-1', degiroOrderId: 'DG-1' })
     })
 
     expect(mockedInvalidateOrderLifecycleQueries).toHaveBeenCalledWith(queryClient, true)

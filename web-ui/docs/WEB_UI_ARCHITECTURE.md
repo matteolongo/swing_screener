@@ -234,5 +234,6 @@ resolved from the localized index resources rather than membership IDs.
 
 - Component tests use `renderWithProviders()` — wraps React Query client and Zustand stores.
 - API calls mocked via MSW (`src/test/mocks/handlers.ts`).
+- MSW answers any path, so it cannot catch a removed backend route. `tests/api/test_web_ui_endpoint_contract.py` (pytest) checks every `/api/...` literal in shipped `src/` files against the FastAPI route table; add the route or remove the call when it fails.
 - Run all tests: `npm test` (Vitest + React Testing Library).
 - Run single feature: `npx vitest run src/features/<domain>`.

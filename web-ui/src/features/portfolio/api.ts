@@ -18,15 +18,7 @@ import {
   ClosePositionRequest,
   PartialCloseRequest,
   UpdateTrailMethodRequest,
-  DegiroOrder,
-  DegiroOrderApiResponse,
-  FillFromDegiroRequest,
-  FillFromDegiroResponse,
-  FillFromDegiroResponseApi,
   transformCreateOrderRequest,
-  transformDegiroOrder,
-  transformFillFromDegiroRequest,
-  transformFillFromDegiroResponse,
   transformOrder,
   transformPosition,
   transformPositionUpdate,
@@ -228,22 +220,6 @@ export interface EarningsProximity {
   warning: boolean;
 }
 
-export interface DegiroStatusApiResponse {
-  installed: boolean;
-  credentials_configured: boolean;
-  available: boolean;
-  mode: 'ready' | 'missing_library' | 'missing_credentials';
-  detail: string;
-}
-
-export interface DegiroStatus {
-  installed: boolean;
-  credentialsConfigured: boolean;
-  available: boolean;
-  mode: 'ready' | 'missing_library' | 'missing_credentials';
-  detail: string;
-}
-
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 export type SnapshotFreshness = 'fresh' | 'stale' | 'unknown';
@@ -364,39 +340,6 @@ export async function cancelOrder(orderId: string): Promise<void> {
     method: 'DELETE',
     errorMessage: 'Failed to cancel order',
   });
-}
-
-export async function fetchDegiroStatus(): Promise<DegiroStatus> {
-  const payload = await fetchJson<DegiroStatusApiResponse>(API_ENDPOINTS.degiroStatus, {
-    errorMessage: 'Failed to fetch DeGiro status',
-  });
-  return {
-    installed: payload.installed,
-    credentialsConfigured: payload.credentials_configured,
-    available: payload.available,
-    mode: payload.mode,
-    detail: payload.detail,
-  };
-}
-
-export async function fetchDegiroOrderHistory(): Promise<DegiroOrder[]> {
-  const data = await fetchJson<{ orders?: DegiroOrderApiResponse[] }>(API_ENDPOINTS.degiroOrderHistory, {
-    errorMessage: 'Failed to fetch DeGiro order history',
-  });
-  return (data.orders ?? []).map(transformDegiroOrder);
-}
-
-export async function fillOrderFromDegiro(
-  orderId: string,
-  request: FillFromDegiroRequest,
-): Promise<FillFromDegiroResponse> {
-  const payload = await fetchJson<FillFromDegiroResponseApi>(API_ENDPOINTS.orderFillFromDegiro(orderId), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(transformFillFromDegiroRequest(request)),
-    errorMessage: 'Failed to fill order from DeGiro',
-  });
-  return transformFillFromDegiroResponse(payload);
 }
 
 export async function fetchPositions(status: PositionFilterStatus): Promise<SnapshotCollection<PositionWithMetrics>> {

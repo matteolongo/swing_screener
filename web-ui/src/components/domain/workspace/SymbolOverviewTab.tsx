@@ -4,7 +4,6 @@ import ManagePositionPanel from '@/components/domain/workspace/ManagePositionPan
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
-import type { CatalystOpportunity } from '@/features/intelligence/catalysts/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
 import { formatDateTime, formatNumber, formatPercent } from '@/utils/formatters';
@@ -25,11 +24,9 @@ export interface SymbolOverviewModel {
   candidateRefresh?: CandidateRefreshControl;
   position?: PositionWithMetrics | null;
   fundamentals: QuerySummary<FundamentalSnapshot>;
-  catalyst: QuerySummary<CatalystOpportunity>;
   intelligenceOutdated: boolean;
   sources?: WorkspaceSourceState[];
   onOpenFundamentals: () => void;
-  onOpenIntelligence: () => void;
   onPrepareOrder?: () => void;
   onSaveDraft?: () => void;
   isWatched?: boolean;
@@ -54,11 +51,10 @@ function SummaryLink({ label, onClick }: { label: string; onClick: () => void })
 }
 
 export default function SymbolOverviewTab({ model }: { model: SymbolOverviewModel }) {
-  const { candidate, position, fundamentals, catalyst } = model;
+  const { candidate, position, fundamentals } = model;
   const summary = candidate?.decisionSummary;
   const partialDependencies = [
     fundamentals.isError ? t('workspacePage.overview.dependencies.fundamentals') : null,
-    catalyst.isError ? t('workspacePage.overview.dependencies.catalysts') : null,
   ].filter((dependency): dependency is string => dependency != null);
   const supports = summary?.drivers.positives.filter(Boolean).slice(0, 3) ?? [];
   const opposition = summary?.drivers.negatives.filter(Boolean).slice(0, 3) ?? [];
@@ -152,23 +148,6 @@ export default function SymbolOverviewTab({ model }: { model: SymbolOverviewMode
           ) : (
             <p className="mt-2 text-sm text-muted">
               {fundamentals.isLoading ? t('workspacePage.overview.loading') : t('workspacePage.overview.notAvailable')}
-            </p>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-border bg-surface p-3">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="text-sm font-semibold text-foreground">{t('workspacePage.overview.catalysts')}</h3>
-            <SummaryLink label={t('workspacePage.overview.openIntelligence')} onClick={model.onOpenIntelligence} />
-          </div>
-          {catalyst.data ? (
-            <>
-              <p className="mt-2 text-sm text-muted">{catalyst.data.thesis}</p>
-              <p className="mt-1 text-xs text-muted">{formatDateTime(catalyst.data.generatedAt)}</p>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-muted">
-              {catalyst.isLoading ? t('workspacePage.overview.loading') : t('workspacePage.overview.notAvailable')}
             </p>
           )}
         </div>

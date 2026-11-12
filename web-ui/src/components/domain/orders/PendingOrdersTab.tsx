@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useOrders, useDegiroStatusQuery, useFillOrderMutation, useSubmitOrderMutation, useCancelOrderMutation } from '@/features/portfolio/hooks';
+import { useOrders, useFillOrderMutation, useSubmitOrderMutation, useCancelOrderMutation } from '@/features/portfolio/hooks';
 import { useLocation } from 'react-router-dom';
 import ModalShell from '@/components/common/ModalShell';
 import Button from '@/components/common/Button';
@@ -10,7 +10,6 @@ import FillOrderModalForm from './FillOrderModalForm';
 import { formatCurrency } from '@/utils/formatters';
 import { isSupportedCurrency } from '@/types/currency';
 
-import FillViaDegiroModal from './FillViaDegiroModal';
 
 type ActiveFilter = 'draft' | 'pending' | 'submitted' | 'cancelled' | 'filled';
 
@@ -30,8 +29,6 @@ export default function PendingOrdersTab() {
   const location = useLocation();
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>(location.state?.orderFilter === 'draft' ? 'draft' : 'pending');
   const ordersQuery = useOrders(activeFilter);
-  const degiroStatusQuery = useDegiroStatusQuery();
-  const [fillDegiroOrder, setFillDegiroOrder] = useState<Order | null>(null);
   const [fillManualOrder, setFillManualOrder] = useState<Order | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
   const [reviewDraft, setReviewDraft] = useState<Order | null>(null);
@@ -48,7 +45,6 @@ export default function PendingOrdersTab() {
   const protectionOrders = orders.filter(
     (order) => order.orderKind === 'stop' || order.orderKind === 'take_profit',
   );
-  const degiroAvailable = degiroStatusQuery.data?.available ?? false;
 
   const filterTabs: ActiveFilter[] = ['draft', 'pending', 'submitted', 'cancelled', 'filled'];
   const isMutating = submitMutation.isPending || fillMutation.isPending || cancelMutation.isPending;
@@ -117,23 +113,14 @@ export default function PendingOrdersTab() {
                         {t('pendingOrdersTab.markSubmitted')}
                       </button>
                     )}
-                    {(order.status === 'pending' || order.status === 'submitted') ? <><button
-                      type="button"
-                      onClick={() => setFillDegiroOrder(order)}
-                      disabled={!degiroAvailable || isMutating}
-                      title={!degiroAvailable ? t('pendingOrdersTab.degiroNotConnected') : undefined}
-                      className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {t('pendingOrdersTab.fillViaDegiro')}
-                    </button>
-                    <button
+                    {(order.status === 'pending' || order.status === 'submitted') ? <button
                       type="button"
                       onClick={() => setFillManualOrder(order)}
                       disabled={isMutating}
                       className="px-2 py-1 rounded text-xs font-medium bg-foreground/5 text-muted hover:bg-foreground/10"
                     >
                       {t('pendingOrdersTab.fillManually')}
-                    </button></> : null}
+                    </button> : null}
                     {order.status === 'draft' ? <button type="button" onClick={() => setReviewDraft(order)} disabled={isMutating} className="rounded px-2 py-1 text-xs font-medium text-primary">{t('manualOrderDraft.review')}</button> : null}
                     {['draft', 'pending', 'submitted'].includes(order.status) ? <button type="button" onClick={() => { cancelMutation.reset(); setCancelTarget(order); }} disabled={isMutating} className="rounded px-2 py-1 text-xs font-medium text-danger disabled:opacity-40">{t('pendingOrdersTab.cancelOrder')}</button> : null}
                   </div>
@@ -185,12 +172,6 @@ export default function PendingOrdersTab() {
         </div>
       )}
 
-      {fillDegiroOrder && (
-        <FillViaDegiroModal
-          order={fillDegiroOrder}
-          onClose={() => setFillDegiroOrder(null)}
-        />
-      )}
       {reviewDraft ? <DraftOrderReview key={reviewDraft.orderId} order={reviewDraft} onClose={() => setReviewDraft(null)} /> : null}
       {cancelTarget ? <ModalShell title={t('pendingOrdersTab.cancelTitle', { ticker: cancelTarget.ticker })} onClose={() => { if (!cancelMutation.isPending) setCancelTarget(null); }} className="max-w-lg" closeOnBackdrop={false}>
         <div className="space-y-4">
