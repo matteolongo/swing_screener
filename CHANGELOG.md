@@ -9,6 +9,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Make the market-data badge open scan details with stale symbol/benchmark
+  dates, an explanation of the requested session, and a refresh action.
 - Finish Daily review scans reliably across navigation, initialize older saved
   runs, and apply the scan deadline to synchronous requests.
 - Connect fundamentals and manual draft actions in symbol research. Preserve

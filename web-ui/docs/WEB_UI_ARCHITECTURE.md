@@ -32,6 +32,12 @@
   completion. Fetch state is independent: initial loading, retained data while
   refreshing, cached-after-failure with Retry, and successful empty results have
   distinct copy. The strip uses the same market-quality mapping as the summary.
+  The header quality badge links to `/today#scan-data-quality`, opening and
+  focusing the scan disclosure even on repeat visits. Stale details identify
+  explicitly flagged candidates and candidate/benchmark candles older than the
+  requested session; run-level stale flags without provenance remain explicit.
+  The disclosure reuses the existing Daily review refresh action and disables
+  it while that scan runs. Refresh completion does not imply current candles.
 - Screener candidates preserve `technicalRank`, `confidenceRank`, and final
   `priorityRank`. List ordering reads `priorityRank`; legacy `rank` remains the
   technical-rank alias for older API payloads.

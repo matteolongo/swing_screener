@@ -611,7 +611,9 @@ describe('Today page — cockpit composition', () => {
     vi.mocked(runScreener).mockRejectedValue(new Error('Simulated provider failure'));
     renderWithProviders(<Today />);
     expect(await screen.findByText(t('screener.quality.cachedAfterFailure'))).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: t('screener.quality.retry') })).toBeEnabled();
+    openNativeDisclosure(screen.getByText(t('cockpit.review.scanDetails')));
+    expect(within(screen.getByRole('region', { name: t('screener.quality.title') }))
+      .getByRole('button', { name: t('screener.quality.retry') })).toBeEnabled();
     expect(useScreenerStore.getState().todayRun?.result).toEqual(result);
   });
   it('shows strip, queue and opens detail on row select without collapsing the list', async () => {

@@ -33,12 +33,22 @@ export function getResultMarketStatus(result?: ScreenerResponse | null): MarketS
   if (!result) return 'unknown';
   const session = marketDate(result.asofDate);
   const dates = getResultCandleDates(result);
-  if (result.dataFreshness === 'stale' || result.candidates.some(candidate => candidate.dataStatus === 'stale')
-    || (session && dates.some(day => day < session))) return 'stale';
+  if (result.dataFreshness === 'stale' || getStaleInputs(result).length > 0) return 'stale';
   if (result.dataFreshness === 'intraday' || result.candidates.some(candidate => candidate.dataStatus === 'intraday')) return 'intraday';
   const candidateDatesKnown = result.candidates.every(candidate =>
     (marketDate(candidate.dataAsOf) ?? marketDate(candidate.lastBar))
     && !['unknown', 'missing', 'degraded'].includes(candidate.dataStatus ?? 'unknown'));
   return result.dataFreshness === 'final_close' && session && dates.length > 0 && candidateDatesKnown
     ? 'final_close' : 'unknown';
+}
+
+export function getStaleInputs(result: ScreenerResponse) {
+  const session = marketDate(result.asofDate);
+  const inputs = result.candidates.map(candidate => ({
+    ticker: candidate.ticker,
+    date: marketDate(candidate.dataAsOf) ?? marketDate(candidate.lastBar),
+    stale: candidate.dataStatus === 'stale',
+  }));
+  inputs.push({ ticker: result.benchmarkTicker ?? '', date: marketDate(result.benchmarkLastBar), stale: false });
+  return inputs.filter(input => input.stale || (session && input.date && input.date < session));
 }

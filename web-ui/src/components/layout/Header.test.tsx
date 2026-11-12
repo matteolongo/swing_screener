@@ -64,6 +64,7 @@ describe('Header', () => {
     });
     renderHeader();
     expect(screen.getByText(t('screener.quality.market.final_close'))).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: new RegExp(t('screener.quality.inspect')) })).toHaveAttribute('href', '/today#scan-data-quality');
   });
 
   it('shows the review-queue badge with count and opens the drawer', async () => {
