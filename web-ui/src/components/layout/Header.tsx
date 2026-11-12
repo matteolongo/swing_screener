@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import Badge from '@/components/common/Badge';
 import Select from '@/components/common/Select';
@@ -121,9 +122,11 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
             hasHealthError ? 'bg-danger' : isFinal ? 'bg-success' : 'bg-warning',
           )}
         />
-        <span
+        <Link
+          to="/today#scan-data-quality"
+          aria-label={`${healthLabel}. ${t('screener.quality.inspect')}`}
           className={cn(
-            'inline-flex min-w-0 flex-wrap items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+            'inline-flex min-h-11 min-w-0 flex-wrap items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
             healthClass,
           )}
         >
@@ -131,7 +134,8 @@ export default function Header({ navigation }: { navigation?: ReactNode }) {
           {reviewSource ? (
             <span className="font-normal text-muted">{formatDate(reviewSource.asofDate)}</span>
           ) : null}
-        </span>
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
       </div>
 
       <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-3 sm:basis-0 sm:justify-end">

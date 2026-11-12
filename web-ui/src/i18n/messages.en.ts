@@ -1665,6 +1665,13 @@ export const messagesEn = {
   },
   screener: {
     quality: {
+      inspect: 'View scan details and data quality',
+      staleExplanation: 'This scan is marked stale because an input was flagged stale or has a candle older than the requested session ({{date}}). The date in the header is the requested session, not proof that every input is current.',
+      staleInput: '{{symbol}}: candle date {{date}}',
+      flaggedStale: 'Flagged stale by the scan',
+      benchmark: 'Benchmark',
+      staleUnattributed: 'The scan reports stale data but does not identify the affected input in its saved details.',
+      staleRecovery: 'Refresh review to request current data. If the warning remains, inspect the provider and symbol warnings below and check data sources. A completed refresh can still contain stale inputs.',
       title: 'Scan quality',
       complete: 'Complete market-data coverage',
       partial: 'Partial market-data coverage',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getResultMarketStatus, getResultCandleDates, summarizeResultQuality } from './resultQuality';
+import { getResultMarketStatus, getResultCandleDates, getStaleInputs, summarizeResultQuality } from './resultQuality';
 import type { ScreenerResponse } from './types';
 
 describe('scan result quality presentation', () => {
@@ -34,5 +34,18 @@ describe('scan result quality presentation', () => {
   it('keeps a persisted dated candidate with no status unknown', () => {
     const legacy = result({ candidates: [{ ticker: 'TEST', lastBar: '2026-10-14' }] as ScreenerResponse['candidates'] });
     expect(getResultMarketStatus(legacy)).toBe('unknown');
+  });
+  it('attributes stale flags and older candles without inventing missing dates', () => {
+    expect(getStaleInputs(result({ benchmarkTicker: 'SPY', benchmarkLastBar: '2026-10-12', candidates: [
+      { ticker: 'FLAGGED', dataStatus: 'stale' },
+      { ticker: 'OLD', dataStatus: 'current', dataAsOf: '2026-10-13', lastBar: '2026-10-14' },
+      { ticker: 'CURRENT', dataStatus: 'current', lastBar: '2026-10-14' },
+      { ticker: 'UNKNOWN', lastBar: 'invalid' },
+    ] as ScreenerResponse['candidates'] }))).toEqual([
+      { ticker: 'FLAGGED', date: null, stale: true },
+      { ticker: 'OLD', date: '2026-10-13', stale: false },
+      { ticker: 'SPY', date: '2026-10-12', stale: false },
+    ]);
+    expect(getStaleInputs(result({ dataFreshness: 'stale' }))).toEqual([]);
   });
 });

@@ -11,6 +11,10 @@ Daily review shows market status and coverage beside portfolio risk. **Scan
 details and data quality** expands the requested, evaluated, and returned
 counts, candle dates, completion time, and provider warnings for the saved scan.
 Refresh failures keep the previous result labelled as cached and offer Retry.
+The header market-data badge opens and focuses those details. Stale results
+identify affected candidate/benchmark candle dates when available, distinguish
+the requested session from input freshness, and offer the shared refresh action.
+Run-level stale flags without affected-input details are labelled explicitly.
 Regime performance consumes the same shares-weighted trade R as Journal and
 Performance. Scratch-only win rates display as unavailable; unknown-risk trades
 are excluded. A benchmark outage displays the regime error state, not no trades.

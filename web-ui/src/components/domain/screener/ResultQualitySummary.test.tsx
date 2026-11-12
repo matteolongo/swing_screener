@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { Link } from 'react-router-dom';
 import { screen } from '@testing-library/react';
 import { openNativeDisclosure, renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
@@ -9,6 +10,36 @@ const result: ScreenerResponse = { asofDate: '2026-10-14', totalScreened: 4, tot
   dataFreshness: 'final_close', candidates: [], benchmarkLastBar: '2026-10-14' };
 
 describe('ResultQualitySummary', () => {
+  it('opens and focuses quality details from the badge destination, including repeat visits', async () => {
+    const { user } = renderWithProviders(<>
+      <Link to="/today#scan-data-quality">{t('screener.quality.inspect')}</Link>
+      <ResultQualitySummary result={result} isRefreshing={false} error={null} />
+    </>, { route: '/today' });
+    const summary = screen.getByText(t('cockpit.review.scanDetails')).closest('summary')!;
+    const link = screen.getByRole('link', { name: t('screener.quality.inspect') });
+    await user.click(link);
+    expect(summary.parentElement).toHaveAttribute('open');
+    expect(summary).toHaveFocus();
+    summary.parentElement!.removeAttribute('open');
+    await user.click(link);
+    expect(summary.parentElement).toHaveAttribute('open');
+    expect(summary).toHaveFocus();
+  });
+  it('identifies stale symbols and benchmark and offers an explicit refresh', async () => {
+    const refresh = vi.fn();
+    const { user, rerender } = renderWithProviders(<ResultQualitySummary result={{ ...result,
+      benchmarkTicker: 'SPY', benchmarkLastBar: '2026-10-12',
+      candidates: [{ ticker: 'TEST', dataStatus: 'stale', dataAsOf: '2026-10-13' }] as ScreenerResponse['candidates'],
+    }} isRefreshing={false} error={null} onRefresh={refresh} />);
+    openNativeDisclosure(screen.getByText(t('cockpit.review.scanDetails')));
+    expect(screen.getByText(t('screener.quality.staleInput', { symbol: 'TEST', date: '2026-10-13' }))).toBeVisible();
+    expect(screen.getByText(t('screener.quality.staleInput', { symbol: 'SPY', date: '2026-10-12' }))).toBeVisible();
+    await user.click(screen.getByRole('button', { name: t('todayPage.refresh.action') }));
+    expect(refresh).toHaveBeenCalledOnce();
+    rerender(<ResultQualitySummary result={{ ...result, dataFreshness: 'stale' }} isRefreshing error={null} onRefresh={refresh} />);
+    expect(screen.getByText(t('screener.quality.staleUnattributed'))).toBeVisible();
+    expect(screen.getByRole('button', { name: t('todayPage.refresh.running') })).toBeDisabled();
+  });
   it.each(['final_close', 'intraday', 'stale'] as const)('separates %s data from request completion', (dataFreshness) => {
     renderWithProviders(<ResultQualitySummary result={{ ...result, dataFreshness }} completedAt="2026-10-15T10:00:00Z" isRefreshing={false} error={null} />);
     expect(screen.getByText(t('screener.quality.complete'))).toBeVisible();
