@@ -12,19 +12,15 @@ import {
   fetchPositions,
   fetchPositionStopSuggestion,
   fetchPositionStopPreview,
-  fetchDegiroStatus,
-  fetchDegiroOrderHistory,
   fetchEarningsProximity,
   fetchRegimeBreakdown,
   fetchOpenPositionsIntelligence,
   triggerPositionAnalyze,
   fillOrder,
-  fillOrderFromDegiro,
   updatePositionStop,
   updatePositionTrailMethod,
   OrderFilterStatus,
   PositionFilterStatus,
-  DegiroStatus,
 } from './api';
 import {
   CreateOrderRequest,
@@ -87,36 +83,6 @@ export function useFillOrderMutation(onSuccess?: () => void) {
         variables.request,
         idempotencyKeyForMutation(variables),
       ),
-    onSuccess: async () => {
-      await invalidateOrderLifecycleQueries(queryClient, true);
-      onSuccess?.();
-    },
-  });
-}
-
-export function useDegiroStatusQuery() {
-  return useQuery<DegiroStatus>({
-    queryKey: queryKeys.degiroStatus(),
-    queryFn: fetchDegiroStatus,
-    staleTime: 60_000,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-}
-
-export function useDegiroOrderHistory() {
-  return useQuery({
-    queryKey: queryKeys.degiroOrderHistory(),
-    queryFn: fetchDegiroOrderHistory,
-    staleTime: 2 * 60 * 1000,
-  });
-}
-
-export function useFillFromDegiroMutation(onSuccess?: () => void) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ orderId, degiroOrderId }: { orderId: string; degiroOrderId: string }) =>
-      fillOrderFromDegiro(orderId, { degiroOrderId }),
     onSuccess: async () => {
       await invalidateOrderLifecycleQueries(queryClient, true);
       onSuccess?.();

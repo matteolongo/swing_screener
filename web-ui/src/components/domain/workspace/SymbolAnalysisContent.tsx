@@ -12,7 +12,6 @@ import {
   useTickerRuns,
 } from '@/features/intelligence/hooks';
 import { getCanonicalOrderDraft, type ScreenerRequest } from '@/features/screener/types';
-import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type {
   EvidenceRefreshResponse,
   SymbolIntelligence,
@@ -98,7 +97,6 @@ export default function SymbolAnalysisContent({
   const intelligenceMutation = useIntelligenceAnalysisMutation();
   const evidenceRefreshMutation = useEvidenceRefreshMutation();
   const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
-  const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
   const [attemptedRunId, setAttemptedRunId] = useState<string | null>(null);
   const [lastAttemptForce, setLastAttemptForce] = useState(false);
@@ -426,18 +424,11 @@ export default function SymbolAnalysisContent({
                   isError: fundamentals.isError,
                   error: fundamentals.error,
                 },
-                catalyst: {
-                  data: catalystQuery.data,
-                  isLoading: catalystQuery.isLoading,
-                  isError: catalystQuery.isError,
-                  error: catalystQuery.error,
-                },
                 intelligenceOutdated,
                 sources: (intelligenceWorkflow?.sources ?? []).filter(
                   ({ id }) => id === 'fundamentals' || id === 'evidence' || id === 'intelligence',
                 ),
                 onOpenFundamentals: () => onTabChange('fundamentals'),
-                onOpenIntelligence: () => onTabChange('intelligence'),
                 onPrepareOrder: canReviewOrder ? () => onTabChange('order') : undefined,
                 onSaveDraft: !heldMode && candidate && !canReviewOrder ? () => setShowDraft(true) : undefined,
                 isWatched,

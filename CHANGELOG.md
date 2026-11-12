@@ -23,6 +23,12 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Stop calling API routes the backend no longer serves. Symbol Overview no
+  longer requests `/api/catalysts/*` and reports catalysts as an unavailable
+  dependency on every symbol. Pending orders no longer show a permanently
+  disabled "Fill via DeGiro" action backed by removed DeGiro status,
+  order-history and fill routes. A backend test now fails when a web UI API
+  path has no matching route.
 - Make the market-data badge open scan details with stale symbol/benchmark
   dates, an explanation of the requested session, and a refresh action.
 - Finish Daily review scans reliably across navigation, initialize older saved

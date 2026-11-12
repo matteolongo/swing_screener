@@ -829,41 +829,6 @@ export const handlers = [
     })
   }),
 
-  http.get(`${API_BASE_URL}/api/portfolio/degiro/status`, () => {
-    return HttpResponse.json({
-      installed: false,
-      credentials_configured: false,
-      available: false,
-      mode: 'missing_library',
-      detail: 'degiro-connector is not installed.',
-    })
-  }),
-
-  http.get(`${API_BASE_URL}/api/portfolio/degiro/order-history`, () => {
-    return HttpResponse.json({ orders: [], asof: '2026-05-28' })
-  }),
-
-  http.post(`${API_BASE_URL}/api/portfolio/orders/:orderId/fill-from-degiro`, ({ params }) => {
-    return HttpResponse.json({
-      order_id: params.orderId,
-      broker_order_id: 'DG-001',
-      quantity_mismatch: false,
-      position: mockPositions[0],
-    }, { status: 201 })
-  }),
-
-  http.post(`${API_BASE_URL}/api/portfolio/sync/degiro/apply`, () => {
-    return HttpResponse.json({
-      positions_created: 0,
-      positions_updated: 0,
-      orders_created: 0,
-      orders_updated: 0,
-      fees_applied: 0,
-      ambiguous_skipped: 0,
-      artifact_paths: {},
-    })
-  }),
-
   http.delete(`${API_BASE_URL}/api/portfolio/orders/:orderId`, ({ params }) => {
     return HttpResponse.json({
       status: 'ok',
@@ -1115,41 +1080,6 @@ export const handlers = [
       patterns: [],
     })
   }),
-
-  // Catalyst endpoints
-  http.post(`${API_BASE_URL}/api/catalysts/daily-scan`, () =>
-    HttpResponse.json({
-      report_id: 'mock-r1', event_summary: 'Mock catalyst.', themes: [
-        { name: 'Theme A', summary: 'Summary A', time_horizon: 'short_term', confidence: 0.8 },
-        { name: 'Theme B', summary: 'Summary B', time_horizon: 'medium_term', confidence: 0.6 },
-      ],
-      causal_chains: [], beneficiaries: [], losers: [], hidden_opportunities: [],
-      non_actionable_notes: [], generated_at: '2026-05-24T10:00:00Z',
-    })
-  ),
-
-  http.get(`${API_BASE_URL}/api/catalysts/latest`, () => HttpResponse.json({
-    report_id: 'mock-r1', event_summary: 'Mock catalyst.', themes: [],
-    causal_chains: [], beneficiaries: [], losers: [], hidden_opportunities: [],
-    non_actionable_notes: [], generated_at: '2026-05-24T10:00:00Z',
-  })),
-
-  http.get(`${API_BASE_URL}/api/catalysts/symbol/:ticker`, ({ params }) =>
-    HttpResponse.json({
-      ticker: (params.ticker as string).toUpperCase(),
-      state: 'CATALYST_ACTIVE', catalyst_strength: 8.0,
-      thesis: 'Mock thesis.', key_risks: [], sources: [],
-      report_id: 'mock-r1', generated_at: '2026-05-24T10:00:00Z',
-    })
-  ),
-
-  http.post(`${API_BASE_URL}/api/catalysts/manual`, () =>
-    HttpResponse.json({
-      report_id: 'mock-r1', event_summary: 'Mock manual catalyst.', themes: [],
-      causal_chains: [], beneficiaries: [], losers: [], hidden_opportunities: [],
-      non_actionable_notes: [], generated_at: '2026-05-24T10:00:00Z',
-    })
-  ),
 
   // Calendar events mock
   http.get(`${API_BASE_URL}/api/calendar/events`, () => {

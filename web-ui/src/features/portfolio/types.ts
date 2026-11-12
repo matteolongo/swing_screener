@@ -3,20 +3,12 @@ export type {
   OrderStatus,
   CreateOrderRequest,
   FillOrderRequest,
-  DegiroOrder,
-  DegiroOrderApiResponse,
-  FillFromDegiroRequest,
-  FillFromDegiroResponse,
-  FillFromDegiroResponseApi,
   OrderSnapshot,
   OrderSnapshotResponseApi,
 } from '@/types/order';
 export {
   transformOrder,
   transformCreateOrderRequest,
-  transformDegiroOrder,
-  transformFillFromDegiroRequest,
-  transformFillFromDegiroResponse,
   transformOrderSnapshot,
 } from '@/types/order';
 

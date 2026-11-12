@@ -67,20 +67,8 @@ function buildModel(overrides: Partial<SymbolOverviewModel> = {}): SymbolOvervie
       isError: false,
       error: null,
     },
-    catalyst: {
-      data: {
-        ticker: 'AAPL',
-        state: 'CATALYST_ACTIVE',
-        thesis: 'Product launch supports demand.',
-        generatedAt: '2026-07-27T19:00:00Z',
-      } as any,
-      isLoading: false,
-      isError: false,
-      error: null,
-    },
     intelligenceOutdated: false,
     onOpenFundamentals: vi.fn(),
-    onOpenIntelligence: vi.fn(),
     ...overrides,
   };
 }
@@ -113,7 +101,6 @@ describe('SymbolOverviewTab', () => {
       name: 'no-data',
       overrides: {
         fundamentals: { data: null, isLoading: false, isError: false, error: null },
-        catalyst: { data: null, isLoading: false, isError: false, error: null },
       },
       expected: t('workspacePage.overview.notAvailable'),
     },
@@ -137,12 +124,11 @@ describe('SymbolOverviewTab', () => {
       name: 'failed',
       overrides: {
         fundamentals: sourceFailure('Overview fundamentals failed'),
-        catalyst: sourceFailure('Overview catalysts failed'),
       },
       expected: t('workspacePage.data.partial'),
     },
     { name: 'timeout', overrides: { fundamentals: sourceFailure('Overview timed out') }, expected: t('workspacePage.data.partial') },
-    { name: 'malformed', overrides: { catalyst: sourceFailure('Overview malformed') }, expected: t('workspacePage.data.partial') },
+    { name: 'malformed', overrides: { fundamentals: sourceFailure('Overview malformed') }, expected: t('workspacePage.data.partial') },
   ];
 
   it.each(reliabilityCases)('keeps its decision and $name source contract visible', ({ overrides, expected }) => {
