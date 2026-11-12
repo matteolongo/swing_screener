@@ -1,9 +1,8 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import MainLayout from './components/layout/MainLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import { registerTradingStoreSync } from '@/features/persistence';
 import { migrateRemovedUniverseIds } from '@/features/screener/universeStorage';
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { LoginGate } from '@/features/auth/LoginGate';
@@ -29,18 +28,11 @@ const queryClient = new QueryClient({
   },
 });
 
-function TradingStoreSyncBridge() {
-  const activeQueryClient = useQueryClient();
-  useEffect(() => registerTradingStoreSync(activeQueryClient), [activeQueryClient]);
-  return null;
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <LoginGate>
-          <TradingStoreSyncBridge />
           <BrowserRouter>
             <ErrorBoundary>
               <Suspense fallback={<div className="p-6 text-sm text-muted">Loading page...</div>}>

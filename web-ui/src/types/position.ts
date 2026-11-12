@@ -97,12 +97,6 @@ export interface UpdateStopRequest {
   expectedVersion?: number;
   newStop: number;
   reason?: string;
-  marketPrice?: {
-    ticker: string;
-    price: number;
-    observedAt: string;
-    dataStatus: 'current';
-  };
 }
 
 export interface ClosePositionRequest {

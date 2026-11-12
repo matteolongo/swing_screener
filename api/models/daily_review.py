@@ -5,10 +5,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
-from api.models.portfolio import OrderSnapshot, Position
-from api.models.screener import SameSymbolCandidateContext, TaxonomyFilter
-from api.models.strategy import Strategy
-from api.models.watchlist import WatchItem, WatchlistItemView
+from api.models.screener import SameSymbolCandidateContext
+from api.models.watchlist import WatchlistItemView
 from swing_screener.recommendation.models import DecisionSummary
 from swing_screener.data.currencies import get_currency_definition
 
@@ -198,21 +196,3 @@ class DailyReviewSnapshotResponse(BaseModel):
     """Acknowledgement for a persisted daily-review snapshot."""
 
     saved: bool = True
-
-
-class DailyReviewComputeRequest(BaseModel):
-    strategy: Strategy
-    positions: list[Position] = Field(default_factory=list)
-    orders: list[OrderSnapshot] = Field(default_factory=list)
-    watchlist: list[WatchItem] = Field(default_factory=list)
-    top_n: int = Field(default=200, ge=1, le=200)
-    universe: Optional[str] = None
-    preset: Optional[str] = None
-    taxonomy_filter: Optional[TaxonomyFilter] = None
-    include_candidates: bool = Field(
-        default=True,
-        description=(
-            "Whether to run the screener and include discovery candidates. "
-            "Portfolio-only reviews set this to false."
-        ),
-    )

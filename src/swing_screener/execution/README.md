@@ -121,8 +121,7 @@ pending → cancelled  (cancel_order)
 
 Orders are persisted to `data/orders.json`. Use `load_orders()` / `save_orders()` for all reads and writes — never edit the JSON directly while the CLI is running (file locking is active).
 
-The API owns a separate SQL ledger (or request-supplied browser ledger for
-stateless commands). Its manual-plan lifecycle is `draft → pending → submitted
+The API owns a separate SQL ledger. Its manual-plan lifecycle is `draft → pending → submitted
 → filled`, with unfilled `draft`, `pending` and `submitted` records cancellable
 to `cancelled`. `save_as_draft` stores a coherent proposed entry plan without
 approval; submission/fill are blocked until a fresh signed review promotes it

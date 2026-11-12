@@ -491,34 +491,3 @@ cache:
   # Days before a Polygon OHLCV parquet cache file is considered stale.
   # Only applies to ranges whose end date is today (historical ranges never expire).
   polygon_cache_ttl_days: 7
-
-# ---------------------------------------------------------------------------
-# Paid provider roadmap only. These entries document intended future gates and
-# must not be treated as active runtime providers until provider implementations
-# and validation tests exist.
-# ---------------------------------------------------------------------------
-data_provider_roadmap:
-  eodhd:
-    status: planned
-    runtime_enabled: false
-    activation_gates:
-      - provider_module_implemented
-      - config_validation_added
-      - contract_tests_passing
-      - explicit_user_config
-    domains:
-      - eu_fundamentals
-      - global_calendar
-      - financial_news
-  twelve_data:
-    status: planned
-    runtime_enabled: false
-    activation_gates:
-      - provider_module_implemented
-      - config_validation_added
-      - contract_tests_passing
-      - explicit_user_config
-    domains:
-      - global_fundamentals
-      - earnings_calendar
-      - dividends_calendar

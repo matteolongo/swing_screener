@@ -7,7 +7,7 @@ import os
 import threading
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Optional
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from api.services.backtest_service import BacktestService
@@ -39,7 +39,6 @@ from api.services.orders_service import OrdersService
 from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.screener_service import ScreenerService
-from api.services.stateless_trading_service import StatelessTradingService
 from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
 from swing_screener.fundamentals import (
@@ -272,16 +271,6 @@ def get_orders_service(
         approval_signer=approval_signer,
         uow=uow,
     )
-
-
-def get_stateless_trading_service(
-    config_repo: Annotated[ConfigRepository, Depends(get_config_repo)],
-    strategy_repo: Annotated[StrategyRepository, Depends(get_strategy_repo)],
-    approval_signer: Annotated[
-        OrderApprovalTokenSigner, Depends(get_order_approval_signer)
-    ],
-) -> StatelessTradingService:
-    return StatelessTradingService(config_repo, strategy_repo, approval_signer)
 
 
 def get_portfolio_service(

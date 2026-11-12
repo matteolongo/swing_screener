@@ -176,23 +176,6 @@ and it intentionally emits a qualitative label rather than a false-precision
 | `max_runs_per_ticker` | `50` | Max persisted runs kept per ticker (older traces are pruned) |
 | `prompt_preview_chars` | `500` | Truncation length for prompt preview in traces (no full prompt stored) |
 
-### `mcp.yaml`
-
-MCP feature flags and server metadata.
-
-Edit this file to enable or disable MCP features:
-
-```yaml
-features:
-  portfolio:
-    enabled: true
-    tools:
-      - list_positions
-      - close_position
-```
-
-Changes require MCP server restart.
-
 ## Runtime Path Keys
 
 Runtime path keys are defined under `paths` in `defaults.yaml` and control where the application writes cache and data files.
@@ -230,7 +213,6 @@ limit `app_config.risk.max_concentration_pct`.
   - `user.yaml` for user-facing app and API behavior
   - `strategies.yaml` for strategy definitions and strategy-level tuning
   - `intelligence.yaml` for intelligence runtime settings and prompts
-  - `mcp.yaml` for MCP feature flags and server metadata
 - `docker-compose.yml` is the repo's local orchestration config. Use it for container/runtime wiring only, not for application defaults that belong in `config/*.yaml`.
 - This directory is for **configuration files only**
 - Do not store runtime artifacts or temporary files here

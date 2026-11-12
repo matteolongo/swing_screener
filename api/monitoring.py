@@ -95,27 +95,6 @@ class HealthChecker:
             "issues": issues or None,
         }
 
-    @staticmethod
-    def check_data_directory() -> Dict[str, Any]:
-        """Check that data directory is accessible."""
-        try:
-            # Resolve the actual data directory from the configured state files
-            # (honors SWING_SCREENER_DATA_DIR / runtime path resolution) rather
-            # than a CWD-relative "data" that flaps when uvicorn runs elsewhere.
-            data_dir = HealthChecker._configured_state_files()["positions"].parent
-            if not data_dir.exists():
-                return {"status": "warning", "message": f"{data_dir} directory not found"}
-
-            # Check if we can list files
-            list(data_dir.iterdir())
-
-            return {"status": "ok"}
-        except PermissionError:
-            return {"status": "error", "message": "Permission denied"}
-        except Exception as exc:
-            return {"status": "error", "message": str(exc)}
-
-
 class MetricsCollector:
     """Simple in-memory metrics collector.
     
@@ -146,40 +125,6 @@ class MetricsCollector:
         with self._lock:
             self._validation_failure_count += 1
 
-    def record_intelligence_metrics(self, *, source_health: Dict[str, Dict[str, Any]], deduped_count: int) -> None:
-        with self._lock:
-            self._intelligence_deduped_events_total += max(0, int(deduped_count))
-            for source, payload in source_health.items():
-                key = str(source).strip().lower()
-                if not key or not isinstance(payload, dict):
-                    continue
-                self._intelligence_ingested_events_total[key] = (
-                    self._intelligence_ingested_events_total.get(key, 0)
-                    + max(0, int(payload.get("event_count", 0)))
-                )
-                self._intelligence_source_errors_total[key] = (
-                    self._intelligence_source_errors_total.get(key, 0)
-                    + max(0, int(payload.get("error_count", 0)))
-                )
-                blocked_reasons = payload.get("blocked_reasons", [])
-                blocked_count = int(payload.get("blocked_count", 0))
-                if isinstance(blocked_reasons, list) and blocked_reasons:
-                    for reason in blocked_reasons:
-                        reason_key = str(reason).strip().lower()
-                        if not reason_key:
-                            continue
-                        metrics_key = f"{key}:{reason_key}"
-                        self._intelligence_source_blocked_total[metrics_key] = (
-                            self._intelligence_source_blocked_total.get(metrics_key, 0) + max(1, blocked_count)
-                        )
-                elif blocked_count > 0:
-                    metrics_key = f"{key}:unknown"
-                    self._intelligence_source_blocked_total[metrics_key] = (
-                        self._intelligence_source_blocked_total.get(metrics_key, 0) + blocked_count
-                    )
-                self._intelligence_mean_confidence[key] = float(payload.get("mean_confidence", 0.0))
-                self._intelligence_coverage_ratio[key] = float(payload.get("coverage_ratio", 0.0))
-    
     def get_metrics(self) -> Dict[str, Any]:
         """Get current metrics."""
         uptime_seconds = time.time() - self._start_time

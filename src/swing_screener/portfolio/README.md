@@ -5,18 +5,10 @@ Position lifecycle management, metrics, and data migration utilities.
 ## Quick Start
 
 ```python
-from swing_screener.portfolio.state import Position, ManageConfig, load_positions, save_positions
+from swing_screener.portfolio.state import Position, ManageConfig, evaluate_positions
 
-# Load positions from JSON
-positions = load_positions("data/positions.json")
-
-# Inspect open positions
-open_pos = [p for p in positions if p.status == "open"]
-for pos in open_pos:
-    print(f"{pos.ticker}: entry={pos.entry_price}, stop={pos.stop_price}, shares={pos.shares}")
-
-# Save updated positions
-save_positions("data/positions.json", positions)
+# Positions are persisted by the API's SQL ledger; this module evaluates them.
+updates, positions = evaluate_positions(ohlcv, positions, ManageConfig())
 ```
 
 ```python
@@ -38,16 +30,15 @@ When `r_now >= 1.0`, the trade has recovered its initial risk → move stop to b
 When `r_now >= 2.0`, trail the stop under the 20-bar SMA.
 
 ### Source of Truth
-Positions are persisted to `data/positions.json` — this is the single source of truth. The ORM in `db.py` is **not used** by the CLI.
+Positions are persisted by the API's SQL ledger (`api/db/`). This module holds pure evaluation logic and does no I/O.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `state.py` | `Position`, `ManageConfig`, `PositionUpdate`, load/save, management logic |
+| `state.py` | `Position`, `ManageConfig`, `PositionUpdate`, management logic |
 | `metrics.py` | P&L, R-multiple, position value calculations |
 | `analytics.py` | Canonical closed-trade R analytics, curve, streak, and tag aggregates |
-| `migrate.py` | Data migration: link orders to positions, backfill stop prices |
 | `__init__.py` | Package exports |
 
 ## Key Classes

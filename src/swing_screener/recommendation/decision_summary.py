@@ -125,13 +125,6 @@ def _format_price(value: float | None) -> str | None:
     return f"{value:.2f}"
 
 
-def _format_percent(value: float | None) -> str | None:
-    if value is None:
-        return None
-    sign = "+" if value >= 0 else "-"
-    return f"{sign}{abs(value):.1f}%"
-
-
 def _format_abs_percent(value: float | None) -> str | None:
     if value is None:
         return None

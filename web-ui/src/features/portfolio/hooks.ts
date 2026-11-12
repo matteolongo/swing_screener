@@ -9,7 +9,6 @@ import {
   partialClosePosition,
   fetchOrders,
   fetchPortfolioSummary,
-  fetchPositionMetrics,
   fetchPositions,
   fetchPositionStopSuggestion,
   fetchPositionStopPreview,
@@ -156,15 +155,6 @@ export function useOpenPositions() {
   return useQuery({
     queryKey: queryKeys.positions('open'),
     queryFn: () => fetchPositions('open'),
-  });
-}
-
-export function usePositionMetrics(positionId?: string) {
-  return useQuery({
-    queryKey: queryKeys.positionMetrics(positionId),
-    queryFn: () => fetchPositionMetrics(positionId as string),
-    enabled: Boolean(positionId),
-    staleTime: 30_000,
   });
 }
 

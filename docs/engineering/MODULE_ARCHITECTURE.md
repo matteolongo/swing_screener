@@ -34,7 +34,7 @@ This document is the canonical module layout after the 2026 architecture consoli
 6. `portfolio` owns position state/metrics.
 7. `data` owns provider access and market-data ingestion.
 8. `fundamentals` owns fundamental data providers, scoring, and snapshot storage.
-9. `intelligence` owns the LLM analysis pipeline, LangGraph analyzer graph, advisory evidence weighting, cache, and symbol analyzer.
+9. `intelligence` owns the LLM analysis pipeline, linear analyzer step pipeline, advisory evidence weighting, cache, and symbol analyzer.
 10. `recommendation` owns the unified decision summary (what-to-do / why) — distinct from
     `risk/recommendations`, which owns the risk-side recommendation engine and trade thesis.
 11. `settings` owns settings load/migrate/path resolution.
@@ -128,9 +128,8 @@ This appears on the Data Sources page with a live Test button. `INTELLIGENCE_SOU
 
 ## Intelligence Graph And Weighting
 
-`src/swing_screener/intelligence/graph/` contains the explicit LangGraph
-pipeline used by `SymbolAnalyzer.analyze()`. The graph is currently linear and
-keeps the former analyzer steps as named nodes:
+`src/swing_screener/intelligence/graph/` contains the linear step pipeline used
+by `SymbolAnalyzer.analyze()`. A plain loop runs the named steps in order:
 
 1. resolve context
 2. assemble inputs

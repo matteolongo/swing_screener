@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/lib/api';
 import { server } from '@/test/mocks/server';
@@ -50,7 +50,6 @@ describe('position conflict recovery', () => {
     expect(screen.getByLabelText(t('positions.updateStopModal.newStopPrice'))).toHaveValue(97);
   });
   it('refetches the changed position and preserves input until deliberate resubmission', async () => {
-    vi.stubEnv('VITE_PERSISTENCE_MODE', 'api');
     let version = 1;
     const submitted: Array<Record<string, unknown>> = [];
     server.use(

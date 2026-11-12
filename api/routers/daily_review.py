@@ -11,7 +11,6 @@ from api.dependencies import (
 )
 from api.models.daily_review import (
     DailyReview,
-    DailyReviewComputeRequest,
     DailyReviewSnapshotRequest,
     DailyReviewSnapshotResponse,
 )
@@ -22,14 +21,6 @@ from api.services.screener_service import ScreenerService
 from api.services.watchlist_service import WatchlistService
 
 router = APIRouter(prefix="/daily-review", tags=["daily-review"])
-
-
-def _dump_payload_item(item):
-    """Serialize either a Pydantic model or a plain dict payload."""
-    model_dump = getattr(item, "model_dump", None)
-    if callable(model_dump):
-        return model_dump()
-    return item
 
 
 def get_daily_review_service(
@@ -92,25 +83,6 @@ def get_daily_review(
         preset=preset,
         taxonomy_filter=parsed_filter,
         include_candidates=include_candidates,
-    )
-
-
-@router.post("/compute", response_model=DailyReview)
-def compute_daily_review(
-    request: DailyReviewComputeRequest,
-    service: DailyReviewService = Depends(get_daily_review_service),
-) -> DailyReview:
-    """Compute daily review from client-provided state without backend persistence writes."""
-    return service.compute_daily_review_from_state(
-        strategy=_dump_payload_item(request.strategy),
-        positions=[_dump_payload_item(position) for position in request.positions],
-        orders=[_dump_payload_item(order) for order in request.orders],
-        watchlist=request.watchlist,
-        top_n=request.top_n,
-        universe=request.universe,
-        preset=request.preset,
-        taxonomy_filter=request.taxonomy_filter,
-        include_candidates=request.include_candidates,
     )
 
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Annotated, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 
@@ -13,7 +13,6 @@ from api.dependencies import (
     get_portfolio_service,
     get_positions_repo,
     get_regime_analytics_service,
-    get_stateless_trading_service,
     get_strategy_repo,
 )
 from api.models.portfolio import (
@@ -32,16 +31,11 @@ from api.models.portfolio import (
     PositionUpdate,
     RegimeBreakdownResponse,
     StopSuggestionComputeRequest,
-    TradingStateCommandRequest,
-    TradingStateCommandResponse,
-    TradingStateMetricsResponse,
-    TradingStateSnapshot,
     UpdateStopRequest,
     UpdateTrailMethodRequest,
 )
 from api.models.position_intelligence import OpenPositionIntelligenceSummary
 from api.repositories.config_repo import ConfigRepository
-from api.repositories.in_memory_trading_state import InMemoryTradingState
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.portfolio.degiro_sync import DeGiroSyncResult, sync_degiro_holdings
@@ -49,7 +43,6 @@ from api.services.portfolio_service import PortfolioService
 from api.services.orders_service import OrdersService
 from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.snapshot_freshness import snapshot_freshness
-from api.services.stateless_trading_service import StatelessTradingService
 from swing_screener.intelligence.cache import read_from_cache
 
 logger = logging.getLogger(__name__)
@@ -72,15 +65,6 @@ def _subject(request: Request) -> str:
 
 
 # ===== Positions =====
-
-
-@router.post("/state/commands", response_model=TradingStateCommandResponse)
-async def apply_trading_state_command(
-    request: TradingStateCommandRequest,
-    service: Annotated[StatelessTradingService, Depends(get_stateless_trading_service)],
-) -> TradingStateCommandResponse:
-    """Return the next browser-owned snapshot without server portfolio writes."""
-    return service.execute(request)
 
 
 @router.get("/positions", response_model=PositionsWithMetricsResponse)
@@ -324,29 +308,6 @@ async def get_portfolio_summary(
     return service.get_portfolio_summary(
         account_size=account_size, account_size_mode=account_size_mode
     )
-
-
-@router.post("/state/metrics", response_model=TradingStateMetricsResponse)
-async def project_trading_state_metrics(
-    snapshot: TradingStateSnapshot,
-    config_repo: Annotated[ConfigRepository, Depends(get_config_repo)],
-    strategy_repo: Annotated[StrategyRepository, Depends(get_strategy_repo)],
-) -> TradingStateMetricsResponse:
-    """Read canonical metrics from isolated supplied holdings, never server state."""
-    state = InMemoryTradingState(snapshot)
-    service = PortfolioService(
-        positions_repo=state.positions_repo, config_repo=config_repo
-    )
-    positions = await get_positions(
-        status=None,
-        service=service,
-        config_repo=config_repo,
-        strategy_repo=strategy_repo,
-    )
-    summary = await get_portfolio_summary(
-        service=service, config_repo=config_repo, strategy_repo=strategy_repo
-    )
-    return TradingStateMetricsResponse(positions=positions.positions, summary=summary)
 
 
 @router.get("/earnings-proximity/{ticker}", response_model=EarningsProximityResponse)

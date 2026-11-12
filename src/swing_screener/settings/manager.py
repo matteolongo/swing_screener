@@ -11,7 +11,6 @@ from swing_screener.settings.paths import (
     data_dir,
     defaults_yaml_path,
     intelligence_yaml_path,
-    mcp_yaml_path,
     repo_config_dir,
     resolve_repo_path,
     strategies_yaml_path,
@@ -32,7 +31,6 @@ def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str
 class SettingsManager:
     def __init__(self) -> None:
         repo_defaults = repo_config_dir() / "defaults.yaml"
-        repo_mcp = repo_config_dir() / "mcp.yaml"
         self.defaults_store = CachedYamlFile(
             defaults_yaml_path(),
             default_factory=dict,
@@ -41,11 +39,6 @@ class SettingsManager:
         self.user_store = CachedYamlFile(user_yaml_path(), default_factory=dict)
         self.strategies_store = CachedYamlFile(strategies_yaml_path(), default_factory=dict)
         self.intelligence_store = CachedYamlFile(intelligence_yaml_path(), default_factory=dict)
-        self.mcp_store = CachedYamlFile(
-            mcp_yaml_path(),
-            default_factory=dict,
-            fallback_path=repo_mcp if repo_mcp != mcp_yaml_path() else None,
-        )
 
     @property
     def current_config_dir(self) -> Path:
@@ -82,12 +75,6 @@ class SettingsManager:
 
     def save_intelligence_document(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.intelligence_store.save(payload)
-
-    def load_mcp_document(self) -> dict[str, Any]:
-        return self._load_document(self.mcp_store)
-
-    def save_mcp_document(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self.mcp_store.save(payload)
 
     def merged_runtime_settings(self) -> dict[str, Any]:
         defaults_runtime = self.load_defaults_document().get("runtime", {})
@@ -145,14 +132,6 @@ class SettingsManager:
         defaults_doc = self.load_defaults_document()
         payload = defaults_doc.get("intelligence", {})
         return deepcopy(payload if isinstance(payload, dict) else {})
-
-    def get_intelligence_provider_catalog(self) -> dict[str, Any]:
-        defaults_doc = self.load_defaults_document()
-        ui_doc = defaults_doc.get("ui", {})
-        if not isinstance(ui_doc, dict):
-            return {}
-        providers = ui_doc.get("intelligence_providers", {})
-        return deepcopy(providers if isinstance(providers, dict) else {})
 
     def get_low_level_defaults_payload(self, section: str | None = None) -> dict[str, Any]:
         defaults_doc = self.load_defaults_document()

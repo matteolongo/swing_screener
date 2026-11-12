@@ -51,10 +51,9 @@ Thread-safe file operations using `portalocker`. Timeouts are enforced with expl
 ```python
 locked_read_json_cli(path: Path, timeout=5.0) -> Any
 locked_write_json_cli(path: Path, data: dict | list, timeout=5.0) -> None
-locked_write_text_cli(path: Path, text: str, timeout=5.0) -> None
 ```
 
-Used by `portfolio/state.py` and `execution/orders.py` to prevent concurrent writes from multiple CLI processes.
+Used by `fundamentals/storage.py` to prevent concurrent snapshot writes.
 
 ### `dataframe_helpers.py`
 

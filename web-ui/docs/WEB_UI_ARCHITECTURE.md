@@ -114,43 +114,21 @@
   on mount. Today's quick stop acceptance also sends the current position version.
   Trail-policy saves return the committed version for the subsequent stop write.
 - Client/UI state: Zustand stores in `src/stores/`.
-- No local persistence by default (`VITE_PERSISTENCE_MODE=api`).
+- Portfolio, order, strategy and watchlist state are server-owned; the browser has no local trading ledger.
 
-Local persistence is a storage choice, not a second trading engine.
-`features/persistence/portfolioService.ts` serializes the browser snapshot and
-dispatches `/api/portfolio/state/commands`; backend services own lifecycle,
-approval, risk, fee and FX calculations. A Web Lock serializes command execution
-across tabs, and the adapter compares the stored state before accepting the
-response. Revision, idempotency receipts, orders, positions and returned active
-strategy are persisted together only on success. Retried requests retain their
-explicit effective time and new-position identity. Missing Web Locks fails closed.
-Local stop updates load the latest candle first and pass its close plus candle
-date through the command's required market-price observation.
-Local position metrics and summaries use the read-only `/api/portfolio/state/metrics`
-projection; these read models never replace the stored snapshot. Browser ledger
-freshness stays unknown rather than inheriting server-database freshness.
 Activating or editing the active strategy clears the current workspace selection
 alongside strategy-derived query and screener state so an old candidate draft
 cannot survive under new policy.
 Closed-trade performance, self-sufficient curve rows (including stable identity
 for ID-less trades), journal tag aggregates, metric display statuses, insight
-verdict/reason codes, and portfolio heat bands also come from that projection
-(or `/api/portfolio/summary` in API mode); components localize, format, filter,
+verdict/reason codes, and portfolio heat bands come from
+`/api/portfolio/summary`; components localize, format, filter,
 and render them without re-deriving R, streak, sample-size, or threshold policy.
 
-Local Daily Review requests include the browser's watchlist and active strategy.
-The stateless backend enriches those symbols and returns the canonical near-trigger
-slice; the browser neither substitutes the server watchlist nor computes a second
-trigger-distance threshold.
-
-`UpdateStopRequest.marketPrice` carries the caller's ticker, price, observation
-timestamp and `current` status in local mode. It must come from an actual observed
-quote or explicit user observation; adapters do not relabel stored prices as fresh.
 Close and partial-close success invalidate linked order queries as well as position
 and review queries, because canonical commands may replace or cancel exit orders.
 `PositionLifecycleResult` transforms `linked_order_ids` at the API boundary.
-Browser commands return their successful snapshot/affected IDs through the local
-adapter. The Book and Today page boundaries subscribe to lifecycle mutation
+The Book and Today page boundaries subscribe to lifecycle mutation
 state through `PositionProtectionNotice`, so the manual broker follow-up survives
 a closed position panel or a tab change. It renders only when the latest mutation
 succeeded and reported changed protection (including protective-order fills);

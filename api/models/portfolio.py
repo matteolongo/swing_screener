@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Annotated, Literal, Optional
+from typing import Literal, Optional
 
 from pydantic import (
-    AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
@@ -15,8 +14,6 @@ from pydantic import (
     model_validator,
 )
 
-from api.db.legacy_models import LegacyOrder
-from api.models.strategy import Strategy
 
 PositionStatus = Literal["open", "closed"]
 ActionType = Literal[
@@ -82,23 +79,6 @@ class Position(BaseModel):
         default=None,
         description="Trail method parameter (ATR multiplier or fixed % value)",
     )
-
-
-class PositionSnapshot(Position):
-    """Immutable position record for request-scoped state snapshots.
-
-    Same fields and validation as ``Position``; attribute mutation is
-    rejected, mutable collections are stored as tuples, and nested
-    partial-close legs are frozen, so a snapshot cannot be altered through
-    a shared reference. Derive local mutable copies via ``model_dump()``
-    when mutation is needed.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    tags: tuple[str, ...] = ()
-    partial_closes: tuple[PartialCloseEventSnapshot, ...] = ()
-    exit_order_ids: tuple[str, ...] | None = None
 
 
 class PositionUpdate(BaseModel):
@@ -445,55 +425,6 @@ class CreateOrderRequest(BaseModel):
         return self
 
 
-class OrderSnapshot(BaseModel):
-    """Immutable, validated view of a persisted order for stateless flows.
-
-    Narrow contract for request-supplied order snapshots (e.g. daily-review
-    ``compute``). Mirrors the canonical order lifecycle statuses and kinds
-    from ``LegacyOrder``/``CreateOrderRequest`` without requiring full order
-    creation fields. Extra provider/order fields are allowed and preserved.
-    """
-
-    model_config = ConfigDict(frozen=True, extra="allow")
-
-    order_id: str
-    ticker: str
-    status: Literal["draft", "pending", "submitted", "filled", "cancelled"] = "pending"
-    order_kind: Literal["entry", "stop", "take_profit"] = "entry"
-    order_date: Optional[str] = None
-    position_id: Optional[str] = None
-
-    @field_validator("order_id", mode="before")
-    @classmethod
-    def validate_order_id(cls, v: object) -> str:
-        normalized = str(v).strip() if v is not None else ""
-        if not normalized:
-            raise ValueError("order_id must not be blank")
-        return normalized
-
-    @field_validator("ticker", mode="before")
-    @classmethod
-    def normalize_ticker(cls, v: object) -> str:
-        normalized = str(v).strip().upper() if v is not None else ""
-        if not normalized:
-            raise ValueError("Ticker cannot be empty")
-        if len(normalized) > 20:
-            raise ValueError("Ticker too long")
-        return normalized
-
-    @field_validator("status", mode="before")
-    @classmethod
-    def normalize_status(cls, v: object) -> object:
-        return str(v).strip().lower() if v is not None else v
-
-    @field_validator("order_kind", mode="before")
-    @classmethod
-    def normalize_order_kind(cls, v: object) -> object:
-        if v is None:
-            return v
-        return str(v).strip().lower()
-
-
 class PortfolioApprovalGate(BaseModel):
     status: Literal["PASS", "WARN", "BLOCK"]
     explanation: str
@@ -563,244 +494,6 @@ class FillOrderResponse(BaseModel):
     order_id: str
     position: Position
     linked_order_ids: list[str] = Field(default_factory=list)
-
-
-class OrderReference(BaseModel):
-    """A non-blank order identifier for a lifecycle command."""
-
-    order_id: str = Field(min_length=1)
-
-    @field_validator("order_id")
-    @classmethod
-    def normalize_order_id(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("order_id must not be blank")
-        return normalized
-
-
-class PositionReference(BaseModel):
-    """A non-blank position identifier for a lifecycle command."""
-
-    position_id: str = Field(min_length=1)
-
-    @field_validator("position_id")
-    @classmethod
-    def normalize_position_id(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("position_id must not be blank")
-        return normalized
-
-
-class FillOrderCommandPayload(FillOrderRequest, OrderReference):
-    """A canonical fill request bound to one order."""
-
-
-class UpdateStopCommandPayload(UpdateStopRequest, PositionReference):
-    """A canonical stop update bound to one position."""
-
-
-class PartialCloseCommandPayload(PartialCloseRequest, PositionReference):
-    """A canonical partial-close request bound to one position."""
-
-
-class ClosePositionCommandPayload(ClosePositionRequest, PositionReference):
-    """A canonical close request bound to one position."""
-
-
-class CreateOrderCommand(BaseModel):
-    operation: Literal["create_order"]
-    payload: CreateOrderRequest
-
-
-class SubmitOrderCommand(BaseModel):
-    operation: Literal["submit_order"]
-    payload: OrderReference
-
-
-class CancelOrderCommand(BaseModel):
-    operation: Literal["cancel_order"]
-    payload: OrderReference
-
-
-class FillOrderCommand(BaseModel):
-    operation: Literal["fill_order"]
-    payload: FillOrderCommandPayload
-
-
-class UpdateStopCommand(BaseModel):
-    operation: Literal["update_stop"]
-    payload: UpdateStopCommandPayload
-
-
-class PartialCloseCommand(BaseModel):
-    operation: Literal["partial_close"]
-    payload: PartialCloseCommandPayload
-
-
-class ClosePositionCommand(BaseModel):
-    operation: Literal["close_position"]
-    payload: ClosePositionCommandPayload
-
-
-TradingCommand = Annotated[
-    CreateOrderCommand
-    | SubmitOrderCommand
-    | CancelOrderCommand
-    | FillOrderCommand
-    | UpdateStopCommand
-    | PartialCloseCommand
-    | ClosePositionCommand,
-    Field(discriminator="operation"),
-]
-
-
-class TradingStrategySnapshot(Strategy):
-    """A non-empty canonical strategy supplied with browser-owned state."""
-
-    model_config = ConfigDict(allow_inf_nan=False)
-
-    @field_validator("id", "name")
-    @classmethod
-    def require_nonblank_identity(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("strategy identity must not be blank")
-        return normalized
-
-
-class TradingPositionSnapshot(Position):
-    """A canonical persisted position with basic state-integrity validation."""
-
-    model_config = ConfigDict(allow_inf_nan=False)
-
-    @field_validator("ticker")
-    @classmethod
-    def normalize_ticker(cls, value: str) -> str:
-        normalized = value.strip().upper()
-        if not normalized:
-            raise ValueError("ticker must not be blank")
-        return normalized
-
-    @field_validator(
-        "entry_price", "stop_price", "target_price", "current_price", "exit_price"
-    )
-    @classmethod
-    def require_positive_finite_price(cls, value: float | None) -> float | None:
-        if value is None:
-            return None
-        if not math.isfinite(value) or value <= 0:
-            raise ValueError("position prices must be finite and positive")
-        return value
-
-    @field_validator("shares")
-    @classmethod
-    def require_positive_shares(cls, value: int) -> int:
-        if value <= 0:
-            raise ValueError("shares must be positive")
-        return value
-
-
-class TradingOrderSnapshot(LegacyOrder):
-    """A canonical persisted order with basic state-integrity validation."""
-
-    model_config = ConfigDict(extra="allow", allow_inf_nan=False)
-
-    @field_validator("limit_price", "stop_price", "target_price", "entry_price")
-    @classmethod
-    def require_positive_finite_price(cls, value: float | None) -> float | None:
-        if value is None:
-            return None
-        if not math.isfinite(value) or value <= 0:
-            raise ValueError("order prices must be finite and positive")
-        return value
-
-
-class TradingStateSnapshot(BaseModel):
-    """The complete browser-owned state supplied to a stateless command."""
-
-    revision: int = Field(default=0, ge=0)
-    strategy: TradingStrategySnapshot
-    positions: list[TradingPositionSnapshot] = Field(default_factory=list)
-    orders: list[TradingOrderSnapshot] = Field(default_factory=list)
-
-
-class TradingMarketPrice(BaseModel):
-    """Fixed price observation for deterministic stop validation."""
-
-    model_config = ConfigDict(allow_inf_nan=False)
-
-    ticker: str = Field(min_length=1)
-    price: float = Field(gt=0)
-    observed_at: AwareDatetime
-    data_status: Literal["current"]
-
-    @field_validator("ticker")
-    @classmethod
-    def normalize_ticker(cls, value: str) -> str:
-        normalized = value.strip().upper()
-        if not normalized:
-            raise ValueError("ticker must not be blank")
-        return normalized
-
-
-class TradingCommandContext(BaseModel):
-    """Explicit business time, identity, and market observation for one command."""
-
-    effective_at: AwareDatetime
-    new_position_id: str | None = Field(default=None, min_length=1)
-    market_price: TradingMarketPrice | None = None
-
-    @field_validator("new_position_id")
-    @classmethod
-    def normalize_position_id(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("new_position_id must not be blank")
-        return normalized
-
-
-class TradingStateCommandRequest(BaseModel):
-    """Request envelope for one optimistic, stateless trading transition."""
-
-    snapshot: TradingStateSnapshot
-    expected_revision: int = Field(ge=0)
-    command: TradingCommand
-    context: TradingCommandContext
-
-    @model_validator(mode="after")
-    def require_command_context(self):
-        if (
-            self.command.operation == "update_stop"
-            and self.context.market_price is None
-        ):
-            raise ValueError("market_price is required for update_stop")
-        if self.command.operation == "fill_order":
-            order = next(
-                (
-                    order
-                    for order in self.snapshot.orders
-                    if order.order_id == self.command.payload.order_id
-                ),
-                None,
-            )
-            if (
-                order is not None
-                and not order.position_id
-                and not self.context.new_position_id
-            ):
-                raise ValueError("new_position_id is required for an entry fill")
-        return self
-
-
-class TradingStateCommandResponse(TradingStateSnapshot):
-    """The next snapshot and the state records changed by a command."""
-
-    affected_order_ids: list[str] = Field(default_factory=list)
-    affected_position_ids: list[str] = Field(default_factory=list)
 
 
 class EarningsProximityResponse(BaseModel):
@@ -1080,10 +773,3 @@ class PortfolioAnalyticsMetadata(BaseModel):
     heat_max_pct: float = 6.0
     concentration_warning_pct: float = 60.0
     tag_min_sample_size: int = 5
-
-
-class TradingStateMetricsResponse(BaseModel):
-    """Canonical read models for a supplied browser portfolio; no state mutation."""
-
-    positions: list[PositionWithMetrics]
-    summary: PortfolioSummary

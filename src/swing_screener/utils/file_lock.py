@@ -185,14 +185,3 @@ def locked_write_json_cli(path: Path, data: dict | list, timeout: float = DEFAUL
         logger.exception(f"Error writing {path.name}")
         raise
 
-
-def locked_write_text_cli(path: Path, text: str, timeout: float = DEFAULT_TIMEOUT) -> None:
-    """Write plain text with file lock (CLI version)."""
-    try:
-        write_text_with_lock(path, text, timeout=timeout)
-    except FileLockTimeoutError as exc:
-        logger.error(f"Lock timeout writing {path.name} after {timeout}s")
-        raise RuntimeError(str(exc)) from exc
-    except Exception:
-        logger.exception(f"Error writing {path.name}")
-        raise

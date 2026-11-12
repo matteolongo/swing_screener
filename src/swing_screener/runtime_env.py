@@ -31,7 +31,3 @@ def get_env_value(name: str, default: str = "") -> str:
 def get_openai_api_key() -> str:
     return get_env_value("OPENAI_API_KEY", "").strip()
 
-
-def get_openai_base_url() -> str:
-    value = get_env_value("OPENAI_BASE_URL", "https://api.openai.com/v1").strip()
-    return value or "https://api.openai.com/v1"

@@ -156,7 +156,7 @@ The system may read a current or user-supplied price to preview position metrics
 
 ## Additional Conventions
 
-- Configurable behavior routes through YAML config (`config/defaults.yaml`, `config/user.yaml`, `config/strategies.yaml`, `config/intelligence.yaml`, `config/mcp.yaml`). Never hardcode operator-tunable settings in source.
+- Configurable behavior routes through YAML config (`config/defaults.yaml`, `config/user.yaml`, `config/strategies.yaml`, `config/intelligence.yaml`). Never hardcode operator-tunable settings in source.
 - Secrets belong in environment variables, not committed YAML files.
 - Use `docker-compose.yml` for local service orchestration only, not as a substitute for app or strategy configuration.
 

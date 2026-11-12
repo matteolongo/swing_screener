@@ -108,20 +108,3 @@ class FundamentalsAnalysisService:
 
         self._storage.save_snapshot(snapshot)
         return snapshot
-
-    def compare_symbols(
-        self,
-        symbols: list[str] | tuple[str, ...],
-        *,
-        cfg: FundamentalsConfig,
-        force_refresh: bool = False,
-    ) -> list:
-        unique: list[str] = []
-        for symbol in symbols:
-            normalized = _normalize_symbol(symbol)
-            if normalized not in unique:
-                unique.append(normalized)
-        return [
-            self.get_snapshot(symbol, cfg=cfg, force_refresh=force_refresh)
-            for symbol in unique[: cfg.compare_limit]
-        ]

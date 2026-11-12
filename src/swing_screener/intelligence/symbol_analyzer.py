@@ -779,4 +779,4 @@ class SymbolAnalyzer:
         }
         if now is not None:
             state["now"] = now
-        return self._graph.invoke(state)["result"]
+        return self._graph(state)["result"]

@@ -100,24 +100,6 @@ def test_portfolio_summary_and_stateless_projection_expose_the_same_canonical_an
     assert persisted.json()["analytics_metadata"]["tag_min_sample_size"] == 5
     assert persisted.json()["analytics_metadata"]["concentration_warning_pct"] == 60.0
 
-    projected = client.post("/api/portfolio/state/metrics", json={
-        "revision": 0,
-        "strategy": {
-            "id": "analytics", "name": "Analytics",
-            "universe": {"trend": {"sma_fast": 20, "sma_mid": 50, "sma_long": 200},
-            "vol": {"atr_window": 14}, "mom": {"lookback_6m": 126, "lookback_12m": 252, "benchmark": "SPY"},
-            "filt": {"min_price": 5, "max_price": 500, "max_atr_pct": 15}},
-            "ranking": {"w_mom_6m": 0.45, "w_mom_12m": 0.35, "w_rs_6m": 0.2, "top_n": 100},
-            "signals": {"breakout_lookback": 50, "pullback_ma": 20, "min_history": 252},
-            "risk": {"account_size": 1000, "risk_pct": 0.01,
-            "max_position_pct": 0.2, "min_shares": 1, "k_atr": 2.0}, "manage": {},
-            "created_at": "2026-01-01T00:00:00", "updated_at": "2026-01-01T00:00:00",
-        },
-        "positions": positions, "orders": [],
-    })
-    assert projected.status_code == 200, projected.text
-    assert projected.json()["summary"]["analytics"] == analytics
-
 
 def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     positions_file = tmp_path / "positions.json"
