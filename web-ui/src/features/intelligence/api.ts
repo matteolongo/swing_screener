@@ -2,8 +2,6 @@ import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
 import type {
   SymbolIntelligenceAPI,
-  SweepSymbolPayload,
-  SweepResponseAPI,
   AnalysisHistoryResponseAPI,
   HistoryEntry,
   IntelligenceChatResponseAPI,
@@ -276,15 +274,6 @@ export async function postStrategicReview(payload: StrategicReviewPayload) {
     errorMessage: `Failed to build strategic overlay for ${payload.ticker}`,
   });
   return transformStrategicReview(res);
-}
-
-export async function postIntelligenceSweep(symbols: SweepSymbolPayload[]): Promise<SweepResponseAPI> {
-  return fetchJson<SweepResponseAPI>(API_ENDPOINTS.intelligenceSweep, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ symbols }),
-    errorMessage: 'Intelligence sweep failed',
-  });
 }
 
 export async function getRunTrace(runId: string): Promise<RunTrace> {

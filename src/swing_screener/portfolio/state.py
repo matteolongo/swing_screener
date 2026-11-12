@@ -2,15 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal, Optional
-from pathlib import Path
-import json
 import math
 from decimal import Decimal, ROUND_HALF_UP
 from dataclasses import replace
 
 import pandas as pd
 
-from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
 from swing_screener.indicators.exhaustion import compute_exhaustion_score
 
 
@@ -73,109 +70,6 @@ class PositionUpdate:
     reason: str
     exhaustion_score: Optional[float] = None
     exhaustion_label: Optional[str] = None
-
-
-def load_positions(path: str | Path) -> list[Position]:
-    p = Path(path)
-    data = locked_read_json_cli(p)
-    out: list[Position] = []
-    for item in data.get("positions", []):
-        out.append(
-            Position(
-                ticker=str(item["ticker"]).upper(),
-                status=item.get("status", "open"),
-                position_id=item.get("position_id", None),
-                source_order_id=item.get("source_order_id", None),
-                entry_date=item["entry_date"],
-                entry_price=float(item["entry_price"]),
-                stop_price=float(item["stop_price"]),
-                shares=int(item["shares"]),
-                initial_risk=(
-                    float(item["initial_risk"])
-                    if item.get("initial_risk") is not None
-                    else None
-                ),
-                max_favorable_price=(
-                    float(item["max_favorable_price"])
-                    if item.get("max_favorable_price") is not None
-                    else None
-                ),
-                exit_date=(
-                    str(item.get("exit_date")).strip()
-                    if item.get("exit_date")
-                    else None
-                ),
-                exit_price=(
-                    float(item["exit_price"])
-                    if item.get("exit_price") is not None
-                    else None
-                ),
-                notes=str(item.get("notes", "")),
-                exit_order_ids=(
-                    [str(x) for x in item.get("exit_order_ids", [])]
-                    if isinstance(item.get("exit_order_ids", None), list)
-                    else None
-                ),
-                broker=item.get("broker", None),
-                broker_product_id=item.get("broker_product_id", None),
-                isin=item.get("isin", None),
-                broker_synced_at=item.get("broker_synced_at", None),
-                thesis=item.get("thesis", None),
-                lesson=item.get("lesson", None),
-                trail_method=str(item.get("trail_method") or "sma20"),
-                trail_param=(
-                    float(item["trail_param"])
-                    if item.get("trail_param") is not None
-                    else None
-                ),
-                last_exhaustion_score=(
-                    float(item["last_exhaustion_score"])
-                    if item.get("last_exhaustion_score") is not None
-                    else None
-                ),
-                last_exhaustion_label=item.get("last_exhaustion_label", None),
-            )
-        )
-    return out
-
-
-def save_positions(
-    path: str | Path, positions: list[Position], asof: Optional[str] = None
-) -> None:
-    p = Path(path)
-    payload = {
-        "asof": asof,
-        "positions": [
-            {
-                "ticker": pos.ticker,
-                "status": pos.status,
-                "position_id": pos.position_id,
-                "source_order_id": pos.source_order_id,
-                "entry_date": pos.entry_date,
-                "entry_price": pos.entry_price,
-                "stop_price": pos.stop_price,
-                "shares": pos.shares,
-                "initial_risk": pos.initial_risk,
-                "max_favorable_price": pos.max_favorable_price,
-                "exit_date": pos.exit_date,
-                "exit_price": pos.exit_price,
-                "notes": pos.notes,
-                "exit_order_ids": pos.exit_order_ids,
-                "broker": pos.broker,
-                "broker_product_id": pos.broker_product_id,
-                "isin": pos.isin,
-                "broker_synced_at": pos.broker_synced_at,
-                "thesis": pos.thesis,
-                "lesson": pos.lesson,
-                "trail_method": pos.trail_method,
-                "trail_param": pos.trail_param,
-                "last_exhaustion_score": pos.last_exhaustion_score,
-                "last_exhaustion_label": pos.last_exhaustion_label,
-            }
-            for pos in positions
-        ],
-    }
-    locked_write_json_cli(p, payload)
 
 
 def scale_in_position(
@@ -516,13 +410,6 @@ def evaluate_positions(
 
     return updates, new_positions
 
-
-def updates_to_dataframe(updates: list[PositionUpdate]) -> pd.DataFrame:
-    return (
-        pd.DataFrame([u.__dict__ for u in updates])
-        .set_index("ticker")
-        .sort_values(["action", "r_now"], ascending=[True, False])
-    )
 
 def apply_stop_updates(
     positions: list[Position],

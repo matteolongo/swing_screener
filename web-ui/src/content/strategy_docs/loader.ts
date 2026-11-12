@@ -16,14 +16,6 @@ export function loadStrategyDocs(module: string): StrategyDocumentation | null {
 }
 
 /**
- * Get documentation for a specific parameter
- */
-export function getParameterDoc(module: string, parameterKey: string) {
-  const docs = loadStrategyDocs(module);
-  return docs?.parameters[parameterKey] || null;
-}
-
-/**
  * Get strategy overview information
  */
 export function getStrategyInfo(module: string) {

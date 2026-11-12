@@ -28,15 +28,14 @@ User-authored configuration no longer lives under `data/`. Shared configuration 
 
 ## Manual order drafts (2026-10-08)
 
-API and browser-owned order snapshots accept the additive status `draft`.
+The API order ledger accepts the additive status `draft`.
 Manual entry drafts keep the proposed quantity, entry, stop, target, notes and
 `quote_currency`, without an approval token or approved exposure. They cannot
 be submitted or filled. A current signed review promotes the same order ID to
 `pending`; cancellation changes an unfilled order to `cancelled` and retains
 its record.
 
-Existing JSON/browser records require no backfill or browser schema-version
-change. The API's SQL ledger requires Alembic migration `20261008_0003` to
+Existing JSON records require no backfill. The API's SQL ledger requires Alembic migration `20261008_0003` to
 expand its status constraint. Downgrading converts drafts to `cancelled` so
 their saved plans survive under the previous constraint. API startup checks the
 migration head; see `api/README.md` for deployment and backup instructions.

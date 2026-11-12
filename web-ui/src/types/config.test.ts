@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { toAppConfigAPI, transformAppConfig } from './config';
+import { transformAppConfig } from './config';
 
 describe('config transforms', () => {
-  it('round-trips current backend risk and manage fields', () => {
+  it('transforms current backend risk and manage fields', () => {
     const config = transformAppConfig({
       risk: {
         account_size: 50000,
@@ -47,9 +47,5 @@ describe('config transforms', () => {
     expect(config.risk.accountSizeMode).toBe('equity');
     expect(config.risk.accountCurrency).toBe('EUR');
     expect(config.manage.exitSignalDays).toBe(2);
-    expect(toAppConfigAPI(config).risk.max_concentration_pct).toBe(60);
-    expect(toAppConfigAPI(config).risk.account_size_mode).toBe('equity');
-    expect(toAppConfigAPI(config).risk.account_currency).toBe('EUR');
-    expect(toAppConfigAPI(config).manage.exit_signal_days).toBe(2);
   });
 });

@@ -1,6 +1,4 @@
 export const SCREENER_UNIVERSE_STORAGE_KEY = 'screener.universe';
-export const SCREENER_CURRENCY_FILTER_STORAGE_KEY = 'screener.currencyFilter';
-
 // Maps removed universe ids to their replacements (null = dropped, no replacement → fall back to default).
 const _REMOVED_UNIVERSE_IDS: Record<string, string | null> = {
   usd_all: 'broad_market_stocks',

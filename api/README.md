@@ -64,7 +64,6 @@ To promote it, refresh the candidate and send a normal create request containing
 freshness, risk, exposure, duplicate-position and pending-order checks apply.
 Only a matching active entry draft can be promoted; success updates that same
 order ID to `pending`. Its submitted prices, quantity and notes are preserved.
-The same flags are accepted by the stateless `create_order` command.
 
 `DELETE /api/portfolio/orders/{order_id}` marks an unfilled `draft`, `pending`,
 or `submitted` order as `cancelled`, retaining its history. It does not undo an
@@ -320,73 +319,6 @@ Universes (`/api/universes`):
 - `POST /api/universes/{universe_id}/benchmark`
 
 Portfolio (`/api/portfolio`):
-- `POST /api/portfolio/state/commands` — apply one canonical lifecycle command to
-  browser-owned state without reading or writing the server portfolio database.
-  Request: `{snapshot: {revision, strategy, positions, orders}, expected_revision,
-  command: {operation, payload}, context: {effective_at, new_position_id?,
-  market_price?}}`. Operations are `create_order`, `submit_order`,
-  `cancel_order`, `fill_order`, `update_stop`, `partial_close`, and `close_position`.
-  Payloads use the corresponding existing request fields plus `order_id` or
-  `position_id` when applicable. DeGiro-enriched fills use `fill_order` with
-  `fee_eur` and `fill_fx_rate`; they do not introduce a separate fill operation.
-  `context.effective_at` is a required timestamp with timezone. Its calendar
-  date supplies order/close business dates; fills retain their explicit
-  `filled_date`. Every new-position fill requires a nonblank
-  `context.new_position_id` that does not already exist in the snapshot.
-  Add-on fills retain the referenced position ID, while new order IDs use the
-  canonical deterministic allocator over the supplied order ledger.
-  Linked `stop` and `take_profit` sell fills reduce the referenced open position
-  or close it when the order quantity equals the remaining shares; they never
-  enter the add-on path.
-  Stop commands require `context.market_price: {ticker, price, observed_at,
-  data_status: "current"}`. The finite positive price must match the position
-  ticker; `observed_at` must include a timezone, must not be after `effective_at`,
-  and must be within the configured `portfolio_snapshot_stale_after_days`
-  elapsed-day interval. A weekend `effective_at` is measured back to Friday
-  end-of-day, so Friday's completed session still satisfies the default
-  one-day limit on Saturday/Sunday. Missing or invalid context fails closed
-  with `422`.
-  The supplied observation feeds canonical stop-price validation without live
-  provider I/O. It is caller-provided local-state context, not a server-attested
-  market quotation. Business dates and new-position identity enter the existing
-  services through optional `business_date`/`position_id_factory` constructor
-  dependencies; persisted workflows keep their existing defaults.
-  The response is the complete next snapshot with `revision` incremented once,
-  `affected_order_ids`, and `affected_position_ids`. Invalid input returns `422`;
-  revision mismatches return `409` before lifecycle work. Canonical lifecycle
-  errors retain their existing status codes. Any failure discards command-local
-  changes. No `Idempotency-Key` or server replay record is used: callers must
-  atomically accept a response only while their local revision still matches
-  the submitted revision. The API compares the two supplied revision values;
-  it cannot observe concurrent changes in browser storage.
-  Signed entry approval, configured backend strategy and risk policy remain
-  authoritative; the browser strategy is round-tripped without allowing it to
-  relax backend policy. Holdings and pending exposure come from the supplied
-  snapshot. Successful transitions are deterministic for identical request
-  context and configured policy. Authentication/authorization freshness is an
-  explicit security exception: approval-token expiry is always checked against
-  trusted server time, never `effective_at`. An expired token cannot be replayed
-  by submitting an earlier business timestamp. This endpoint computes a
-  local-state transition only; broker execution stays manual.
-- `POST /api/portfolio/state/metrics` — read-only projection from a supplied
-  `{revision, strategy, positions, orders}` snapshot. Returns `{positions, summary}`
-  using the existing canonical position metrics and portfolio summary services.
-  Holdings come exclusively from the supplied snapshot; account/risk policy comes
-  from backend configuration, as for persisted portfolio reads. Market quotes and
-  FX use the existing pricing service. The endpoint does not open the portfolio
-  database, mutate the supplied snapshot, or persist a command/revision. Browser
-  clients must not save the returned read models as trading state. Its `summary`
-  includes the same canonical closed-trade analytics as `GET /summary`: R uses
-  immutable initial per-share risk; `0R` scratches are excluded from win rates
-  and break streaks. Curve rows carry backend-computed final/max R, holding
-  days, tags, stable response identity (including ID-less trades), and closed
-  trade display fields. Closed trades without a computable R stay in the curve
-  with an unavailable (`null`) R and no cumulative contribution so journal
-  thesis/notes/lessons remain visible; aggregates exclude them. The response also includes backend-computed win-rate/
-  profit-factor statuses, journal tag aggregates, and a verdict/reason code for
-  localized insight copy; clients do not recreate R, threshold, sample-size,
-  or insight policy.
-  days; metadata returns configured heat, concentration, and tag-sample limits.
 - `GET /api/portfolio/positions` — includes additive server-derived
   `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
 - `GET /api/portfolio/positions/{position_id}`
@@ -409,11 +341,20 @@ Stop, close, partial-close and protective-order fill responses include
 `linked_order_ids` for other local protective records changed in the operation.
 The filled exit retains its own `filled` status. Partial-close also returns
 `shares_remaining`; stop updates return `new_stop`. Clients show broker
-follow-up only after success, using these IDs. Stateless command responses
-include the changed records in `orders` and their IDs in `affected_order_ids`.
+follow-up only after success, using these IDs.
 
 - `GET /api/portfolio/summary` — open-risk/cash summary plus canonical
-  closed-trade analytics and configured rendering thresholds.
+  closed-trade analytics and configured rendering thresholds. R uses
+  immutable initial per-share risk; `0R` scratches are excluded from win rates
+  and break streaks. Curve rows carry backend-computed final/max R, holding
+  days, tags, stable response identity (including ID-less trades), and closed
+  trade display fields. Closed trades without a computable R stay in the curve
+  with an unavailable (`null`) R and no cumulative contribution so journal
+  thesis/notes/lessons remain visible; aggregates exclude them. The response also includes backend-computed win-rate/
+  profit-factor statuses, journal tag aggregates, and a verdict/reason code for
+  localized insight copy; clients do not recreate R, threshold, sample-size,
+  or insight policy.
+  Metadata returns configured heat, concentration, and tag-sample limits.
 - `GET /api/portfolio/earnings-proximity/{ticker}`
 - `GET /api/portfolio/analytics/regime-breakdown` — classifies trades by benchmark
   trend at entry, then reuses canonical portfolio analytics for each group.
@@ -438,25 +379,12 @@ include the changed records in `orders` and their IDs in `affected_order_ids`.
 
 Daily Review (`/api/daily-review`):
 - `GET /api/daily-review` — read-only computation that accepts `preset` and `taxonomy_filter` (JSON-encoded `TaxonomyFilter`) for the legacy combined review. Pass `include_candidates=false` for a portfolio/watchlist-only review that does not run the screener.
-- `POST /api/daily-review/compute` — read-only stateless computation from the supplied strategy, positions, orders, and optional `watchlist` (a list of `WatchItem` objects: `ticker`, `watched_at`, `watch_price`, `currency`, `source`; defaults to an empty list). The backend enriches that watchlist using the supplied strategy and applies the same near-trigger filter as persisted reviews without reading the server watchlist or active strategy. Supports the same `include_candidates` switch for local-persistence mode.
 - `POST /api/daily-review/snapshots` — the explicit persistence command. It validates a computed `review` plus a filesystem-safe `strategy_name`, then atomically writes one dated snapshot. Computation routes do not write snapshots, evaluation-cache entries, or review-queue artifacts.
 
-The compute endpoint treats its validated `positions` and `orders` as one
-immutable, authoritative snapshot for the entire request. `orders` are validated
-as `OrderSnapshot` models (ticker normalized to uppercase, `status`/`order_kind`
-normalized to lowercase, extra order fields preserved); `positions` are validated
-as frozen `PositionSnapshot` models; malformed items fail
-request validation with `422` instead of reaching the service. The snapshot
-stores frozen order and position models, so downstream code derives local mutable copies and
-cannot mutate the authoritative state. Pending-order review,
-screener duplicate-order checks, same-symbol position ownership, and stop-action
-evaluation all consume
-that snapshot and never fall back to repository state for missing symbols.
-`pending_orders_review` lists only `status == "pending"` entry orders, mirroring
-the stateful `list_orders(status="pending")` semantics (`submitted` entries stay
-active for duplicate-order gates but are excluded here).
+`pending_orders_review` lists only `status == "pending"` entry orders
+(`submitted` entries stay active for duplicate-order gates but are excluded here).
 
-Both review responses expose `evaluation_errors` for individual positions whose
+The review response exposes `evaluation_errors` for individual positions whose
 stop evaluation could not be completed. Each item contains `symbol`, the stable
 code `position_evaluation_failed`, and a sanitized message. These failures are
 not reported as successful `positions_hold` actions;

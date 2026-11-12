@@ -114,26 +114,6 @@ const EDUCATION_GLOSSARY_MESSAGE_KEYS: Record<EducationMetricKey, EducationGloss
   },
 };
 
-export const SCREENER_GLOSSARY_KEYS: EducationMetricKey[] = [
-  'CONFIDENCE',
-  'SCORE',
-  'ATR',
-  'RR',
-  'MOM_6M',
-  'MOM_12M',
-  'RS',
-  'RISK_PCT',
-  'FEE_TO_RISK',
-];
-
-export const DAILY_REVIEW_GLOSSARY_KEYS: EducationMetricKey[] = [
-  'CONFIDENCE',
-  'RR',
-  'R_NOW',
-  'RISK_PCT',
-  'FEE_TO_RISK',
-];
-
 export function getGlossaryEntry(metricKey: EducationMetricKey): EducationGlossaryEntry {
   const keys = EDUCATION_GLOSSARY_MESSAGE_KEYS[metricKey];
   return {

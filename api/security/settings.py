@@ -198,6 +198,3 @@ def get_auth_settings() -> AuthSettings:
     settings.validate_runtime()
     return settings
 
-
-def reset_auth_settings_cache() -> None:
-    get_auth_settings.cache_clear()

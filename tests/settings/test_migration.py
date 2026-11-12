@@ -73,18 +73,6 @@ def test_migrate_legacy_config_to_yaml_strips_secrets_and_is_idempotent(monkeypa
             },
         },
     )
-    dump_yaml_file(
-        config_dir / "mcp_features.yaml",
-        {
-            "environment": "dev",
-            "features": {
-                "config": {
-                    "enabled": True,
-                    "tools": ["get_config"],
-                },
-            },
-        },
-    )
 
     strategy_payload = {
         "id": "default",
@@ -149,9 +137,7 @@ def test_migrate_legacy_config_to_yaml_strips_secrets_and_is_idempotent(monkeypa
 
     migrated_strategies = yaml.safe_load((config_dir / "strategies.yaml").read_text(encoding="utf-8"))
     migrated_intelligence = yaml.safe_load((config_dir / "intelligence.yaml").read_text(encoding="utf-8"))
-    migrated_mcp = yaml.safe_load((config_dir / "mcp.yaml").read_text(encoding="utf-8"))
 
     assert migrated_strategies["active_strategy_id"] == "default"
     assert "api_key" not in migrated_strategies["strategies"][0]["market_intelligence"]["llm"]
     assert "api_key" not in migrated_intelligence["config"]["llm"]
-    assert migrated_mcp["features"]["config"]["enabled"] is True

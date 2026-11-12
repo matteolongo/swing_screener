@@ -62,12 +62,6 @@
     "SERVE_WEB_UI": {
       "value": "1"
     },
-    "VITE_PERSISTENCE_MODE": {
-      "value": "api"
-    },
-    "VITE_ENABLE_LOCAL_PERSISTENCE": {
-      "value": "false"
-    },
     "SCREENER_RUN_MODE": {
       "value": "async"
     },

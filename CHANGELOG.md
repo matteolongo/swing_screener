@@ -7,6 +7,20 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- Remove browser-local persistence mode and the stateless endpoints that only
+  it called: `POST /api/portfolio/state/commands`,
+  `POST /api/portfolio/state/metrics` and `POST /api/daily-review/compute`.
+  Portfolio, order, strategy and watchlist state are server-owned. The
+  `VITE_PERSISTENCE_MODE` and `VITE_ENABLE_LOCAL_PERSISTENCE` build variables
+  no longer have any effect.
+- Drop unused `langchain-core`, `langchain-openai` and `langgraph`
+  dependencies and the `llm` extra; `ta-lib` moves to the `dev` extra because
+  only tests use it.
+- Remove MCP configuration leftovers (`config/mcp.yaml` store), the unused
+  `data_provider_roadmap` defaults block and the `web-app/` placeholder.
+
 ### Fixed
 
 - Make the market-data badge open scan details with stale symbol/benchmark

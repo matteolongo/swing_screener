@@ -1,1 +1,1 @@
-"""LangGraph pipeline for symbol intelligence analysis."""
+"""Linear step pipeline for symbol intelligence analysis."""

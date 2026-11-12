@@ -17,7 +17,7 @@ Given a ticker, builds a structured context snapshot (OHLCV features, fundamenta
 | `market_hours.py` | Minimal zoneinfo US market-hours helper. Decides pre-open mode + previous session close. |
 | `metrics.py` | Append-only per-analysis metrics log (`data/intelligence/intelligence_metrics.json`). |
 | `tracing.py` | Per-run trace recording and durable persistence (pydantic models, `TraceRecorder`, disk I/O with per-ticker index). |
-| `graph/` | LangGraph state graph for `SymbolAnalyzer.analyze()` (`resolve_context` → `assemble_inputs` → `build_prompt` → `search` → `format` → `postprocess` → `weigh_evidence` → `assemble_result` → `persist`). |
+| `graph/` | Linear step pipeline for `SymbolAnalyzer.analyze()` (`resolve_context` → `assemble_inputs` → `build_prompt` → `search` → `format` → `postprocess` → `weigh_evidence` → `assemble_result` → `persist`). |
 | `weighting/` | Deterministic advisory evidence weighting (`EvidenceLedger`, `WeightedSignal`, `weigh(...)`, YAML-backed config). |
 
 ## API Surface
@@ -42,7 +42,7 @@ Core: `symbol_analyzer.py`
 
 ## Flow at a glance
 
-The current single-symbol analyzer is a linear LangGraph wrapped by the FastAPI
+The current single-symbol analyzer is a linear step pipeline wrapped by the FastAPI
 intelligence endpoints. Cache checks and server-side enrichment happen before
 the graph; cache/history/metrics writes happen inside the final `persist` node.
 
@@ -57,7 +57,7 @@ flowchart TD
   Enrich --> Earnings[Earnings and dividend proximity]
   Enrich --> Evidence[Configured evidence collectors]
   Enrich --> Prices[Polygon or portfolio OHLCV technicals]
-  Enrich --> Graph[LangGraph SymbolAnalyzer]
+  Enrich --> Graph[SymbolAnalyzer pipeline]
 
   Graph --> Resolve[resolve_context]
   Resolve --> Inputs[assemble_inputs]
@@ -177,9 +177,9 @@ existing Finnhub signal fields). The web-search instruction is multi-hop — sea
 broadly, follow the material leads, then run a dedicated forward-looking catalyst
 pass — and every news claim must cite its source URL.
 
-`SymbolAnalyzer.analyze()` compiles and invokes the LangGraph state graph in
-`intelligence/graph/`. The graph is intentionally linear today so each former
-pipeline step is explicit and independently testable. The graph output remains a
+`SymbolAnalyzer.analyze()` runs the step pipeline in `intelligence/graph/`:
+`build_graph()` returns a function that calls each named step in order and merges
+its returned state. Each step is explicit and independently testable. The output remains a
 single `SymbolIntelligence` object; persistence side effects still happen after
 result assembly.
 

@@ -69,13 +69,6 @@ export function formatCurrency(value: number, currency: string = 'USD'): string 
 }
 
 /**
- * Format number as price (e.g., $123.45)
- */
-export function formatPrice(price: number): string {
-  return `$${price.toFixed(2)}`;
-}
-
-/**
  * Format date (e.g., "Feb 5, 2026")
  */
 export function formatDate(date: string | Date): string {

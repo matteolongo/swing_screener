@@ -45,8 +45,6 @@ def intelligence_yaml_path() -> Path:
     return config_dir() / "intelligence.yaml"
 
 
-def mcp_yaml_path() -> Path:
-    return config_dir() / "mcp.yaml"
 
 
 def resolve_repo_path(value: str | Path) -> Path:

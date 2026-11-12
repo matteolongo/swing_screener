@@ -9,7 +9,7 @@ from typing import Any
 import portalocker
 
 from swing_screener.settings import config_dir
-from swing_screener.settings.io import dump_yaml_file, load_yaml_file
+from swing_screener.settings.io import load_yaml_file
 
 _LOCK_TIMEOUT = 5.0
 logger = logging.getLogger(__name__)
@@ -37,8 +37,3 @@ class FundamentalsConfigRepository:
         if not isinstance(payload, dict):
             return None
         return payload
-
-    def save_raw(self, payload: dict[str, Any]) -> None:
-        with self._thread_lock:
-            with portalocker.Lock(self._lock_path, mode="a", timeout=_LOCK_TIMEOUT):
-                dump_yaml_file(self.path, payload)

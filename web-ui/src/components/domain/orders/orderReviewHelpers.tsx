@@ -8,23 +8,6 @@ export const REVIEW_SECTIONS: Array<{ id: ReviewSectionId; titleKey: string }> =
   { id: 'risk', titleKey: 'order.review.sections.risk' },
 ];
 
-export const CONCENTRATION_WARNING_THRESHOLD = 60;
-
-const COUNTRY_SUFFIXES: Record<string, string> = {
-  '.AS': 'NL',
-  '.PA': 'FR',
-  '.DE': 'DE',
-  '.MC': 'ES',
-  '.MI': 'IT',
-  '.ST': 'SE',
-  '.L': 'UK',
-  '.BR': 'BE',
-  '.LS': 'PT',
-  '.HE': 'FI',
-  '.CO': 'DK',
-  '.OL': 'NO',
-};
-
 export function MetricTile({
   label,
   value,
@@ -65,10 +48,3 @@ export function classifyInvalidationRule(condition: string) {
   return 'soft';
 }
 
-export function countryFromTicker(ticker: string): string {
-  const normalized = ticker.trim().toUpperCase();
-  for (const [suffix, country] of Object.entries(COUNTRY_SUFFIXES)) {
-    if (normalized.endsWith(suffix)) return country;
-  }
-  return 'US';
-}

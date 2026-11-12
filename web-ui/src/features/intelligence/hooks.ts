@@ -11,7 +11,6 @@ import {
   postStrategicReview,
   postIntelligenceAnalysis,
   refreshIntelligenceEvidence,
-  postIntelligenceSweep,
   sendIntelligenceChatMessage,
   type IntelligenceChatMessagePayload,
   type PositionReviewPayload,
@@ -24,8 +23,6 @@ import type {
   HistoryEntry,
   IntelligenceChatResponse,
   SymbolIntelligence,
-  SweepResponseAPI,
-  SweepSymbolPayload,
 } from '@/features/intelligence/types';
 import type { PositionReview } from '@/features/intelligence/positionReviewTypes';
 import type { StrategicReview } from '@/features/intelligence/strategicReviewTypes';
@@ -174,12 +171,6 @@ export function usePositionReviewMutation() {
 export function useStrategicReviewMutation() {
   return useMutation<StrategicReview, Error, StrategicReviewPayload>({
     mutationFn: postStrategicReview,
-  });
-}
-
-export function useIntelligenceSweepMutation() {
-  return useMutation<SweepResponseAPI, Error, SweepSymbolPayload[]>({
-    mutationFn: postIntelligenceSweep,
   });
 }
 

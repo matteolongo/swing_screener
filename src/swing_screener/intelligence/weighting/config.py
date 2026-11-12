@@ -89,10 +89,6 @@ class EvidenceWeightsConfig:
     def catalyst_weight(self, key: str) -> float:
         return float(self.catalyst_types.get(key, 0.0))
 
-    def upcoming_weight(self, key: str) -> float:
-        return float(self.upcoming_event_types.get(key, 0.0))
-
-
 def load_evidence_weights_config() -> EvidenceWeightsConfig:
     cfg = intelligence_config_section("evidence_weights")
 

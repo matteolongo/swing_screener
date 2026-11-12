@@ -84,7 +84,6 @@ export const API_ENDPOINTS = {
   intelligencePositionReview: (positionId: string) => `/api/intelligence/position-review/${encodeURIComponent(positionId)}`,
   intelligenceSymbolReview: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/position-review`,
   intelligenceStrategicReview: '/api/intelligence/strategic-review',
-  intelligenceSweep: '/api/intelligence/sweep',
   intelligenceRunTrace: (runId: string) => `/api/intelligence/runs/${encodeURIComponent(runId)}`,
   intelligenceRuns: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/runs`,
 
@@ -99,7 +98,6 @@ export const API_ENDPOINTS = {
 
   // Daily Review
   dailyReview: '/api/daily-review',
-  dailyReviewCompute: '/api/daily-review/compute',
 
   // Calendar
   calendarEvents: '/api/calendar/events',

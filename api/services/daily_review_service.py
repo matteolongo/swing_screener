@@ -18,29 +18,20 @@ from api.models.daily_review import (
     PendingOrderReview,
     TrimSuggestion,
 )
-from api.models.portfolio import OrderSnapshot, PositionUpdate
+from api.models.portfolio import PositionUpdate
 from api.models.screener import ScreenerRequest, TaxonomyFilter
-from api.models.watchlist import WatchItem
 from api.repositories.orders_repo import OrdersRepository
 from api.services.daily_review import DailyReviewWriter
 from api.services.portfolio_service import PortfolioService
-from api.services.screener_service import (
-    PortfolioStateSnapshot,
-    ScreenerRunPolicy,
-    ScreenerService,
-)
+from api.services.screener_service import ScreenerRunPolicy, ScreenerService
 from api.services.watchlist_service import WatchlistService
 from swing_screener.errors import DomainError
-from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 
 logger = logging.getLogger(__name__)
 
 
-def _review_order_field(order: object, key: str, default=None):
-    """Read an order field from either a frozen snapshot model or a raw dict."""
-    if isinstance(order, dict):
-        return order.get(key, default)
-    return getattr(order, key, default)
+def _review_order_field(order: dict, key: str, default=None):
+    return order.get(key, default)
 
 
 def to_daily_review_candidate(c) -> DailyReviewCandidate:
@@ -100,13 +91,7 @@ class _ActionBuckets:
 
 @dataclass
 class _PositionActionContext:
-    """Per-position values that differ between the live and stateless review paths.
-
-    The two paths read success-branch fields from different sources (the position
-    model vs the stop suggestion) and resolve error-branch fields, the time-stop
-    payload and position_id differently. Capturing those as resolved scalars plus
-    two small callables lets one classifier handle both.
-    """
+    """Per-position values the action classifier needs besides the stop suggestion."""
 
     position_id: str
     trim_r_threshold: float
@@ -297,20 +282,18 @@ class DailyReviewService:
 
     @classmethod
     def _pending_orders_review(cls, orders) -> list[PendingOrderReview]:
-        """Classify pending entry orders from an explicit state snapshot.
+        """Classify pending entry orders.
 
-        Mirrors the stateful ``orders_repo.list_orders(status="pending")``
-        semantics: only ``status == "pending"`` entry orders appear here.
-        ``submitted`` orders remain active for duplicate-order gates elsewhere
-        but are intentionally excluded from this section. Accepts frozen
-        ``OrderSnapshot`` models or raw dicts; non-mapping items are skipped.
+        Only ``status == "pending"`` entry orders appear here. ``submitted``
+        orders remain active for duplicate-order gates elsewhere but are
+        intentionally excluded from this section. Non-mapping items are skipped.
         """
 
         today = date.today()
         result: list[PendingOrderReview] = []
         items = orders if isinstance(orders, (list, tuple)) else []
         for order in items:
-            if isinstance(order, str) or not isinstance(order, (dict, OrderSnapshot)):
+            if not isinstance(order, dict):
                 continue
             if _review_order_field(order, "order_kind") != "entry":
                 continue
@@ -340,17 +323,11 @@ class DailyReviewService:
             )
         return result
 
-    def _watchlist_near_trigger_items(
-        self, watchlist: list[WatchItem] | None = None, strategy: dict | None = None
-    ) -> list:
+    def _watchlist_near_trigger_items(self) -> list:
         if self.watchlist is None:
             return []
         try:
-            items = (
-                self.watchlist.list_items()
-                if watchlist is None
-                else self.watchlist.enrich_items(watchlist, strategy)
-            )
+            items = self.watchlist.list_items()
         except Exception:
             logger.exception(
                 "Unable to build watchlist near-trigger section for daily review"
@@ -412,30 +389,6 @@ class DailyReviewService:
         model_dump = getattr(position, "model_dump", None)
         payload = model_dump() if callable(model_dump) else dict(position)
         return self._time_stop_payload(payload, r_now, manage_payload)
-
-    @staticmethod
-    def _manage_cfg_payload_from_strategy(strategy: dict) -> dict:
-        manage = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
-        cfg = ManageStateConfig(
-            breakeven_at_R=float(manage.get("breakeven_at_r", 1.0)),
-            trail_sma=int(manage.get("trail_sma", 20)),
-            trail_after_R=float(manage.get("trail_after_r", 2.0)),
-            sma_buffer_pct=float(manage.get("sma_buffer_pct", 0.005)),
-            max_holding_days=int(manage.get("max_holding_days", 20)),
-            time_stop_days=int(manage.get("time_stop_days", 15)),
-            time_stop_min_r=float(manage.get("time_stop_min_r", 0.5)),
-            exit_signal_days=int(manage.get("exit_signal_days", 2)),
-        )
-        return {
-            "breakeven_at_r": cfg.breakeven_at_R,
-            "trail_after_r": cfg.trail_after_R,
-            "trail_sma": cfg.trail_sma,
-            "sma_buffer_pct": cfg.sma_buffer_pct,
-            "max_holding_days": cfg.max_holding_days,
-            "time_stop_days": cfg.time_stop_days,
-            "time_stop_min_r": cfg.time_stop_min_r,
-            "exit_signal_days": cfg.exit_signal_days,
-        }
 
     def _classify_position_action(
         self,
@@ -512,160 +465,3 @@ class DailyReviewService:
                     reason=suggestion.reason,
                 )
             )
-
-    def compute_daily_review_from_state(
-        self,
-        strategy: dict,
-        positions: list,
-        orders: list,
-        top_n: int = 200,
-        universe: str | None = None,
-        preset: str | None = None,
-        taxonomy_filter: "TaxonomyFilter | None" = None,
-        include_candidates: bool = True,
-        watchlist: list[WatchItem] | None = None,
-    ) -> DailyReview:
-        """Compute daily review from client-provided strategy/portfolio state.
-
-        ``positions``/``orders`` accept validated models or raw dicts and are
-        normalized into an immutable ``PortfolioStateSnapshot``. That snapshot
-        is the authoritative state for the whole request: pending-order review,
-        screener duplicate-order gates, and same-symbol ownership all consume
-        it, never the persisted repositories.
-        """
-        snapshot = PortfolioStateSnapshot(
-            positions=tuple(positions or ()),
-            orders=tuple(orders or ()),
-        )
-
-        candidates = []
-        if include_candidates:
-            selected_universe = universe.strip() if isinstance(universe, str) else None
-            signals = strategy.get("signals", {}) if isinstance(strategy, dict) else {}
-            universe_cfg = (
-                strategy.get("universe", {}) if isinstance(strategy, dict) else {}
-            )
-            filt_cfg = (
-                universe_cfg.get("filt", {}) if isinstance(universe_cfg, dict) else {}
-            )
-
-            screener_request = ScreenerRequest(
-                top=top_n,
-                universe=selected_universe or None,
-                preset=preset or None,
-                taxonomy_filter=taxonomy_filter,
-                breakout_lookback=signals.get("breakout_lookback"),
-                pullback_ma=signals.get("pullback_ma"),
-                min_history=signals.get("min_history"),
-                currencies=filt_cfg.get("currencies"),
-            )
-            screener_result = self.screener.run_screener(
-                screener_request,
-                strategy_override=strategy,
-                state_snapshot=snapshot,
-                run_policy=ScreenerRunPolicy.read_only(),
-            )
-            candidates = screener_result.candidates[:top_n]
-
-        # Re-entries are fresh buy decisions (no open position), so rank them
-        # among new opportunities by screener priority. Add-ons / scale-backs
-        # depend on an existing position and stay in the portfolio sub-group.
-        new_candidates = [
-            to_daily_review_candidate(c)
-            for c in candidates
-            if c.same_symbol is None or c.same_symbol.mode in ("NEW_ENTRY", "RE_ENTRY")
-        ]
-        add_on_candidates = [
-            to_daily_review_candidate(c)
-            for c in candidates
-            if c.same_symbol is not None
-            and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")
-        ]
-
-        manage_payload = self._manage_cfg_payload_from_strategy(strategy)
-        trim_r_threshold_state = float(
-            (strategy.get("manage", {}) if isinstance(strategy, dict) else {}).get(
-                "trim_r_threshold", 2.0
-            )
-        )
-
-        buckets = _ActionBuckets()
-        evaluation_errors: list[DailyReviewPositionEvaluationError] = []
-        for snapshot_pos in snapshot.positions:
-            # Detached validated copy: downstream mutation cannot leak back
-            # into the authoritative snapshot or the caller's input.
-            pos = snapshot_pos.model_dump(mode="json")
-            if pos.get("status") != "open":
-                continue
-
-            position_id = str(
-                pos.get("position_id") or f"LOCAL-{pos.get('ticker', 'UNKNOWN')}"
-            )
-            ctx = _PositionActionContext(
-                position_id=position_id,
-                trim_r_threshold=trim_r_threshold_state,
-                success_fields=lambda s: (s.ticker, s.entry, s.stop_old),
-                time_stop=lambda r, p=pos: self._time_stop_payload(
-                    p, r, manage_payload
-                ),
-            )
-            try:
-                suggestion = self.portfolio.compute_position_stop_suggestion(
-                    pos, manage_payload
-                )
-            except DomainError as exc:
-                logger.warning(
-                    "Stateless daily review stop suggestion unavailable for %s: %s",
-                    pos.get("ticker"),
-                    exc.detail,
-                )
-                evaluation_errors.append(
-                    DailyReviewPositionEvaluationError(
-                        symbol=str(pos.get("ticker", ""))
-                    )
-                )
-                continue
-
-            self._classify_position_action(suggestion, ctx, buckets)
-
-        positions_hold = buckets.hold
-        positions_update = buckets.update
-        positions_close = buckets.close
-        positions_exit_signal = buckets.exit_signal
-
-        screener_tickers = {candidate.ticker.upper() for candidate in candidates}
-        watchlist_near_trigger = [
-            item
-            for item in self._watchlist_near_trigger_items(watchlist or [], strategy)
-            if item.ticker.upper() not in screener_tickers
-        ]
-
-        return DailyReview(
-            watchlist_near_trigger=watchlist_near_trigger,
-            new_candidates=new_candidates,
-            positions_add_on_candidates=add_on_candidates,
-            positions_hold=positions_hold,
-            positions_update_stop=positions_update,
-            positions_close=positions_close,
-            positions_exit_signal=positions_exit_signal,
-            evaluation_errors=evaluation_errors,
-            summary=DailyReviewSummary(
-                total_positions=len(
-                    [
-                        position
-                        for position in snapshot.positions
-                        if position.status == "open"
-                    ]
-                ),
-                no_action=len(positions_hold),
-                update_stop=len(positions_update),
-                close_positions=len(positions_close),
-                exit_signal=len(positions_exit_signal),
-                new_candidates=len(new_candidates),
-                add_on_candidates=len(add_on_candidates),
-                watchlist_near_trigger=len(watchlist_near_trigger),
-                evaluation_error_count=len(evaluation_errors),
-                review_date=date.today(),
-            ),
-            pending_orders_review=self._pending_orders_review(snapshot.orders),
-        )

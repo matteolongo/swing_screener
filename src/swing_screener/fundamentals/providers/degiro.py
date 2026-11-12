@@ -124,17 +124,6 @@ def _current_ratio_value(groups: list[dict], ratio_id: str) -> Optional[float]:
     return None
 
 
-def _forecast_value(ratios: list[dict], ratio_id: str) -> Optional[float]:
-    """Extract a float from forecastData.ratios list by id."""
-    for r in ratios:
-        if r.get("id") == ratio_id and r.get("value") is not None:
-            try:
-                return float(r["value"])
-            except (TypeError, ValueError):
-                pass  # parse fallback
-    return None
-
-
 def _estimate_item(statements: list[dict], stmt_type: str, code: str) -> Optional[float]:
     """Extract an analyst estimate value from the nested statements structure."""
     for stmt in statements:
@@ -257,15 +246,9 @@ class DegiroFundamentalsProvider:
         ratio_groups: list[dict] = (
             ratios_data.get("currentRatios", {}).get("ratiosGroups", [])
         )
-        forecast_ratios: list[dict] = (
-            ratios_data.get("forecastData", {}).get("ratios", [])
-        )
 
         def cr(ratio_id: str) -> Optional[float]:
             return _current_ratio_value(ratio_groups, ratio_id)
-
-        def fd(ratio_id: str) -> Optional[float]:
-            return _forecast_value(forecast_ratios, ratio_id)
 
         # ----- Point-in-time metrics -----
         market_cap = cr("MKTCAP")

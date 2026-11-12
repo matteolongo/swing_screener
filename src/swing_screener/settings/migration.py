@@ -7,12 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from swing_screener.settings import get_settings_manager
-from swing_screener.settings.io import dump_yaml_file, load_yaml_file
-from swing_screener.settings.paths import data_dir, repo_config_dir
-
-
-def _legacy_mcp_file() -> Path:
-    return repo_config_dir() / "mcp_features.yaml"
+from swing_screener.settings.paths import data_dir
 
 
 def _legacy_strategies_file() -> Path:
@@ -124,21 +119,11 @@ def migrate_legacy_config_to_yaml(*, force: bool = False, cleanup: bool = False)
         manager.save_intelligence_document(legacy_doc)
         actions.append(f"wrote {manager.current_config_dir / 'intelligence.yaml'}")
 
-    mcp_doc = manager.load_mcp_document()
-    if force or not mcp_doc:
-        legacy_mcp_file = _legacy_mcp_file()
-        if legacy_mcp_file.exists():
-            payload = load_yaml_file(legacy_mcp_file)
-            if isinstance(payload, dict):
-                dump_yaml_file(manager.current_config_dir / "mcp.yaml", payload)
-                actions.append(f"wrote {manager.current_config_dir / 'mcp.yaml'}")
-
     if cleanup:
         legacy_paths = (
             _legacy_strategies_file(),
             _legacy_active_strategy_file(),
             _legacy_intelligence_file(),
-            _legacy_mcp_file(),
         )
         for legacy_path in legacy_paths:
             if legacy_path.exists():

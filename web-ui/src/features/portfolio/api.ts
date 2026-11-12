@@ -6,21 +6,6 @@ import type { OrderApiResponse } from '@/types/order';
 import type { PositionUpdateApiResponse } from '@/types/position';
 import type { OpenPositionIntelligenceSummaryAPI, OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
 import { transformOpenPositionIntelligence } from '@/features/intelligence/types';
-import { fetchTickerCandles } from '@/features/screener/api';
-import type { TradingCommandResponse } from '@/features/persistence/portfolioService';
-import {
-  cancelOrderLocal,
-  closePositionLocal,
-  createOrderLocal,
-  fillOrderLocal,
-  getActiveStrategyLocal,
-  getPositionByIdLocal,
-  isLocalPersistenceMode,
-  listOrdersLocal,
-  executeTradingCommandLocal,
-  tradingSnapshotLocal,
-  updatePositionStopLocal,
-} from '@/features/persistence';
 import {
   CreateOrderRequest,
   FillOrderRequest,
@@ -48,18 +33,6 @@ import {
   PositionUpdate,
 } from './types';
 
-interface PositionMetricsApiResponse {
-  ticker: string;
-  pnl: number;
-  pnl_percent: number;
-  r_now: number;
-  r_fx_adjusted?: number | null;
-  entry_value: number;
-  current_value: number;
-  per_share_risk: number;
-  total_risk: number;
-}
-
 export interface PositionLifecycleResult {
   linkedOrderIds: string[];
   sharesRemaining?: number;
@@ -79,17 +52,6 @@ function transformPositionLifecycle(data: PositionLifecycleApiResponse = {}): Po
     ...(data.shares_remaining != null ? { sharesRemaining: data.shares_remaining } : {}),
     ...(data.new_stop != null ? { newStop: data.new_stop } : {}),
   };
-}
-
-function transformLocalPositionLifecycle(
-  response: TradingCommandResponse | undefined,
-  positionId: string,
-): PositionLifecycleResult {
-  const position = response?.positions.find((item) => item.position_id === positionId);
-  return transformPositionLifecycle({
-    linked_order_ids: response?.affected_order_ids,
-    ...(position?.status === 'open' ? { shares_remaining: position.shares, new_stop: position.stop_price } : {}),
-  });
 }
 
 interface PositionWithMetricsApiResponse extends PositionApiResponse {
@@ -170,18 +132,6 @@ interface ConcentrationGroupApiResponse {
   risk_pct: number;
   position_count: number;
   warning: boolean;
-}
-
-export interface PositionMetrics {
-  ticker: string;
-  pnl: number;
-  pnlPercent: number;
-  rNow: number;
-  rFxAdjusted?: number | null;
-  entryValue: number;
-  currentValue: number;
-  perShareRisk: number;
-  totalRisk: number;
 }
 
 export interface PositionWithMetrics extends Position {
@@ -332,9 +282,6 @@ function resolveIdempotencyKey(idempotencyKey?: string): string {
 }
 
 export async function fetchOrders(status: OrderFilterStatus): Promise<SnapshotCollection<Order>> {
-  if (isLocalPersistenceMode()) {
-    return attachSnapshotMetadata(listOrdersLocal(status), {});
-  }
   const params = status !== 'all' ? `?status=${status}` : '';
   const data = await fetchJson<{
     orders?: OrderApiResponse[];
@@ -351,10 +298,6 @@ export async function createOrder(
   request: CreateOrderRequest,
   idempotencyKey?: string,
 ): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    await createOrderLocal(request, resolveIdempotencyKey(idempotencyKey));
-    return;
-  }
   if ((request.orderKind ?? 'entry') === 'entry' && !request.saveAsDraft && !request.approvalToken) {
     throw new Error('Entry order approval token is required. Refresh the screener candidate and try again.');
   }
@@ -374,21 +317,6 @@ export async function fillOrder(
   request: FillOrderRequest,
   idempotencyKey?: string,
 ): Promise<PositionLifecycleResult> {
-  if (isLocalPersistenceMode()) {
-    const response = await fillOrderLocal(orderId, request, resolveIdempotencyKey(idempotencyKey));
-    const positionId = response?.affected_position_ids?.[0] ?? '';
-    const position = response?.positions.find((item) => item.position_id === positionId);
-    const filledOrder = response?.orders.find((order) => order.order_id === orderId);
-    return {
-      ...transformLocalPositionLifecycle(response, positionId),
-      linkedOrderIds: filledOrder?.order_kind === 'entry' ? [] : (response?.orders ?? [])
-        .filter((order) => order.order_id !== orderId
-          && (order.order_kind === 'stop' || order.order_kind === 'take_profit')
-          && response?.affected_order_ids?.includes(order.order_id))
-        .map((order) => order.order_id),
-      protectionAction: position?.status === 'closed' ? 'cancellation' : 'adjustment',
-    };
-  }
   const payload: Record<string, number | string> = {
     filled_price: request.filledPrice,
     filled_date: request.filledDate,
@@ -425,10 +353,6 @@ export async function fillOrder(
 }
 
 export async function submitOrder(orderId: string): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    await executeTradingCommandLocal('submit_order', { order_id: orderId }, `submit-order:${orderId}`);
-    return;
-  }
   await fetchJson<void>(`/api/portfolio/orders/${orderId}/submit`, {
     method: 'PATCH',
     errorMessage: 'Failed to mark order submitted',
@@ -436,10 +360,6 @@ export async function submitOrder(orderId: string): Promise<void> {
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  if (isLocalPersistenceMode()) {
-    await cancelOrderLocal(orderId, `cancel-order:${orderId}`);
-    return;
-  }
   await fetchJson<void>(API_ENDPOINTS.order(orderId), {
     method: 'DELETE',
     errorMessage: 'Failed to cancel order',
@@ -447,16 +367,6 @@ export async function cancelOrder(orderId: string): Promise<void> {
 }
 
 export async function fetchDegiroStatus(): Promise<DegiroStatus> {
-  if (isLocalPersistenceMode()) {
-    return {
-      installed: false,
-      credentialsConfigured: false,
-      available: false,
-      mode: 'missing_library',
-      detail: 'Local persistence mode keeps broker tracking manual. DeGiro sync is unavailable.',
-    };
-  }
-
   const payload = await fetchJson<DegiroStatusApiResponse>(API_ENDPOINTS.degiroStatus, {
     errorMessage: 'Failed to fetch DeGiro status',
   });
@@ -470,10 +380,6 @@ export async function fetchDegiroStatus(): Promise<DegiroStatus> {
 }
 
 export async function fetchDegiroOrderHistory(): Promise<DegiroOrder[]> {
-  if (isLocalPersistenceMode()) {
-    return [];
-  }
-
   const data = await fetchJson<{ orders?: DegiroOrderApiResponse[] }>(API_ENDPOINTS.degiroOrderHistory, {
     errorMessage: 'Failed to fetch DeGiro order history',
   });
@@ -484,10 +390,6 @@ export async function fillOrderFromDegiro(
   orderId: string,
   request: FillFromDegiroRequest,
 ): Promise<FillFromDegiroResponse> {
-  if (isLocalPersistenceMode()) {
-    throw new Error('Fill from DeGiro is not supported in local persistence mode');
-  }
-
   const payload = await fetchJson<FillFromDegiroResponseApi>(API_ENDPOINTS.orderFillFromDegiro(orderId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -498,10 +400,6 @@ export async function fillOrderFromDegiro(
 }
 
 export async function fetchPositions(status: PositionFilterStatus): Promise<SnapshotCollection<PositionWithMetrics>> {
-  if (isLocalPersistenceMode()) {
-    const projection = await fetchLocalPortfolioProjection();
-    return attachSnapshotMetadata(projection.positions.filter(position => status === 'all' || position.status === status).map(transformPositionWithMetrics), {});
-  }
   const params = status !== 'all' ? `?status=${status}` : '';
   const data = await fetchJson<{
     positions: PositionWithMetricsApiResponse[];
@@ -515,23 +413,7 @@ export async function fetchPositions(status: PositionFilterStatus): Promise<Snap
   return attachSnapshotMetadata(data.positions.map(transformPositionWithMetrics), data);
 }
 
-export async function fetchPositionMetrics(positionId: string): Promise<PositionMetrics> {
-  if (isLocalPersistenceMode()) {
-    const projection = await fetchLocalPortfolioProjection();
-    const position = projection.positions.find(item => item.position_id === positionId);
-    if (!position) throw new Error(`Position not found: ${positionId}`);
-    return transformPositionMetrics(position);
-  }
-  const data = await fetchJson<PositionMetricsApiResponse>(API_ENDPOINTS.positionMetrics(positionId), {
-    errorMessage: 'Failed to fetch position metrics',
-  });
-  return transformPositionMetrics(data);
-}
-
 export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
-  if (isLocalPersistenceMode()) {
-    return transformPortfolioSummary((await fetchLocalPortfolioProjection()).summary);
-  }
   const data = await fetchJson<PortfolioSummaryApiResponse>(API_ENDPOINTS.portfolioSummary, {
     errorMessage: 'Failed to fetch portfolio summary',
   });
@@ -540,7 +422,7 @@ export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
 
 export async function fetchEarningsProximity(ticker: string): Promise<EarningsProximity> {
   const normalizedTicker = ticker.trim().toUpperCase();
-  if (!normalizedTicker || isLocalPersistenceMode()) {
+  if (!normalizedTicker) {
     return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
   }
 
@@ -563,22 +445,6 @@ export async function updatePositionStop(
   request: UpdateStopRequest,
   idempotencyKey?: string,
 ): Promise<PositionLifecycleResult> {
-  if (isLocalPersistenceMode()) {
-    const position = getPositionByIdLocal(positionId);
-    if (!position) throw new Error(`Position not found: ${positionId}`);
-    let marketPrice = request.marketPrice;
-    if (!marketPrice) {
-      const candles = await fetchTickerCandles(position.ticker);
-      const latest = candles.priceHistory[candles.priceHistory.length - 1];
-      if (!latest) throw new Error('A current timestamped market price observation is required to update the stop.');
-      // A daily candle represents its completed session (US close ≈ 20:00 UTC),
-      // not a midnight observation. Stamp session close so weekend commands
-      // still see Friday's bar as the latest completed session.
-      marketPrice = { ticker: position.ticker, price: latest.close, observedAt: `${latest.date}T20:00:00Z`, dataStatus: 'current' };
-    }
-    const response = await updatePositionStopLocal(positionId, { ...request, marketPrice }, resolveIdempotencyKey(idempotencyKey));
-    return transformLocalPositionLifecycle(response, positionId);
-  }
   const response = await fetchJson<PositionLifecycleApiResponse>(API_ENDPOINTS.positionStop(positionId), {
     method: 'PUT',
     headers: {
@@ -596,50 +462,6 @@ export async function updatePositionStop(
 }
 
 export async function fetchPositionStopSuggestion(positionId: string): Promise<PositionUpdate> {
-  if (isLocalPersistenceMode()) {
-    const localPosition = getPositionByIdLocal(positionId);
-    if (!localPosition) {
-      throw new Error(`Position not found: ${positionId}`);
-    }
-    const strategy = getActiveStrategyLocal();
-    const data = await fetchJson<PositionUpdateApiResponse>(API_ENDPOINTS.positionStopSuggestionCompute, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        position: {
-          ticker: localPosition.ticker,
-          status: localPosition.status,
-          entry_date: localPosition.entryDate,
-          entry_price: localPosition.entryPrice,
-          stop_price: localPosition.stopPrice,
-          shares: localPosition.shares,
-          position_id: localPosition.positionId ?? null,
-          source_order_id: localPosition.sourceOrderId ?? null,
-          initial_risk: localPosition.initialRisk ?? null,
-          max_favorable_price: localPosition.maxFavorablePrice ?? null,
-          exit_date: localPosition.exitDate ?? null,
-          exit_price: localPosition.exitPrice ?? null,
-          current_price: localPosition.currentPrice ?? null,
-          notes: localPosition.notes ?? '',
-          exit_order_ids: localPosition.exitOrderIds ?? null,
-          trail_method: localPosition.trailMethod ?? 'sma20',
-          trail_param: localPosition.trailParam ?? null,
-        },
-        manage: {
-          breakeven_at_r: strategy.manage.breakevenAtR,
-          trail_after_r: strategy.manage.trailAfterR,
-          trail_sma: strategy.manage.trailSma,
-          sma_buffer_pct: strategy.manage.smaBufferPct,
-          max_holding_days: strategy.manage.maxHoldingDays,
-          time_stop_days: strategy.manage.timeStopDays,
-          time_stop_min_r: strategy.manage.timeStopMinR,
-        },
-      }),
-      errorMessage: 'Failed to fetch stop suggestion',
-    });
-    return transformPositionUpdate(data);
-  }
-
   const data = await fetchJson<PositionUpdateApiResponse>(API_ENDPOINTS.positionStopSuggestion(positionId), {
     errorMessage: 'Failed to fetch stop suggestion',
   });
@@ -663,9 +485,6 @@ export async function updatePositionTrailMethod(
   request: UpdateTrailMethodRequest,
   idempotencyKey?: string,
 ): Promise<{ positionVersion: number }> {
-  if (isLocalPersistenceMode()) {
-    throw new Error('Trail method update is not supported in local persistence mode');
-  }
   const result = await fetchJson<{ position_version: number }>(API_ENDPOINTS.positionTrailMethod(positionId), {
     method: 'PATCH',
     headers: {
@@ -722,10 +541,6 @@ export async function closePosition(
   request: ClosePositionRequest,
   idempotencyKey?: string,
 ): Promise<PositionLifecycleResult> {
-  if (isLocalPersistenceMode()) {
-    const response = await closePositionLocal(positionId, request, resolveIdempotencyKey(idempotencyKey));
-    return transformLocalPositionLifecycle(response, positionId);
-  }
   const response = await fetchJson<PositionLifecycleApiResponse>(API_ENDPOINTS.positionClose(positionId), {
     method: 'POST',
     headers: {
@@ -751,13 +566,6 @@ export async function partialClosePosition(
   request: PartialCloseRequest,
   idempotencyKey?: string,
 ): Promise<PositionLifecycleResult> {
-  if (isLocalPersistenceMode()) {
-    const response = await executeTradingCommandLocal('partial_close', {
-      position_id: positionId, shares_closed: request.sharesClosed, price: request.price,
-      fee_eur: request.feeEur, fx_rate: request.fxRate,
-    }, resolveIdempotencyKey(idempotencyKey));
-    return transformLocalPositionLifecycle(response, positionId);
-  }
   const response = await fetchJson<PositionLifecycleApiResponse>(API_ENDPOINTS.positionPartialClose(positionId), {
     method: 'POST',
     headers: {
@@ -774,28 +582,6 @@ export async function partialClosePosition(
     errorMessage: 'Failed to partial close position',
   });
   return transformPositionLifecycle(response);
-}
-
-async function fetchLocalPortfolioProjection() {
-  return fetchJson<{ positions: PositionWithMetricsApiResponse[]; summary: PortfolioSummaryApiResponse }>('/api/portfolio/state/metrics', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(tradingSnapshotLocal()),
-    errorMessage: 'Failed to fetch local portfolio metrics',
-  });
-}
-
-function transformPositionMetrics(data: PositionMetricsApiResponse): PositionMetrics {
-  return {
-    ticker: data.ticker,
-    pnl: data.pnl,
-    pnlPercent: data.pnl_percent,
-    rNow: data.r_now,
-    rFxAdjusted: data.r_fx_adjusted ?? null,
-    entryValue: data.entry_value,
-    currentValue: data.current_value,
-    perShareRisk: data.per_share_risk,
-    totalRisk: data.total_risk,
-  };
 }
 
 function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): PositionWithMetrics {
