@@ -21,7 +21,7 @@ from api.models.portfolio import (
     PositionWithMetrics,
 )
 from api.repositories.config_repo import ConfigRepository
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlPositionsRepository
 from api.services.portfolio._helpers import to_state_position
 from api.services.portfolio.pricing import PositionPricingService
 from swing_screener.data.currency import detect_currency
@@ -322,7 +322,7 @@ class PortfolioReadService:
 
     def __init__(
         self,
-        positions_repo: PositionsRepository,
+        positions_repo: SqlPositionsRepository,
         pricing: PositionPricingService,
         config_repo: ConfigRepository,
     ) -> None:

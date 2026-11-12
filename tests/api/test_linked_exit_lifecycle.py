@@ -9,8 +9,8 @@ from api.models.portfolio import (
     FillOrderRequest,
     PartialCloseRequest,
 )
-from api.repositories.orders_repo import OrdersRepository
-from api.repositories.positions_repo import PositionsRepository
+from tests.support.fakes.json_orders_repo import OrdersRepository
+from tests.support.fakes.json_positions_repo import PositionsRepository
 from api.services.portfolio_service import PortfolioService
 from api.services.orders_service import OrdersService
 from swing_screener.errors import ConflictError

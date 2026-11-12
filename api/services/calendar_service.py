@@ -11,7 +11,7 @@ from typing import Optional
 import httpx
 
 from api.models.calendar import CalendarEvent, CalendarEventsResponse, CalendarSourceWarning
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlPositionsRepository
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class _SourceUnavailable(Exception):
 class CalendarService:
     def __init__(
         self,
-        positions_repo: PositionsRepository,
+        positions_repo: SqlPositionsRepository,
         data_dir: Path,
         finnhub_api_key: Optional[str] = None,
     ):

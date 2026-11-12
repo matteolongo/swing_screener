@@ -5,41 +5,6 @@ Order execution, workflows, and guidance for trade management.
 ## Quick Start
 
 ```python
-from swing_screener.execution import Order, load_orders, save_orders
-
-# Create an order
-order = Order(
-    order_id="ORD-001",
-    ticker="AAPL",
-    status="pending",
-    order_type="BUY_LIMIT",
-    quantity=100,
-    limit_price=175.00,
-    order_date="2024-01-15",
-)
-
-# Save orders to JSON
-save_orders("orders.json", [order])
-```
-
-```python
-from swing_screener.execution import fill_entry_order, fill_exit_order_dicts
-from swing_screener.portfolio.state import Position
-
-# Fill an entry order - creates position + auto-linked stop/take-profit
-new_orders, new_positions = fill_entry_order(
-    orders=[entry_order],
-    positions=[],
-    order_id="ORD-001",
-    fill_price=175.50,
-    fill_date="2024-01-16",
-    quantity=100,
-    stop_price=170.00,
-    tp_price=185.00,
-)
-```
-
-```python
 # Generate execution guidance from screener results
 from swing_screener.execution.guidance import add_execution_guidance, ExecutionConfig
 
@@ -59,13 +24,13 @@ request-scoped `ReportConfig.execution` instance explicitly.
 
 | File | Purpose |
 |------|---------|
-| `orders.py` | `Order` dataclass, `load_orders()`, `save_orders()` |
-| `order_workflows.py` | `fill_entry_order()`, `scale_in_fill()`, `normalize_orders()` |
-| `orders_service.py` | Dict ↔ model conversions for API layer |
 | `guidance.py` | `add_execution_guidance()`, `ExecutionConfig` |
-| `degiro_fees.py` | Import DeGiro broker fees from CSV export |
-| `providers/` | Fee calculators per broker |
 | `__init__.py` | Package exports |
+
+Orders, fills and linked exits live in the API's SQL ledger
+(`api/services/orders_service.py`, `api/services/portfolio/write.py`,
+`api/db/repositories.py`). DeGiro fees are recorded per order/position as
+`fee_eur`, `entry_fee_eur` and `exit_fee_eur` through the API.
 
 The API-layer order-review boundary lives in
 `api/services/order_approval.py`. Its pure
@@ -98,30 +63,9 @@ approval token. Its mode is `pending_pullback`, not `ready`. `SKIP` is never an
 executable signal: it cannot produce approval claims, a token, or a draft even
 if an earlier analytical signal looked actionable.
 
-## DeGiro Fee Import
-
-```python
-from swing_screener.execution.degiro_fees import import_degiro_fees
-
-updated_orders = import_degiro_fees(
-    orders=orders,
-    degiro_csv_path="degiro_export.csv",
-    fx_rate=1.08,          # EUR/USD if orders are in USD
-)
-```
-
-DeGiro fee records are matched to filled orders by ticker and date, then stored in `order.fee_eur`.
-
 ## Order Lifecycle
 
-```
-pending → filled     (fill_entry_order / fill_exit_order)
-pending → cancelled  (cancel_order)
-```
-
-Orders are persisted to `data/orders.json`. Use `load_orders()` / `save_orders()` for all reads and writes — never edit the JSON directly while the CLI is running (file locking is active).
-
-The API owns a separate SQL ledger. Its manual-plan lifecycle is `draft → pending → submitted
+The API's SQL ledger is the only order store. Its manual-plan lifecycle is `draft → pending → submitted
 → filled`, with unfilled `draft`, `pending` and `submitted` records cancellable
 to `cancelled`. `save_as_draft` stores a coherent proposed entry plan without
 approval; submission/fill are blocked until a fresh signed review promotes it
@@ -136,15 +80,7 @@ protective records in the same local transaction. If a linked exit is filled,
 that record remains historical as `filled` while other protection reconciles.
 Users must make the corresponding broker change manually.
 
-## Notes
-
-- `fill_entry_order()` automatically creates linked stop and take-profit orders.
-- `scale_in_fill()` adds shares to an existing open position without creating a new position record.
-- `normalize_orders()` deduplicates and cleans order lists after import operations.
-- `orders_service.py` provides dict-based wrappers consumed by the FastAPI endpoints.
-
 ## See Also
 
-- `portfolio/state.py` — `Position` created from a filled entry order
+- `portfolio/state.py` — `Position` and stop management
 - `risk/position_sizing.py` — determines `stop_price` and `quantity` before order creation
-- `cli.py` `orders` command — drives the order lifecycle from the terminal

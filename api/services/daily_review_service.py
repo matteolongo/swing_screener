@@ -20,7 +20,7 @@ from api.models.daily_review import (
 )
 from api.models.portfolio import PositionUpdate
 from api.models.screener import ScreenerRequest, TaxonomyFilter
-from api.repositories.orders_repo import OrdersRepository
+from api.db.repositories import SqlOrdersRepository
 from api.services.daily_review import DailyReviewWriter
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerRunPolicy, ScreenerService
@@ -112,7 +112,7 @@ class DailyReviewService:
         screener_service: ScreenerService,
         portfolio_service: PortfolioService,
         watchlist_service: WatchlistService | None = None,
-        orders_repo: Optional[OrdersRepository] = None,
+        orders_repo: Optional[SqlOrdersRepository] = None,
         data_dir: Path = Path("data"),
     ):
         self.screener = screener_service

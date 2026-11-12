@@ -70,8 +70,7 @@ def test_upgrade_downgrade_upgrade_creates_relational_schema(tmp_path):
         "portfolio_orders",
         "portfolio_positions",
         "idempotency_records",
-        "legacy_imports",
-        "legacy_import_lock",
+        "portfolio_state",
         "alembic_version",
     } <= set(inspector.get_table_names())
 
@@ -141,4 +140,29 @@ def test_manual_draft_migration_preserves_populated_orders_and_safe_rollback(tmp
     command.upgrade(config, "head")
     with engine.begin() as connection:
         connection.execute(insert, {"id": "new-manual", "status": "draft"})
+    engine.dispose()
+
+
+def test_legacy_import_ledger_migration_keeps_asof_dates(tmp_path):
+    url = f"sqlite:///{tmp_path / 'ledger-migration.db'}"
+    config = _config(url)
+    command.upgrade(config, "20261008_0003")
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO legacy_imports (id, schema_revision, orders_sha256, "
+                "positions_sha256, order_count, position_count, orders_asof, "
+                "positions_asof) VALUES (1, '20260715_0001', '', '', 0, 0, "
+                "'2026-11-01', '2026-11-02')"
+            )
+        )
+
+    command.upgrade(config, "head")
+    tables = set(inspect(engine).get_table_names())
+    assert "legacy_imports" not in tables
+    assert "legacy_import_lock" not in tables
+    with engine.connect() as connection:
+        rows = connection.execute(text("SELECT * FROM portfolio_state")).all()
+    assert [tuple(row) for row in rows] == [(1, "2026-11-01", "2026-11-02")]
     engine.dispose()

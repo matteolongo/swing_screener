@@ -1,15 +1,14 @@
 """Tests for FX-adjusted R display on position metrics."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pandas as pd
 from fastapi.testclient import TestClient
 
-import api.dependencies as deps
 from api.main import app
+from tests.support.state import seed_portfolio
 from api.services import portfolio_service
 from swing_screener.data.providers import MarketDataProvider
 
@@ -31,10 +30,8 @@ def _ohlcv_with_closes(closes: dict[str, list[float]]) -> pd.DataFrame:
     return df
 
 
-def _write_positions(tmp_path: Path, positions: list[dict]) -> Path:
-    p = tmp_path / "positions.json"
-    p.write_text(json.dumps({"positions": positions, "asof": "2026-01-01"}))
-    return p
+def _write_positions(monkeypatch, tmp_path: Path, positions: list[dict]) -> None:
+    seed_portfolio(monkeypatch, tmp_path, positions=positions, asof="2026-01-01")
 
 
 USD_POSITION = {
@@ -110,8 +107,7 @@ class TestComputeRFxAdjusted:
 
 class TestFxAdjustedREndpoint:
     def test_usd_position_with_entry_fx_rate_has_r_fx_adjusted(self, tmp_path, monkeypatch):
-        pos_file = _write_positions(tmp_path, [USD_POSITION])
-        monkeypatch.setattr(deps, "POSITIONS_FILE", pos_file)
+        _write_positions(monkeypatch, tmp_path, [USD_POSITION])
         portfolio_service._eurusd_cache.clear()
 
         mock_provider = MagicMock(spec=MarketDataProvider)
@@ -138,8 +134,7 @@ class TestFxAdjustedREndpoint:
         assert data["r_fx_adjusted"] > 2.0  # USD strengthened → more EUR R
 
     def test_eur_position_returns_null_r_fx_adjusted(self, tmp_path, monkeypatch):
-        pos_file = _write_positions(tmp_path, [EUR_POSITION])
-        monkeypatch.setattr(deps, "POSITIONS_FILE", pos_file)
+        _write_positions(monkeypatch, tmp_path, [EUR_POSITION])
         portfolio_service._eurusd_cache.clear()
 
         mock_provider = MagicMock(spec=MarketDataProvider)
@@ -155,8 +150,7 @@ class TestFxAdjustedREndpoint:
 
     def test_usd_position_without_entry_fx_rate_returns_null(self, tmp_path, monkeypatch):
         pos_no_fx = {**USD_POSITION, "position_id": "POS-USD002", "entry_fx_rate": None}
-        pos_file = _write_positions(tmp_path, [pos_no_fx])
-        monkeypatch.setattr(deps, "POSITIONS_FILE", pos_file)
+        _write_positions(monkeypatch, tmp_path, [pos_no_fx])
         portfolio_service._eurusd_cache.clear()
 
         mock_provider = MagicMock(spec=MarketDataProvider)
@@ -171,8 +165,7 @@ class TestFxAdjustedREndpoint:
         assert response.json()["r_fx_adjusted"] is None
 
     def test_list_positions_includes_r_fx_adjusted_for_usd(self, tmp_path, monkeypatch):
-        pos_file = _write_positions(tmp_path, [USD_POSITION])
-        monkeypatch.setattr(deps, "POSITIONS_FILE", pos_file)
+        _write_positions(monkeypatch, tmp_path, [USD_POSITION])
         portfolio_service._eurusd_cache.clear()
 
         mock_provider = MagicMock(spec=MarketDataProvider)

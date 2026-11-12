@@ -7,15 +7,14 @@ as "current price" for the rest of the trading session, mislabeled `price_source
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pandas as pd
 from fastapi.testclient import TestClient
 
-import api.dependencies as deps
 from api.main import app
+from tests.support.state import seed_portfolio
 from api.services import portfolio_service
 from swing_screener.data.providers import MarketDataProvider
 
@@ -33,10 +32,8 @@ OPEN_POSITION = {
 }
 
 
-def _write_positions(tmp_path: Path, positions: list[dict]) -> Path:
-    p = tmp_path / "positions.json"
-    p.write_text(json.dumps({"positions": positions, "asof": "2026-06-30"}))
-    return p
+def _write_positions(monkeypatch, tmp_path: Path, positions: list[dict]) -> None:
+    seed_portfolio(monkeypatch, tmp_path, positions=positions, asof="2026-06-30")
 
 
 def _stale_ohlcv(ticker: str, close: float) -> pd.DataFrame:
@@ -55,8 +52,7 @@ def _stale_ohlcv(ticker: str, close: float) -> pd.DataFrame:
 
 class TestListPositionsLiveQuote:
     def test_uses_live_quote_over_stale_cached_close(self, tmp_path, monkeypatch):
-        pos_file = _write_positions(tmp_path, [OPEN_POSITION])
-        monkeypatch.setattr(deps, "POSITIONS_FILE", pos_file)
+        _write_positions(monkeypatch, tmp_path, [OPEN_POSITION])
 
         mock_provider = MagicMock(spec=MarketDataProvider)
         mock_provider.fetch_latest_price.return_value = 396.44  # real-time quote
@@ -73,8 +69,7 @@ class TestListPositionsLiveQuote:
         assert positions[0]["price_source"] == "live"
 
     def test_falls_back_to_cached_close_when_live_quote_fails(self, tmp_path, monkeypatch):
-        pos_file = _write_positions(tmp_path, [OPEN_POSITION])
-        monkeypatch.setattr(deps, "POSITIONS_FILE", pos_file)
+        _write_positions(monkeypatch, tmp_path, [OPEN_POSITION])
 
         mock_provider = MagicMock(spec=MarketDataProvider)
         mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote")
@@ -92,8 +87,7 @@ class TestListPositionsLiveQuote:
 
 class TestPositionMetricsLiveQuote:
     def test_uses_live_quote_over_stale_cached_close(self, tmp_path, monkeypatch):
-        pos_file = _write_positions(tmp_path, [OPEN_POSITION])
-        monkeypatch.setattr(deps, "POSITIONS_FILE", pos_file)
+        _write_positions(monkeypatch, tmp_path, [OPEN_POSITION])
 
         mock_provider = MagicMock(spec=MarketDataProvider)
         mock_provider.fetch_latest_price.return_value = 396.44
@@ -109,8 +103,7 @@ class TestPositionMetricsLiveQuote:
         assert data["price_source"] == "live"
 
     def test_falls_back_to_cached_close_when_live_quote_fails(self, tmp_path, monkeypatch):
-        pos_file = _write_positions(tmp_path, [OPEN_POSITION])
-        monkeypatch.setattr(deps, "POSITIONS_FILE", pos_file)
+        _write_positions(monkeypatch, tmp_path, [OPEN_POSITION])
 
         mock_provider = MagicMock(spec=MarketDataProvider)
         mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote")

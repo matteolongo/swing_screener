@@ -30,8 +30,7 @@ from api.models.portfolio import (
 )
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.strategy_repo import StrategyRepository
-from api.repositories.orders_repo import OrdersRepository
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
 from api.utils.files import get_today_str
 from api.services.order_approval import (
     EffectiveOrderPolicy,
@@ -63,8 +62,8 @@ def _resolve_isin(ticker: str) -> Optional[str]:
 class OrdersService:
     def __init__(
         self,
-        orders_repo: OrdersRepository,
-        positions_repo: PositionsRepository,
+        orders_repo: SqlOrdersRepository,
+        positions_repo: SqlPositionsRepository,
         config_repo: ConfigRepository | None = None,
         strategy_repo: StrategyRepository | None = None,
         approval_signer: OrderApprovalTokenSigner | None = None,

@@ -44,8 +44,6 @@ def test_settings_manager_merges_defaults_and_runtime_overrides(monkeypatch, tmp
                     "sma_buffer_pct": 0.005,
                     "max_holding_days": 20,
                 },
-                "positions_file": "data/positions.json",
-                "orders_file": "data/orders.json",
             },
         },
     )
@@ -57,9 +55,6 @@ def test_settings_manager_merges_defaults_and_runtime_overrides(monkeypatch, tmp
                     "risk_pct": 0.02,
                 },
             },
-            "runtime": {
-                "positions_file": "runtime/positions.yaml.json",
-            },
         },
     )
 
@@ -68,6 +63,5 @@ def test_settings_manager_merges_defaults_and_runtime_overrides(monkeypatch, tmp
 
     assert payload["risk"]["account_size"] == 50000
     assert payload["risk"]["risk_pct"] == 0.02
-    assert payload["positions_file"] == "runtime/positions.yaml.json"
-    assert payload["orders_file"] == "data/orders.json"
+    assert "positions_file" not in payload
 

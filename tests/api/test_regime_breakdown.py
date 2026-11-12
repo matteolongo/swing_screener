@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -12,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
+from tests.support.state import seed_portfolio
 from api.services.regime_analytics import (
     REGIME_CHOPPY,
     REGIME_TRENDING_DOWN,
@@ -34,10 +34,8 @@ def _make_close(n: int, prices: list[float] | None = None) -> pd.Series:
     return pd.Series(vals, index=dates)
 
 
-def _write_positions(tmp_path: Path, positions: list) -> Path:
-    pos_file = tmp_path / "positions.json"
-    pos_file.write_text(json.dumps({"asof": "2024-01-01", "positions": positions}))
-    return pos_file
+def _write_positions(monkeypatch, tmp_path: Path, positions: list[dict]) -> None:
+    seed_portfolio(monkeypatch, tmp_path, positions=positions, asof="2024-01-01")
 
 
 def _make_spy_df(n: int, prices: list[float]) -> pd.DataFrame:
@@ -185,10 +183,7 @@ def test_endpoint_preserves_canonical_r_and_nullable_win_rate(
     position = _closed_trade()
     if scratch:
         position.update(exit_price=100, partial_closes=[])
-    pos_file = _write_positions(tmp_path, [position])
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_positions_path", pos_file)
+    _write_positions(monkeypatch, tmp_path, [position])
     prices = pd.DataFrame(
         {"Close": range(100, 500)}, index=pd.bdate_range(end="2026-10-14", periods=400)
     )
@@ -205,10 +200,7 @@ def test_endpoint_preserves_canonical_r_and_nullable_win_rate(
 
 
 def test_endpoint_returns_empty_when_no_closed_positions(tmp_path, monkeypatch):
-    pos_file = _write_positions(tmp_path, [])
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_positions_path", pos_file)
+    _write_positions(monkeypatch, tmp_path, [])
 
     response = client.get("/api/portfolio/analytics/regime-breakdown")
     assert response.status_code == 200
@@ -244,10 +236,7 @@ def test_endpoint_returns_regime_stats(tmp_path, monkeypatch):
             "stop_price": 190.0,
         },
     ]
-    pos_file = _write_positions(tmp_path, positions)
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_positions_path", pos_file)
+    _write_positions(monkeypatch, tmp_path, positions)
 
     # 400 days of rising prices → trending_up at both entry dates
     rising_prices = [400.0 + i * 0.5 for i in range(400)]
@@ -295,11 +284,7 @@ def test_endpoint_benchmark_unavailable_is_not_empty_success(
             "stop_price": 90.0,
         },
     ]
-    pos_file = _write_positions(tmp_path, positions)
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_positions_path", pos_file)
-
+    _write_positions(monkeypatch, tmp_path, positions)
     with patch(
         "yfinance.download",
         **(

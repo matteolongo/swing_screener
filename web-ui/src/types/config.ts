@@ -39,8 +39,6 @@ export interface AppConfig {
   risk: RiskConfig;
   indicators: IndicatorConfig;
   manage: ManageConfig;
-  positionsFile: string;
-  ordersFile: string;
 }
 
 export interface RiskConfigAPI {
@@ -84,8 +82,6 @@ export interface AppConfigAPI {
   risk: RiskConfigAPI;
   indicators: IndicatorConfigAPI;
   manage: ManageConfigAPI;
-  positions_file: string;
-  orders_file: string;
 }
 
 export function transformAppConfig(api: AppConfigAPI): AppConfig {
@@ -124,8 +120,6 @@ export function transformAppConfig(api: AppConfigAPI): AppConfig {
       timeStopMinR: api.manage.time_stop_min_r ?? 0.5,
       exitSignalDays: api.manage.exit_signal_days ?? 2,
     },
-    positionsFile: api.positions_file,
-    ordersFile: api.orders_file,
   };
 }
 

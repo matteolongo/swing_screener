@@ -16,7 +16,7 @@ from swing_screener.portfolio.state import (
 
 from api.models.portfolio import PositionUpdate
 from api.repositories.config_repo import ConfigRepository
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlPositionsRepository
 from api.services.portfolio._helpers import to_state_position
 from api.utils.files import get_today_str
 
@@ -55,7 +55,7 @@ class PositionStopAdvisor:
 
     def __init__(
         self,
-        positions_repo: PositionsRepository,
+        positions_repo: SqlPositionsRepository,
         provider: Optional[MarketDataProvider] = None,
         config_repo: Optional[ConfigRepository] = None,
     ) -> None:

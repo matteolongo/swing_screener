@@ -12,7 +12,7 @@ from swing_screener.errors import ConflictError
 
 from api.db.models import (
     IdempotencyRecordRow,
-    LegacyImportRow,
+    PortfolioStateRow,
     OrderRow,
     PositionRow,
 )
@@ -129,10 +129,10 @@ class SqlOrdersRepository:
         if status:
             statement = statement.where(OrderRow.status == status)
         rows = self.session.scalars(statement).all()
-        ledger = self.session.get(LegacyImportRow, 1)
+        state = self.session.get(PortfolioStateRow, 1)
         asof = (
-            ledger.orders_asof
-            if ledger is not None and ledger.orders_asof
+            state.orders_asof
+            if state is not None and state.orders_asof
             else max((row.order_date for row in rows), default=get_today_str())
         )
         return [_serialize(row, ORDER_FIELDS) for row in rows], asof
@@ -198,9 +198,9 @@ class SqlOrdersRepository:
         return _serialize(row, ORDER_FIELDS)
 
     def _touch_asof(self) -> None:
-        ledger = self.session.get(LegacyImportRow, 1)
-        if ledger is not None:
-            ledger.orders_asof = get_today_str()
+        state = self.session.get(PortfolioStateRow, 1)
+        if state is not None:
+            state.orders_asof = get_today_str()
 
 
 class SqlPositionsRepository:
@@ -212,10 +212,10 @@ class SqlPositionsRepository:
         if status:
             statement = statement.where(PositionRow.status == status)
         rows = self.session.scalars(statement).all()
-        ledger = self.session.get(LegacyImportRow, 1)
+        state = self.session.get(PortfolioStateRow, 1)
         asof = (
-            ledger.positions_asof
-            if ledger is not None and ledger.positions_asof
+            state.positions_asof
+            if state is not None and state.positions_asof
             else max((row.entry_date for row in rows), default=get_today_str())
         )
         return [_serialize(row, POSITION_FIELDS) for row in rows], asof
@@ -283,9 +283,9 @@ class SqlPositionsRepository:
         return data
 
     def _touch_asof(self) -> None:
-        ledger = self.session.get(LegacyImportRow, 1)
-        if ledger is not None:
-            ledger.positions_asof = get_today_str()
+        state = self.session.get(PortfolioStateRow, 1)
+        if state is not None:
+            state.positions_asof = get_today_str()
 
 
 class SqlIdempotencyRepository:

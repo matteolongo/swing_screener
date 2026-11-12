@@ -115,25 +115,11 @@ class IdempotencyRecordRow(Base):
     )
 
 
-class LegacyImportRow(Base):
-    __tablename__ = "legacy_imports"
+class PortfolioStateRow(Base):
+    """Singleton row: portfolio write lock and orders/positions ``asof`` dates."""
+
+    __tablename__ = "portfolio_state"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    schema_revision: Mapped[str] = mapped_column(String(64))
-    orders_sha256: Mapped[str] = mapped_column(String(64))
-    positions_sha256: Mapped[str] = mapped_column(String(64))
-    order_count: Mapped[int] = mapped_column(Integer)
-    position_count: Mapped[int] = mapped_column(Integer)
     orders_asof: Mapped[str | None] = mapped_column(String(32))
     positions_asof: Mapped[str | None] = mapped_column(String(32))
-    imported_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-
-class LegacyImportLockRow(Base):
-    """Singleton row used to serialize legacy import across app instances."""
-
-    __tablename__ = "legacy_import_lock"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)

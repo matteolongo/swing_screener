@@ -1,8 +1,8 @@
 from __future__ import annotations
-import json
 import pytest
 from fastapi.testclient import TestClient
 from api.main import app
+from tests.support.state import seed_portfolio
 
 
 def _idempotency(key: str) -> dict[str, str]:
@@ -11,14 +11,11 @@ def _idempotency(key: str) -> dict[str, str]:
 
 @pytest.fixture()
 def client_with_empty_order_book(tmp_path, monkeypatch):
-    orders_path = tmp_path / "orders.json"
-    positions_path = tmp_path / "positions.json"
-    orders_path.write_text(json.dumps({"orders": [], "asof": "2026-04-25"}))
-    positions_path.write_text(json.dumps({"positions": [], "asof": "2026-04-25"}))
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_orders_path", orders_path)
-    monkeypatch.setattr(deps, "_positions_path", positions_path)
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        asof="2026-04-25",
+    )
     return TestClient(app)
 
 
@@ -54,43 +51,34 @@ def test_create_order_rejects_stop_at_or_above_limit(client_with_empty_order_boo
 
 @pytest.fixture()
 def client_with_pending_order(tmp_path, monkeypatch):
-    orders_path = tmp_path / "orders.json"
-    positions_path = tmp_path / "positions.json"
-    orders_path.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        orders=[
             {
-                "orders": [
-                    {
-                        "order_id": "ORD-SBMO-001",
-                        "ticker": "SBMO",
-                        "status": "pending",
-                        "order_kind": "entry",
-                        "order_type": "LIMIT",
-                        "quantity": 200,
-                        "limit_price": 12.50,
-                        "stop_price": 11.20,
-                        "order_date": "2026-04-25",
-                        "filled_date": None,
-                        "entry_price": None,
-                        "notes": "",
-                        "parent_order_id": None,
-                        "position_id": None,
-                        "tif": "GTC",
-                        "fee_eur": None,
-                        "fill_fx_rate": None,
-                        "isin": "NL0010273215",
-                        "thesis": None,
-                    }
-                ],
-                "asof": "2026-04-25",
+                "order_id": "ORD-SBMO-001",
+                "ticker": "SBMO",
+                "status": "pending",
+                "order_kind": "entry",
+                "order_type": "LIMIT",
+                "quantity": 200,
+                "limit_price": 12.50,
+                "stop_price": 11.20,
+                "order_date": "2026-04-25",
+                "filled_date": None,
+                "entry_price": None,
+                "notes": "",
+                "parent_order_id": None,
+                "position_id": None,
+                "tif": "GTC",
+                "fee_eur": None,
+                "fill_fx_rate": None,
+                "isin": "NL0010273215",
+                "thesis": None,
             }
-        )
+        ],
+        asof="2026-04-25",
     )
-    positions_path.write_text(json.dumps({"positions": [], "asof": "2026-04-25"}))
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_orders_path", orders_path)
-    monkeypatch.setattr(deps, "_positions_path", positions_path)
     return TestClient(app)
 
 
@@ -157,44 +145,35 @@ def test_cancel_pending_order_marks_cancelled(client_with_pending_order):
 
 @pytest.fixture()
 def client_with_target_order(tmp_path, monkeypatch):
-    orders_path = tmp_path / "orders.json"
-    positions_path = tmp_path / "positions.json"
-    orders_path.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        orders=[
             {
-                "orders": [
-                    {
-                        "order_id": "ORD-SBMO-001",
-                        "ticker": "SBMO",
-                        "status": "pending",
-                        "order_kind": "entry",
-                        "order_type": "LIMIT",
-                        "quantity": 200,
-                        "limit_price": 12.50,
-                        "stop_price": 11.20,
-                        "target_price": 15.00,
-                        "order_date": "2026-04-25",
-                        "filled_date": None,
-                        "entry_price": None,
-                        "notes": "",
-                        "parent_order_id": None,
-                        "position_id": None,
-                        "tif": "GTC",
-                        "fee_eur": None,
-                        "fill_fx_rate": None,
-                        "isin": "NL0010273215",
-                        "thesis": None,
-                    }
-                ],
-                "asof": "2026-04-25",
+                "order_id": "ORD-SBMO-001",
+                "ticker": "SBMO",
+                "status": "pending",
+                "order_kind": "entry",
+                "order_type": "LIMIT",
+                "quantity": 200,
+                "limit_price": 12.50,
+                "stop_price": 11.20,
+                "target_price": 15.00,
+                "order_date": "2026-04-25",
+                "filled_date": None,
+                "entry_price": None,
+                "notes": "",
+                "parent_order_id": None,
+                "position_id": None,
+                "tif": "GTC",
+                "fee_eur": None,
+                "fill_fx_rate": None,
+                "isin": "NL0010273215",
+                "thesis": None,
             }
-        )
+        ],
+        asof="2026-04-25",
     )
-    positions_path.write_text(json.dumps({"positions": [], "asof": "2026-04-25"}))
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_orders_path", orders_path)
-    monkeypatch.setattr(deps, "_positions_path", positions_path)
     return TestClient(app)
 
 
@@ -211,68 +190,53 @@ def test_fill_order_carries_target_price_to_position(client_with_target_order):
 
 @pytest.fixture()
 def client_with_addon_order(tmp_path, monkeypatch):
-    orders_path = tmp_path / "orders.json"
-    positions_path = tmp_path / "positions.json"
-    orders_path.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=[
             {
-                "orders": [
-                    {
-                        "order_id": "ORD-SBMO-002",
-                        "ticker": "SBMO",
-                        "status": "pending",
-                        "order_kind": "entry",
-                        "order_type": "LIMIT",
-                        "quantity": 50,
-                        "limit_price": 13.00,
-                        "stop_price": 11.20,
-                        "order_date": "2026-04-25",
-                        "filled_date": None,
-                        "entry_price": None,
-                        "notes": "",
-                        "parent_order_id": None,
-                        "position_id": "POS-EXIST",
-                        "tif": "GTC",
-                        "fee_eur": None,
-                        "fill_fx_rate": None,
-                        "isin": "NL0010273215",
-                        "thesis": None,
-                        "quote_currency": "USD",
-                        "account_currency": "EUR",
-                        "approval_fx_rate": 1.1,
-                    }
-                ],
-                "asof": "2026-04-25",
+                "position_id": "POS-EXIST",
+                "ticker": "SBMO",
+                "status": "open",
+                "entry_date": "2026-04-20",
+                "entry_price": 12.0,
+                "stop_price": 11.0,
+                "shares": 100,
+                "initial_risk": 1.0,
+                "entry_fee_eur": 2.0,
+                "quote_currency": "USD",
+                "account_currency": "EUR",
+                "entry_fx_rate": 1.2,
             }
-        )
-    )
-    positions_path.write_text(
-        json.dumps(
+        ],
+        orders=[
             {
-                "positions": [
-                    {
-                        "position_id": "POS-EXIST",
-                        "ticker": "SBMO",
-                        "status": "open",
-                        "entry_date": "2026-04-20",
-                        "entry_price": 12.0,
-                        "stop_price": 11.0,
-                        "shares": 100,
-                        "initial_risk": 1.0,
-                        "entry_fee_eur": 2.0,
-                        "quote_currency": "USD",
-                        "account_currency": "EUR",
-                        "entry_fx_rate": 1.2,
-                    }
-                ],
-                "asof": "2026-04-25",
+                "order_id": "ORD-SBMO-002",
+                "ticker": "SBMO",
+                "status": "pending",
+                "order_kind": "entry",
+                "order_type": "LIMIT",
+                "quantity": 50,
+                "limit_price": 13.00,
+                "stop_price": 11.20,
+                "order_date": "2026-04-25",
+                "filled_date": None,
+                "entry_price": None,
+                "notes": "",
+                "parent_order_id": None,
+                "position_id": "POS-EXIST",
+                "tif": "GTC",
+                "fee_eur": None,
+                "fill_fx_rate": None,
+                "isin": "NL0010273215",
+                "thesis": None,
+                "quote_currency": "USD",
+                "account_currency": "EUR",
+                "approval_fx_rate": 1.1,
             }
-        )
+        ],
+        asof="2026-04-25",
     )
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_orders_path", orders_path)
-    monkeypatch.setattr(deps, "_positions_path", positions_path)
     return TestClient(app)
 
 
@@ -312,61 +276,46 @@ def test_fill_addon_merges_into_existing_position(client_with_addon_order):
 
 @pytest.fixture()
 def client_with_addon_order_below_live_stop(tmp_path, monkeypatch):
-    orders_path = tmp_path / "orders.json"
-    positions_path = tmp_path / "positions.json"
-    orders_path.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=[
             {
-                "orders": [
-                    {
-                        "order_id": "ORD-SBMO-003",
-                        "ticker": "SBMO",
-                        "status": "pending",
-                        "order_kind": "entry",
-                        "order_type": "LIMIT",
-                        "quantity": 50,
-                        "limit_price": 8.00,
-                        "stop_price": 7.00,
-                        "order_date": "2026-04-25",
-                        "filled_date": None,
-                        "entry_price": None,
-                        "notes": "",
-                        "parent_order_id": None,
-                        "position_id": "POS-EXIST",
-                        "tif": "GTC",
-                        "fee_eur": None,
-                        "fill_fx_rate": None,
-                        "isin": "NL0010273215",
-                        "thesis": None,
-                    }
-                ],
-                "asof": "2026-04-25",
+                "position_id": "POS-EXIST",
+                "ticker": "SBMO",
+                "status": "open",
+                "entry_date": "2026-04-20",
+                "entry_price": 12.0,
+                "stop_price": 11.0,
+                "shares": 100,
+                "initial_risk": 1.0,
             }
-        )
-    )
-    positions_path.write_text(
-        json.dumps(
+        ],
+        orders=[
             {
-                "positions": [
-                    {
-                        "position_id": "POS-EXIST",
-                        "ticker": "SBMO",
-                        "status": "open",
-                        "entry_date": "2026-04-20",
-                        "entry_price": 12.0,
-                        "stop_price": 11.0,
-                        "shares": 100,
-                        "initial_risk": 1.0,
-                    }
-                ],
-                "asof": "2026-04-25",
+                "order_id": "ORD-SBMO-003",
+                "ticker": "SBMO",
+                "status": "pending",
+                "order_kind": "entry",
+                "order_type": "LIMIT",
+                "quantity": 50,
+                "limit_price": 8.00,
+                "stop_price": 7.00,
+                "order_date": "2026-04-25",
+                "filled_date": None,
+                "entry_price": None,
+                "notes": "",
+                "parent_order_id": None,
+                "position_id": "POS-EXIST",
+                "tif": "GTC",
+                "fee_eur": None,
+                "fill_fx_rate": None,
+                "isin": "NL0010273215",
+                "thesis": None,
             }
-        )
+        ],
+        asof="2026-04-25",
     )
-    import api.dependencies as deps
-
-    monkeypatch.setattr(deps, "_orders_path", orders_path)
-    monkeypatch.setattr(deps, "_positions_path", positions_path)
     return TestClient(app)
 
 

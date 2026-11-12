@@ -11,7 +11,6 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import text
 
-from api.db.import_legacy import classify_import_state
 from api.db.session import DatabaseRuntime
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ class DatabaseReadiness:
 
 
 class DatabaseSchemaError(RuntimeError):
-    """Raised before import when the database is unavailable or not at head."""
+    """Raised when the database is unavailable or not at head."""
 
 
 def _expected_revision() -> str:
@@ -55,7 +54,6 @@ def check_database_readiness(runtime: DatabaseRuntime) -> DatabaseReadiness:
     checks = {
         "connectivity": "error",
         "migration": "unknown",
-        "legacy_import": "unknown",
     }
     details: dict[str, str] = {}
 
@@ -95,21 +93,4 @@ def check_database_readiness(runtime: DatabaseRuntime) -> DatabaseReadiness:
         )
         return DatabaseReadiness(False, checks, details)
     checks["migration"] = "ok"
-
-    try:
-        with runtime.session_factory() as session:
-            state = classify_import_state(session)
-    except Exception as exc:
-        logger.warning(
-            "Database readiness import-state check failed: exception=%s",
-            type(exc).__name__,
-        )
-        checks["legacy_import"] = "error"
-        details["legacy_import"] = "Legacy import state is unavailable."
-        return DatabaseReadiness(False, checks, details)
-
-    checks["legacy_import"] = state.value
-    if state.value != "complete":
-        details["legacy_import"] = "Legacy portfolio import is not complete."
-        return DatabaseReadiness(False, checks, details)
     return DatabaseReadiness(True, checks, details)

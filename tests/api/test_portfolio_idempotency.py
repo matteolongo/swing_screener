@@ -1,47 +1,38 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-import json
 
 import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
+from tests.support.state import seed_portfolio
 
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    orders_path = tmp_path / "orders.json"
-    positions_path = tmp_path / "positions.json"
-    orders_path.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        orders=[
             {
-                "orders": [
-                    {
-                        "order_id": "ORD-AAPL-001",
-                        "ticker": "AAPL",
-                        "status": "pending",
-                        "order_kind": "entry",
-                        "order_type": "BUY_LIMIT",
-                        "quantity": 2,
-                        "limit_price": 100,
-                        "stop_price": 95,
-                        "target_price": 110,
-                        "order_date": "2026-07-15",
-                        "quote_currency": "USD",
-                        "account_currency": "EUR",
-                        "approval_fx_rate": 1.1,
-                    }
-                ],
-                "asof": "2026-07-15",
+                "order_id": "ORD-AAPL-001",
+                "ticker": "AAPL",
+                "status": "pending",
+                "order_kind": "entry",
+                "order_type": "BUY_LIMIT",
+                "quantity": 2,
+                "limit_price": 100,
+                "stop_price": 95,
+                "target_price": 110,
+                "order_date": "2026-07-15",
+                "quote_currency": "USD",
+                "account_currency": "EUR",
+                "approval_fx_rate": 1.1,
             }
-        )
+        ],
+        asof="2026-07-15",
     )
-    positions_path.write_text(json.dumps({"positions": [], "asof": "2026-07-15"}))
-    import api.dependencies as dependencies
-
-    monkeypatch.setattr(dependencies, "_orders_path", orders_path)
-    monkeypatch.setattr(dependencies, "_positions_path", positions_path)
     return TestClient(app)
 
 

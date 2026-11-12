@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from api.db.unit_of_work import PortfolioUnitOfWork
+from api.utils.files import get_today_str
 
 
 def _order(order_id="ORD-AAPL-001"):
@@ -57,7 +58,7 @@ def test_repository_round_trip_preserves_shape_and_float_boundary(runtime):
         orders, asof = uow.orders.list_orders()
         positions, _ = uow.positions.list_positions(status="open")
 
-    assert asof == "2026-07-15"
+    assert asof == get_today_str()
     assert orders[0]["limit_price"] == 100.125
     assert isinstance(orders[0]["limit_price"], float)
     assert orders[0]["notes"] == "audit me"

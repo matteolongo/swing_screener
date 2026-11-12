@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from api.models.portfolio import ClosePositionRequest, PartialCloseEvent, PartialCloseRequest
-from api.repositories.positions_repo import PositionsRepository
+from tests.support.fakes.json_positions_repo import PositionsRepository
 from api.services.portfolio.read import PortfolioReadService
 from api.services.portfolio.write import PortfolioWriteService
 

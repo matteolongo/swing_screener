@@ -144,7 +144,7 @@ Require migration/backfill notes in the nearest `README.md`.
 Configurable behavior goes in YAML, never hardcoded. Config files live in `config/`. See `config/README.md` for which file to use for each type of setting.
 
 ### Runtime State
-Primary state: `data/positions.json` (open trades), `data/orders.json` (order lifecycle). See `data/README.md` for schema notes and migration history.
+Primary state: orders, positions and idempotency records in the SQL database (`DATABASE_URL`; SQLite `data/swing_screener.db` in development). See `api/README.md` for persistence rules and `data/README.md` for record notes.
 
 ## Intraday Boundary
 

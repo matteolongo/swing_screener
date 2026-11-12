@@ -31,8 +31,6 @@ export const mockConfig = {
     sma_buffer_pct: 0.005,
     max_holding_days: 20,
   },
-  positions_file: 'data/positions.json',
-  orders_file: 'data/orders.json',
 }
 
 export const mockVolumeAnalysis = {

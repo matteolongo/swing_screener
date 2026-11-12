@@ -8,7 +8,7 @@ import pytest
 
 from tests.support.api import dependency_overrides as dependency_overrides_context
 from tests.support.fakes.services import PortfolioServiceStub
-from tests.support.state import JsonPortfolioState
+from tests.support.state import PortfolioDbState
 
 
 @pytest.fixture(autouse=True)
@@ -48,9 +48,7 @@ def api_client():
 
 @pytest.fixture
 def portfolio_state(tmp_path, monkeypatch):
-    state = JsonPortfolioState(tmp_path / "positions.json", tmp_path / "orders.json")
-    state.write()
-    return state.install(monkeypatch)
+    return PortfolioDbState(tmp_path / "portfolio.db").install(monkeypatch)
 
 
 @pytest.fixture
