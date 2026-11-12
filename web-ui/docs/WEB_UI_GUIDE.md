@@ -15,6 +15,10 @@ or unknown data separately from coverage. Open **Scan details and data quality**
 to see requested, evaluated, and matched counts, candle dates, request completion
 time, and provider warnings. A failed refresh keeps the previous result visible
 and labels it as cached.
+Click the header market-data badge to open and focus these details from any
+page. Stale results show affected symbols and benchmark candle dates when the
+scan provides them. Use **Refresh review** in the disclosure; if stale status
+persists, read the provider warnings and follow **Inspect data sources**.
 
 Use the risk, positions, and pending-orders cards to open the corresponding
 Trading book views. **Portfolio attention** places stop and exit reviews before

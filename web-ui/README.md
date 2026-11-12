@@ -33,7 +33,8 @@ are excluded. A benchmark outage displays the regime error state, not no trades.
 
 ## Candidate review
 
-Daily review force-refreshes its scan on entry/reload and through **Refresh review**.
+Daily review loads its scan on entry/reload, reusing an in-flight or still-fresh
+query. **Refresh review** explicitly requests a new scan.
 It reuses the pinned settings (or the last scan/defaults when none are pinned),
 requests the latest daily session, and reloads portfolio, order and watchlist
 queries. A successful run replaces Today's snapshot and its selected candidate
