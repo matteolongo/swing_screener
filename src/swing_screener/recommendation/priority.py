@@ -12,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from swing_screener.utils.coerce import float_or_none
+
 if TYPE_CHECKING:
     from api.models.screener import ScreenerCandidate
 
@@ -72,15 +74,6 @@ _VALUATION_SCORE: dict[str, float] = {
 }
 
 
-def _safe_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def _label_score(
     mapping: dict[str, float], label: str | None, default: float = 0.5
 ) -> float:
@@ -98,7 +91,7 @@ def _technical_rank(candidate: ScreenerCandidate) -> int:
 
 
 def _data_confidence_multiplier(snapshot: Any, floor: float) -> float:
-    data_confidence = _safe_float(getattr(snapshot, "data_confidence_score", None))
+    data_confidence = float_or_none(getattr(snapshot, "data_confidence_score", None))
     if data_confidence is None:
         return 1.0
     return max(floor, max(0.0, min(1.0, data_confidence)))
@@ -116,12 +109,12 @@ def _fundamentals_score(candidate: ScreenerCandidate) -> float:
     if snapshot is None:
         return score
 
-    business_quality = _safe_float(getattr(snapshot, "business_quality_score", None))
+    business_quality = float_or_none(getattr(snapshot, "business_quality_score", None))
     if business_quality is not None:
         score = business_quality
 
-    freshness_penalty = _safe_float(getattr(snapshot, "freshness_penalty", None)) or 0.0
-    coverage_penalty = _safe_float(getattr(snapshot, "coverage_penalty", None)) or 0.0
+    freshness_penalty = float_or_none(getattr(snapshot, "freshness_penalty", None)) or 0.0
+    coverage_penalty = float_or_none(getattr(snapshot, "coverage_penalty", None)) or 0.0
     penalty_multiplier = max(0.0, 1.0 - freshness_penalty - (coverage_penalty * 0.5))
     score *= _data_confidence_multiplier(snapshot, floor=0.25)
     return max(0.0, score * penalty_multiplier)
@@ -139,7 +132,7 @@ def _valuation_score(candidate: ScreenerCandidate) -> float:
     if snapshot is None:
         return score
 
-    valuation = _safe_float(getattr(snapshot, "valuation_attractiveness", None))
+    valuation = float_or_none(getattr(snapshot, "valuation_attractiveness", None))
     score = valuation if valuation is not None else score
     return max(0.0, score * _data_confidence_multiplier(snapshot, floor=0.4))
 

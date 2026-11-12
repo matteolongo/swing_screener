@@ -54,3 +54,13 @@ def safe_list(val):
             return [v.strip() for v in val.split(sep) if v.strip()]
         return [val]
     return [str(val)]
+
+
+def float_or_none(val) -> float | None:
+    """``float(val)``, or ``None`` when ``val`` is ``None`` or not numeric."""
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None

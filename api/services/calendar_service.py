@@ -12,6 +12,7 @@ import httpx
 
 from api.models.calendar import CalendarEvent, CalendarEventsResponse, CalendarSourceWarning
 from api.db.repositories import SqlPositionsRepository
+from swing_screener.utils.coerce import float_or_none
 
 logger = logging.getLogger(__name__)
 
@@ -178,8 +179,8 @@ class CalendarService:
             return None
         item = upcoming[0]
         earnings_date = _parse_date(item["date"])
-        eps_estimate = _safe_float(item.get("epsEstimate"))
-        eps_actual = _safe_float(item.get("epsActual"))
+        eps_estimate = float_or_none(item.get("epsEstimate"))
+        eps_actual = float_or_none(item.get("epsActual"))
         return earnings_date, eps_estimate, eps_actual
 
     def _batch_fetch_earnings_yfinance(
@@ -355,15 +356,6 @@ class CalendarService:
             for item in items
             if item.get("date")
         ]
-
-
-def _safe_float(value: object) -> Optional[float]:
-    try:
-        if value is None:
-            return None
-        return float(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def _parse_date(raw: object) -> Optional[dt.date]:
