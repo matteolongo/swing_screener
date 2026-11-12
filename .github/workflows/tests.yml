@@ -43,9 +43,9 @@ jobs:
         run: |
           docker compose run --rm --no-deps web npm run lint
 
-      - name: Run web tests in Docker
+      - name: Run web tests with coverage thresholds in Docker
         run: |
-          docker compose run --rm --no-deps web npm test -- --run
+          docker compose run --rm --no-deps web npm run test:coverage
           
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4

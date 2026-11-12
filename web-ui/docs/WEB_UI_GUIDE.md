@@ -217,4 +217,4 @@ Full timing guidance: `docs/product/DAILY_USAGE_GUIDE.md`.
 - Use `renderWithProviders()` for component tests (wraps React Query + Zustand).
 - Mock API calls with MSW handlers in `web-ui/src/test/mocks/handlers.ts`.
 - Assert user-facing copy via i18n keys (`web-ui/src/i18n/`), not hardcoded strings.
-- Coverage thresholds enforced: 80%+ lines, 75%+ branches.
+- Coverage thresholds enforced in CI (`npm run test:coverage`): 80%+ lines and statements, 79%+ functions, 75%+ branches.

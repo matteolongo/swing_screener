@@ -167,7 +167,7 @@ The system may read a current or user-supplied price to preview position metrics
 **Frontend:**
 - Use `renderWithProviders()` for component tests
 - Mock APIs with MSW handlers
-- Coverage thresholds enforced: 80%+ lines, 75%+ branches
+- Coverage thresholds enforced in CI (`npm run test:coverage`): 80%+ lines and statements, 79%+ functions, 75%+ branches
 - Assert user-facing copy through i18n-backed text, not hardcoded strings
 
 ## Documentation Rules
