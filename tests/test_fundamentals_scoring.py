@@ -328,3 +328,33 @@ def test_no_red_flag_when_net_cash_positive():
     snap = build_snapshot(record, FundamentalsConfig())
     red_flag_texts = " ".join(snap.red_flags).lower()
     assert "net debt" not in red_flag_texts
+
+
+def test_non_finite_provider_metrics_count_as_missing():
+    record = ProviderFundamentalsRecord(
+        symbol="SAN.MC",
+        asof_date="2026-11-11",
+        provider="yfinance",
+        instrument_type="equity",
+        revenue_growth_yoy=float("nan"),
+        earnings_growth_yoy=float("inf"),
+        gross_margin=0.45,
+    )
+
+    snapshot = build_snapshot(record, FundamentalsConfig(providers=("yfinance",)))
+
+    assert snapshot.pillars["growth"].score is None
+    assert snapshot.pillars["growth"].status == "unavailable"
+    assert snapshot.revenue_growth_yoy is None
+
+
+def test_snapshot_to_dict_drops_cached_nan_values():
+    record = ProviderFundamentalsRecord(
+        symbol="SAN.MC", asof_date="2026-11-11", provider="yfinance", instrument_type="equity"
+    )
+    payload = build_snapshot(record, FundamentalsConfig(providers=("yfinance",))).to_dict()
+    payload["pillars"]["growth"]["score"] = float("nan")
+
+    restored = FundamentalSnapshot.from_dict(payload).to_dict()
+
+    assert restored["pillars"]["growth"]["score"] is None

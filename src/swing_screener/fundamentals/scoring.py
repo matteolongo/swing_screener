@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import fields, replace
 from datetime import date, datetime, timezone
+import math
 
 from swing_screener.utils.date_helpers import market_today
 from swing_screener.data.source_health import DataSourceHealth
@@ -805,8 +806,19 @@ def _source_health_status(
     return "ok"
 
 
+def _without_non_finite(record: ProviderFundamentalsRecord) -> ProviderFundamentalsRecord:
+    """Treat NaN/inf provider metrics as missing; every comparison against NaN is False."""
+    updates = {
+        item.name: None
+        for item in fields(record)
+        if isinstance(getattr(record, item.name), float)
+        and not math.isfinite(getattr(record, item.name))
+    }
+    return replace(record, **updates) if updates else record
+
+
 def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) -> FundamentalSnapshot:
-    resolved_record = _resolved_record(record)
+    resolved_record = _resolved_record(_without_non_finite(record))
     supported = _is_supported_equity(resolved_record.instrument_type)
     coverage_status = _coverage_status(resolved_record, supported)
     freshness_status = _freshness_status(resolved_record.most_recent_quarter, cfg.stale_after_days)

@@ -9,6 +9,19 @@ VALID_SERIES_DIRECTIONS = {"improving", "deteriorating", "stable", "unknown", "n
 VALID_SERIES_FREQUENCIES = {"quarterly", "annual", "unknown"}
 VALID_METRIC_CADENCES = {"snapshot", "quarterly", "annual", "unknown"}
 VALID_DATA_QUALITY_STATUSES = {"high", "medium", "low"}
+
+
+def _finite_or_none(value: Any) -> Any:
+    """Replace NaN/inf floats, which JSON cannot encode, with None."""
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {key: _finite_or_none(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_finite_or_none(item) for item in value]
+    return value
+
+
 TRUST_METADATA_MISSING_FLAG = (
     "Snapshot lacks trust metadata; refresh fundamentals to validate cadence and provenance."
 )
@@ -241,7 +254,7 @@ class FundamentalSnapshot:
     latest_filing_date: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return _finite_or_none(asdict(self))
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "FundamentalSnapshot":
