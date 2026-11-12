@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Link } from 'react-router-dom';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { openNativeDisclosure, renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import type { ScreenerResponse } from '@/features/screener/types';
@@ -14,17 +14,17 @@ describe('ResultQualitySummary', () => {
     const { user } = renderWithProviders(<>
       <Link to="/today#scan-data-quality">{t('screener.quality.inspect')}</Link>
       <ResultQualitySummary result={result} isRefreshing={false} error={null} />
-    </>, { route: '/today' });
+    </>, { route: '/today', router: 'memory' });
     const summary = screen.getByText(t('cockpit.review.scanDetails')).closest('summary')!;
     const details = summary.parentElement as HTMLDetailsElement;
     const link = screen.getByRole('link', { name: t('screener.quality.inspect') });
     await user.click(link);
     // Happy DOM does not reflect details.open to the attribute.
-    expect(details.open).toBe(true);
+    await waitFor(() => expect(details.open).toBe(true));
     expect(summary).toHaveFocus();
     details.open = false;
     await user.click(link);
-    expect(details.open).toBe(true);
+    await waitFor(() => expect(details.open).toBe(true));
     expect(summary).toHaveFocus();
   });
   it('identifies stale symbols and benchmark and offers an explicit refresh', async () => {
