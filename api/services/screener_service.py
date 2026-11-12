@@ -39,7 +39,7 @@ from api.services.order_approval_token import (
 from api.services.portfolio_service import PortfolioService
 from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
 from api.services.screener_fx import resolve_fx_conversion
-from api.services.screener_run_manager import get_screener_run_manager
+from api.services.run_jobs import get_screener_run_manager
 from api.utils.converters import to_iso as _to_iso
 from swing_screener.data import sector_rotation
 from swing_screener.data.currency import detect_currency

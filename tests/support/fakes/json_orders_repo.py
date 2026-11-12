@@ -1,4 +1,4 @@
-"""Orders JSON repository."""
+"""JSON-file orders repository used as a test double for service tests."""
 
 from __future__ import annotations
 

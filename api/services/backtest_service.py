@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import replace
-from datetime import date
 from typing import Optional
 
 from swing_screener.backtest import BacktestConfig, run_event_study
@@ -35,6 +34,7 @@ from api.models.backtest import (
     SetupMetricsModel,
     TradeModel,
 )
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class BacktestService:
             raise ValidationError("At least one ticker is required.")
 
         start = (request.start or DEFAULT_START).strip()
-        end = (request.end or date.today().isoformat()).strip()
+        end = (request.end or market_today().isoformat()).strip()
 
         try:
             ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start, end_date=end)
@@ -89,7 +89,7 @@ class BacktestService:
         return _to_response(tickers, start, end, request.config, result)
 
     def start_run_async(self, request: EventStudyRequest) -> BacktestRunLaunchResponse:
-        from api.services.backtest_run_manager import get_backtest_run_manager
+        from api.services.run_jobs import get_backtest_run_manager
 
         def _run() -> EventStudyResponse:
             return self.run_event_study(request)
@@ -107,7 +107,7 @@ class BacktestService:
         )
 
     def get_run_status(self, job_id: str) -> BacktestRunStatusResponse:
-        from api.services.backtest_run_manager import get_backtest_run_manager
+        from api.services.run_jobs import get_backtest_run_manager
         from swing_screener.errors import NotFoundError
 
         job = get_backtest_run_manager().get_job(job_id)

@@ -165,6 +165,26 @@ describe('OrderReviewExperience — execution readiness', () => {
     }));
   });
 
+  it('blocks submission with field errors and clears them once the plan is fixed', async () => {
+    const onSubmitOrder = vi.fn().mockResolvedValue({});
+    renderWithProviders(
+      <OrderReviewExperience context={makeContext()} defaultNotes="" onSubmitOrder={onSubmitOrder} />,
+    );
+
+    const stopInput = await screen.findByLabelText(t('order.candidateModal.stopPrice'));
+    fireEvent.change(stopInput, { target: { value: '20' } });
+    const submit = screen.getByRole('button', { name: t('order.candidateModal.createAction') });
+    fireEvent.submit(submit.closest('form') as HTMLFormElement);
+
+    expect(await screen.findByText(t('order.candidateModal.stopError'))).toBeInTheDocument();
+    expect(onSubmitOrder).not.toHaveBeenCalled();
+
+    fireEvent.change(stopInput, { target: { value: '18.5' } });
+    expect(screen.queryByText(t('order.candidateModal.stopError'))).not.toBeInTheDocument();
+    fireEvent.submit(submit.closest('form') as HTMLFormElement);
+    await waitFor(() => expect(onSubmitOrder).toHaveBeenCalledWith(expect.objectContaining({ stopPrice: 18.5 })));
+  });
+
   it('keeps the canonical pending-pullback order type fixed', async () => {
     const onSubmitOrder = vi.fn().mockResolvedValue({});
     renderWithProviders(

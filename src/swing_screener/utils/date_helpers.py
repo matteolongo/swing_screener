@@ -1,8 +1,20 @@
 """Date utility functions for dynamic date calculations."""
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional, Union
+from zoneinfo import ZoneInfo
+
 import pandas as pd
+
+# The business date of this end-of-day US equity workflow. A post-close review
+# in the US evening stays on the session date after UTC midnight, and a server
+# in another timezone does not shift it.
+MARKET_TIMEZONE = ZoneInfo("America/New_York")
+
+
+def market_today() -> date:
+    """Today's calendar date in the US equity market timezone."""
+    return datetime.now(MARKET_TIMEZONE).date()
 
 
 def get_lookback_start_date(
@@ -25,7 +37,7 @@ def get_lookback_start_date(
         '2024-02-16'  # if today is 2026-02-16
     """
     if from_date is None:
-        from_date = datetime.now()
+        from_date = datetime.now(MARKET_TIMEZONE)
     
     # Use 365 days per year for simple, deterministic calculation.
     # This provides a consistent lookback period without fractional-day offsets.
@@ -67,7 +79,7 @@ def get_ytd_start_date(from_date: Optional[datetime] = None) -> str:
         '2026-01-01'  # if today is 2026-02-16
     """
     if from_date is None:
-        from_date = datetime.now()
+        from_date = datetime.now(MARKET_TIMEZONE)
     
     return f"{from_date.year}-01-01"
 

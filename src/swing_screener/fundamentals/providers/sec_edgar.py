@@ -15,6 +15,7 @@ from swing_screener.fundamentals.models import (
     FundamentalSeriesPoint,
     ProviderFundamentalsRecord,
 )
+from swing_screener.utils.coerce import float_or_none
 
 _ALLOWED_FORMS = {
     "10-Q",
@@ -33,15 +34,6 @@ _QUARTER_MIN_DAYS = 70
 _QUARTER_MAX_DAYS = 110
 _ANNUAL_MIN_DAYS = 300
 _ANNUAL_MAX_DAYS = 390
-
-
-def _safe_float(value: Any) -> float | None:
-    try:
-        if value is None:
-            return None
-        return float(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def _coerce_date(value: Any) -> date | None:
@@ -115,7 +107,7 @@ def _dedupe_points(items: list[dict[str, Any]], *, frequency: str) -> list[Funda
         if form and form not in _ALLOWED_FORMS:
             continue
         period_end = str(item.get("end", "")).strip()
-        numeric_value = _safe_float(item.get("val"))
+        numeric_value = float_or_none(item.get("val"))
         if not period_end or numeric_value is None:
             continue
         filed_at = str(item.get("filed", "")).strip()
@@ -226,7 +218,7 @@ def _latest_instant_value(
             continue
         period_end = str(item.get("end", "")).strip()
         filed_at = str(item.get("filed", "")).strip()
-        numeric_value = _safe_float(item.get("val"))
+        numeric_value = float_or_none(item.get("val"))
         if not period_end or numeric_value is None:
             continue
         candidate = (period_end, filed_at, numeric_value)

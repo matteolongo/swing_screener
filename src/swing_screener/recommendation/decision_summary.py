@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from swing_screener.utils.date_helpers import market_today
 from swing_screener.fundamentals.models import FundamentalPillarScore, FundamentalSnapshot
 from swing_screener.recommendation.models import (
     CatalystLabel,
@@ -16,6 +17,7 @@ from swing_screener.recommendation.models import (
     SignalLabel,
     ValuationLabel,
 )
+from swing_screener.utils.coerce import float_or_none
 
 _ACTION_WHY_NOW: dict[DecisionAction, str] = {
     "BUY_NOW": "Setup timing is ready and the business-quality read supports conviction.",
@@ -70,17 +72,8 @@ def _get_value(source: Any, key: str, default: Any = None) -> Any:
     return getattr(source, key, default)
 
 
-def _safe_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def _normalize_percent(value: Any) -> float | None:
-    numeric = _safe_float(value)
+    numeric = float_or_none(value)
     if numeric is None:
         return None
     return numeric * 100 if abs(numeric) <= 1 else numeric
@@ -211,9 +204,9 @@ def _sector_weighted_valuation_score(candidate: Any, snapshot: FundamentalSnapsh
         return None
 
     profile = _valuation_profile(candidate, snapshot)
-    trailing_pe = _safe_float(_get_value(snapshot, "trailing_pe"))
-    price_to_sales = _safe_float(_get_value(snapshot, "price_to_sales"))
-    price_to_book = _safe_float(_get_value(snapshot, "price_to_book"))
+    trailing_pe = float_or_none(_get_value(snapshot, "trailing_pe"))
+    price_to_sales = float_or_none(_get_value(snapshot, "price_to_sales"))
+    price_to_book = float_or_none(_get_value(snapshot, "price_to_book"))
     _growth = _pillar_score(snapshot, "growth")
     growth_score = 0.55 if _growth is None else _growth
     _cash_flow = _pillar_score(snapshot, "cash_flow")
@@ -320,7 +313,7 @@ def _fair_value_estimate(
     book_value_per_share: float | None,
     price_to_book: float | None,
 ) -> tuple[FairValueMethod, float | None, float | None, float | None, float | None]:
-    current_price = _safe_float(_get_value(candidate, "close"))
+    current_price = float_or_none(_get_value(candidate, "close"))
     if current_price is None or current_price <= 0 or snapshot is None:
         return "not_available", None, None, None, None
 
@@ -404,7 +397,7 @@ def _fair_value_estimate(
 
 
 def _technical_label(candidate: Any, opportunity: Any | None) -> SignalLabel:
-    readiness = _safe_float(_get_value(opportunity, "technical_readiness"))
+    readiness = float_or_none(_get_value(opportunity, "technical_readiness"))
     if readiness is not None:
         if readiness >= 0.67:
             return "strong"
@@ -413,14 +406,14 @@ def _technical_label(candidate: Any, opportunity: Any | None) -> SignalLabel:
         return "weak"
 
     confidence = _normalize_percent(_get_value(candidate, "confidence"))
-    rr = _safe_float(_get_value(candidate, "rr"))
+    rr = float_or_none(_get_value(candidate, "rr"))
     signal = str(_get_value(candidate, "signal", "") or "").strip()
     recommendation = _get_value(candidate, "recommendation")
     recommended = str(_get_value(recommendation, "verdict", "")).strip().upper() == "RECOMMENDED"
 
     supportive_signals = 0
     for metric_name in ("momentum_6m", "momentum_12m", "rel_strength"):
-        metric_value = _safe_float(_get_value(candidate, metric_name))
+        metric_value = float_or_none(_get_value(candidate, metric_name))
         if metric_value is not None and metric_value > 0:
             supportive_signals += 1
     if signal:
@@ -482,11 +475,11 @@ def _valuation_context(
     valuation_label: ValuationLabel,
 ) -> DecisionValuationContext:
     profile = _valuation_profile(candidate, snapshot)
-    trailing_pe = _safe_float(_get_value(snapshot, "trailing_pe"))
-    price_to_sales = _safe_float(_get_value(snapshot, "price_to_sales"))
-    book_value_per_share = _safe_float(_get_value(snapshot, "book_value_per_share"))
-    price_to_book = _safe_float(_get_value(snapshot, "price_to_book"))
-    book_to_price = _safe_float(_get_value(snapshot, "book_to_price"))
+    trailing_pe = float_or_none(_get_value(snapshot, "trailing_pe"))
+    price_to_sales = float_or_none(_get_value(snapshot, "price_to_sales"))
+    book_value_per_share = float_or_none(_get_value(snapshot, "book_value_per_share"))
+    price_to_book = float_or_none(_get_value(snapshot, "price_to_book"))
+    book_to_price = float_or_none(_get_value(snapshot, "book_to_price"))
     method, fair_value_low, fair_value_base, fair_value_high, premium_discount_pct = _fair_value_estimate(
         candidate=candidate,
         snapshot=snapshot,
@@ -546,7 +539,7 @@ def _catalyst_label(opportunity: Any | None) -> CatalystLabel:
     if opportunity is None:
         return "unknown"
     state = str(_get_value(opportunity, "state", "")).strip().upper()
-    strength = _safe_float(_get_value(opportunity, "catalyst_strength"))
+    strength = float_or_none(_get_value(opportunity, "catalyst_strength"))
     if state in {"CATALYST_ACTIVE", "TRENDING"} or (strength is not None and strength >= 6.7):
         return "active"
     if state in {"WATCH", "COOLING_OFF"} or (strength is not None and strength >= 4.0):
@@ -673,14 +666,14 @@ def _drivers(
         if str(snapshot.data_quality_status or "").strip().lower() == "low":
             _append_unique(warnings, "Fundamental data quality is limited.")
         # Numeric conviction modifiers from PR6
-        freshness_pen = _safe_float(getattr(snapshot, "freshness_penalty", None))
-        coverage_pen = _safe_float(getattr(snapshot, "coverage_penalty", None))
+        freshness_pen = float_or_none(getattr(snapshot, "freshness_penalty", None))
+        coverage_pen = float_or_none(getattr(snapshot, "coverage_penalty", None))
         if freshness_pen is not None and freshness_pen > 0.15:
             try:
                 from datetime import datetime
                 mrq = getattr(snapshot, "most_recent_quarter", None)
                 if mrq:
-                    age_days = (datetime.utcnow().date() - datetime.fromisoformat(mrq).date()).days
+                    age_days = (market_today() - datetime.fromisoformat(mrq).date()).days
                     months = max(1, round(age_days / 30))
                     _append_unique(warnings, f"Fundamentals data is {months} months old.")
                 else:
@@ -690,7 +683,7 @@ def _drivers(
         if coverage_pen is not None and coverage_pen > 0.25:
             _append_unique(warnings, "Some fundamental pillars are missing.")
 
-    rr = _safe_float(_get_value(candidate, "rr"))
+    rr = float_or_none(_get_value(candidate, "rr"))
     if rr is None:
         _append_unique(warnings, "Reward-to-risk is not available yet.")
     elif rr >= 2:
@@ -698,7 +691,7 @@ def _drivers(
     elif rr < 1.5:
         _append_unique(negatives, "Reward-to-risk is light for a swing setup.")
 
-    consolidation = _safe_float(_get_value(candidate, "consolidation_tightness"))
+    consolidation = float_or_none(_get_value(candidate, "consolidation_tightness"))
     if consolidation is not None and consolidation > 0.7:
         _append_unique(positives, "Tight consolidation base.")
 
@@ -706,7 +699,7 @@ def _drivers(
     if vol_conf is True:
         _append_unique(positives, "Volume-confirmed breakout.")
 
-    extension = _safe_float(_get_value(candidate, "above_breakout_extension"))
+    extension = float_or_none(_get_value(candidate, "above_breakout_extension"))
     if extension is not None and extension > 0.05:
         _append_unique(warnings, "Extended — avoid chasing at current levels.")
 
@@ -789,7 +782,7 @@ def _build_explanation_contract(
         main_risks.append(main_risk)
 
     what_invalidates_it: list[str] = []
-    stop = _safe_float(_get_value(candidate, "stop"))
+    stop = float_or_none(_get_value(candidate, "stop"))
     if stop is not None:
         what_invalidates_it.append(f"Price closing below the stop at {stop} invalidates the setup.")
     if not what_invalidates_it:
@@ -818,12 +811,12 @@ def _trade_plan(*, candidate: Any, action: DecisionAction) -> DecisionTradePlan:
     safely claim a concrete breakout or pullback trigger.
     """
 
-    entry = _safe_float(_get_value(candidate, "entry"))
-    stop = _safe_float(_get_value(candidate, "stop"))
-    target = _safe_float(_get_value(candidate, "target"))
-    rr = _safe_float(_get_value(candidate, "rr"))
+    entry = float_or_none(_get_value(candidate, "entry"))
+    stop = float_or_none(_get_value(candidate, "stop"))
+    target = float_or_none(_get_value(candidate, "target"))
+    rr = float_or_none(_get_value(candidate, "rr"))
     suggested_order_type = str(_get_value(candidate, "suggested_order_type", "") or "").upper()
-    suggested_order_price = _safe_float(_get_value(candidate, "suggested_order_price"))
+    suggested_order_price = float_or_none(_get_value(candidate, "suggested_order_price"))
     execution_note = str(_get_value(candidate, "execution_note", "") or "").strip() or None
 
     if action == "MANAGE_ONLY":

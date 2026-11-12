@@ -1,11 +1,11 @@
 # Strategy Module
 
-Strategy framework: plugin-based architecture, module registry, configuration persistence, and orchestration.
+Strategy configuration, persistence, and the momentum report builder.
 
 ## Quick Start
 
 ```python
-from swing_screener.strategy.orchestrator import build_strategy_report
+from swing_screener.strategy.modules.momentum import build_strategy_report
 from swing_screener.strategy.report_config import ReportConfig
 
 # Build the daily report using the active strategy
@@ -28,59 +28,18 @@ print(strategy["id"], strategy.get("risk", {}))
 
 ```
 strategy/
-  orchestrator.py     ← entry point: dispatches to a StrategyModule
-  registry.py         ← module registry (name → StrategyModule)
-  base.py             ← StrategyModule Protocol definition
   modules/
-    momentum.py       ← built-in momentum strategy (default)
-  plugins/            ← 18 pluggable feature modules
-  plugin_system.py    ← plugin resolution and config merging
+    momentum.py       ← build_strategy_report(): the only report builder
   config.py           ← builder functions for all config dataclasses
   report_config.py    ← ReportConfig aggregator
   storage.py          ← strategy persistence (config/strategies.yaml)
+  validation.py       ← strategy safety/consistency checks
 ```
 
-## StrategyModule Protocol
-
-Any strategy module must implement:
-```python
-class StrategyModule(Protocol):
-    name: str
-
-    def build_report(
-        self,
-        ohlcv: pd.DataFrame,
-        cfg: ReportConfig,
-        exclude_tickers: Iterable[str] | None = None,
-    ) -> pd.DataFrame: ...
-```
-
-The default module is `MomentumStrategyModule` (registered as `"momentum"`).
-
-## Plugin System
-
-Plugins are self-contained feature modules in `strategy/plugins/`. Each plugin can be enabled/disabled and configured per strategy. Available plugins:
-
-| Plugin | Purpose |
-|--------|---------|
-| `atr_filter` | Filter candidates by ATR% volatility cap |
-| `atr_position_sizing` | Size positions using ATR-based stops |
-| `breakeven_management` | Move stop to breakeven after 1R gain |
-| `breakout_signal` | Detect 50-bar price breakouts |
-| `currency_filter` | Filter by ticker currency (USD/EUR) |
-| `fee_gate` | Skip trades where fees exceed risk budget |
-| `market_intelligence` | Overlay catalyst/event scoring |
-| `min_history_gate` | Require minimum bars of history |
-| `momentum_ranking` | Rank by 6m/12m momentum + relative strength |
-| `price_filter` | Filter by min/max last price |
-| `pullback_signal` | Detect SMA20 pullback-reclaim entries |
-| `regime_risk` | Scale down risk in bear/high-vol regimes |
-| `rr_gate` | Require minimum reward-to-risk ratio |
-| `rs_filter` | Require positive relative strength |
-| `time_exit_management` | Exit after max holding trading bars |
-| `trailing_management` | Trail stop under SMA after 2R gain |
-| `trend_filter` | Require price above SMA200 in uptrend |
-| `volume_confirmation` | (reserved) |
+`build_strategy_report()` reuses cached per-symbol records when given an
+evaluation cache and an `asof_date`, then calls `build_momentum_report()`. The
+strategy `module` field stored in `config/strategies.yaml` is kept for
+compatibility; `momentum` is the only builder.
 
 ## Configuration
 
@@ -90,7 +49,6 @@ Central config aggregator — passed to `build_strategy_report()`:
 from swing_screener.strategy.report_config import ReportConfig
 
 cfg = ReportConfig(
-    strategy_module="momentum",   # which StrategyModule to use
     universe=UniverseConfig(),
     ranking=RankingConfig(),
     entry=EntrySignalConfig(),
@@ -138,25 +96,9 @@ configured fields. `ReportConfig.confidence` is loaded from
 `low_level.reporting.confidence` and participates in report generation and
 evaluation-cache identity.
 
-## Adding a Custom Strategy Module
-
-```python
-from swing_screener.strategy.registry import register
-from swing_screener.strategy.base import StrategyModule
-
-class MyStrategyModule:
-    name = "my_strategy"
-
-    def build_report(self, ohlcv, cfg, exclude_tickers=None):
-        # ... custom logic ...
-        return pd.DataFrame(...)
-
-register(MyStrategyModule())
-```
-
 ## See Also
 
-- `selection/pipeline.py` — used by `MomentumStrategyModule`
+- `selection/pipeline.py` — used by `build_momentum_report()`
 - `risk/position_sizing.py` — `build_trade_plans()`
 - `reporting/report.py` — `build_daily_report()` thin wrapper
 - `execution/guidance.py` — execution guidance columns added to report

@@ -1,4 +1,3 @@
-import json
 
 import pandas as pd
 from fastapi.testclient import TestClient
@@ -6,7 +5,7 @@ from unittest.mock import MagicMock
 
 from api.models.config import AppConfig
 from api.main import app
-import api.dependencies
+from tests.support.state import seed_portfolio
 import api.services.portfolio_service as portfolio_service
 from api.repositories.config_repo import ConfigRepository
 from swing_screener.data.providers import MarketDataProvider
@@ -31,7 +30,6 @@ def _ohlcv_for_ticker() -> pd.DataFrame:
     return df
 
 def test_position_stop_suggestion(monkeypatch, tmp_path):
-    positions_file = tmp_path / "positions.json"
     positions_data = {
         "asof": "2026-02-08",
         "positions": [
@@ -46,14 +44,18 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
             }
         ],
     }
-    positions_file.write_text(json.dumps(positions_data))
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=positions_data["positions"],
+        asof=positions_data["asof"],
+    )
 
     config = ConfigRepository.get_defaults().model_copy(deep=True)
     config.manage.trail_after_r = 999.0
     config.manage.max_holding_days = 999
     monkeypatch.setattr(ConfigRepository, "get", lambda self: AppConfig.model_validate(config.model_dump()))
 
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
     # Mock the provider
     ohlcv = _ohlcv_for_ticker()
     mock_provider = MagicMock(spec=MarketDataProvider)

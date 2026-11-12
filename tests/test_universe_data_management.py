@@ -59,10 +59,7 @@ def test_load_amsterdam_all_returns_non_empty():
     snapshot = universe_mod._load_snapshot("amsterdam_all")
     reviewed_at = datetime.date.fromisoformat(snapshot["last_reviewed_at"])
     # Check packaged membership independently of the runtime freshness policy.
-    with patch(
-        "swing_screener.data.universe.datetime.date", wraps=datetime.date
-    ) as mocked_date:
-        mocked_date.today.return_value = reviewed_at
+    with patch("swing_screener.data.universe.market_today", return_value=reviewed_at):
         tickers = load_universe_from_package("amsterdam_all", cfg)
     assert len(tickers) > 10
     assert all("." in t for t in tickers)  # All Amsterdam tickers have suffix
@@ -217,7 +214,7 @@ def test_refresh_apply_persists_review_metadata_when_membership_is_unchanged(
     assert result["changed"] is False
     assert result["applied"] is True
     assert (
-        written[0]["last_reviewed_at"] == universe_mod.datetime.date.today().isoformat()
+        written[0]["last_reviewed_at"] == universe_mod.market_today().isoformat()
     )
 
 

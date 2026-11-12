@@ -1,14 +1,15 @@
 """Tests for stale-position time-stop nudges."""
 from __future__ import annotations
 
-import json
-from datetime import date, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
 import api.dependencies as deps
 from api.main import app
+from tests.support.state import PortfolioDbState
+from swing_screener.utils.date_helpers import market_today
 
 
 class FakeStrategyRepo:
@@ -36,18 +37,11 @@ def make_position(entry_date: str, r_now: float) -> dict:
 
 @pytest.fixture
 def client_with_positions(tmp_path, monkeypatch):
-    positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
+    state = PortfolioDbState(tmp_path / "portfolio.db").install(monkeypatch)
 
     def write_positions(positions: list[dict]) -> None:
-        positions_file.write_text(
-            json.dumps({"asof": date.today().isoformat(), "positions": positions}),
-            encoding="utf-8",
-        )
-        orders_file.write_text(json.dumps({"asof": date.today().isoformat(), "orders": []}), encoding="utf-8")
+        state.write(positions=positions, asof=market_today().isoformat())
 
-    monkeypatch.setattr(deps, "_positions_path", positions_file)
-    monkeypatch.setattr(deps, "_orders_path", orders_file)
     app.dependency_overrides[deps.get_strategy_repo] = lambda: FakeStrategyRepo()
     yield TestClient(app), write_positions
     app.dependency_overrides.pop(deps.get_strategy_repo, None)
@@ -55,7 +49,7 @@ def client_with_positions(tmp_path, monkeypatch):
 
 def test_position_includes_days_open(client_with_positions):
     client, write_positions = client_with_positions
-    write_positions([make_position((date.today() - timedelta(days=20)).isoformat(), r_now=0.0)])
+    write_positions([make_position((market_today() - timedelta(days=20)).isoformat(), r_now=0.0)])
 
     response = client.get("/api/portfolio/positions")
 
@@ -66,7 +60,7 @@ def test_position_includes_days_open(client_with_positions):
 
 def test_time_stop_warning_fires_for_old_flat_position(client_with_positions):
     client, write_positions = client_with_positions
-    write_positions([make_position((date.today() - timedelta(days=20)).isoformat(), r_now=0.0)])
+    write_positions([make_position((market_today() - timedelta(days=20)).isoformat(), r_now=0.0)])
 
     response = client.get("/api/portfolio/positions")
 
@@ -76,7 +70,7 @@ def test_time_stop_warning_fires_for_old_flat_position(client_with_positions):
 
 def test_time_stop_warning_absent_for_new_profitable_position(client_with_positions):
     client, write_positions = client_with_positions
-    write_positions([make_position((date.today() - timedelta(days=5)).isoformat(), r_now=2.0)])
+    write_positions([make_position((market_today() - timedelta(days=5)).isoformat(), r_now=2.0)])
 
     response = client.get("/api/portfolio/positions")
 

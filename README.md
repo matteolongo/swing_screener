@@ -72,7 +72,7 @@ Copy `.env.example` to `.env` at the repo root before running the API.
 | --- | --- | --- |
 | `OPENAI_API_KEY` | For AI analysis | OpenAI API key, used by `POST /api/intelligence/{ticker}` and all LLM-backed intelligence endpoints |
 | `SWING_SCREENER_PROVIDER` | No (defaults to `yfinance`) | EOD data provider: `yfinance` or `alpaca` |
-| `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` | If using Alpaca | Alpaca market data keys. `ALPACA_PAPER` defaults to `true` |
+| `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` | If using Alpaca | Alpaca market data keys; install the `alpaca` extra (`pip install -e ".[alpaca]"`). `ALPACA_PAPER` defaults to `true` |
 | `FINNHUB_API_KEY` | No (degrades analysis) | Calendar, earnings proximity, analyst and insider enrichment |
 | `EODHD_API_KEY` | No | Exchange and symbol discovery via EODHD |
 | `SEC_CONTACT_EMAIL` | No (recommended) | Satisfies SEC EDGAR fair-access User-Agent guidance |
@@ -95,7 +95,7 @@ src/swing_screener/    Core trading logic: screening, risk, portfolio, execution
 api/                   FastAPI REST layer: routers, services, repositories
 web-ui/                React 18 + TypeScript UI (Zustand, React Query, Vite)
 config/                YAML config (provider, intelligence, risk, LLM)
-data/                  Runtime state: positions.json, orders.json
+data/                  Runtime caches, jobs, watchlist; dev SQLite portfolio DB
 ```
 
 Layer responsibilities: [`docs/engineering/MODULE_ARCHITECTURE.md`](docs/engineering/MODULE_ARCHITECTURE.md).
@@ -145,5 +145,5 @@ Key starting points:
 - **Deterministic logic** over discretionary behavior. Every screener output is reproducible given the same EOD data.
 - **Risk-first.** Position size flows from `1R = entry - stop`, not from conviction or gut feel.
 - **Post-close only.** Current-price previews are read-only context. No intraday decisions, no auto-execution.
-- **Local files as source of truth.** `data/positions.json` and `data/orders.json` are the book.
+- **One SQL ledger as source of truth.** Orders and positions live in the API database; every write is transactional and idempotent.
 - **Manual execution by design.** The system tells you what to do. You decide whether to do it.

@@ -110,14 +110,8 @@ port 8888 on an untrusted network.
 - Each portfolio request owns one SQLAlchemy unit of work. SQLite writes begin
   with `BEGIN IMMEDIATE`; PostgreSQL lifecycle reads use row locks. Order fill
   and position mutation commit or roll back together.
-- `data/orders.json` and `data/positions.json` are import-only legacy sources.
-  They are validated and imported once into an empty schema, recorded with row
-  counts and SHA-256 checksums, and are never changed or dual-written. A
-  migration-created singleton lock serializes import classification and writes
-  across application instances, so concurrent startup returns the committed
-  import report instead of attempting a second import. Signed legacy broker fee
-  debits are canonicalized to positive fee amounts during import; the source
-  JSON remains unchanged.
+- A singleton `portfolio_state` row serializes portfolio writes
+  (`SELECT ... FOR UPDATE`) and stores the orders/positions `asof` dates.
 - Order create/fill and every persisted position write require `Idempotency-Key`.
   Replaying the same request returns its stored response; reusing a key for
   different input returns `409`. Stop-price market-data validation runs before
@@ -130,50 +124,26 @@ port 8888 on an untrusted network.
   idempotent retries replay before version validation. Omitting the field keeps
   legacy latest-state validation, which is weaker optimistic concurrency.
   Trail updates return `position_version` for a subsequent stop request.
-  Stateless commands retain required `expected_revision` and also validate the
-  supplied position version; changed snapshot positions increment their version.
 - `DATABASE_URL` accepts `postgres://` and `postgresql://`; both are normalized
   to SQLAlchemy's `postgresql+psycopg://` dialect URL.
 
 ## Database Operations
 
-Before the first deployment, back up both the target database and the two
-legacy JSON files. For PostgreSQL, use a provider snapshot or:
+Back up the database before upgrading. For PostgreSQL, use a provider snapshot
+or `pg_dump "$DATABASE_URL" --format=custom --file swing-screener-backup.dump`;
+for SQLite, stop writers and run
+`sqlite3 data/swing_screener.db ".backup data/swing_screener.backup.db"`.
 
-```bash
-pg_dump "$DATABASE_URL" --format=custom --file swing-screener-before-import.dump
-cp data/orders.json data/orders.before-sql.json
-cp data/positions.json data/positions.before-sql.json
-```
+Apply the schema with `alembic upgrade head` (Heroku runs it in the release
+phase). Startup refuses to serve when the schema is not at head;
+`/health/ready` reports `connectivity` and `migration`. `/health/live` remains a
+dependency-free process liveness check.
 
-For SQLite, stop application writers and use `sqlite3`'s online backup command:
-
-```bash
-sqlite3 data/swing_screener.db ".backup data/swing_screener.before-import.db"
-```
-
-Apply the schema, inspect the empty import state, and execute the same importer
-used at application startup:
-
-```bash
-alembic upgrade head
-python scripts/migrate_json_to_sqlite.py --dry-run
-python scripts/migrate_json_to_sqlite.py
-```
-
-The execute command prints imported order and position counts. Verify those
-counts against the JSON documents and verify `/health/ready` reports
-`connectivity=ok`, `migration=ok`, and `legacy_import=complete`. Startup refuses
-to serve when the schema is stale or the import ledger is incomplete.
-
-`/health` and `/health/ready` also check that the frozen legacy JSON files and
-their parent directory remain readable and writable. `/health/live` remains a
-dependency-free process liveness check. If readiness reports a partial import state, stop the application. Restore the
-database backup, confirm that all portfolio and import-ledger tables reflect the
-same point in time, rerun `alembic upgrade head`, and retry the importer. Do not
-manually add a ledger row to populated tables. Returning to a release that
-writes JSON is an explicit operator rollback decision: restore the frozen JSON
-backup first and ensure no SQL-only fills or position changes would be lost.
+Revision `20261112_0004` drops the one-time JSON import ledger
+(`legacy_imports`, `legacy_import_lock`) and keeps its `asof` dates in
+`portfolio_state`. A database that never completed the JSON import must do so
+on an earlier release before upgrading; this release no longer reads
+`data/orders.json` or `data/positions.json`.
 
 ## API Surface (by router)
 Health:

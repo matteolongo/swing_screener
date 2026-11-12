@@ -26,10 +26,10 @@ This document is the canonical module layout after the 2026 architecture consoli
 
 ## Design Rules
 
-1. `strategy` orchestrates strategy modules and report assembly inputs.
+1. `strategy` owns strategy configuration and the momentum report builder.
 2. `selection` owns universe filtering, ranking, and entry signals.
 3. `risk` owns risk decisions and recommendations (`risk/recommendations`).
-4. `reporting` formats/presents report outputs and does not own strategy registry.
+4. `reporting` formats/presents report outputs and does not own strategy logic.
 5. `execution` owns order state/workflows.
 6. `portfolio` owns position state/metrics.
 7. `data` owns provider access and market-data ingestion.

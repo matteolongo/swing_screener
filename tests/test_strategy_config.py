@@ -17,10 +17,9 @@ from swing_screener.selection.universe import (
 from swing_screener.strategy import report_config as report_config_module
 from swing_screener.strategy.config import build_report_config, build_risk_config
 from swing_screener.strategy.modules.momentum import (
-    MomentumStrategyModule,
     _compute_confidence,
+    build_strategy_report,
 )
-from swing_screener.strategy.orchestrator import build_strategy_report
 from swing_screener.strategy.report_config import ConfidenceConfig, ReportConfig
 
 
@@ -28,7 +27,6 @@ def test_public_pipeline_config_defaults_resolve_at_call_time() -> None:
     functions = [
         build_daily_report,
         build_strategy_report,
-        MomentumStrategyModule.build_report,
         compute_hot_score,
         top_candidates,
         build_signal_board,

@@ -1,6 +1,5 @@
 """Tests for F13: per-position trail method PATCH endpoint."""
 
-import json
 
 import pytest
 from tests.support.factories.portfolio import position_payload
@@ -21,7 +20,7 @@ def client(portfolio_state, api_client):
     return api_client
 
 
-def test_patch_trail_method_persists(client, portfolio_state):
+def test_patch_trail_method_persists(client):
     response = client.patch(
         "/api/portfolio/positions/POS-001/trail-method",
         json={"trail_method": "atr", "trail_param": 2.5},
@@ -34,13 +33,9 @@ def test_patch_trail_method_persists(client, portfolio_state):
     pos = stored_response.json()
     assert pos["trail_method"] == "atr"
     assert pos["trail_param"] == 2.5
-    assert (
-        "trail_method"
-        not in json.loads(portfolio_state.positions_path.read_text())["positions"][0]
-    )
 
 
-def test_patch_trail_method_manual(client, portfolio_state):
+def test_patch_trail_method_manual(client):
     response = client.patch(
         "/api/portfolio/positions/POS-001/trail-method",
         json={"trail_method": "manual", "trail_param": None},
@@ -52,10 +47,6 @@ def test_patch_trail_method_manual(client, portfolio_state):
     stored = stored_response.json()
     assert stored["trail_method"] == "manual"
     assert stored["trail_param"] is None
-    assert (
-        "trail_method"
-        not in json.loads(portfolio_state.positions_path.read_text())["positions"][0]
-    )
 
 
 def test_patch_trail_method_invalid_value(client):

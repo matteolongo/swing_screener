@@ -1,50 +1,30 @@
-import json
-
 from fastapi.testclient import TestClient
 
-import api.dependencies as deps
 from api.main import app
+from tests.support.state import seed_portfolio
 
 
-def _seed_position_files(tmp_path):
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    positions_path = data_dir / "positions.json"
-
-    positions_path.write_text(
-        json.dumps(
-            {
-                "asof": "2026-03-03",
-                "positions": [
-                    {
-                        "ticker": "ENGI.PA",
-                        "status": "open",
-                        "entry_date": "2026-02-25",
-                        "entry_price": 26.92,
-                        "stop_price": 26.50,
-                        "shares": 3,
-                        "position_id": "POS-ENGI-1",
-                        "source_order_id": "ORD-ENGI-ENTRY",
-                        "initial_risk": 0.42,
-                        "max_favorable_price": 28.22,
-                        "exit_date": None,
-                        "exit_price": None,
-                        "current_price": 27.01,
-                        "notes": "",
-                        "exit_order_ids": ["ORD-ENGI-STOP"],
-                    }
-                ],
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-    return positions_path
+POSITION = {
+    "ticker": "ENGI.PA",
+    "status": "open",
+    "entry_date": "2026-02-25",
+    "entry_price": 26.92,
+    "stop_price": 26.50,
+    "shares": 3,
+    "position_id": "POS-ENGI-1",
+    "source_order_id": "ORD-ENGI-ENTRY",
+    "initial_risk": 0.42,
+    "max_favorable_price": 28.22,
+    "exit_date": None,
+    "exit_price": None,
+    "current_price": 27.01,
+    "notes": "",
+    "exit_order_ids": ["ORD-ENGI-STOP"],
+}
 
 
 def test_close_position_persists_optional_fee(monkeypatch, tmp_path):
-    positions_path = _seed_position_files(tmp_path)
-    monkeypatch.setattr(deps, "POSITIONS_FILE", positions_path)
+    seed_portfolio(monkeypatch, tmp_path, positions=[POSITION], asof="2026-03-03")
 
     client = TestClient(app)
     response = client.post(
@@ -67,6 +47,3 @@ def test_close_position_persists_optional_fee(monkeypatch, tmp_path):
     assert position["exit_price"] == 26.92
     assert position["exit_fee_eur"] == 4.90
     assert "Stop loss executed on broker" in position["notes"]
-
-    legacy_position = json.loads(positions_path.read_text(encoding="utf-8"))["positions"][0]
-    assert legacy_position["status"] == "open"

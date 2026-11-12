@@ -11,7 +11,7 @@ from api.models.portfolio import (
     PositionMetrics,
 )
 from api.services.portfolio_service import PortfolioService
-from api.repositories.positions_repo import PositionsRepository
+from tests.support.fakes.json_positions_repo import PositionsRepository
 
 
 def test_partial_close_request_valid():

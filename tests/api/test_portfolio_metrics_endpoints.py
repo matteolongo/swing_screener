@@ -1,4 +1,3 @@
-import json
 import time
 from unittest.mock import MagicMock
 
@@ -10,6 +9,7 @@ import api.dependencies
 import api.services.portfolio_service as portfolio_service
 from api.repositories.config_repo import ConfigRepository
 from api.main import app
+from tests.support.state import seed_portfolio
 from swing_screener.data.providers import MarketDataProvider
 
 
@@ -48,9 +48,12 @@ def test_portfolio_summary_and_stateless_projection_expose_the_same_canonical_an
         }
         for index, price in enumerate([120.0, 90.0, 100.0, 130.0, 80.0], start=1)
     ]
-    positions_file = tmp_path / "positions.json"
-    positions_file.write_text(json.dumps({"asof": "2026-02-08", "positions": positions}), encoding="utf-8")
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=positions,
+        asof="2026-02-08",
+    )
     _set_account_size(monkeypatch, account_size=1_000.0)
 
     client = TestClient(app)
@@ -102,29 +105,23 @@ def test_portfolio_summary_and_stateless_projection_expose_the_same_canonical_an
 
 
 def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    positions_file = tmp_path / "positions.json"
-    positions_file.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=[
             {
-                "asof": "2026-02-08",
-                "positions": [
-                    {
-                        "ticker": "VALE",
-                        "status": "open",
-                        "entry_date": "2026-01-16",
-                        "entry_price": 15.89,
-                        "stop_price": 14.60,
-                        "shares": 6,
-                        "position_id": "POS-VALE-1",
-                        "initial_risk": 1.29,
-                    }
-                ],
+                "ticker": "VALE",
+                "status": "open",
+                "entry_date": "2026-01-16",
+                "entry_price": 15.89,
+                "stop_price": 14.60,
+                "shares": 6,
+                "position_id": "POS-VALE-1",
+                "initial_risk": 1.29,
             }
-        ),
-        encoding="utf-8",
+        ],
+        asof="2026-02-08",
     )
-
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_latest_price.side_effect = ConnectionError(
@@ -156,30 +153,24 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
 def test_position_metrics_subtracts_recorded_fees(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    positions_file = tmp_path / "positions.json"
-    positions_file.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=[
             {
-                "asof": "2026-02-08",
-                "positions": [
-                    {
-                        "ticker": "BAMNB.AS",
-                        "status": "open",
-                        "entry_date": "2026-02-17",
-                        "entry_price": 9.97,
-                        "stop_price": 9.37,
-                        "shares": 2,
-                        "position_id": "POS-BAMNB.AS-1",
-                        "initial_risk": 0.60,
-                        "entry_fee_eur": 4.90,
-                    }
-                ],
+                "ticker": "BAMNB.AS",
+                "status": "open",
+                "entry_date": "2026-02-17",
+                "entry_price": 9.97,
+                "stop_price": 9.37,
+                "shares": 2,
+                "position_id": "POS-BAMNB.AS-1",
+                "initial_risk": 0.60,
+                "entry_fee_eur": 4.90,
             }
-        ),
-        encoding="utf-8",
+        ],
+        asof="2026-02-08",
     )
-
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_latest_price.side_effect = ConnectionError(
@@ -211,30 +202,24 @@ def test_position_metrics_subtracts_recorded_fees_usd(
 
     ps._eurusd_cache.clear()
 
-    positions_file = tmp_path / "positions.json"
-    positions_file.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=[
             {
-                "asof": "2026-02-08",
-                "positions": [
-                    {
-                        "ticker": "INTC",
-                        "status": "open",
-                        "entry_date": "2026-02-17",
-                        "entry_price": 48.0,
-                        "stop_price": 47.0,
-                        "shares": 1,
-                        "position_id": "POS-INTC-USD-1",
-                        "initial_risk": 1.0,
-                        "entry_fee_eur": 5.0,
-                    }
-                ],
+                "ticker": "INTC",
+                "status": "open",
+                "entry_date": "2026-02-17",
+                "entry_price": 48.0,
+                "stop_price": 47.0,
+                "shares": 1,
+                "position_id": "POS-INTC-USD-1",
+                "initial_risk": 1.0,
+                "entry_fee_eur": 5.0,
             }
-        ),
-        encoding="utf-8",
+        ],
+        asof="2026-02-08",
     )
-
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_latest_price.side_effect = ConnectionError(
@@ -268,41 +253,35 @@ def test_position_metrics_subtracts_recorded_fees_usd(
 def test_positions_endpoint_returns_precomputed_metrics(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    positions_file = tmp_path / "positions.json"
-    positions_file.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=[
             {
-                "asof": "2026-02-08",
-                "positions": [
-                    {
-                        "ticker": "VALE",
-                        "status": "open",
-                        "entry_date": "2026-01-16",
-                        "entry_price": 15.89,
-                        "stop_price": 14.60,
-                        "shares": 6,
-                        "position_id": "POS-VALE-1",
-                        "initial_risk": 1.29,
-                    },
-                    {
-                        "ticker": "INTC",
-                        "status": "closed",
-                        "entry_date": "2026-01-15",
-                        "entry_price": 48.0,
-                        "stop_price": 47.0,
-                        "shares": 1,
-                        "position_id": "POS-INTC-1",
-                        "exit_price": 47.29,
-                        "exit_date": "2026-01-23",
-                        "initial_risk": 1.0,
-                    },
-                ],
-            }
-        ),
-        encoding="utf-8",
+                "ticker": "VALE",
+                "status": "open",
+                "entry_date": "2026-01-16",
+                "entry_price": 15.89,
+                "stop_price": 14.60,
+                "shares": 6,
+                "position_id": "POS-VALE-1",
+                "initial_risk": 1.29,
+            },
+            {
+                "ticker": "INTC",
+                "status": "closed",
+                "entry_date": "2026-01-15",
+                "entry_price": 48.0,
+                "stop_price": 47.0,
+                "shares": 1,
+                "position_id": "POS-INTC-1",
+                "exit_price": 47.29,
+                "exit_date": "2026-01-23",
+                "initial_risk": 1.0,
+            },
+        ],
+        asof="2026-02-08",
     )
-
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_latest_price.side_effect = ConnectionError(
@@ -356,49 +335,43 @@ def test_positions_endpoint_returns_precomputed_metrics(
 def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     portfolio_service._eurusd_cache.clear()
     monkeypatch.setitem(portfolio_service._eurusd_cache, "eurusd", (1.18, time.time()))
-    positions_file = tmp_path / "positions.json"
-    positions_file.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=[
             {
-                "asof": "2026-02-08",
-                "positions": [
-                    {
-                        "ticker": "VALE",
-                        "status": "open",
-                        "entry_date": "2026-01-16",
-                        "entry_price": 15.89,
-                        "stop_price": 14.60,
-                        "shares": 6,
-                        "position_id": "POS-VALE-1",
-                        "initial_risk": 1.29,
-                    },
-                    {
-                        "ticker": "MUFG",
-                        "status": "open",
-                        "entry_date": "2026-02-02",
-                        "entry_price": 10.0,
-                        "stop_price": 9.0,
-                        "shares": 5,
-                        "position_id": "POS-MUFG-1",
-                        "initial_risk": 1.0,
-                    },
-                    {
-                        "ticker": "INTC",
-                        "status": "closed",
-                        "entry_date": "2026-01-15",
-                        "entry_price": 48.0,
-                        "stop_price": 47.0,
-                        "shares": 1,
-                        "position_id": "POS-INTC-1",
-                        "initial_risk": 1.0,
-                    },
-                ],
-            }
-        ),
-        encoding="utf-8",
+                "ticker": "VALE",
+                "status": "open",
+                "entry_date": "2026-01-16",
+                "entry_price": 15.89,
+                "stop_price": 14.60,
+                "shares": 6,
+                "position_id": "POS-VALE-1",
+                "initial_risk": 1.29,
+            },
+            {
+                "ticker": "MUFG",
+                "status": "open",
+                "entry_date": "2026-02-02",
+                "entry_price": 10.0,
+                "stop_price": 9.0,
+                "shares": 5,
+                "position_id": "POS-MUFG-1",
+                "initial_risk": 1.0,
+            },
+            {
+                "ticker": "INTC",
+                "status": "closed",
+                "entry_date": "2026-01-15",
+                "entry_price": 48.0,
+                "stop_price": 47.0,
+                "shares": 1,
+                "position_id": "POS-INTC-1",
+                "initial_risk": 1.0,
+            },
+        ],
+        asof="2026-02-08",
     )
-
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
     _set_account_size(monkeypatch, account_size=1000.0)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
@@ -451,29 +424,23 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
 def test_portfolio_summary_endpoint_no_open_positions(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    positions_file = tmp_path / "positions.json"
-    positions_file.write_text(
-        json.dumps(
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=[
             {
-                "asof": "2026-02-08",
-                "positions": [
-                    {
-                        "ticker": "INTC",
-                        "status": "closed",
-                        "entry_date": "2026-01-15",
-                        "entry_price": 48.0,
-                        "stop_price": 47.0,
-                        "shares": 1,
-                        "position_id": "POS-INTC-1",
-                        "initial_risk": 1.0,
-                    }
-                ],
+                "ticker": "INTC",
+                "status": "closed",
+                "entry_date": "2026-01-15",
+                "entry_price": 48.0,
+                "stop_price": 47.0,
+                "shares": 1,
+                "position_id": "POS-INTC-1",
+                "initial_risk": 1.0,
             }
-        ),
-        encoding="utf-8",
+        ],
+        asof="2026-02-08",
     )
-
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
     _set_account_size(monkeypatch, account_size=1000.0)
 
     mock_provider = MagicMock(spec=MarketDataProvider)

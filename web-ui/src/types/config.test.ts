@@ -39,8 +39,6 @@ describe('config transforms', () => {
         time_stop_min_r: 0.5,
         exit_signal_days: 2,
       },
-      positions_file: 'data/positions.json',
-      orders_file: 'data/orders.json',
     });
 
     expect(config.risk.maxConcentrationPct).toBe(60);

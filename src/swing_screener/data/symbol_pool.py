@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
+from swing_screener.utils.coerce import float_or_none
+
 POOL_SCHEMA_VERSION = 1
 
 REGION_VALUES = ("us", "europe", "asia_pacific", "other")
@@ -370,15 +372,6 @@ def filter_pool_by_taxonomy(
     return out
 
 
-def _coerce_float(value) -> float | None:
-    try:
-        if value is None:
-            return None
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def enrich_pool_taxonomy(
     pool: list[PoolSymbol],
     info_fn: Callable[[str], dict | None],
@@ -402,13 +395,13 @@ def enrich_pool_taxonomy(
         # Accept both raw yfinance `.info` (`marketCap`) and the provider's
         # curated `get_ticker_info` dict (`market_cap`).
         s.market_cap_tier = derive_cap_tier(
-            _coerce_float(info.get("marketCap") or info.get("market_cap")),
+            float_or_none(info.get("marketCap") or info.get("market_cap")),
             cap_thresholds,
         )
-        avg_vol = _coerce_float(info.get("averageDailyVolume3Month")) or _coerce_float(
+        avg_vol = float_or_none(info.get("averageDailyVolume3Month")) or float_or_none(
             info.get("averageVolume")
         )
-        price = _coerce_float(info.get("regularMarketPrice"))
+        price = float_or_none(info.get("regularMarketPrice"))
         dollar_vol = (
             avg_vol * price if (avg_vol is not None and price is not None) else None
         )

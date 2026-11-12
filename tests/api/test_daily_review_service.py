@@ -1,6 +1,6 @@
 """Tests for daily review service."""
 
-from datetime import date, timedelta
+from datetime import timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -18,6 +18,7 @@ from api.services.daily_review_service import (
 )
 from swing_screener.errors import UpstreamError
 from swing_screener.recommendation.models import DecisionSummary
+from swing_screener.utils.date_helpers import market_today
 
 
 @pytest.fixture
@@ -103,7 +104,7 @@ def mock_screener_service():
                 ),
             ),
         ],
-        asof_date=str(date.today()),
+        asof_date=str(market_today()),
         total_screened=100,
     )
     return service
@@ -242,7 +243,7 @@ def test_generate_daily_review_basic(
     assert review.summary.update_stop == 1
     assert review.summary.close_positions == 1
     assert review.summary.new_candidates == 2
-    assert review.summary.review_date == date.today()
+    assert review.summary.review_date == market_today()
 
 
 def test_generate_daily_review_portfolio_only_never_runs_screener(
@@ -462,7 +463,7 @@ def test_generate_daily_review_separates_add_on_candidates(
                 ),
             ),
         ],
-        asof_date=str(date.today()),
+        asof_date=str(market_today()),
         total_screened=100,
     )
 
@@ -525,7 +526,7 @@ def test_reentries_rank_with_new_candidates(mock_portfolio_service, tmp_path):
             _candidate("NN", 3, "NEW_ENTRY"),
             _candidate("REP", 4, "ADD_ON"),
         ],
-        asof_date=str(date.today()),
+        asof_date=str(market_today()),
         total_screened=100,
     )
 
@@ -584,7 +585,7 @@ def test_generate_daily_review_no_candidates(mock_portfolio_service, tmp_path):
     empty_screener = Mock()
     empty_screener.run_screener.return_value = ScreenerResponse(
         candidates=[],
-        asof_date=str(date.today()),
+        asof_date=str(market_today()),
         total_screened=0,
     )
 
@@ -805,7 +806,7 @@ def test_pending_orders_review_still_valid_for_recent_order(
     mock_screener_service, mock_portfolio_service, tmp_path
 ):
     """A pending entry order created 2 days ago is categorised as still_valid."""
-    two_days_ago = (date.today() - timedelta(days=2)).isoformat()
+    two_days_ago = (market_today() - timedelta(days=2)).isoformat()
     orders_repo = _make_mock_orders_repo(
         [
             {
@@ -839,7 +840,7 @@ def test_pending_orders_review_stale_for_old_order(
     mock_screener_service, mock_portfolio_service, tmp_path
 ):
     """A pending entry order created 7 days ago is categorised as stale."""
-    seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
+    seven_days_ago = (market_today() - timedelta(days=7)).isoformat()
     orders_repo = _make_mock_orders_repo(
         [
             {
@@ -868,7 +869,7 @@ def test_pending_orders_review_stale_for_old_order(
 
 def _mixed_snapshot_orders() -> list[dict]:
     """One snapshot holding every pending-review edge case for one symbol set."""
-    recent = (date.today() - timedelta(days=2)).isoformat()
+    recent = (market_today() - timedelta(days=2)).isoformat()
     return [
         {
             "order_id": "ORD-PENDING-AAPL",

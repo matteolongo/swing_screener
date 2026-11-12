@@ -14,15 +14,8 @@ from swing_screener.fundamentals.models import (
     FundamentalSeriesPoint,
     ProviderFundamentalsRecord,
 )
-
-
-def _safe_float(value: Any) -> float | None:
-    try:
-        if value is None:
-            return None
-        return float(value)
-    except (TypeError, ValueError):
-        return None
+from swing_screener.utils.coerce import float_or_none
+from swing_screener.utils.date_helpers import market_today
 
 
 def _coerce_iso_date(value: Any) -> str | None:
@@ -139,7 +132,7 @@ def _series_points_from_row(row: Any, *, limit: int = 5) -> list[FundamentalSeri
     points: list[FundamentalSeriesPoint] = []
     for raw_period, raw_value in items:
         period_end = _coerce_iso_date(raw_period)
-        numeric_value = _safe_float(raw_value)
+        numeric_value = float_or_none(raw_value)
         if not period_end or numeric_value is None:
             continue
         points.append(FundamentalSeriesPoint(period_end=period_end, value=numeric_value))
@@ -246,7 +239,7 @@ class YfinanceFundamentalsProvider:
             cadence: str = "snapshot",
             period_end: str | None = None,
         ) -> float | None:
-            normalized = _safe_float(value)
+            normalized = float_or_none(value)
             if normalized is None:
                 return None
             source = _info_source(field_name)
@@ -488,7 +481,7 @@ class YfinanceFundamentalsProvider:
 
         return ProviderFundamentalsRecord(
             symbol=symbol,
-            asof_date=date.today().isoformat(),
+            asof_date=market_today().isoformat(),
             provider=self.name,
             instrument_type=instrument_type,
             data_region=data_region,

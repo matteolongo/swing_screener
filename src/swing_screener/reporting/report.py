@@ -21,7 +21,7 @@ def build_daily_report(
     force_refresh: bool = False,
     market_phase: str = "unknown",
 ) -> pd.DataFrame:
-    from swing_screener.strategy.orchestrator import build_strategy_report
+    from swing_screener.strategy.modules.momentum import build_strategy_report
 
     cfg = cfg or ReportConfig()
     return build_strategy_report(

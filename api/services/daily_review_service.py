@@ -20,12 +20,13 @@ from api.models.daily_review import (
 )
 from api.models.portfolio import PositionUpdate
 from api.models.screener import ScreenerRequest, TaxonomyFilter
-from api.repositories.orders_repo import OrdersRepository
+from api.db.repositories import SqlOrdersRepository
 from api.services.daily_review import DailyReviewWriter
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerRunPolicy, ScreenerService
 from api.services.watchlist_service import WatchlistService
 from swing_screener.errors import DomainError
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ class DailyReviewService:
         screener_service: ScreenerService,
         portfolio_service: PortfolioService,
         watchlist_service: WatchlistService | None = None,
-        orders_repo: Optional[OrdersRepository] = None,
+        orders_repo: Optional[SqlOrdersRepository] = None,
         data_dir: Path = Path("data"),
     ):
         self.screener = screener_service
@@ -241,7 +242,7 @@ class DailyReviewService:
             add_on_candidates=len(add_on_candidates),
             watchlist_near_trigger=len(watchlist_near_trigger),
             evaluation_error_count=len(evaluation_errors),
-            review_date=date.today(),
+            review_date=market_today(),
         )
 
         pending_orders_review = self._build_pending_orders_review()
@@ -289,7 +290,7 @@ class DailyReviewService:
         intentionally excluded from this section. Non-mapping items are skipped.
         """
 
-        today = date.today()
+        today = market_today()
         result: list[PendingOrderReview] = []
         items = orders if isinstance(orders, (list, tuple)) else []
         for order in items:
@@ -362,7 +363,7 @@ class DailyReviewService:
     def _time_stop_payload(position: dict, r_now: float, manage_payload: dict) -> dict:
         try:
             entry_dt = date.fromisoformat(str(position.get("entry_date") or ""))
-            days_open = max((date.today() - entry_dt).days, 0)
+            days_open = max((market_today() - entry_dt).days, 0)
         except ValueError:
             days_open = 0
         time_stop_days = int(manage_payload.get("time_stop_days", 15))

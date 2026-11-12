@@ -32,8 +32,6 @@ app_config:
     time_stop_days: 15
     time_stop_min_r: 0.5
     exit_signal_days: 2
-  positions_file: data/positions.json
-  orders_file: data/orders.json
   portfolio_snapshot_stale_after_days: 1
   portfolio_analytics_min_sample_size: 5
   portfolio_analytics_insight_min_trade_count: 5

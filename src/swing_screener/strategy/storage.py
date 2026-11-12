@@ -70,7 +70,7 @@ def _default_market_intelligence_payload() -> dict:
 
 def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
     defaults = get_settings_manager().get_strategy_defaults_payload()
-    ts = (now or dt.datetime.now()).replace(microsecond=0).isoformat()
+    ts = (now or dt.datetime.now(dt.UTC).replace(tzinfo=None)).replace(microsecond=0).isoformat()
     payload = deepcopy(defaults)
     payload.setdefault("id", DEFAULT_STRATEGY_ID)
     payload.setdefault("name", "Default")

@@ -1,7 +1,6 @@
 """Tests for portfolio concentration warnings."""
 from __future__ import annotations
 
-import json
 import time
 from unittest.mock import MagicMock
 
@@ -9,7 +8,7 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-import api.dependencies as deps
+from tests.support.state import seed_portfolio
 from api.main import app
 import api.services.portfolio_service as portfolio_service
 from swing_screener.data.providers import MarketDataProvider
@@ -58,12 +57,7 @@ POSITIONS = [
 @pytest.fixture
 def client_with_positions(tmp_path, monkeypatch):
     portfolio_service._eurusd_cache.clear()
-    positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
-    positions_file.write_text(json.dumps({"asof": "2026-01-01", "positions": POSITIONS}))
-    orders_file.write_text(json.dumps({"asof": "2026-01-01", "orders": []}))
-    monkeypatch.setattr(deps, "_positions_path", positions_file)
-    monkeypatch.setattr(deps, "_orders_path", orders_file)
+    seed_portfolio(monkeypatch, tmp_path, positions=POSITIONS, asof="2026-01-01")
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")

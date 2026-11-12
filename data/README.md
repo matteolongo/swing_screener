@@ -3,8 +3,7 @@
 Runtime data for Swing Screener.
 
 ## Primary Files
-- `orders.json`: CLI order records and import-only legacy source for the SQL API
-- `positions.json`: CLI position records and import-only legacy source for the SQL API
+- `swing_screener.db`: development SQLite database for orders, positions and idempotency records (production uses `DATABASE_URL`; see `api/README.md`)
 - `watchlist.json`: watchlist state
 - `intelligence/`: runtime intelligence snapshots, jobs, caches, and reports
   - `intelligence/evidence/{date}/{ticker}.json`: per-ticker curated catalyst evidence cache (regenerable; gitignored). Created on-demand by the evidence collector pipeline. No schema migration required.
@@ -66,7 +65,7 @@ multiple active stops or targets, and active records whose position no longer
 exists, are skipped and reported for manual review. The command never runs
 automatically and never changes broker state.
 
-## positions.json schema notes
+## Position and order record notes
 
 ### Position management versions (2026-10-15)
 
@@ -75,15 +74,14 @@ Position reads expose that version. New management clients send
 `expected_version`; older clients may omit it and retain weaker latest-state
 validation. Browser snapshots without a position version normalize to 1 on the
 existing snapshot/API boundary, then increment only changed positions during
-canonical commands. No JSON import source is rewritten or backfilled in place.
-Snapshot `expected_revision` checks remain required and unchanged.
+canonical commands.
 
-### v3 transactional import compatibility
+### JSON import removed (2026-11-12)
 
-`positions.json` is a frozen legacy import source once SQL portfolio storage is
-enabled. Some historical DeGiro records store broker fee debits as negative
-values. The one-time importer canonicalizes `entry_fee_eur` and `exit_fee_eur`
-to positive fee amounts in SQL while leaving this source file unchanged.
+The API no longer imports `orders.json` or `positions.json`. Alembic revision
+`20261112_0004` drops the import ledger and keeps the `asof` dates in the
+`portfolio_state` row. Complete the JSON import on an earlier release before
+upgrading a database that never ran it.
 
 New fields added in F13 (Trail Customization):
 - `trail_method`: `"sma20" | "atr" | "fixed_pct" | "manual"` — defaults to `"sma20"` when absent (backward-compatible)
@@ -102,7 +100,7 @@ New field added in target-persistence feature (2026-06-19):
   (prefilled from the screener recommendation, editable on the order ticket) and carried to the
   position on fill. Used to show Target / To-Target / R:R on an open position.
 
-Applies to both `orders.json` (on the order record) and `positions.json` (on the position record).
+Applies to both the order record and the position record.
 Optional and backward-compatible: existing orders/positions without it load with `None`, and the
 open-position view falls back to the candidate recommendation or shows `—` when no target is stored.
 

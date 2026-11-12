@@ -45,8 +45,7 @@ If a doc contradicts the code, the code is right — fix the doc as part of your
 uv sync
 # or: python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 
-# Tests (run before and after changes)
-pytest -q
+# Tests: run only the files affected by your change (full suite runs in CI)
 pytest tests/test_ranking.py -q          # single file
 pytest -k "test_position_sizing" -q      # by name pattern
 pytest -m "not integration" -q          # skip tests requiring API keys
@@ -65,7 +64,7 @@ cd web-ui && npm install
 
 npm run dev          # dev server (Vite)
 npm run build        # production build
-npm test             # Vitest (run before and after changes)
+npm test             # full Vitest run (CI only; locally pass a path)
 npm run typecheck    # tsc --noEmit
 npm run lint         # ESLint strict, zero warnings allowed
 npm run test:coverage
@@ -73,10 +72,12 @@ npx vitest run src/features/portfolio  # single directory
 npx vitest -t "renders positions"      # by test name
 ```
 
-### Full test suite before committing
-```bash
-pytest -q && cd web-ui && npm test
-```
+### Local test scope
+Run locally only the tests affected by your change (the test files for the
+modules you touched, e.g. `pytest tests/api/test_order_fill.py -q` or
+`npx vitest run src/components/domain/orders`), plus typecheck/lint for the
+layer you changed. **Never run the full suite locally** (`pytest -q`, `npm test`
+without a path): the full backend and frontend runs are always left to CI.
 
 ## Versioning and releases
 
@@ -144,7 +145,7 @@ Require migration/backfill notes in the nearest `README.md`.
 Configurable behavior goes in YAML, never hardcoded. Config files live in `config/`. See `config/README.md` for which file to use for each type of setting.
 
 ### Runtime State
-Primary state: `data/positions.json` (open trades), `data/orders.json` (order lifecycle). See `data/README.md` for schema notes and migration history.
+Primary state: orders, positions and idempotency records in the SQL database (`DATABASE_URL`; SQLite `data/swing_screener.db` in development). See `api/README.md` for persistence rules and `data/README.md` for record notes.
 
 ## Intraday Boundary
 
@@ -167,7 +168,7 @@ The system may read a current or user-supplied price to preview position metrics
 **Frontend:**
 - Use `renderWithProviders()` for component tests
 - Mock APIs with MSW handlers
-- Coverage thresholds enforced: 80%+ lines, 75%+ branches
+- Coverage thresholds enforced in CI (`npm run test:coverage`): 80%+ lines and statements, 79%+ functions, 75%+ branches
 - Assert user-facing copy through i18n-backed text, not hardcoded strings
 
 ## Documentation Rules

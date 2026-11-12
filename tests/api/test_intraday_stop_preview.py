@@ -1,13 +1,11 @@
-import json
 
 import pandas as pd
-import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 
 from api.models.config import AppConfig
 from api.main import app
-import api.dependencies
+from tests.support.state import seed_portfolio
 import api.services.portfolio_service as portfolio_service
 from api.repositories.config_repo import ConfigRepository
 from swing_screener.data.providers import MarketDataProvider
@@ -29,7 +27,6 @@ def _ohlcv_for_ticker(ticker: str = "AAPL", periods: int = 250) -> pd.DataFrame:
 
 
 def _setup(monkeypatch, tmp_path, stop_price: float = 90.0):
-    positions_file = tmp_path / "positions.json"
     positions_data = {
         "asof": "2026-01-01",
         "positions": [
@@ -44,8 +41,12 @@ def _setup(monkeypatch, tmp_path, stop_price: float = 90.0):
             }
         ],
     }
-    positions_file.write_text(json.dumps(positions_data))
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=positions_data["positions"],
+        asof=positions_data["asof"],
+    )
 
     config = ConfigRepository.get_defaults().model_copy(deep=True)
     config.manage.trail_after_r = 999.0
@@ -53,7 +54,6 @@ def _setup(monkeypatch, tmp_path, stop_price: float = 90.0):
     monkeypatch.setattr(
         ConfigRepository, "get", lambda self: AppConfig.model_validate(config.model_dump())
     )
-    return positions_file
 
 
 def _mock_provider(monkeypatch, ohlcv: pd.DataFrame, live_price: float = 110.0):
@@ -134,7 +134,6 @@ def test_stop_preview_position_not_found(monkeypatch, tmp_path):
 
 
 def test_stop_preview_closed_position_rejected(monkeypatch, tmp_path):
-    positions_file = tmp_path / "positions.json"
     positions_data = {
         "asof": "2026-01-01",
         "positions": [
@@ -151,8 +150,12 @@ def test_stop_preview_closed_position_rejected(monkeypatch, tmp_path):
             }
         ],
     }
-    positions_file.write_text(json.dumps(positions_data))
-    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
+    seed_portfolio(
+        monkeypatch,
+        tmp_path,
+        positions=positions_data["positions"],
+        asof=positions_data["asof"],
+    )
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-CLOSED-1/stop-preview")

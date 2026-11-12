@@ -6,7 +6,7 @@ from threading import Barrier
 import pytest
 from sqlalchemy import func, select
 
-from api.db.models import IdempotencyRecordRow, LegacyImportRow
+from api.db.models import IdempotencyRecordRow, PortfolioStateRow
 from api.db.unit_of_work import PortfolioUnitOfWork
 from api.models.portfolio import ClosePositionRequest, PartialCloseRequest
 from api.services.portfolio_service import PortfolioService
@@ -47,20 +47,15 @@ def _stop_order() -> dict[str, object]:
     }
 
 
+def _set_asof(uow):
+    state = uow.session.get(PortfolioStateRow, 1)
+    state.orders_asof = "2026-10-01"
+    state.positions_asof = "2026-10-01"
+
+
 def _seed_ledger(uow):
     uow.begin_write()
-    uow.session.add(
-        LegacyImportRow(
-            id=1,
-            schema_revision="test",
-            orders_sha256="0" * 64,
-            positions_sha256="0" * 64,
-            order_count=2,
-            position_count=2,
-            orders_asof="2026-10-01",
-            positions_asof="2026-10-01",
-        )
-    )
+    _set_asof(uow)
 
 
 def test_repair_sql_apply_twice_leaves_unrelated_protection_untouched(runtime):
@@ -152,18 +147,7 @@ def test_concurrent_final_exits_commit_one_close_and_one_receipt(runtime):
 def test_exit_and_linked_order_reconciliation_roll_back_together(runtime, monkeypatch):
     with PortfolioUnitOfWork(runtime.session_factory) as uow:
         uow.begin_write()
-        uow.session.add(
-            LegacyImportRow(
-                id=1,
-                schema_revision="test",
-                orders_sha256="0" * 64,
-                positions_sha256="0" * 64,
-                order_count=1,
-                position_count=1,
-                orders_asof="2026-10-01",
-                positions_asof="2026-10-01",
-            )
-        )
+        _set_asof(uow)
         uow.positions.add_position(_position())
         uow.orders.add_order(_stop_order())
 
@@ -224,18 +208,7 @@ def test_stale_version_does_not_change_reconciled_protection(runtime):
 def test_partial_exit_idempotency_replay_does_not_reconcile_twice(runtime):
     with PortfolioUnitOfWork(runtime.session_factory) as uow:
         uow.begin_write()
-        uow.session.add(
-            LegacyImportRow(
-                id=1,
-                schema_revision="test",
-                orders_sha256="0" * 64,
-                positions_sha256="0" * 64,
-                order_count=1,
-                position_count=1,
-                orders_asof="2026-10-01",
-                positions_asof="2026-10-01",
-            )
-        )
+        _set_asof(uow)
         uow.positions.add_position(_position())
         uow.orders.add_order(_stop_order())
 

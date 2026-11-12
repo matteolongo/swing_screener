@@ -13,6 +13,8 @@ import httpx
 
 from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.fundamentals.models import ProviderFundamentalsRecord
+from swing_screener.utils.coerce import float_or_none
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +36,6 @@ _FINNHUB_METRIC_MAP: dict[str, tuple[str, float]] = {
     "peAnnual": ("trailing_pe", 1.0),
     "pbAnnual": ("price_to_book", 1.0),
 }
-
-
-def _safe_float(value: Any) -> float | None:
-    try:
-        if value is None:
-            return None
-        return float(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def _safe_date_from_grade_time(value: Any) -> dt.date | None:
@@ -91,7 +84,7 @@ class FinnhubEnrichmentClient:
 
         result: dict[str, float] = {}
         for finnhub_key, (model_field, scale) in _FINNHUB_METRIC_MAP.items():
-            raw = _safe_float(raw_metrics.get(finnhub_key))
+            raw = float_or_none(raw_metrics.get(finnhub_key))
             if raw is not None:
                 result[model_field] = raw * scale
         return result
@@ -117,7 +110,7 @@ class FinnhubEnrichmentClient:
         """Median analyst price target."""
         try:
             data = self._get("/stock/price-target", {"symbol": symbol})
-            return _safe_float(data.get("targetMedian"))
+            return float_or_none(data.get("targetMedian"))
         except Exception as exc:
             logger.debug("Finnhub /stock/price-target failed for %s: %s", symbol, exc)
             return None
@@ -130,8 +123,8 @@ class FinnhubEnrichmentClient:
                 return None
             streak = 0
             for item in items:
-                actual = _safe_float(item.get("actual"))
-                estimate = _safe_float(item.get("estimate"))
+                actual = float_or_none(item.get("actual"))
+                estimate = float_or_none(item.get("estimate"))
                 if actual is None or estimate is None:
                     break
                 if actual > estimate:
@@ -145,7 +138,7 @@ class FinnhubEnrichmentClient:
 
     def _fetch_insider_transactions(self, symbol: str) -> tuple[int | None, int | None]:
         """Returns (net_shares_90d, transaction_count_90d). net_shares > 0 = net buy."""
-        from_date = (dt.date.today() - dt.timedelta(days=90)).isoformat()
+        from_date = (market_today() - dt.timedelta(days=90)).isoformat()
         try:
             data = self._get("/stock/insider-transactions", {"symbol": symbol, "from": from_date})
             rows = data.get("data") or []
@@ -158,7 +151,7 @@ class FinnhubEnrichmentClient:
 
         net = 0
         for row in rows:
-            change = _safe_float(row.get("change"))
+            change = float_or_none(row.get("change"))
             if change is not None:
                 net += int(change)
         return net, len(rows)
@@ -170,14 +163,14 @@ class FinnhubEnrichmentClient:
             rows = data.get("data") or []
             if not rows:
                 return None
-            return _safe_float(rows[0].get("epsAvg", rows[0].get("eps")))
+            return float_or_none(rows[0].get("epsAvg", rows[0].get("eps")))
         except Exception as exc:
             logger.debug("Finnhub /stock/eps-estimate failed for %s: %s", symbol, exc)
             return None
 
     def _fetch_upgrade_downgrade_net(self, symbol: str) -> int | None:
         """Net analyst actions (upgrades minus downgrades) in the last 30 days."""
-        cutoff = dt.date.today() - dt.timedelta(days=30)
+        cutoff = market_today() - dt.timedelta(days=30)
         from_date = cutoff.isoformat()
         try:
             items = self._get("/stock/upgrade-downgrade", {"symbol": symbol, "from": from_date})

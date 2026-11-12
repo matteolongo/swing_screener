@@ -25,8 +25,7 @@ from api.models.portfolio import (
     UpdateTrailMethodRequest,
 )
 from api.repositories.config_repo import ConfigRepository
-from api.repositories.orders_repo import OrdersRepository
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
 from api.db.unit_of_work import PortfolioUnitOfWork
 from api.services.portfolio import (
     PositionPricingService,
@@ -44,8 +43,8 @@ from api.services.portfolio.read import _compute_r_fx_adjusted  # noqa: F401
 class PortfolioService:
     def __init__(
         self,
-        positions_repo: PositionsRepository,
-        orders_repo: OrdersRepository | None = None,
+        positions_repo: SqlPositionsRepository,
+        orders_repo: SqlOrdersRepository | None = None,
         provider: Optional[MarketDataProvider] = None,
         config_repo: Optional[ConfigRepository] = None,
         uow: PortfolioUnitOfWork | None = None,

@@ -20,9 +20,28 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only tests use it.
 - Remove MCP configuration leftovers (`config/mcp.yaml` store), the unused
   `data_provider_roadmap` defaults block and the `web-app/` placeholder.
+- Remove the one-time JSON→SQL portfolio import, the JSON→YAML config
+  migration that ran at every startup, `scripts/migrate_json_to_sqlite.py`,
+  `scripts/migrate_json_config_to_yaml.py`, the `positions_file`/`orders_file`
+  config keys and the JSON state-file checks in `/health`. Alembic revision
+  `20261112_0004` drops `legacy_imports`/`legacy_import_lock` and moves the
+  portfolio write lock and `asof` dates to `portfolio_state`. A database that
+  never completed the JSON import must finish it on an earlier release first.
+
+- Move `alpaca-py` to an optional `alpaca` extra (also in `dev`). Deployments
+  with `SWING_SCREENER_PROVIDER=alpaca` must install `.[alpaca]`; without it
+  the Data Sources probe reports Alpaca as not installed.
+- Drop `react-hook-form`, `@hookform/resolvers` and `zod` from the web UI. The
+  order review form, their only user, validates with a plain function and keeps
+  the same field errors.
 
 ### Fixed
 
+- Use the US market date (America/New_York) wherever the app needs "today":
+  order and ledger dates, days open, stop and snapshot freshness, review
+  dates, calendar windows and provider lookbacks. A post-close review after
+  UTC midnight no longer lands on the next calendar day. Timestamps that used
+  `utcnow()` or a naive `now()` are now explicit UTC with the same format.
 - Stop calling API routes the backend no longer serves. Symbol Overview no
   longer requests `/api/catalysts/*` and reports catalysts as an unavailable
   dependency on every symbol. Pending orders no longer show a permanently

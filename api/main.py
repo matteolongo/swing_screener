@@ -13,7 +13,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from contextlib import asynccontextmanager
 from swing_screener.errors import DomainError
 from swing_screener.settings import get_settings_manager
-from swing_screener.settings.migration import migrate_legacy_config_to_yaml
 from swing_screener.runtime_env import ensure_runtime_env_loaded
 from swing_screener.version import get_version
 
@@ -43,7 +42,6 @@ from api.security.openapi import install_security_openapi
 from api.security.settings import get_auth_settings
 from api.db.readiness import check_database_readiness
 from api.dependencies import get_database_runtime
-from api.monitoring import HealthChecker
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
@@ -120,12 +118,6 @@ def _resolve_spa_file(path: str) -> Path | None:
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
     AUTH_SETTINGS.validate_runtime()
-    try:
-        migration_actions = migrate_legacy_config_to_yaml()
-        for action in migration_actions:
-            logger.info("Config migration: %s", action)
-    except Exception:
-        logger.exception("Failed to migrate legacy JSON configuration to YAML")
     try:
         database_runtime = get_database_runtime()
         database_readiness = check_database_readiness(database_runtime)
@@ -300,11 +292,10 @@ async def liveness():
 @app.get("/health")
 @app.get("/health/ready")
 async def health_check():
-    """Return readiness for SQL state and the frozen legacy source files."""
+    """Return readiness for SQL portfolio state."""
     from api.monitoring import get_metrics_collector
 
     metrics = get_metrics_collector().get_metrics()
-    legacy_state = HealthChecker.check_file_access()
     try:
         readiness = check_database_readiness(get_database_runtime())
     except Exception as exc:
@@ -316,38 +307,19 @@ async def health_check():
             content={
                 "status": "unhealthy",
                 "checks": {
-                    "database": {
-                        "connectivity": "error",
-                        "migration": "unknown",
-                        "legacy_import": "unknown",
-                    },
-                    "legacy_state": legacy_state,
+                    "database": {"connectivity": "error", "migration": "unknown"},
                 },
-                "details": {
-                    "database": "Portfolio database is unavailable.",
-                    **(
-                        {"legacy_state": "; ".join(legacy_state["issues"])}
-                        if legacy_state["issues"]
-                        else {}
-                    ),
-                },
+                "details": {"database": "Portfolio database is unavailable."},
                 "metrics": metrics,
             },
         )
 
-    healthy = readiness.healthy and legacy_state["status"] == "healthy"
-    details = dict(readiness.details)
-    if legacy_state["issues"]:
-        details["legacy_state"] = "; ".join(legacy_state["issues"])
     return JSONResponse(
-        status_code=200 if healthy else 503,
+        status_code=200 if readiness.healthy else 503,
         content={
-            "status": "healthy" if healthy else "unhealthy",
-            "checks": {
-                "database": readiness.checks,
-                "legacy_state": legacy_state,
-            },
-            "details": details or None,
+            "status": "healthy" if readiness.healthy else "unhealthy",
+            "checks": {"database": readiness.checks},
+            "details": readiness.details or None,
             "metrics": metrics,
         },
     )

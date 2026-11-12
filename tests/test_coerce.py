@@ -1,7 +1,7 @@
 import math
 import pandas as pd
 from swing_screener.utils.coerce import (
-    is_na_scalar, safe_float, safe_optional_float, safe_optional_int, safe_list,
+    float_or_none, is_na_scalar, safe_float, safe_optional_float, safe_optional_int, safe_list,
 )
 
 
@@ -42,3 +42,11 @@ def test_safe_optional_int_returns_none_on_na():
 def test_safe_list_wraps_and_filters():
     assert safe_list(None) == []
     assert safe_list([1, 2]) == ["1", "2"]
+
+
+def test_float_or_none_keeps_numbers_and_rejects_non_numeric():
+    assert float_or_none("1.5") == 1.5
+    assert float_or_none(2) == 2.0
+    assert float_or_none(None) is None
+    assert float_or_none("n/a") is None
+    assert float_or_none({}) is None

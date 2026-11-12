@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 import threading
 from functools import lru_cache
@@ -16,7 +15,6 @@ from alembic.config import Config
 from fastapi import Depends
 
 from alembic import command
-from api.db.import_legacy import LEGACY_IMPORT_SCHEMA_REVISION, import_legacy_portfolio
 from api.db.readiness import require_database_schema_at_head
 from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
 from api.db.session import DatabaseRuntime, create_database_runtime
@@ -85,12 +83,6 @@ def get_finnhub_client() -> FinnhubEnrichmentClient | None:
 
 # Repository root
 DATA_DIR = data_dir()
-POSITIONS_FILE = get_settings_manager().resolve_runtime_path(
-    "positions_file", DATA_DIR / "positions.json"
-)
-ORDERS_FILE = DATA_DIR / "orders.json"
-_DEFAULT_POSITIONS_FILE = POSITIONS_FILE
-_DEFAULT_ORDERS_FILE = ORDERS_FILE
 WATCHLIST_FILE = get_settings_manager().resolve_runtime_path(
     "watchlist_file", DATA_DIR / "watchlist.json"
 )
@@ -101,10 +93,8 @@ REVIEW_QUEUE_FILE = get_settings_manager().resolve_runtime_path(
     "review_queue_file", DATA_DIR / "review_queue.json"
 )
 
-# Patchable path aliases used by tests (monkeypatch these to redirect I/O).
-# Set to None to fall through to the module-level constants.
-_positions_path: Optional[Path] = None
-_orders_path: Optional[Path] = None
+# Tests point this at a throwaway SQLite file to isolate portfolio state.
+_test_database_url: Optional[str] = None
 
 # Global singleton config repository (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
@@ -113,24 +103,9 @@ _database_runtime_lock = threading.Lock()
 _database_runtimes: dict[str, DatabaseRuntime] = {}
 
 
-def get_positions_path() -> Path:
-    """Get path to positions.json."""
-    import api.dependencies as _self
-
-    return (
-        _self._positions_path if _self._positions_path is not None else POSITIONS_FILE
-    )
-
-
 def get_watchlist_path() -> Path:
     """Get path to watchlist.json."""
     return WATCHLIST_FILE
-
-
-def get_orders_path() -> Path:
-    import api.dependencies as _self
-
-    return _self._orders_path if _self._orders_path is not None else ORDERS_FILE
 
 
 def _alembic_upgrade(url: str) -> None:
@@ -139,39 +114,22 @@ def _alembic_upgrade(url: str) -> None:
     command.upgrade(config, "head")
 
 
-def _database_context() -> tuple[str, Path, Path, bool]:
-    positions_path = get_positions_path()
-    orders_path = get_orders_path()
+def _database_context() -> tuple[str, bool]:
     settings = DatabaseSettings.from_env()
-    test_override = (
-        _positions_path is not None
-        or _orders_path is not None
-        or positions_path != _DEFAULT_POSITIONS_FILE
-        or orders_path != _DEFAULT_ORDERS_FILE
-    )
     if settings.app_env == "test" and not settings.database_url_configured:
-        if test_override:
-            digest = hashlib.sha256(
-                f"{orders_path.resolve()}|{positions_path.resolve()}".encode("utf-8")
-            ).hexdigest()[:20]
-            database_path = (
-                Path.home()
-                / ".cache"
-                / "swing-screener-tests"
-                / f"portfolio-{digest}-v2.db"
-            )
-        else:
-            database_path = (
-                Path.home() / ".cache" / f"swing-screener-test-{os.getpid()}-v2.db"
-            )
+        if _test_database_url is not None:
+            return _test_database_url, True
+        database_path = (
+            Path.home() / ".cache" / f"swing-screener-test-{os.getpid()}-v2.db"
+        )
         database_path.parent.mkdir(parents=True, exist_ok=True)
-        return f"sqlite:///{database_path}", orders_path, positions_path, True
+        return f"sqlite:///{database_path}", True
     settings.validate_runtime()
-    return settings.url, orders_path, positions_path, False
+    return settings.url, False
 
 
 def get_database_runtime() -> DatabaseRuntime:
-    url, orders_path, positions_path, auto_migrate = _database_context()
+    url, auto_migrate = _database_context()
     runtime = _database_runtimes.get(url)
     if runtime is None:
         with _database_runtime_lock:
@@ -182,20 +140,6 @@ def get_database_runtime() -> DatabaseRuntime:
                 runtime = create_database_runtime(url)
                 try:
                     require_database_schema_at_head(runtime)
-                except Exception:
-                    runtime.engine.dispose()
-                    raise
-
-                def factory() -> PortfolioUnitOfWork:
-                    return PortfolioUnitOfWork(runtime.session_factory)
-
-                try:
-                    import_legacy_portfolio(
-                        factory,
-                        orders_path,
-                        positions_path,
-                        LEGACY_IMPORT_SCHEMA_REVISION,
-                    )
                 except Exception:
                     runtime.engine.dispose()
                     raise

@@ -63,7 +63,7 @@ def get_market_data_provider(
         except ModuleNotFoundError as exc:
             raise ModuleNotFoundError(
                 "alpaca-py is required when provider='alpaca'. "
-                "Install it with `pip install alpaca-py`."
+                "Install the extra with `pip install -e '.[alpaca]'`."
             ) from exc
         
         return AlpacaDataProvider(

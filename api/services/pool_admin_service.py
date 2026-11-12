@@ -17,11 +17,10 @@ gets ``PoolBusyError`` (mapped to HTTP 409 by the router).
 
 from __future__ import annotations
 
-import datetime
 import threading
 from typing import Optional
 
-from api.services.pool_enrich_run_manager import (
+from api.services.run_jobs import (
     ProgressReporter,
     get_pool_enrich_run_manager,
 )
@@ -37,6 +36,7 @@ from swing_screener.data.universe import (
     list_package_universe_entries,
     refresh_package_universe,
 )
+from swing_screener.utils.date_helpers import market_today
 
 # Structural fields recomputed by a base rebuild from universe snapshots.
 STRUCTURAL_DIFF_FIELDS = (
@@ -75,7 +75,7 @@ class PoolBusyError(RuntimeError):
 
 
 def _today() -> str:
-    return datetime.date.today().isoformat()
+    return market_today().isoformat()
 
 
 def _normalize(value: object) -> object:

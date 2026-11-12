@@ -1,52 +1,68 @@
-"""Temporary JSON portfolio state setup for API tests."""
+"""Isolated SQL portfolio state for API tests."""
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
-from tests.support.factories.portfolio import orders_document, positions_document
+from api.db.models import PortfolioStateRow
+from api.db.unit_of_work import PortfolioUnitOfWork
 
 
-class JsonPortfolioState:
-    """Own and install isolated positions/orders JSON files for one test."""
+def _order(order: dict[str, object]) -> dict[str, object]:
+    return {"status": "pending", "order_kind": "entry", **order}
 
-    positions_path: Path
-    orders_path: Path
 
-    def __init__(self, positions_path: Path, orders_path: Path) -> None:
-        self.positions_path = positions_path
-        self.orders_path = orders_path
+def _position(position: dict[str, object]) -> dict[str, object]:
+    return {"status": "open", **position}
+
+
+class PortfolioDbState:
+    """Point the API at a throwaway SQLite portfolio and seed it."""
+
+    def __init__(self, database_path: Path) -> None:
+        self.url = f"sqlite:///{database_path}"
+
+    def install(self, monkeypatch: pytest.MonkeyPatch) -> "PortfolioDbState":
+        import api.dependencies as dependencies
+
+        monkeypatch.setattr(dependencies, "_test_database_url", self.url)
+        return self
 
     def write(
         self,
         *,
         positions: list[dict[str, object]] | None = None,
         orders: list[dict[str, object]] | None = None,
-        asof: str = "2026-01-01",
+        asof: str | None = None,
     ) -> None:
-        self.positions_path.parent.mkdir(parents=True, exist_ok=True)
-        self.orders_path.parent.mkdir(parents=True, exist_ok=True)
-        self.positions_path.write_text(
-            json.dumps(positions_document(positions, asof=asof)), encoding="utf-8"
-        )
-        self.orders_path.write_text(
-            json.dumps(orders_document(orders, asof=asof)), encoding="utf-8"
-        )
+        from api.dependencies import get_database_runtime
 
-    def install(self, monkeypatch: pytest.MonkeyPatch) -> "JsonPortfolioState":
-        """Redirect all exposed dependency path aliases to this state."""
-        import api.dependencies as dependencies
-
-        monkeypatch.setattr(dependencies, "_positions_path", self.positions_path)
-        monkeypatch.setattr(dependencies, "_orders_path", self.orders_path)
-        if hasattr(dependencies, "POSITIONS_FILE"):
-            monkeypatch.setattr(dependencies, "POSITIONS_FILE", self.positions_path)
-        if hasattr(dependencies, "ORDERS_FILE"):
-            monkeypatch.setattr(dependencies, "ORDERS_FILE", self.orders_path)
-        return self
+        runtime = get_database_runtime()
+        with PortfolioUnitOfWork(runtime.session_factory) as uow:
+            uow.begin_write()
+            for position in positions or []:
+                uow.positions.add_position(_position(position))
+            for order in orders or []:
+                uow.orders.add_order(_order(order))
+            if asof is not None:
+                state = uow.session.get(PortfolioStateRow, 1)
+                state.orders_asof = asof
+                state.positions_asof = asof
 
 
-__all__ = ["JsonPortfolioState"]
+def seed_portfolio(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    *,
+    positions: list[dict[str, object]] | None = None,
+    orders: list[dict[str, object]] | None = None,
+    asof: str | None = None,
+) -> PortfolioDbState:
+    state = PortfolioDbState(tmp_path / "portfolio.db").install(monkeypatch)
+    state.write(positions=positions, orders=orders, asof=asof)
+    return state
+
+
+__all__ = ["PortfolioDbState", "seed_portfolio"]

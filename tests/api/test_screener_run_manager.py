@@ -7,8 +7,8 @@ from typing import Callable
 import pytest
 
 from api.models.screener import ScreenerResponse
-import api.services.screener_run_manager as run_manager_module
-from api.services.screener_run_manager import ScreenerRunManager
+import api.services.run_jobs as run_manager_module
+from api.services.run_jobs import ScreenerRunManager
 
 
 class InlineThread:

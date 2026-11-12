@@ -1,7 +1,7 @@
 """Tests for earnings proximity endpoint."""
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from api.main import app
 from api.services import portfolio_service
+from swing_screener.utils.date_helpers import market_today
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +23,7 @@ client = TestClient(app)
 
 
 def test_earnings_within_10_days_returns_warning():
-    near_date = (date.today() + timedelta(days=5)).isoformat()
+    near_date = (market_today() + timedelta(days=5)).isoformat()
     mock_ticker = MagicMock()
     mock_ticker.calendar = {"Earnings Date": [near_date]}
 
@@ -38,7 +39,7 @@ def test_earnings_within_10_days_returns_warning():
 
 
 def test_earnings_beyond_10_days_returns_no_warning():
-    far_date = (date.today() + timedelta(days=30)).isoformat()
+    far_date = (market_today() + timedelta(days=30)).isoformat()
     mock_ticker = MagicMock()
     mock_ticker.calendar = {"Earnings Date": [far_date]}
 
@@ -63,7 +64,7 @@ def test_yfinance_failure_returns_no_warning():
 
 
 def test_earnings_result_cached_per_ticker_for_today():
-    near_date = (date.today() + timedelta(days=5)).isoformat()
+    near_date = (market_today() + timedelta(days=5)).isoformat()
     mock_ticker = MagicMock()
     mock_ticker.calendar = {"Earnings Date": [near_date]}
 

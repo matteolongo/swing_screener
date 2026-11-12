@@ -22,8 +22,7 @@ from api.models.portfolio import (
     UpdateStopRequest,
     UpdateTrailMethodRequest,
 )
-from api.repositories.orders_repo import OrdersRepository
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlOrdersRepository, SqlPositionsRepository
 from api.repositories.config_repo import ConfigRepository
 from api.services.portfolio.linked_exits import (
     linked_stop_order_id,
@@ -58,12 +57,12 @@ class PortfolioWriteService:
 
     def __init__(
         self,
-        positions_repo: PositionsRepository,
+        positions_repo: SqlPositionsRepository,
         provider: Optional[MarketDataProvider] = None,
         config_repo: Optional[ConfigRepository] = None,
         begin_write: Callable[[], None] | None = None,
         business_date: Callable[[], str] | None = None,
-        orders_repo: OrdersRepository | None = None,
+        orders_repo: SqlOrdersRepository | None = None,
     ) -> None:
         self._positions_repo = positions_repo
         self._orders_repo = orders_repo

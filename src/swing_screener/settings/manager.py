@@ -90,14 +90,6 @@ class SettingsManager:
         raw = runtime.get(key, fallback)
         return resolve_repo_path(raw)
 
-    @staticmethod
-    def _serialize_path(path: Path) -> str:
-        repo_root = resolve_repo_path(".")
-        try:
-            return str(path.relative_to(repo_root))
-        except ValueError:
-            return str(path)
-
     def get_app_config_payload(self) -> dict[str, Any]:
         defaults_doc = self.load_defaults_document()
         user_doc = self.load_user_document()
@@ -107,16 +99,7 @@ class SettingsManager:
             defaults_payload = {}
         if not isinstance(user_payload, dict):
             user_payload = {}
-        payload = deep_merge_dicts(defaults_payload, user_payload)
-        positions_fallback = payload.get("positions_file", "data/positions.json")
-        orders_fallback = payload.get("orders_file", "data/orders.json")
-        payload["positions_file"] = self._serialize_path(
-            self.resolve_runtime_path("positions_file", positions_fallback)
-        )
-        payload["orders_file"] = self._serialize_path(
-            self.resolve_runtime_path("orders_file", orders_fallback)
-        )
-        return payload
+        return deep_merge_dicts(defaults_payload, user_payload)
 
     def set_app_config_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
         user_doc = self.load_user_document()

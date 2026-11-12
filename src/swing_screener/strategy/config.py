@@ -72,9 +72,6 @@ def build_report_config(
     ranking = ranking_override or build_ranking_config(strategy)
     signals = signals_override or build_entry_config(strategy)
     risk = risk_override or build_risk_config(strategy)
-    strategy_module = (
-        strategy.get("module", "momentum") if isinstance(strategy, dict) else "momentum"
-    )
 
     if top_override is not None:
         ranking = replace(ranking, top_n=max(ranking.top_n, int(top_override)))
@@ -85,5 +82,4 @@ def build_report_config(
         signals=signals,
         risk=risk,
         only_active_signals=False,
-        strategy_module=strategy_module,
     )

@@ -7,7 +7,7 @@ import logging
 
 import pandas as pd
 
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlPositionsRepository
 from swing_screener.errors import ServiceUnavailableError
 from swing_screener.portfolio.analytics import calculate_portfolio_analytics
 
@@ -94,7 +94,7 @@ def label_regime_at_date(
 
 
 class RegimeAnalyticsService:
-    def __init__(self, positions_repo: PositionsRepository):
+    def __init__(self, positions_repo: SqlPositionsRepository):
         self._repo = positions_repo
 
     def get_regime_breakdown(

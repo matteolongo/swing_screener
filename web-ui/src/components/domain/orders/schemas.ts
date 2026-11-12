@@ -1,65 +1,41 @@
-import { z } from 'zod';
 import { t } from '@/i18n/t';
 
-export const candidateOrderSchema = z
-  .object({
-    orderType: z.enum(['BUY_LIMIT', 'BUY_STOP']),
-    quantity: z.number().finite().int().min(1, t('order.candidateModal.quantityError')),
-    limitPrice: z.number().finite().positive(t('order.candidateModal.limitError')),
-    stopPrice: z.number().finite().positive(t('order.candidateModal.stopPositiveError')),
-    targetPrice: z.number().finite().positive(t('order.candidateModal.targetPositiveError')).optional(),
-    notes: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (values.limitPrice <= values.stopPrice) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: t('order.candidateModal.stopError'),
-        path: ['stopPrice'],
-      });
-    }
-    if (values.targetPrice != null && values.targetPrice <= values.limitPrice) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: t('order.candidateModal.targetError'),
-        path: ['targetPrice'],
-      });
-    }
-  });
+export interface CandidateOrderFormValues {
+  orderType: 'BUY_LIMIT' | 'BUY_STOP';
+  quantity: number;
+  limitPrice: number;
+  stopPrice: number;
+  targetPrice?: number;
+  notes?: string;
+}
 
-export type CandidateOrderFormValues = z.infer<typeof candidateOrderSchema>;
+export type CandidateOrderErrors = Partial<Record<keyof CandidateOrderFormValues, string>>;
 
-export const createOrderSchema = z
-  .object({
-    ticker: z.string().min(1),
-    orderType: z.enum(['BUY_LIMIT', 'BUY_STOP', 'SELL_LIMIT', 'SELL_STOP', 'BUY_MARKET', 'SELL_MARKET']),
-    orderKind: z.enum(['entry', 'stop', 'take_profit']),
-    quantity: z.number().int().min(1),
-    limitPrice: z.number().nonnegative(),
-    stopPrice: z.number().nonnegative(),
-    notes: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (
-      (values.orderType === 'BUY_LIMIT' || values.orderType === 'SELL_LIMIT') &&
-      values.limitPrice <= 0
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: t('order.candidateModal.limitError'),
-        path: ['limitPrice'],
-      });
-    }
-  });
+const isPositive = (value: number) => Number.isFinite(value) && value > 0;
 
-export type CreateOrderFormValues = z.infer<typeof createOrderSchema>;
-
-export const fillOrderSchema = z.object({
-  filledPrice: z.number().positive(),
-  filledDate: z.string().min(1),
-  stopPrice: z.number().positive().optional(),
-  feeEur: z.number().nonnegative().optional(),
-  fillFxRate: z.number().positive().optional(),
-});
-
-export type FillOrderFormValues = z.infer<typeof fillOrderSchema>;
+/** Field errors in form order; price-relationship checks run once every field is valid. */
+export function validateCandidateOrder(values: CandidateOrderFormValues): CandidateOrderErrors {
+  const errors: CandidateOrderErrors = {};
+  if (!Number.isInteger(values.quantity) || values.quantity < 1) {
+    errors.quantity = t('order.candidateModal.quantityError');
+  }
+  if (!isPositive(values.limitPrice)) {
+    errors.limitPrice = t('order.candidateModal.limitError');
+  }
+  if (!isPositive(values.stopPrice)) {
+    errors.stopPrice = t('order.candidateModal.stopPositiveError');
+  }
+  if (values.targetPrice != null && !isPositive(values.targetPrice)) {
+    errors.targetPrice = t('order.candidateModal.targetPositiveError');
+  }
+  if (Object.keys(errors).length > 0) {
+    return errors;
+  }
+  if (values.limitPrice <= values.stopPrice) {
+    errors.stopPrice = t('order.candidateModal.stopError');
+  }
+  if (values.targetPrice != null && values.targetPrice <= values.limitPrice) {
+    errors.targetPrice = t('order.candidateModal.targetError');
+  }
+  return errors;
+}

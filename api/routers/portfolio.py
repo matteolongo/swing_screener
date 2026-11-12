@@ -36,7 +36,7 @@ from api.models.portfolio import (
 )
 from api.models.position_intelligence import OpenPositionIntelligenceSummary
 from api.repositories.config_repo import ConfigRepository
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlPositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.portfolio.degiro_sync import DeGiroSyncResult, sync_degiro_holdings
 from api.services.portfolio_service import PortfolioService
@@ -404,7 +404,7 @@ async def fill_order(
 
 @router.post("/sync-degiro", response_model=DeGiroSyncResult)
 async def sync_degiro(
-    positions_repo: PositionsRepository = Depends(get_positions_repo),
+    positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
 ):
     """Fetch live DeGiro portfolio and reconcile against local positions.
 

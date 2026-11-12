@@ -14,6 +14,7 @@ from datetime import datetime, date, timedelta, timezone
 from typing import Any
 
 from pydantic import BaseModel
+from swing_screener.utils.date_helpers import market_today
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ def _parse_nearest_dividend(result: dict | None, asof: date, isin: str) -> Divid
 
 def get_dividend_proximity(isin: str, *, asof: date | None = None) -> DividendProximity | None:
     """Return the nearest upcoming dividend for an ISIN, or None."""
-    asof = asof or date.today()
+    asof = asof or market_today()
 
     try:
         from swing_screener.integrations.degiro.credentials import (

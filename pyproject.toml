@@ -26,7 +26,6 @@ dependencies = [
   "pydantic>=2.0",
   "httpx (>=0.28.1,<0.29.0)",
   "portalocker>=2.8.0",
-  "alpaca-py>=0.22.0",
   "sqlalchemy>=2.0",
   "openai>=1.66",
   "degiro-connector>=3.0.35",
@@ -37,7 +36,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+alpaca = ["alpaca-py>=0.22.0"]
 dev = [
+  "alpaca-py>=0.22.0",
   "pytest>=8.0",
   "pytest-cov",
   "black",

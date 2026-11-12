@@ -1,4 +1,4 @@
-"""Positions JSON repository."""
+"""JSON-file positions repository used as a test double for service tests."""
 from __future__ import annotations
 
 from dataclasses import dataclass

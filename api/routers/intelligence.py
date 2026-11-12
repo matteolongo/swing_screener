@@ -17,7 +17,7 @@ from api.models.intelligence_chat import IntelligenceChatRequest, IntelligenceCh
 from api.models.position_review import PositionReviewRequest, PositionReviewResponse
 from api.models.strategic_review import StrategicReviewRequest
 from api.dependencies import get_fundamentals_service, get_portfolio_service, get_positions_repo
-from api.repositories.positions_repo import PositionsRepository
+from api.db.repositories import SqlPositionsRepository
 from api.services.intelligence_chat_service import IntelligenceChatService, MissingIntelligenceError
 from api.services.position_review_service import MissingPositionReviewContextError, PositionReviewService
 from api.services.strategic_review_service import StrategicReviewService
@@ -307,7 +307,7 @@ def refresh_evidence(ticker: str) -> EvidenceRefreshResponse:
 @router.post("/sweep", response_model=SweepResponse)
 def sweep(
     request: SweepRequest,
-    positions_repo: PositionsRepository = Depends(get_positions_repo),
+    positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
     fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
 ) -> SweepResponse:
@@ -477,7 +477,7 @@ def analyze_symbol(
     request: SymbolIntelligenceRequest,
     force: bool = False,
     attempt_id: str | None = None,
-    positions_repo: PositionsRepository = Depends(get_positions_repo),
+    positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
     fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
 ) -> SymbolIntelligence:
