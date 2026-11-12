@@ -63,27 +63,5 @@
 
 ## Current implementation plans
 
-- [docs/superpowers/specs/2026-10-01-frontend-remediation-design.md](../superpowers/specs/2026-10-01-frontend-remediation-design.md) — approved frontend remediation scope and non-goals
-- [docs/superpowers/plans/2026-10-01-frontend-remediation.md](../superpowers/plans/2026-10-01-frontend-remediation.md) — task-by-task TDD plan for audit remediation
-- [docs/superpowers/sdd/2026-10-01-frontend-remediation/task-5-report.md](../superpowers/sdd/2026-10-01-frontend-remediation/task-5-report.md) — keyboard and modal interaction review evidence
-- [docs/superpowers/sdd/2026-10-01-frontend-remediation/task-6-report.md](../superpowers/sdd/2026-10-01-frontend-remediation/task-6-report.md) — date, locale, token, and final verification evidence
+Completed plans and specs live in git history (`git log -- docs/superpowers`).
 
-- [`docs/superpowers/plans/2026-09-30-cockpit-review-fixes.md`](../superpowers/plans/2026-09-30-cockpit-review-fixes.md) — PR #481 fixes, validation, merge, and frontend audit scope
-
-- [`docs/superpowers/plans/2026-09-16-p1-p2-fixes.md`](../superpowers/plans/2026-09-16-p1-p2-fixes.md) — task-by-task TDD plan for the six P1/P2 review fixes (cache head freshness, linked-stop lifecycle, sizing batch abort, weekend stop validation, workspace auto-reselect, journal visibility)
-- [`docs/superpowers/specs/2026-09-04-reporting-pipeline-remediation-design.md`](../superpowers/specs/2026-09-04-reporting-pipeline-remediation-design.md) — approved ownership, contracts, and 18-PR delivery design for backend reporting-pipeline remediation
-- [`docs/superpowers/plans/2026-09-04-reporting-pipeline-remediation-roadmap.md`](../superpowers/plans/2026-09-04-reporting-pipeline-remediation-roadmap.md) — merge-order roadmap linking the seven subsystem implementation plans
-- [`docs/superpowers/plans/2026-09-04-risk-plan-correctness.md`](../superpowers/plans/2026-09-04-risk-plan-correctness.md) — PR plans for structural targets and executable position sizing
-- [`docs/superpowers/plans/2026-09-04-cache-freshness.md`](../superpowers/plans/2026-09-04-cache-freshness.md) — stacked PR plans for evaluation and final-close market-data freshness
-- [`docs/superpowers/plans/2026-09-04-currency-contract.md`](../superpowers/plans/2026-09-04-currency-contract.md) — stacked PR plans for currency metadata, authoritative account FX, and monetary fields
-- [`docs/superpowers/plans/2026-09-04-reporting-contract.md`](../superpowers/plans/2026-09-04-reporting-contract.md) — PR plans for stable report schemas and concentration semantics
-- [`docs/superpowers/plans/2026-09-04-order-daily-review.md`](../superpowers/plans/2026-09-04-order-daily-review.md) — PR plans for order safety, daily-review errors, stateless state, and persistence
-- [`docs/superpowers/plans/2026-09-04-ranking-data-signals.md`](../superpowers/plans/2026-09-04-ranking-data-signals.md) — PR plans for rank provenance, OHLCV normalization, and signal windows
-- [`docs/superpowers/plans/2026-09-04-configuration-cleanup.md`](../superpowers/plans/2026-09-04-configuration-cleanup.md) — stacked PR plans for runtime configuration and ownership cleanup
-- [`docs/superpowers/plans/2026-09-04-frontend-reporting-remediation-roadmap.md`](../superpowers/plans/2026-09-04-frontend-reporting-remediation-roadmap.md) — merge order and execution status for the frontend reporting remediation stack
-- [`docs/superpowers/specs/2026-07-27-symbol-workspace-redesign-design.md`](../superpowers/specs/2026-07-27-symbol-workspace-redesign-design.md) — approved UX, data-flow, reliability, and testing design for the Today-page symbol workspace
-- [`docs/superpowers/plans/2026-07-27-symbol-workspace-redesign.md`](../superpowers/plans/2026-07-27-symbol-workspace-redesign.md) — task-by-task implementation plan for the Today-page symbol workspace redesign
-- [`docs/superpowers/specs/2026-07-22-coherent-execution-workflow-design.md`](../superpowers/specs/2026-07-22-coherent-execution-workflow-design.md) — approved design for the coherent execution workflow
-- [`docs/superpowers/plans/2026-07-22-coherent-execution-workflow.md`](../superpowers/plans/2026-07-22-coherent-execution-workflow.md) — implementation plan for the coherent execution workflow
-- [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/spec.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/spec.md) — approved design for Volume-Zone Stock Analysis V1
-- [`docs/superpowers/plans/2026-07-07-volume-zone-analysis/plan.md`](../superpowers/plans/2026-07-07-volume-zone-analysis/plan.md) — task-by-task implementation plan for Volume-Zone Stock Analysis V1
