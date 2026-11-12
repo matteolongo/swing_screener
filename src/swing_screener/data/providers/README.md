@@ -7,7 +7,7 @@ Market-data provider implementations for OHLCV and price history.
 | Module | Provider class | Source | Role |
 |--------|---------------|--------|------|
 | `yfinance_provider.py` | `YfinanceProvider` | Yahoo Finance | primary |
-| `alpaca_provider.py` | `AlpacaDataProvider` | Alpaca Markets | primary (requires `ALPACA_API_KEY` + `ALPACA_SECRET_KEY`) |
+| `alpaca_provider.py` | `AlpacaDataProvider` | Alpaca Markets | primary (requires `ALPACA_API_KEY` + `ALPACA_SECRET_KEY` and the `alpaca` extra: `pip install -e ".[alpaca]"`) |
 | `polygon_provider.py` | `PolygonProvider` | Polygon.io | primary (requires `POLYGON_IO_API_KEY`) |
 
 ## API provenance

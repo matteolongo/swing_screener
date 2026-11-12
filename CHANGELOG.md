@@ -28,6 +28,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   portfolio write lock and `asof` dates to `portfolio_state`. A database that
   never completed the JSON import must finish it on an earlier release first.
 
+- Move `alpaca-py` to an optional `alpaca` extra (also in `dev`). Deployments
+  with `SWING_SCREENER_PROVIDER=alpaca` must install `.[alpaca]`; without it
+  the Data Sources probe reports Alpaca as not installed.
 - Drop `react-hook-form`, `@hookform/resolvers` and `zod` from the web UI. The
   order review form, their only user, validates with a plain function and keeps
   the same field errors.

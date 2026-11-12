@@ -72,7 +72,7 @@ Copy `.env.example` to `.env` at the repo root before running the API.
 | --- | --- | --- |
 | `OPENAI_API_KEY` | For AI analysis | OpenAI API key, used by `POST /api/intelligence/{ticker}` and all LLM-backed intelligence endpoints |
 | `SWING_SCREENER_PROVIDER` | No (defaults to `yfinance`) | EOD data provider: `yfinance` or `alpaca` |
-| `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` | If using Alpaca | Alpaca market data keys. `ALPACA_PAPER` defaults to `true` |
+| `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` | If using Alpaca | Alpaca market data keys; install the `alpaca` extra (`pip install -e ".[alpaca]"`). `ALPACA_PAPER` defaults to `true` |
 | `FINNHUB_API_KEY` | No (degrades analysis) | Calendar, earnings proximity, analyst and insider enrichment |
 | `EODHD_API_KEY` | No | Exchange and symbol discovery via EODHD |
 | `SEC_CONTACT_EMAIL` | No (recommended) | Satisfies SEC EDGAR fair-access User-Agent guidance |
