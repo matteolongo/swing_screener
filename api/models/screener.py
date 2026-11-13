@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -302,6 +303,20 @@ class ScreenerRequest(BaseModel):
         default=None,
         description="Named taxonomy preset id (config/taxonomy_presets.yaml).",
     )
+
+    @field_validator("asof_date")
+    @classmethod
+    def validate_asof_date(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or not str(value).strip():
+            return None
+        text = str(value).strip()
+        try:
+            dt.date.fromisoformat(text)
+        except ValueError as exc:
+            raise ValueError("asof_date must be a calendar date in YYYY-MM-DD format") from exc
+        if len(text) != 10:
+            raise ValueError("asof_date must be a calendar date in YYYY-MM-DD format")
+        return text
 
     @field_validator("currencies")
     @classmethod

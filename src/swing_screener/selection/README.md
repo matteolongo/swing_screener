@@ -55,6 +55,7 @@ SelectionResult(universe, ranked, board)
 | `ranking.py` | Weighted momentum score (`compute_hot_score`, `top_candidates`) |
 | `entries.py` | Entry signal detection (`breakout_signal`, `pullback_reclaim_signal`) |
 | `eval_cache.py` | Versioned per-symbol evaluation cache with input-provenance validation |
+| `screening_window.py` | Session resolution: default as-of date, `final_close`/`intraday` freshness, fetch window. USD sessions skip regular NYSE holidays (`utils/market_calendar.py`); other currencies skip weekends only. An unparseable as-of date is never `final_close`. |
 | `__init__.py` | Package exports |
 
 ## Evaluation cache identity

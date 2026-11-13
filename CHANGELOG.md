@@ -46,6 +46,13 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fallback feed shows when each fallback happened. Probe results carry
   `checked_at`, and credential query parameters are redacted from probe
   errors.
+- USD screening sessions skip regular NYSE holidays, so a holiday no longer
+  becomes the as-of date with every candidate marked stale. A malformed
+  `asof_date` is rejected with 422 instead of being treated as a final close.
+- Background job records follow `SWING_SCREENER_DATA_DIR` instead of the
+  process working directory.
+- `api/README.md` no longer lists five fundamentals routes that do not exist
+  and now documents five routes that do.
 - Earnings proximity reports `status`; a failed lookup is shown as unknown
   instead of "no earnings" and is retried instead of cached for the day.
 

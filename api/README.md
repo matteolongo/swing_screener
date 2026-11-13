@@ -284,7 +284,7 @@ Symbol pool (`/api/pool`):
 - `POST /api/pool/review-queue/{symbol}/restore` — reset the symbol's failure counter and return it to the active pool. Returns `{restored: bool}`.
 - `GET /api/pool/presets` — list taxonomy presets from `config/taxonomy_presets.yaml`. Returns `{presets: [{id, label, filter}]}`.
 - `POST /api/pool/rebuild` — re-merge the universe snapshots + instrument master into `symbol_pool.json` (the runtime equivalent of the base-build runbook in `data/README.md`). Structural fields (`index_memberships`, `exchange_mic`, `currency`, `region`, `instrument_type`, providers) are recomputed; yfinance enrichment is carried over for surviving symbols. The diff is computed before the file is written. Returns `{applied, additions, removals, modifications, summary}` where additions/removals are full symbol snapshots and modifications are `[{symbol, changes: [{field, before, after}]}]` (list fields compared order-insensitively). Returns `409` if another pool operation (rebuild/enrich) is already running.
-- `POST /api/pool/enrich` — launch a best-effort yfinance enrichment job over the current pool (`sector`, `market_cap_tier`, `liquidity_tier`, `instrument_type_detail`). Runs in a background thread; returns `{job_id}` immediately. Returns `409` if another pool operation is already running (pool writes are serialized). Jobs are disk-persisted under `data/pool/enrich_jobs/` and trimmed to the most recent 16.
+- `POST /api/pool/enrich` — launch a best-effort yfinance enrichment job over the current pool (`sector`, `market_cap_tier`, `liquidity_tier`, `instrument_type_detail`). Runs in a background thread; returns `{job_id}` immediately. Returns `409` if another pool operation is already running (pool writes are serialized). Jobs are disk-persisted under `<data dir>/pool/enrich_jobs/` (`SWING_SCREENER_DATA_DIR`, default `data/`) and trimmed to the most recent 16.
 - `GET /api/pool/enrich/{job_id}` — poll enrichment status. Returns `{status: running|done|failed, progress: {processed, total, failed}, error, diff}`. `diff` is `{modified: [{symbol, changes}], failed_symbols}` and is populated only when `status == done`. A job interrupted by an API restart is recovered as `failed` (not 404); unknown job id → 404.
 
 Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
@@ -307,6 +307,8 @@ Backtest (`/api/backtest`):
 Universes (`/api/universes`):
 - `GET /api/universes`
 - `GET /api/universes/{universe_id}`
+- `POST /api/universes/discover` — query a symbol-discovery provider (screens,
+  exchanges, currencies, MICs) and return matching symbols without saving.
 - `POST /api/universes/auto-refresh`
 - `POST /api/universes/refresh-all` — refresh every **registry** universe snapshot from its source (`apply=true` for each), aggregating per-universe diffs. Auto universes are skipped (they refresh via their own discovery path) and counted in `skipped_auto`. Per-universe failures are surfaced inline (`{id, error}`), never as a 500. Returns `{universes: [{id, applied, changed, current_member_count, proposed_member_count, additions, removals}], total_additions, total_removals, total_changed, skipped_auto}`.
 - `POST /api/universes/{universe_id}/refresh`
@@ -318,6 +320,8 @@ Portfolio (`/api/portfolio`):
   plus `fx_rate_status` (below).
 - `GET /api/portfolio/positions/{position_id}`
 - `GET /api/portfolio/positions/{position_id}/metrics`
+- `GET /api/portfolio/positions/open/intelligence` — cached intelligence summary
+  plus the current stop suggestion for every open position.
 
 Position rows and metrics carry `price_source`, the price the metrics used:
 `live` (real-time quote), `cached` (last daily close or stored price),
@@ -381,6 +385,11 @@ follow-up only after success, using these IDs.
   manual) and records it in the position's `exit_order_ids`. Filling a linked
   local exit records that exit as filled and reconciles its remaining linked
   protection in the same transaction; it never sends a broker instruction.
+- `PATCH /api/portfolio/orders/{order_id}/submit` — mark a pending order as
+  submitted to the broker (ledger bookkeeping; the order is placed manually).
+- `POST /api/portfolio/sync-degiro` — read the DeGiro portfolio and report held
+  positions not yet registered locally. It updates the ISIN map but never
+  creates positions or sends orders.
 - `DELETE /api/portfolio/orders/{order_id}` — cancel an unfilled draft, pending,
   or submitted order while preserving history.
 
@@ -434,13 +443,8 @@ Intelligence (`/api/intelligence`):
 - `POST /api/intelligence/position/{position_id}?force=false` — position-aware LLM analysis for an open position. Enriches with the same fundamentals and technicals a screener candidate gets, so the model has real data to manage the position. Returns cached result unless `force=true`. Returns 404 if position not found.
 
 Fundamentals (`/api/fundamentals`):
-- `GET /api/fundamentals/config`
-- `PUT /api/fundamentals/config`
-- `GET /api/fundamentals/snapshot/{symbol}` — `FundamentalSnapshotResponse` now also exposes optional Finnhub signals (`net_margin`, `insider_net_shares_90d`, `insider_transaction_count_90d`, `forward_eps_estimate`, `analyst_upgrade_downgrade_net_30d`).
-- `POST /api/fundamentals/refresh`
-- `POST /api/fundamentals/compare`
-- `POST /api/fundamentals/warmup`
-- `GET /api/fundamentals/warmup/{job_id}`
+- `GET /api/fundamentals/snapshot/{symbol}` — `refresh=true` bypasses the cache. — `FundamentalSnapshotResponse` now also exposes optional Finnhub signals (`net_margin`, `insider_net_shares_90d`, `insider_transaction_count_90d`, `forward_eps_estimate`, `analyst_upgrade_downgrade_net_30d`).
+- `POST /api/fundamentals/refresh` — refresh one symbol's snapshot.
 
 Watchlist (`/api/watchlist`):
 - `GET /api/watchlist`

@@ -1998,3 +1998,10 @@ def test_screener_candidate_includes_52w_high_fields(monkeypatch):
     assert "dist_52w_high_pct" in candidate
     assert candidate["dist_52w_high_pct"] == pytest.approx(-0.03, abs=1e-4)
     assert candidate["near_52w_high"] is True
+
+
+def test_run_rejects_malformed_asof_date():
+    client = TestClient(app)
+    response = client.post("/api/screener/run", json={"top": 5, "asof_date": "2026-13-40"})
+
+    assert response.status_code == 422

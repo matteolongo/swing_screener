@@ -158,3 +158,14 @@ def test_screener_run_manager_marks_interrupted_jobs_as_errors(
     assert recovered.status == "error"
     assert recovered.result is None
     assert recovered.error == "Run interrupted by API restart."
+
+
+def test_default_jobs_dir_follows_configured_data_dir(tmp_path, monkeypatch):
+    from api.services.run_jobs import ScreenerRunManager
+
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+
+    manager = ScreenerRunManager(max_jobs=2)
+
+    assert manager._jobs_dir == tmp_path / "screener" / "jobs"
+    assert manager._jobs_dir.is_dir()
