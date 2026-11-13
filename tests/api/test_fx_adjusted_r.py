@@ -190,3 +190,42 @@ class TestFxAdjustedREndpoint:
         positions = response.json()["positions"]
         assert len(positions) == 1
         assert positions[0]["r_fx_adjusted"] is not None
+
+
+class TestFxRateUnavailable:
+    def test_missing_eurusd_is_flagged_and_not_cached(self, tmp_path, monkeypatch):
+        _write_positions(monkeypatch, tmp_path, [USD_POSITION])
+        portfolio_service._eurusd_cache.clear()
+
+        mock_provider = MagicMock(spec=MarketDataProvider)
+        mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
+        mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"AAPL": [120.0, 120.0]})
+        mock_provider.get_provider_name.return_value = "mock"
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
+
+        listed = client.get("/api/portfolio/positions?status=open").json()
+        metrics = client.get("/api/portfolio/positions/POS-USD001/metrics").json()
+
+        assert listed["fx_rate_status"] == "unavailable"
+        assert listed["positions"][0]["fx_rate_status"] == "unavailable"
+        assert listed["positions"][0]["r_fx_adjusted"] is None
+        assert metrics["fx_rate_status"] == "unavailable"
+        assert metrics["r_fx_adjusted"] is None
+        assert "eurusd" not in portfolio_service._eurusd_cache
+
+    def test_available_eurusd_is_reported(self, tmp_path, monkeypatch):
+        _write_positions(monkeypatch, tmp_path, [USD_POSITION])
+        portfolio_service._eurusd_cache.clear()
+
+        mock_provider = MagicMock(spec=MarketDataProvider)
+        mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote in test")
+        mock_provider.fetch_ohlcv.side_effect = lambda tickers, **kwargs: _ohlcv_with_closes(
+            {t: [1.10, 1.10] if t == "EURUSD=X" else [120.0, 120.0] for t in tickers}
+        )
+        mock_provider.get_provider_name.return_value = "mock"
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
+
+        listed = client.get("/api/portfolio/positions?status=open").json()
+
+        assert listed["fx_rate_status"] == "available"
+        assert listed["positions"][0]["r_fx_adjusted"] is not None

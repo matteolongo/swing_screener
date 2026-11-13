@@ -144,25 +144,36 @@ class PositionPricingService:
 
         return last_prices, live_tickers
 
-    def _eurusd_rate(self) -> float:
-        """Fetch EURUSD rate with simple caching."""
+    def eurusd_quote(self) -> tuple[float, bool]:
+        """Return (EURUSD rate, available).
+
+        When no positive rate can be fetched the rate is 1.0 so arithmetic
+        stays defined, ``available`` is False so callers can flag the numbers,
+        and nothing is cached so the next request retries.
+        """
         import time
         now = time.time()
         cached = _eurusd_cache.get("eurusd")
         if cached is not None:
             rate, timestamp = cached
             if now - timestamp < _CACHE_TTL_SECONDS:
-                return rate
+                return rate, True
 
         try:
             fx = self._fetch_last_prices(["EURUSD=X"])
             rate = float(fx.get("EURUSD=X", 0.0))
-            rate = rate if rate > 0 else 1.0
-            _eurusd_cache["eurusd"] = (rate, now)
-            return rate
         except Exception as exc:
-            logger.warning("Failed to fetch EURUSD fx rate: %s", exc)
-            return 1.0
+            logger.warning("EURUSD rate unavailable, using 1.0 (flagged): %s", type(exc).__name__)
+            return 1.0, False
+        if not rate > 0:
+            logger.warning("EURUSD rate unavailable (got %r), using 1.0 (flagged)", rate)
+            return 1.0, False
+        _eurusd_cache["eurusd"] = (rate, now)
+        return rate, True
+
+    def _eurusd_rate(self) -> float:
+        """EURUSD rate, 1.0 when unavailable. Prefer ``eurusd_quote`` to see which."""
+        return self.eurusd_quote()[0]
 
     def get_earnings_proximity(self, ticker: str) -> EarningsProximityResponse:
         normalized_ticker = ticker.strip().upper()
@@ -188,7 +199,7 @@ class PositionPricingService:
                 if (parsed := _parse_earnings_date(raw_date)) is not None and parsed >= today_dt
             )
             if not upcoming:
-                result = EarningsProximityResponse(ticker=normalized_ticker)
+                result = EarningsProximityResponse(ticker=normalized_ticker, status="none")
             else:
                 next_date = upcoming[0]
                 days_until = (next_date - today_dt).days
@@ -197,10 +208,15 @@ class PositionPricingService:
                     next_earnings_date=next_date.isoformat(),
                     days_until=days_until,
                     warning=days_until <= 10,
+                    status="ok",
                 )
         except Exception as exc:
-            logger.info("Failed to fetch earnings calendar for %s: %s", normalized_ticker, exc)
-            result = EarningsProximityResponse(ticker=normalized_ticker)
+            # Unknown is not the same as "no earnings": report it and do not
+            # cache it, so a transient provider error is retried.
+            logger.warning(
+                "Earnings calendar unavailable for %s: %s", normalized_ticker, type(exc).__name__
+            )
+            return EarningsProximityResponse(ticker=normalized_ticker, status="unavailable")
 
         _earnings_cache[normalized_ticker] = (today, result)
         return result

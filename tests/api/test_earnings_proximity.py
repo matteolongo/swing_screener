@@ -61,6 +61,31 @@ def test_yfinance_failure_returns_no_warning():
     assert data["warning"] is False
     assert data["next_earnings_date"] is None
     assert data["days_until"] is None
+    assert data["status"] == "unavailable"
+
+
+def test_failed_lookup_is_not_cached():
+    near_date = (market_today() + timedelta(days=5)).isoformat()
+    mock_ticker = MagicMock()
+    mock_ticker.calendar = {"Earnings Date": [near_date]}
+
+    with patch("yfinance.Ticker", side_effect=Exception("network error")):
+        assert client.get("/api/portfolio/earnings-proximity/AAPL").json()["status"] == "unavailable"
+    with patch("yfinance.Ticker", return_value=mock_ticker):
+        data = client.get("/api/portfolio/earnings-proximity/AAPL").json()
+
+    assert data["status"] == "ok"
+    assert data["days_until"] == 5
+
+
+def test_no_upcoming_date_reports_none():
+    mock_ticker = MagicMock()
+    mock_ticker.calendar = {}
+
+    with patch("yfinance.Ticker", return_value=mock_ticker):
+        data = client.get("/api/portfolio/earnings-proximity/AAPL").json()
+
+    assert data["status"] == "none"
 
 
 def test_earnings_result_cached_per_ticker_for_today():

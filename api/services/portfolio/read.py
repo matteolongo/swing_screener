@@ -331,6 +331,13 @@ class PortfolioReadService:
         self._pricing = pricing
         self._config_repo = config_repo
 
+    def _eurusd(self, needed: bool) -> tuple[float, str]:
+        """Return (rate, fx_rate_status) without fetching when no conversion needs it."""
+        if not needed:
+            return 1.0, "not_needed"
+        rate, available = self._pricing.eurusd_quote()
+        return rate, "available" if available else "unavailable"
+
     def _build_position_with_metrics(
         self,
         position: dict,
@@ -338,6 +345,7 @@ class PortfolioReadService:
         eurusd_rate: float,
         account_currency: str = "EUR",
         *,
+        fx_rate_status: str = "not_needed",
         live_tickers: frozenset[str] = frozenset(),
         time_stop_days: int | None = None,
         time_stop_min_r: float | None = None,
@@ -364,12 +372,17 @@ class PortfolioReadService:
         if state_position.status == "open" and live_price is not None:
             payload["current_price"] = live_price
 
-        if live_price is not None and ticker in live_tickers:
+        if state_position.status == "closed":
+            price_source = "recorded"
+        elif live_price is not None and ticker in live_tickers:
             price_source = "live"
         elif live_price is not None or position.get("current_price") is not None:
             price_source = "cached"
         else:
+            # No quote, no close, no stored price: metrics below use the entry
+            # price. Expose it so the UI can show the price it actually used.
             price_source = "entry"
+            payload["current_price"] = current_price_for_metrics
 
         current_risk_per_share = float(state_position.entry_price - state_position.stop_price)
         r_uses_initial_risk = (
@@ -396,7 +409,7 @@ class PortfolioReadService:
             and position_currency == "USD"
             and account_currency == "EUR"
             and entry_fx_rate_raw
-            and eurusd_rate > 0
+            and fx_rate_status == "available"
         ):
             r_fx_adjusted = _compute_r_fx_adjusted(
                 entry_price=state_position.entry_price,
@@ -420,6 +433,7 @@ class PortfolioReadService:
             time_stop_warning=time_stop_warning,
             r_fx_adjusted=r_fx_adjusted,
             price_source=price_source,
+            fx_rate_status=fx_rate_status if position_currency != account_currency else "not_needed",
             r_uses_initial_risk=r_uses_initial_risk,
         )
 
@@ -448,7 +462,7 @@ class PortfolioReadService:
             )
             for position in positions
         )
-        eurusd_rate = self._pricing._eurusd_rate() if needs_eurusd else 1.0
+        eurusd_rate, fx_rate_status = self._eurusd(needs_eurusd)
 
         positions_with_metrics = [
             self._build_position_with_metrics(
@@ -456,13 +470,16 @@ class PortfolioReadService:
                 current_prices,
                 eurusd_rate,
                 account_currency,
+                fx_rate_status=fx_rate_status,
                 live_tickers=live_tickers,
                 time_stop_days=time_stop_days,
                 time_stop_min_r=time_stop_min_r,
             )
             for position in positions
         ]
-        return PositionsWithMetricsResponse(positions=positions_with_metrics, asof=asof)
+        return PositionsWithMetricsResponse(
+            positions=positions_with_metrics, asof=asof, fx_rate_status=fx_rate_status
+        )
 
     def get_position(self, position_id: str) -> Position:
         position = self._positions_repo.get_position(position_id)
@@ -477,8 +494,12 @@ class PortfolioReadService:
 
         ticker = str(position.get("ticker", "")).upper()
         current_price = self._pricing._fallback_price(position)
-        # Non-open positions (closed) have a fixed, recorded price - label unchanged from prior behavior.
-        price_source = "live"
+        if position.get("status") != "open":
+            price_source = "recorded"
+        elif position.get("current_price") is not None:
+            price_source = "cached"
+        else:
+            price_source = "entry"
 
         if position.get("status") == "open" and ticker:
             live_quote = self._pricing._fetch_live_quote(ticker)
@@ -500,7 +521,11 @@ class PortfolioReadService:
         entry_fee_eur = _remaining_entry_fee_eur(position)
         if state_position.status == "closed":
             entry_fee_eur += float(position.get("exit_fee_eur") or 0.0)
-        eurusd_rate = self._pricing._eurusd_rate() if position_currency == "USD" and entry_fee_eur else 1.0
+        account_currency = getattr(self._config_repo.get().risk, "account_currency", "EUR")
+        eurusd_rate, fx_rate_status = self._eurusd(
+            (position_currency == "USD" and bool(entry_fee_eur))
+            or _needs_eurusd_rate(position_currency, account_currency)
+        )
         fee_for_pnl = _fee_eur_to_position_currency(
             entry_fee_eur,
             position_currency=position_currency,
@@ -529,7 +554,6 @@ class PortfolioReadService:
             total_shares = sum(e.shares_closed for e in partial_close_events)
             blended_r = sum(e.shares_closed * e.r_at_close for e in partial_close_events) / total_shares
 
-        account_currency = getattr(self._config_repo.get().risk, "account_currency", "EUR")
         r_fx_adjusted: Optional[float] = None
         entry_fx_rate_raw = position.get("entry_fx_rate")
         if (
@@ -537,14 +561,14 @@ class PortfolioReadService:
             and position_currency == "USD"
             and account_currency == "EUR"
             and entry_fx_rate_raw
+            and fx_rate_status == "available"
         ):
-            current_eurusd = self._pricing._eurusd_rate()
             r_fx_adjusted = _compute_r_fx_adjusted(
                 entry_price=state_position.entry_price,
                 stop_price=state_position.stop_price,
                 current_price=current_price,
                 entry_eurusd=float(entry_fx_rate_raw),
-                current_eurusd=current_eurusd,
+                current_eurusd=eurusd_rate,
             )
 
         current_risk_per_share_metrics = float(state_position.entry_price - state_position.stop_price)
@@ -568,6 +592,7 @@ class PortfolioReadService:
             blended_r=blended_r,
             r_fx_adjusted=r_fx_adjusted,
             price_source=price_source,
+            fx_rate_status=fx_rate_status,
             r_uses_initial_risk=r_uses_initial_risk_metrics,
         )
 
@@ -658,7 +683,7 @@ class PortfolioReadService:
             )
             for position in all_positions
         )
-        realized_eurusd_rate = self._pricing._eurusd_rate() if needs_eurusd else 1.0
+        realized_eurusd_rate, realized_fx_status = self._eurusd(needs_eurusd)
         realized_pnl = self._realized_pnl(
             all_positions,
             account_currency=account_currency,
@@ -671,7 +696,13 @@ class PortfolioReadService:
             _needs_eurusd_rate(detect_currency(position.ticker.upper()), account_currency)
             for position in positions
         )
-        eurusd_rate = self._pricing._eurusd_rate() if needs_open_eurusd else 1.0
+        eurusd_rate, open_fx_status = self._eurusd(needs_open_eurusd)
+        fx_statuses = {realized_fx_status, open_fx_status, positions_response.fx_rate_status}
+        summary_fx_status = (
+            "unavailable" if "unavailable" in fx_statuses
+            else "available" if "available" in fx_statuses
+            else "not_needed"
+        )
         if not positions:
             return PortfolioSummary(
                 total_positions=0,
@@ -698,6 +729,7 @@ class PortfolioReadService:
                 realized_pnl=realized_pnl,
                 effective_account_size=effective_account_size,
                 analytics=analytics,
+                fx_rate_status=summary_fx_status,
                 analytics_metadata=_analytics_metadata(config, 0.0),
             )
 
@@ -807,6 +839,7 @@ class PortfolioReadService:
             realized_pnl=realized_pnl,
             effective_account_size=effective_account_size,
             analytics=analytics,
+            fx_rate_status=summary_fx_status,
             analytics_metadata=_analytics_metadata(config, open_risk_percent),
         )
 

@@ -74,6 +74,7 @@ function makePosition(overrides: Partial<PositionWithMetrics> = {}): PositionWit
     daysOpen: 0,
     timeStopWarning: false,
     priceSource: 'live',
+    fxRateStatus: 'not_needed',
     rUsesInitialRisk: false,
     notes: '',
     tags: [],
@@ -240,5 +241,23 @@ describe('PortfolioTable symbol analysis', () => {
 
     expect(screen.queryByRole('button', { name: t('workspacePage.panels.analysis.managePosition.scaleOut') })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('workspacePage.panels.analysis.managePosition.exit') })).not.toBeInTheDocument();
+  });
+});
+
+describe('PortfolioTable FX availability', () => {
+  it('warns when EURUSD was unavailable for the listed positions', () => {
+    positionsMock.mockReturnValue([makePosition({ fxRateStatus: 'unavailable' })]);
+
+    renderWithProviders(<PortfolioTable />);
+
+    expect(screen.getByText(t('positions.fxUnavailable'))).toBeInTheDocument();
+  });
+
+  it('shows no FX warning when the rate was available or not needed', () => {
+    positionsMock.mockReturnValue([makePosition({ fxRateStatus: 'available' }), makePosition({ fxRateStatus: 'not_needed' })]);
+
+    renderWithProviders(<PortfolioTable />);
+
+    expect(screen.queryByText(t('positions.fxUnavailable'))).not.toBeInTheDocument();
   });
 });

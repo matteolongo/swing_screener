@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import EarningsWarningBanner from './EarningsWarningBanner';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders, screen } from '@/test/utils';
+import { t } from '@/i18n/t';
 
 describe('EarningsWarningBanner', () => {
   it('shows warning when earnings are within 10 days', async () => {
@@ -46,5 +47,17 @@ describe('EarningsWarningBanner', () => {
     const { container } = renderWithProviders(<EarningsWarningBanner ticker={undefined} />);
 
     expect(container.firstChild).toBeNull();
+  });
+
+  it('says the earnings date is unknown when the lookup failed', async () => {
+    server.use(
+      http.get('*/api/portfolio/earnings-proximity/AAPL', () =>
+        HttpResponse.json({ ticker: 'AAPL', next_earnings_date: null, days_until: null, warning: false, status: 'unavailable' }),
+      ),
+    );
+
+    renderWithProviders(<EarningsWarningBanner ticker="AAPL" />);
+
+    expect(await screen.findByText(t('earningsWarning.unavailable'))).toBeInTheDocument();
   });
 });

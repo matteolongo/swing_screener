@@ -314,9 +314,20 @@ Universes (`/api/universes`):
 
 Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/positions` — includes additive server-derived
-  `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
+  `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata,
+  plus `fx_rate_status` (below).
 - `GET /api/portfolio/positions/{position_id}`
 - `GET /api/portfolio/positions/{position_id}/metrics`
+
+Position rows and metrics carry `price_source`, the price the metrics used:
+`live` (real-time quote), `cached` (last daily close or stored price),
+`entry` (nothing resolved; P&L and R use the entry price, and the list sets
+`current_price` to it) or `recorded` (closed position, exit price). They also
+carry `fx_rate_status`: `not_needed`, `available`, or `unavailable` when EURUSD
+could not be fetched. On `unavailable` conversions use 1.0, `r_fx_adjusted` is
+`null`, and the failure is not cached, so the next request retries. The list
+response and `GET /api/portfolio/summary` report the same status for the
+whole response.
 - `PUT /api/portfolio/positions/{position_id}/stop` — updates the position
   and its local linked stop record (`ORD-STOP-{position_id}`) in the same
   transaction. Ledger bookkeeping only; broker execution stays manual.
@@ -349,7 +360,9 @@ follow-up only after success, using these IDs.
   localized insight copy; clients do not recreate R, threshold, sample-size,
   or insight policy.
   Metadata returns configured heat, concentration, and tag-sample limits.
-- `GET /api/portfolio/earnings-proximity/{ticker}`
+- `GET /api/portfolio/earnings-proximity/{ticker}` — `status` is `ok` (upcoming
+  date found), `none` (provider reported no upcoming date) or `unavailable`
+  (lookup failed; earnings risk is unknown). `unavailable` is not cached.
 - `GET /api/portfolio/analytics/regime-breakdown` — classifies trades by benchmark
   trend at entry, then reuses canonical portfolio analytics for each group.
   `avg_r` and `expectancy` include every exit leg weighted by shares and measured
