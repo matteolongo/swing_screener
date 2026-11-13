@@ -741,6 +741,8 @@ export const messagesEn = {
     empty: 'The server returned no data sources.',
     notConfigured: 'Not configured',
     notProbeable: 'No probe',
+    checkedAt: 'Tested {{time}}',
+    probeError: 'Error: {{message}}',
     fallbacks: {
       title: 'Recent fallbacks',
       empty: 'No fallbacks recorded since the server started.',

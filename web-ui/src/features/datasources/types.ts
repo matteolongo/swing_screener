@@ -8,6 +8,7 @@ export interface ProbeResultAPI {
   detail: string | null;
   sample: Record<string, unknown> | null;
   error: string | null;
+  checked_at?: string | null;
 }
 
 export interface DataSourceAPI {
@@ -48,6 +49,8 @@ export interface ProbeResult {
   detail?: string;
   sample?: Record<string, unknown>;
   error?: string;
+  /** When the probe ran (server time). Probe results live in API process memory. */
+  checkedAt?: string;
 }
 
 export interface DataSource {
@@ -81,6 +84,7 @@ export function transformProbeResult(api: ProbeResultAPI): ProbeResult {
     detail: api.detail ?? undefined,
     sample: api.sample ?? undefined,
     error: api.error ?? undefined,
+    checkedAt: api.checked_at ?? undefined,
   };
 }
 

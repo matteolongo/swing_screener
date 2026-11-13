@@ -1,5 +1,6 @@
 import { t } from '@/i18n/t';
 import type { FallbackEvent } from '@/features/datasources/types';
+import { formatDateTime } from '@/utils/formatters';
 
 export default function FallbackFeed({ events }: { events: FallbackEvent[] }) {
   return (
@@ -11,6 +12,7 @@ export default function FallbackFeed({ events }: { events: FallbackEvent[] }) {
         <ul className="space-y-1">
           {events.map((e, i) => (
             <li key={`${e.ts}-${i}`} className="text-xs text-muted">
+              <time dateTime={e.ts} className="mr-1 tabular-nums">{formatDateTime(e.ts)}</time>
               <span className="text-foreground">{e.fromProvider}</span>
               {e.fellBackTo ? ` → ${e.fellBackTo}` : ''} · {e.reason}
               {e.tickers.length ? ` · ${e.tickers.slice(0, 5).join(', ')}` : ''}

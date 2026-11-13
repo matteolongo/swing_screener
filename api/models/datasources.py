@@ -13,6 +13,7 @@ class ProbeResultOut(BaseModel):
     detail: Optional[str] = None
     sample: Optional[dict] = None
     error: Optional[str] = None
+    checked_at: Optional[str] = None
 
 
 class SourceDescriptorOut(BaseModel):

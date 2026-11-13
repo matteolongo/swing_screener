@@ -42,6 +42,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   metrics write failures; the metrics log is written under a file lock.
 - The analysis stepper no longer implies per-step progress mid-run, and the
   trace panel shows the cached analysis's own run instead of an older attempt.
+- The Data Sources page shows why a probe is down and when it ran, and the
+  fallback feed shows when each fallback happened. Probe results carry
+  `checked_at`, and credential query parameters are redacted from probe
+  errors.
 - Earnings proximity reports `status`; a failed lookup is shown as unknown
   instead of "no earnings" and is retried instead of cached for the day.
 

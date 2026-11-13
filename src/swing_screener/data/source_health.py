@@ -50,6 +50,7 @@ class ProbeResult:
     detail: str | None = None
     sample: dict | None = None
     error: str | None = None
+    checked_at: str | None = None        # ISO-8601 UTC, stamped by the diagnostics service
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -1,5 +1,6 @@
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
+import { formatDateTime } from '@/utils/formatters';
 import type { MessageKey } from '@/i18n/types';
 import type { DataSource } from '@/features/datasources/types';
 
@@ -44,6 +45,12 @@ export default function SourceCard({ source, onTest, testing }: Props) {
           {probe.latencyMs != null ? ` · ${Math.round(probe.latencyMs)}ms` : ''}
           {probe.detail ? ` · ${probe.detail}` : ''}
         </span>
+      )}
+      {probe?.error && (
+        <span className="break-words text-xs text-danger">{t('datasources.probeError', { message: probe.error })}</span>
+      )}
+      {probe?.checkedAt && (
+        <span className="text-[11px] text-muted">{t('datasources.checkedAt', { time: formatDateTime(probe.checkedAt) })}</span>
       )}
       <div>
         <button
