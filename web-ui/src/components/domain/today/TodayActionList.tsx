@@ -92,11 +92,13 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
   const watchlistNearTriggerCount = watchlistNearTrigger?.length ?? 0;
   const pendingOrderCount = review?.pendingOrdersReview?.length ?? 0;
   const evaluationErrors = review?.evaluationErrors ?? [];
+  const sectionErrors = review?.sectionErrors ?? [];
   const isRefreshing = isFetching || openPositionsQuery.isFetching;
   const refreshPortfolio = () => refetchTodayPortfolio(queryClient);
   const isEmpty = !isLoading && !openPositionsQuery.isLoading && !error && !openPositionsQuery.error &&
     openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 &&
-    watchlistNearTriggerCount === 0 && pendingOrderCount === 0 && evaluationErrors.length === 0;
+    watchlistNearTriggerCount === 0 && pendingOrderCount === 0 && evaluationErrors.length === 0 &&
+    sectionErrors.length === 0;
 
   return (
     <div className="flex min-w-0 flex-col">
@@ -167,6 +169,20 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
           <p className="text-sm text-muted px-2 py-4 text-center">
             {t('todayPage.actionList.empty')}
           </p>
+        )}
+
+        {sectionErrors.length > 0 && (
+          <div role="alert" className="space-y-1 rounded bg-warning/10 px-3 py-2 text-sm text-warning">
+            <p className="font-semibold">{t('todayPage.actionList.sectionsUnavailable')}</p>
+            <ul className="list-inside list-disc break-words">
+              {sectionErrors.map(({ section }) => (
+                <li key={section}>{t(`todayPage.actionList.sectionUnavailable.${section}`)}</li>
+              ))}
+            </ul>
+            <button type="button" disabled={isFetching} onClick={() => void refetch()} className="min-h-11 underline">
+              {t('todayPage.actionList.retryReview')}
+            </button>
+          </div>
         )}
 
         {evaluationErrors.length > 0 && (

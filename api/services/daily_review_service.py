@@ -14,6 +14,7 @@ from api.models.daily_review import (
     DailyReviewPositionExitSignal,
     DailyReviewPositionHold,
     DailyReviewPositionUpdate,
+    DailyReviewSectionError,
     DailyReviewSummary,
     PendingOrderReview,
     TrimSuggestion,
@@ -176,10 +177,11 @@ class DailyReviewService:
             if c.same_symbol is not None
             and c.same_symbol.mode in ("ADD_ON", "SCALE_BACK")
         ]
+        section_errors: list[DailyReviewSectionError] = []
         screener_tickers = {c.ticker.upper() for c in candidates}
         watchlist_near_trigger = [
             item
-            for item in self._watchlist_near_trigger_items()
+            for item in self._watchlist_near_trigger_items(section_errors)
             if (
                 item.ticker if hasattr(item, "ticker") else item.get("ticker", "")
             ).upper()
@@ -187,7 +189,7 @@ class DailyReviewService:
         ]
 
         # 2. Analyze all open positions
-        active_manage = self._active_manage_cfg_payload()
+        active_manage = self._active_manage_cfg_payload(section_errors)
         trim_r_threshold = float(active_manage.get("trim_r_threshold", 2.0))
         positions_response = self.portfolio.list_positions(
             status="open",
@@ -245,7 +247,7 @@ class DailyReviewService:
             review_date=market_today(),
         )
 
-        pending_orders_review = self._build_pending_orders_review()
+        pending_orders_review = self._build_pending_orders_review(section_errors)
 
         review = DailyReview(
             watchlist_near_trigger=watchlist_near_trigger,
@@ -256,6 +258,7 @@ class DailyReviewService:
             positions_close=positions_close,
             positions_exit_signal=positions_exit_signal,
             evaluation_errors=evaluation_errors,
+            section_errors=section_errors,
             summary=summary,
             pending_orders_review=pending_orders_review,
         )
@@ -269,7 +272,9 @@ class DailyReviewService:
         """Persist a snapshot only in response to an explicit command."""
         self._writer.save(review, strategy_name)
 
-    def _build_pending_orders_review(self) -> list[PendingOrderReview]:
+    def _build_pending_orders_review(
+        self, section_errors: list[DailyReviewSectionError]
+    ) -> list[PendingOrderReview]:
         """Build PendingOrderReview items for all pending entry orders."""
         if self.orders_repo is None:
             return []
@@ -277,6 +282,12 @@ class DailyReviewService:
             orders, _ = self.orders_repo.list_orders(status="pending")
         except Exception:
             logger.exception("Unable to load pending orders for daily review")
+            section_errors.append(
+                DailyReviewSectionError(
+                    section="pending_orders",
+                    message="Pending orders could not be loaded.",
+                )
+            )
             return []
 
         return self._pending_orders_review(orders)
@@ -324,7 +335,9 @@ class DailyReviewService:
             )
         return result
 
-    def _watchlist_near_trigger_items(self) -> list:
+    def _watchlist_near_trigger_items(
+        self, section_errors: list[DailyReviewSectionError]
+    ) -> list:
         if self.watchlist is None:
             return []
         try:
@@ -332,6 +345,12 @@ class DailyReviewService:
         except Exception:
             logger.exception(
                 "Unable to build watchlist near-trigger section for daily review"
+            )
+            section_errors.append(
+                DailyReviewSectionError(
+                    section="watchlist",
+                    message="Watchlist could not be loaded.",
+                )
             )
             return []
         near_trigger = []
@@ -345,7 +364,9 @@ class DailyReviewService:
                 near_trigger.append(item)
         return near_trigger
 
-    def _active_manage_cfg_payload(self) -> dict:
+    def _active_manage_cfg_payload(
+        self, section_errors: list[DailyReviewSectionError]
+    ) -> dict:
         strategy_repo = getattr(self.screener, "_strategy_repo", None)
         if strategy_repo is None:
             return {}
@@ -354,6 +375,12 @@ class DailyReviewService:
         except Exception:
             logger.exception(
                 "Unable to resolve active strategy manage config for daily review"
+            )
+            section_errors.append(
+                DailyReviewSectionError(
+                    section="manage_config",
+                    message="Active strategy manage rules could not be read; defaults were used.",
+                )
             )
             return {}
         manage = strategy.get("manage", {}) if isinstance(strategy, dict) else {}

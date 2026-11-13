@@ -3288,6 +3288,12 @@ export const messagesEn = {
       retryReview: 'Retry review',
       incompleteReview: 'Some positions could not be evaluated',
       evaluationFailed: '{{symbol}}: {{message}}',
+      sectionsUnavailable: 'Parts of this review were not checked',
+      sectionUnavailable: {
+        pending_orders: 'Pending orders could not be loaded. An empty orders section does not mean there are none.',
+        watchlist: 'Watchlist could not be loaded. Near-trigger names may be missing.',
+        manage_config: 'Strategy manage rules could not be read. Time-stop and trim checks used default thresholds.',
+      },
       acceptingStop: 'Saving stop…',
       acceptStopFailed: 'Stop update failed: {{message}}',
       refreshPortfolio: 'Refresh portfolio',

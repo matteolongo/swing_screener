@@ -154,6 +154,7 @@ export interface DailyReviewAPI {
   positions_close: DailyReviewPositionCloseAPI[];
   positions_exit_signal?: DailyReviewPositionExitSignalAPI[];
   evaluation_errors?: DailyReviewPositionEvaluationErrorAPI[];
+  section_errors?: DailyReviewSectionErrorAPI[];
   summary: DailyReviewSummaryAPI;
   pending_orders_review?: PendingOrderReviewAPI[];
 }
@@ -290,6 +291,8 @@ export interface DailyReview {
   positionsClose: DailyReviewPositionClose[];
   positionsExitSignal: DailyReviewPositionExitSignal[];
   evaluationErrors: DailyReviewPositionEvaluationError[];
+  /** Sections that failed to load: an empty list there means "not checked". */
+  sectionErrors: DailyReviewSectionError[];
   summary: DailyReviewSummary;
   pendingOrdersReview?: PendingOrderReview[];
 }
@@ -301,6 +304,16 @@ export interface DailyReviewPositionEvaluationErrorAPI {
 }
 
 export type DailyReviewPositionEvaluationError = DailyReviewPositionEvaluationErrorAPI;
+
+export type DailyReviewSection = 'pending_orders' | 'watchlist' | 'manage_config';
+
+export interface DailyReviewSectionErrorAPI {
+  section: DailyReviewSection;
+  code: 'section_unavailable';
+  message: string;
+}
+
+export type DailyReviewSectionError = DailyReviewSectionErrorAPI;
 
 // Transform functions
 export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCandidate {
@@ -498,6 +511,7 @@ export function transformDailyReview(api: DailyReviewAPI): DailyReview {
     positionsClose: api.positions_close.map(transformPositionClose),
     positionsExitSignal: (api.positions_exit_signal ?? []).map(transformPositionExitSignal),
     evaluationErrors: api.evaluation_errors ?? [],
+    sectionErrors: api.section_errors ?? [],
     summary: transformSummary(api.summary),
     pendingOrdersReview: (api.pending_orders_review ?? []).map(transformPendingOrderReview),
   };

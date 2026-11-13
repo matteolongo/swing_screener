@@ -31,6 +31,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Portfolio responses report `fx_rate_status`. A failed EURUSD fetch is no
   longer cached as 1.0, hides FX-adjusted R and shows a warning on the
   portfolio table.
+- The daily review reports `section_errors` when pending orders, the watchlist
+  or the strategy manage rules fail to load, and Today shows which parts were
+  not checked instead of "No items for today".
 - Earnings proximity reports `status`; a failed lookup is shown as unknown
   instead of "no earnings" and is retried instead of cached for the day.
 

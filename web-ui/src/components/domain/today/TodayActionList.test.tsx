@@ -65,6 +65,26 @@ describe('TodayActionList holdings', () => {
     });
   });
 
+  it('says which review sections were not checked', () => {
+    reviewQuery.current.data.sectionErrors = [
+      { section: 'pending_orders', code: 'section_unavailable', message: 'x' },
+      { section: 'manage_config', code: 'section_unavailable', message: 'y' },
+    ];
+    renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
+    expect(screen.getByText(t('todayPage.actionList.sectionsUnavailable'))).toBeInTheDocument();
+    expect(screen.getByText(t('todayPage.actionList.sectionUnavailable.pending_orders'))).toBeInTheDocument();
+    expect(screen.getByText(t('todayPage.actionList.sectionUnavailable.manage_config'))).toBeInTheDocument();
+    expect(screen.queryByText(t('todayPage.actionList.sectionUnavailable.watchlist'))).not.toBeInTheDocument();
+  });
+
+  it('does not claim there is nothing to do when a section failed', () => {
+    reviewQuery.current.data.positionsHold = [];
+    reviewQuery.current.data.sectionErrors = [{ section: 'watchlist', code: 'section_unavailable', message: 'x' }];
+    positionsQuery.current.data = [];
+    renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
+    expect(screen.queryByText(t('todayPage.actionList.empty'))).not.toBeInTheDocument();
+  });
+
   it('shows held positions under Open Positions and renders no separate Holding section', () => {
     renderWithProviders(<TodayActionList onTickerSelect={() => {}} />);
     expect(screen.getByText(new RegExp(t('todayPage.actionList.openPositions')))).toBeInTheDocument();

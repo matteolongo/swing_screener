@@ -398,6 +398,13 @@ not reported as successful `positions_hold` actions;
 `summary.evaluation_error_count` counts them independently. Unexpected
 request-wide invariant failures still fail the request.
 
+`section_errors` lists review sections that could not be built, each with
+`section` (`pending_orders`, `watchlist` or `manage_config`), the code
+`section_unavailable` and a sanitized message. An empty section with no matching
+error means nothing to do; with an error it means not checked. `manage_config`
+means the active strategy's manage rules could not be read and the time-stop
+and trim checks used their defaults.
+
 Reporting candidate currency fields normalize against the canonical currency
 registry (`CHF`, `DKK`, `EUR`, `GBP`, `NOK`, `SEK`, `USD`). The explicit
 `UNKNOWN` sentinel is preserved for non-actionable missing metadata; any other
