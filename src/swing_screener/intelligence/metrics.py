@@ -6,8 +6,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from swing_screener.settings.paths import data_dir
+from swing_screener.utils.file_lock import FileLockTimeoutError, open_locked_text
 
 logger = logging.getLogger(__name__)
+
+_MAX_ENTRIES = 500
 
 
 def record_analysis_metrics(
@@ -15,28 +18,38 @@ def record_analysis_metrics(
     *,
     tokens: int | None,
     metrics_root: Path | None = None,
-) -> None:
+) -> bool:
     """Append one entry to data/intelligence/intelligence_metrics.json.
 
-    Degrades soft: any I/O or parse error is logged and swallowed so a metrics
-    failure never interrupts the analysis pipeline.
+    The read-modify-write runs under an exclusive file lock so concurrent
+    analyses cannot drop each other's entries. Degrades soft: a failure is
+    logged and reported as False, never raised into the analysis pipeline.
     """
     root = metrics_root or data_dir() / "intelligence"
     path = root / "intelligence_metrics.json"
+    entry = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "ticker": ticker.upper(),
+        "tokens": tokens,
+    }
     try:
-        if path.exists():
-            try:
-                existing = json.loads(path.read_text())
-                if not isinstance(existing, list):
-                    existing = []
-            except (OSError, ValueError):
-                existing = []
-        else:
-            existing = []
-        existing.append({"ts": datetime.now(timezone.utc).isoformat(), "ticker": ticker.upper(), "tokens": tokens})
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(existing[-500:], indent=2))
-    except (OSError, ValueError):
+        with open_locked_text(path, mode="r+", lock_kind="exclusive", create_file=True) as fh:
+            raw = fh.read()
+            try:
+                existing = json.loads(raw) if raw.strip() else []
+            except ValueError:
+                existing = []
+            if not isinstance(existing, list):
+                existing = []
+            existing.append(entry)
+            fh.seek(0)
+            fh.truncate()
+            json.dump(existing[-_MAX_ENTRIES:], fh, indent=2)
+            fh.flush()
+    except (OSError, ValueError, FileLockTimeoutError):
         logger.warning(
             "Failed to record intelligence metrics for %r", ticker, exc_info=True
         )
+        return False
+    return True

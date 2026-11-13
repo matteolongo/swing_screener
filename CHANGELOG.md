@@ -34,6 +34,14 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The daily review reports `section_errors` when pending orders, the watchlist
   or the strategy manage rules fail to load, and Today shows which parts were
   not checked instead of "No items for today".
+- Intelligence "today" (analysis cache, chat, evidence cache) uses the US
+  market date instead of the UTC date, so a post-close analysis no longer
+  disappears at 00:00 UTC and gets regenerated.
+- Requests served from the intelligence cache no longer write a truncated
+  trace that hid the producing run; the persist step reports history and
+  metrics write failures; the metrics log is written under a file lock.
+- The analysis stepper no longer implies per-step progress mid-run, and the
+  trace panel shows the cached analysis's own run instead of an older attempt.
 - Earnings proximity reports `status`; a failed lookup is shown as unknown
   instead of "no earnings" and is retried instead of cached for the day.
 

@@ -48,10 +48,11 @@ def test_latest_returns_404_when_no_cache(tmp_path, monkeypatch):
 
 
 def test_latest_returns_cached_entry(tmp_path, monkeypatch):
-    from datetime import datetime, timezone
+    from swing_screener.utils.date_helpers import market_today
+
     monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    today = datetime.now(timezone.utc).date()
+    today = market_today()
     _write_cache(tmp_path, "AAPL", today)
     response = client.get("/api/intelligence/AAPL/latest")
     assert response.status_code == 200
@@ -61,10 +62,10 @@ def test_latest_returns_cached_entry(tmp_path, monkeypatch):
 
 
 def test_latest_rejects_legacy_unversioned_cache_entry(tmp_path, monkeypatch):
-    from datetime import datetime, timezone
+    from swing_screener.utils.date_helpers import market_today
 
     monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
-    today = datetime.now(timezone.utc).date()
+    today = market_today()
     cache_dir = tmp_path / "intelligence"
     cache_dir.mkdir(parents=True)
     (cache_dir / f"sweep_{today.isoformat()}.json").write_text(
@@ -212,6 +213,10 @@ def test_analyze_returns_cache_unless_force(tmp_path, monkeypatch):
     resp = client.post("/api/intelligence/AAA", json={"close": 1.0, "signal": "x"})
     assert resp.status_code == 200
     assert resp.json()["symbol"] == "AAA"
+    # A cache hit must not write a trace that shadows the producing run.
+    from swing_screener.intelligence.tracing import list_runs_for_ticker
+
+    assert list_runs_for_ticker("AAA") == []
 
 
 def test_sweep_enriches_uncached_symbol(tmp_path, monkeypatch):

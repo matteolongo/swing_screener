@@ -108,6 +108,16 @@ class TraceRecorder:
             client_attempt_id=client_attempt_id,
             attempt_force=attempt_force,
         )
+        self.discarded = False
+
+    def discard(self) -> None:
+        """Do not persist this run (e.g. it was served from cache).
+
+        A cache hit's result already carries the run_id of the run that
+        produced it; persisting a 2-step "ok" trace would shadow that run in
+        the per-ticker index and could prune its trace.
+        """
+        self.discarded = True
 
     @contextmanager
     def step(self, name: str) -> Iterator[StepDraft]:
@@ -185,7 +195,7 @@ def step(recorder: TraceRecorder | None, name: str):
 
 
 def finalize_trace(recorder: TraceRecorder | None, *, error: BaseException | None = None) -> None:
-    if recorder is None:
+    if recorder is None or recorder.discarded:
         return
     try:
         if error is not None:

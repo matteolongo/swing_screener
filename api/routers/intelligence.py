@@ -384,6 +384,8 @@ def sweep(
                         expected_fingerprint=analyzer.context_fingerprint(upper, item_req),
                     )
                     if cached is not None:
+                        if recorder is not None:
+                            recorder.discard()
                         analyzed.append(upper)
                         continue
                 analyzer.analyze(upper, item_req, past_positions=past_positions, recorder=recorder)
@@ -543,6 +545,8 @@ def analyze_symbol(
                     expected_fingerprint=analyzer.context_fingerprint(upper, request),
                 )
                 if cached is not None:
+                    if recorder is not None:
+                        recorder.discard()
                     return cached
             return analyzer.analyze(
                 upper, request, past_positions=past_positions, recorder=recorder
@@ -636,6 +640,8 @@ def analyze_position(
                     expected_fingerprint=analyzer.context_fingerprint(pos.ticker, request),
                 )
                 if cached is not None and _cached_position_context_matches(cached, position_context):
+                    if recorder is not None:
+                        recorder.discard()
                     return cached
             return analyzer.analyze(pos.ticker.upper(), request, recorder=recorder)
     except HTTPException:

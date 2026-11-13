@@ -473,16 +473,23 @@ def persist(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> AnalyzerState:
             exc_info=True,
         )
     try:
-        mod.append_history(ticker, result, max_entries=analyzer._history_max_entries)
-        summary["history_appended"] = True
+        # Writers degrade soft and report failure through their return value.
+        summary["history_appended"] = mod.append_history(
+            ticker, result, max_entries=analyzer._history_max_entries
+        ) is not False
+        if not summary["history_appended"]:
+            summary["history_error"] = "history write failed (see server log)"
     except Exception as exc:
         summary["history_error"] = f"{type(exc).__name__}: {exc}"
         mod.logger.warning(
             "Failed to append intelligence history for %r", ticker, exc_info=True
         )
     try:
-        mod.record_analysis_metrics(ticker, tokens=state.get("tokens"))
-        summary["metrics_recorded"] = True
+        summary["metrics_recorded"] = mod.record_analysis_metrics(
+            ticker, tokens=state.get("tokens")
+        ) is not False
+        if not summary["metrics_recorded"]:
+            summary["metrics_error"] = "metrics write failed (see server log)"
     except Exception as exc:
         summary["metrics_error"] = f"{type(exc).__name__}: {exc}"
         mod.logger.warning(

@@ -173,3 +173,32 @@ def test_disabled_tracing_yields_no_trace_and_null_run_id(monkeypatch):
     result = SymbolAnalyzer().analyze("AAPL", _req())
     assert result.run_id is None
     assert tracing.list_runs_for_ticker("AAPL") == []
+
+
+def test_persist_step_reports_soft_writer_failures(monkeypatch):
+    """History and metrics writers swallow I/O errors; the trace must still say so."""
+    _install_fake(monkeypatch)
+    from swing_screener.intelligence import symbol_analyzer as mod
+
+    monkeypatch.setattr(mod, "append_history", lambda *a, **k: False)
+    monkeypatch.setattr(mod, "record_analysis_metrics", lambda *a, **k: False)
+
+    result = SymbolAnalyzer().analyze("AAPL", _req())
+    persist_step = next(s for s in tracing.read_run_trace(result.run_id).steps if s.name == "persist")
+
+    assert persist_step.outputs_summary["cache_written"] is True
+    assert persist_step.outputs_summary["history_appended"] is False
+    assert "history_error" in persist_step.outputs_summary
+    assert persist_step.outputs_summary["metrics_recorded"] is False
+    assert "metrics_error" in persist_step.outputs_summary
+
+
+def test_postprocess_step_records_total_tokens_as_data_not_model_usage(monkeypatch):
+    _install_fake(monkeypatch)
+
+    result = SymbolAnalyzer().analyze("AAPL", _req())
+    post = next(s for s in tracing.read_run_trace(result.run_id).steps if s.name == "postprocess")
+
+    assert post.tokens is None
+    assert post.model is None
+    assert post.outputs_summary["total_tokens"] == 1200

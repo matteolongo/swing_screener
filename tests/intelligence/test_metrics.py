@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+from swing_screener.intelligence.metrics import record_analysis_metrics
+
 
 def test_record_analysis_metrics_appends(tmp_path):
     from swing_screener.intelligence.metrics import record_analysis_metrics
@@ -55,3 +57,14 @@ def test_record_analysis_metrics_soft_degrades_on_write_failure(tmp_path, monkey
     monkeypatch.setattr("pathlib.Path.write_text", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("disk full")))
     # must not raise — degrade soft
     record_analysis_metrics("AAA", tokens=1, metrics_root=tmp_path)
+
+
+def test_record_analysis_metrics_reports_failure_without_raising(tmp_path):
+    blocker = tmp_path / "not-a-dir"
+    blocker.write_text("x")
+
+    assert record_analysis_metrics("AAPL", tokens=1, metrics_root=blocker) is False
+
+
+def test_record_analysis_metrics_returns_true_on_success(tmp_path):
+    assert record_analysis_metrics("AAPL", tokens=1, metrics_root=tmp_path) is True

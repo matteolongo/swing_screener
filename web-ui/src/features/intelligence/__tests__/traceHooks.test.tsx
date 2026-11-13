@@ -254,4 +254,20 @@ describe('resolveRunId', () => {
       },
     ], null, 'cached-success')).toBe('modern-attempt');
   });
+
+  it('uses the cached analysis run over an older successful attempt', () => {
+    expect(resolveRunId([
+      {
+        runId: 'older-attempt',
+        ticker: 'AAPL',
+        startedAt: '2026-07-28T09:00:00Z',
+        finishedAt: '2026-07-28T09:00:05Z',
+        status: 'ok',
+        durationMs: 5000,
+        stepCount: 12,
+        clientAttemptId: 'attempt-old',
+        attemptForce: false,
+      },
+    ], null, 'sweep-run-that-produced-cache')).toBe('sweep-run-that-produced-cache');
+  });
 });

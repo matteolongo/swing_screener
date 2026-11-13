@@ -94,8 +94,10 @@ def _summ_postprocess(analyzer: "SymbolAnalyzer", state: AnalyzerState) -> dict:
             continue
         host = _citation_host(str(url))
         counts[host] = counts.get(host, 0) + 1
+    # Total tokens are already on the search and format steps; record the sum
+    # as data so this step does not render a model tab or double-count.
     return {
-        "tokens": state.get("tokens"),
+        "outputs_summary": {"total_tokens": state.get("tokens")},
         "source_counts": counts,
     }
 

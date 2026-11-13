@@ -808,6 +808,7 @@ export const messagesEn = {
       generating: 'Generating analysis…',
       forceRefresh: 'Force-refresh analysis',
       pipeline: 'Analysis pipeline',
+      pipelineNoLiveProgress: 'Generating. Step results appear when the run finishes.',
       failed: 'The analysis pipeline failed.',
       loadingCached: 'Loading the latest saved analysis…',
       outdated: 'Analysis is outdated because a dependency is newer.',

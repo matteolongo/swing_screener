@@ -84,11 +84,12 @@ function pipelineStatus(
   trace: RunTrace | null,
   isGenerating: boolean,
 ): PipelineStatus {
+  // Traces are persisted when a run finishes, so there is no per-step progress
+  // to show mid-run: every step is "running" until the finished trace arrives.
+  if (isGenerating) return 'running';
   const matching = trace?.steps.filter((item) => step.traceNames.includes(item.name)) ?? [];
   if (matching.some((item) => item.status === 'error')) return 'failed';
-  if (matching.some((item) => item.status === 'running')) return 'running';
   if (matching.some((item) => item.status === 'ok')) return 'complete';
-  if (!trace && isGenerating && step.id === 'enriching') return 'running';
   return 'pending';
 }
 
@@ -259,6 +260,9 @@ function Pipeline({ model }: { model: SymbolIntelligenceTabModel }) {
           );
         })}
       </ol>
+      {model.isGenerating ? (
+        <p role="status" className="mt-2 text-xs text-muted">{t('workspacePage.intelligence.pipelineNoLiveProgress')}</p>
+      ) : null}
       {(model.generationError || model.trace?.status === 'error') && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-danger">

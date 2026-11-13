@@ -24,6 +24,7 @@ from swing_screener.intelligence.history import read_history
 from swing_screener.intelligence.config_access import intelligence_config_section
 from swing_screener.intelligence.models import SymbolIntelligence
 from swing_screener.settings.paths import data_dir
+from swing_screener.utils.date_helpers import market_today
 from swing_screener.utils.file_lock import write_json_with_lock
 
 
@@ -160,7 +161,7 @@ class IntelligenceChatService:
         answer_fn: AnswerFn | None = None,
         collect_evidence_fn: CollectEvidenceFn | None = None,
     ) -> None:
-        self._today = today or (lambda: datetime.now(timezone.utc).date())
+        self._today = today or market_today
         self._answer_fn = answer_fn or _default_answer_fn
         self._collect_evidence = collect_evidence_fn or (lambda ticker: collect_evidence(ticker, refresh_sources=True))
 
