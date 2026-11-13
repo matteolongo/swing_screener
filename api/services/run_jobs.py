@@ -214,7 +214,8 @@ class RunManager(JobStore[RunJob[ResultT]]):
         try:
             result = run_fn()
             self._modify(job_id, status="completed", result=result, error=None)
-        except Exception as exc:  # pragma: no cover - defensive path
+        except Exception as exc:  # noqa: BLE001 - surface as failed job
+            logger.exception("%s job %s failed", self.label, job_id)
             self._modify(job_id, status="error", result=None, error=str(exc))
 
 
@@ -293,6 +294,7 @@ class PoolEnrichRunManager(JobStore[PoolEnrichJob]):
             result = run_fn(report)
             self._modify(job_id, status="done", result=result, error=None)
         except Exception as exc:  # noqa: BLE001 - surface as failed job
+            logger.exception("%s job %s failed", self.label, job_id)
             self._modify(job_id, status="failed", result=None, error=str(exc))
 
 

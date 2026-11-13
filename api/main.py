@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -37,14 +39,22 @@ from api.routers import (
     watchlist,
     weekly_reviews,
 )
+from api.request_context import (
+    REQUEST_ID_HEADER,
+    RequestContextMiddleware,
+    RequestIdLogFilter,
+    current_request_id,
+)
 from api.security.middleware import RateLimitMiddleware, SecurityBoundaryMiddleware
 from api.security.openapi import install_security_openapi
 from api.security.settings import get_auth_settings
 from api.db.readiness import check_database_readiness
 from api.dependencies import get_database_runtime
 
-LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] [req=%(request_id)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
+for _handler in logging.getLogger().handlers:
+    _handler.addFilter(RequestIdLogFilter())
 logger = logging.getLogger("swing_screener.api")
 
 # yfinance logs ERROR for expected "ticker not found" situations (delisted symbols,
@@ -133,9 +143,9 @@ async def lifespan(app: FastAPI):
         )
         raise RuntimeError("Portfolio database is not ready.")
     app.state.database_runtime = database_runtime
-    logger.info("Swing Screener API starting up...")
-    logger.info("API docs available at: http://localhost:8000/docs")
-    logger.info("OpenAPI schema: http://localhost:8000/openapi.json")
+    logger.info("Swing Screener API %s starting up...", get_version())
+    if AUTH_SETTINGS.api_docs_enabled:
+        logger.info("API docs available at /docs, OpenAPI schema at /openapi.json")
     mode = _get_web_ui_mode()
     index_exists = WEB_UI_INDEX_FILE.exists()
     logger.info(
@@ -212,46 +222,61 @@ app.add_middleware(
         "X-Requested-With",
         "X-CSRF-Token",
         "Idempotency-Key",
+        REQUEST_ID_HEADER,
     ],
+    expose_headers=[REQUEST_ID_HEADER],
 )
+# Outermost: every response, including CORS and security rejections, carries
+# the request id that the log lines for that request are stamped with.
+app.add_middleware(RequestContextMiddleware)
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_handler(request: Request, exc: RequestValidationError):
+    """Count request validation failures, then defer to FastAPI's 422 response."""
+    from api.monitoring import get_metrics_collector
+
+    get_metrics_collector().record_validation_failure()
+    return await request_validation_exception_handler(request, exc)
 
 
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch-all exception handler - masks error details for security."""
-    from fastapi import HTTPException
     from pydantic import ValidationError
     from api.monitoring import get_metrics_collector
-    
-    # Preserve HTTPException status codes and messages (these are intentional)
-    if isinstance(exc, HTTPException):
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"detail": exc.detail},
-        )
-    
-    # Preserve Pydantic validation errors (user input errors)
+
+    # A pydantic ValidationError raised inside a handler (not request parsing,
+    # which RequestValidationError covers) keeps its 422 contract, but it is
+    # usually server-side data that failed a model, so leave a trace of it.
     if isinstance(exc, ValidationError):
         get_metrics_collector().record_validation_failure()
+        logger.warning(
+            "Model validation failed inside %s %s: %s",
+            request.method,
+            request.url.path,
+            exc.title,
+        )
         return JSONResponse(
             status_code=422,
             # Inputs can hold NaN/inf, which JSON cannot encode.
             content={"detail": exc.errors(include_input=False, include_url=False)},
         )
-    
+
     # For unexpected errors: log full details server-side, return generic message
     logger.exception(
         "Unhandled API error on %s %s",
         request.method,
         request.url.path,
     )
-    
+
     return JSONResponse(
         status_code=500,
         content={
             "detail": "Internal server error",
             "message": "An unexpected error occurred. Please contact support if the issue persists.",
+            "request_id": current_request_id(),
         },
     )
 
@@ -265,7 +290,7 @@ async def root():
     return {
         "status": "ok",
         "service": "swing-screener-api",
-        "version": "3.0.0",
+        "version": get_version(),
         "api": "/api",
         "health": "/health",
         "docs": "/docs",
@@ -278,7 +303,7 @@ async def api_root():
     return {
         "status": "ok",
         "service": "swing-screener-api",
-        "version": "3.0.0",
+        "version": get_version(),
         "health": "/health",
         "docs": "/docs",
     }
@@ -334,7 +359,7 @@ async def metrics():
     Returns:
         - uptime_seconds: time since API started
         - lock_contention_total: number of times file lock acquisition timed out
-        - validation_failures_total: number of Pydantic validation errors (422 status)
+        - validation_failures_total: number of 422 validation responses
     """
     from api.monitoring import get_metrics_collector
 

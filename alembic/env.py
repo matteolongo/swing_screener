@@ -11,7 +11,9 @@ from api.db.settings import get_database_settings
 
 
 config = context.config
-if config.config_file_name is not None:
+# In-process callers (test auto-migration) keep the application's logging:
+# fileConfig would reset the root level and disable every existing logger.
+if config.config_file_name is not None and config.attributes.get("configure_logger", True):
     fileConfig(config.config_file_name)
 
 if not config.get_main_option("sqlalchemy.url"):

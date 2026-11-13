@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hmac
+import logging
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -14,6 +15,8 @@ from api.security.rate_limit import (
     rate_policy_name,
 )
 from api.security.settings import AuthSettings
+
+logger = logging.getLogger(__name__)
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 PUBLIC_EXACT = frozenset({"/", "/api/auth/session", "/health/live", "/favicon.ico"})
@@ -32,6 +35,20 @@ def is_protected_path(path: str) -> bool:
         or path.startswith("/api/")
         or path in {"/health", "/health/ready", "/metrics", "/docs", "/redoc", "/openapi.json"}
     ) and not is_public_path(path)
+
+
+def _rejected(request: Request, status_code: int, detail: str, code: str) -> JSONResponse:
+    """Log a boundary rejection (no credentials or tokens) and build its response."""
+    principal = getattr(request.state, "principal", None)
+    logger.warning(
+        "Rejected %s %s: status=%d code=%s subject=%s",
+        request.method,
+        request.url.path,
+        status_code,
+        code,
+        getattr(principal, "subject", None) or "-",
+    )
+    return _error(status_code, detail, code)
 
 
 def _error(status_code: int, detail: str, code: str) -> JSONResponse:
@@ -55,7 +72,8 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
 
         principal = principal_from_session(request, self._settings)
         if principal is None:
-            return _error(
+            return _rejected(
+                request,
                 401,
                 "Authentication is required.",
                 "AUTHENTICATION_REQUIRED",
@@ -65,7 +83,8 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
         if request.method not in SAFE_METHODS:
             is_logout = path == "/api/auth/logout"
             if not is_logout and principal.role != "admin":
-                return _error(
+                return _rejected(
+                    request,
                     403,
                     "Administrator access is required.",
                     "INSUFFICIENT_ROLE",
@@ -78,7 +97,7 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
                     or not isinstance(supplied, str)
                     or not hmac.compare_digest(expected, supplied)
                 ):
-                    return _error(403, "The CSRF token is invalid.", "CSRF_INVALID")
+                    return _rejected(request, 403, "The CSRF token is invalid.", "CSRF_INVALID")
 
         return await call_next(request)
 
@@ -123,7 +142,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         key = f"{self._key(request)}:policy:{policy_name}"
         decision = self._limiter.check(key, limit)
         if not decision.allowed:
-            response = _error(
+            response = _rejected(
+                request,
                 429,
                 "The request rate limit was exceeded.",
                 "RATE_LIMIT_EXCEEDED",

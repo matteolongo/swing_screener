@@ -72,3 +72,23 @@ def test_strategic_review_endpoint_returns_advisory_overlay(monkeypatch):
     assert data["external_source_count"] == 1
     assert data["situations"][0]["affected_symbols"] == ["ASML"]
     assert data["situations"][0]["actions"][0]["action_type"] == "REVIEW_CONTEXT"
+
+
+def test_strategic_review_failure_is_logged_and_masked(monkeypatch, caplog):
+    from api.routers import intelligence as router
+
+    class FailingStrategicReviewService:
+        def review(self, request):
+            raise RuntimeError("https://provider.example/?token=secret exploded")
+
+    monkeypatch.setattr(router, "_get_strategic_review_service", lambda: FailingStrategicReviewService())
+
+    with caplog.at_level("ERROR", logger="api.routers.intelligence"):
+        response = client.post("/api/intelligence/strategic-review", json={"ticker": "ASML"})
+
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert "secret" not in detail
+    error_id = detail.rsplit(" ", 1)[-1].rstrip(".")
+    records = [r for r in caplog.records if error_id in r.getMessage()]
+    assert records and records[0].exc_info is not None

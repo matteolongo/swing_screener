@@ -7,6 +7,25 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Tag every API response with `X-Request-ID` and stamp log lines with it; the
+  generic 500 body now includes `request_id`.
+- Log committed order and position mutations on the `swing_screener.audit`
+  logger, and log authentication, role, CSRF and rate-limit rejections.
+
+### Fixed
+
+- Log background screener, backtest and pool-enrichment job failures with
+  their traceback instead of only storing the message on the job.
+- Intelligence endpoints log unexpected failures and return a reference id
+  instead of the raw exception text.
+- `validation_failures_total` now counts request validation failures; the six
+  `intelligence_*` fields that were never written are removed from `/metrics`
+  and `/health`.
+- `/` and `/api` report the application version instead of a stale `3.0.0`.
+- In-process test migrations no longer disable existing loggers.
+
 ### Removed
 
 - Remove browser-local persistence mode and the stateless endpoints that only

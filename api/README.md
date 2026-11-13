@@ -145,6 +145,30 @@ Revision `20261112_0004` drops the one-time JSON import ledger
 on an earlier release before upgrading; this release no longer reads
 `data/orders.json` or `data/positions.json`.
 
+## Observability
+
+Every response carries an `X-Request-ID` header. A well-formed inbound value
+(1–64 of `A-Za-z0-9._-`, e.g. from a proxy) is reused; otherwise the API
+generates one. Application log lines are stamped `[req=<id>]`, and the generic
+500 body includes `request_id`, so a client-visible failure maps to its
+traceback. Intelligence endpoints return
+`Intelligence <operation> failed. Reference: <error_id>.` instead of the raw
+exception text; the same `error_id` appears in the server log.
+
+Authentication, role, CSRF and rate-limit rejections are logged at WARNING with
+method, path, status, code and session subject (never tokens). Committed
+order and position mutations (`create_order`, `submit_order`, `cancel_order`,
+`fill_order`, `create_position`, `update_position_stop`, `close_position`,
+`partial_close_position`, `update_trail_method`) are logged on the
+`swing_screener.audit` logger only after the transaction commits; a rollback
+logs them as `rolled_back`. Background screener, backtest and pool-enrichment
+job failures are logged with their traceback.
+
+`GET /metrics` returns process-local counters: `uptime_seconds`,
+`lock_contention_total` (JSON file-lock timeouts) and
+`validation_failures_total` (422 responses, from request parsing or from a
+model failing inside a handler). Each worker process keeps its own counters.
+
 ## API Surface (by router)
 Health:
 - `GET /`

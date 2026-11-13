@@ -111,6 +111,7 @@ def get_watchlist_path() -> Path:
 def _alembic_upgrade(url: str) -> None:
     config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", url)
+    config.attributes["configure_logger"] = False
     command.upgrade(config, "head")
 
 

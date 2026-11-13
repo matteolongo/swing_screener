@@ -170,6 +170,13 @@ class PortfolioService:
             self._uow.positions.get_position(resource, for_update=True)
         response = action()
         self._uow.idempotency.complete(reservation, status_code=200, response=response)
+        self._uow.audit(
+            operation,
+            resource=resource,
+            position_id=response.get("position_id") if isinstance(response, dict) else None,
+            subject=subject,
+            idempotency_key=idempotency_key,
+        )
         return response
 
     def fetch_recent_ohlcv(

@@ -84,10 +84,25 @@ class TestMetrics:
         assert isinstance(data["lock_contention_total"], int)
         assert isinstance(data["validation_failures_total"], int)
 
-    @pytest.mark.skip(reason="TODO: increment metrics for FastAPI RequestValidationError responses")
     def test_metrics_validation_failure_increments(self):
-        """Test that request validation failures are counted."""
-        pass
+        """Request validation failures keep FastAPI's 422 body and are counted."""
+        before = client.get("/metrics").json()["validation_failures_total"]
+
+        response = client.put("/api/watchlist/AAPL", json={"watch_price": "not-a-number"})
+
+        assert response.status_code == 422
+        assert isinstance(response.json()["detail"], list)
+        after = client.get("/metrics").json()["validation_failures_total"]
+        assert after == before + 1
+
+    def test_metrics_exposes_only_recorded_counters(self):
+        data = client.get("/metrics").json()
+
+        assert set(data) == {
+            "uptime_seconds",
+            "lock_contention_total",
+            "validation_failures_total",
+        }
 
 
 class TestRootEndpoint:
@@ -101,6 +116,11 @@ class TestRootEndpoint:
 
         assert "health" in data
         assert data["health"] == "/health"
+
+    def test_api_root_reports_application_version(self):
+        from swing_screener.version import get_version
+
+        assert client.get("/api").json()["version"] == get_version()
 
 
 if __name__ == "__main__":
