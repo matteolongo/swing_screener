@@ -1,3 +1,4 @@
+import datetime as dt
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -556,6 +557,7 @@ def test_skip_guidance_blocks_original_breakout_and_approval(tmp_path, monkeypat
 
     def resolve_universe(ctx):
         ctx.asof_str = asof
+        ctx.now_utc = dt.datetime.fromisoformat(f"{asof}T22:00:00+00:00")
         ctx.screening_tickers = ["AAA", "BBB"]
         ctx.benchmark = "SPY"
         return 2
