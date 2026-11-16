@@ -257,7 +257,12 @@ class PortfolioWriteService:
                 if not pd.isna(latest_close):
                     current_price = float(latest_close)
         except Exception as exc:
-            logger.warning("Could not fetch current price for validation: %s", exc)
+            # Fails open: without a price the "stop below market" check is skipped.
+            logger.warning(
+                "Stop update for %s not checked against market price (price unavailable): %s",
+                ticker,
+                type(exc).__name__,
+            )
 
         if current_price is not None and new_stop > current_price:
             raise ValidationError(

@@ -83,7 +83,9 @@ from swing_screener.selection.entries import EntrySignalConfig
 from swing_screener.selection.eval_cache import EvalCache
 from swing_screener.selection.ranking import RankingConfig
 from swing_screener.selection.screening_window import (
+    SUPPORTED_CURRENCIES,
     latest_market_close_utc,
+    market_effective_date,
     resolve_data_freshness,
     resolve_default_asof_date,
     resolve_fetch_start_date,
@@ -1208,11 +1210,22 @@ class ScreenerService:
             ticker_str = str(idx)
             info = ticker_info.get(ticker_str, {})
             instrument = get_instrument_record(ticker_str) or {}
+            currency = _normalize_quote_currency_value(
+                info.get("currency") if isinstance(info, dict) else None,
+                row.get("currency"),
+                instrument.get("currency"),
+                fallback_ticker=ticker_str,
+            )
+            expected_asof = ctx.asof_str
+            if ctx.request.asof_date is None and currency in SUPPORTED_CURRENCIES:
+                # A shared scan date can lag a market that traded on a US holiday.
+                expected_session, _ = market_effective_date(currency, ctx.now_utc)
+                expected_asof = expected_session.isoformat()
             last_bar = last_bar_map.get(ticker_str) or overall_last_bar
             last_bar_date = str(last_bar or "")[:10]
             if not last_bar_date:
                 candidate_data_status = "unknown"
-            elif last_bar_date != ctx.asof_str:
+            elif last_bar_date != ctx.asof_str or last_bar_date != expected_asof:
                 candidate_data_status = "stale"
             elif ctx.data_freshness == "stale":
                 candidate_data_status = "stale"
@@ -1224,14 +1237,8 @@ class ScreenerService:
                 []
                 if candidate_data_status == "current"
                 else [
-                    f"Market data is {candidate_data_status}: last bar {last_bar_date or 'unknown'}, expected {ctx.asof_str}."
+                    f"Market data is {candidate_data_status}: last bar {last_bar_date or 'unknown'}, expected {expected_asof}."
                 ]
-            )
-            currency = _normalize_quote_currency_value(
-                info.get("currency") if isinstance(info, dict) else None,
-                row.get("currency"),
-                instrument.get("currency"),
-                fallback_ticker=ticker_str,
             )
 
             signal = row.get("signal")

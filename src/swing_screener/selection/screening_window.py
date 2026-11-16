@@ -11,6 +11,10 @@ from swing_screener.data.currencies import (
     supported_currency_codes,
 )
 from swing_screener.data.universe import get_instrument_record
+from swing_screener.utils.market_calendar import (
+    is_us_trading_day,
+    previous_us_trading_day,
+)
 
 SUPPORTED_CURRENCIES = frozenset(supported_currency_codes())
 
@@ -37,14 +41,28 @@ def previous_weekday(day: dt.date) -> dt.date:
     return cursor
 
 
+def _is_trading_day(currency: str, day: dt.date) -> bool:
+    # Only the US equity calendar is modelled; other markets skip weekends only.
+    if currency == "USD":
+        return is_us_trading_day(day)
+    return day.weekday() < 5
+
+
+def _previous_trading_day(currency: str, day: dt.date) -> dt.date:
+    if currency == "USD":
+        return previous_us_trading_day(day)
+    return previous_weekday(day)
+
+
 def market_effective_date(currency: str, now_utc: dt.datetime) -> tuple[dt.date, bool]:
     definition = get_currency_definition(currency)
     tz = ZoneInfo(definition.timezone)
     local_now = now_utc.astimezone(tz)
     local_date = local_now.date()
+    code = definition.code
 
-    if local_date.weekday() >= 5:
-        return previous_weekday(local_date), True
+    if not _is_trading_day(code, local_date):
+        return _previous_trading_day(code, local_date), True
 
     close_local = dt.datetime.combine(
         local_date,
@@ -54,7 +72,7 @@ def market_effective_date(currency: str, now_utc: dt.datetime) -> tuple[dt.date,
     is_closed = local_now >= close_local
     if is_closed:
         return local_date, True
-    return previous_weekday(local_date), False
+    return _previous_trading_day(code, local_date), False
 
 
 def infer_currencies_from_tickers(tickers: list[str]) -> list[str]:
@@ -119,7 +137,9 @@ def resolve_data_freshness(
     try:
         resolved = dt.date.fromisoformat(asof_date)
     except ValueError:
-        return "final_close"
+        # An unparseable date cannot be shown to be a completed session, and
+        # only final_close output is final.
+        return "intraday"
 
     effective_date = resolve_default_asof_date(now_utc, currencies)
     return "final_close" if resolved <= effective_date else "intraday"

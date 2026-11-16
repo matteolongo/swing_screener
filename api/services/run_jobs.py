@@ -22,6 +22,7 @@ from pydantic import BaseModel
 
 from api.models.backtest import EventStudyResponse
 from api.models.screener import ScreenerResponse
+from swing_screener.settings.paths import data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,9 @@ class JobStore(Generic[JobT]):
         self._jobs: dict[str, JobT] = {}
         self._lock = threading.Lock()
         self._max_jobs = max_jobs
-        self._jobs_dir = Path(jobs_dir or self.default_jobs_dir)
+        # Resolve against the configured data directory, not the process cwd,
+        # so jobs land beside the rest of the runtime state.
+        self._jobs_dir = Path(jobs_dir) if jobs_dir else data_dir() / self.default_jobs_dir
         self._jobs_dir.mkdir(parents=True, exist_ok=True)
         self._load_jobs()
 
@@ -222,13 +225,13 @@ class RunManager(JobStore[RunJob[ResultT]]):
 class ScreenerRunManager(RunManager[ScreenerResponse]):
     result_model = ScreenerResponse
     label = "screener"
-    default_jobs_dir = "data/screener/jobs"
+    default_jobs_dir = "screener/jobs"
 
 
 class BacktestRunManager(RunManager[EventStudyResponse]):
     result_model = EventStudyResponse
     label = "backtest"
-    default_jobs_dir = "data/backtest/jobs"
+    default_jobs_dir = "backtest/jobs"
 
 
 # Reporter signature handed to the enrichment function: (processed, total, failed).
@@ -261,7 +264,7 @@ class PoolEnrichRunManager(JobStore[PoolEnrichJob]):
     failed_status = "failed"
     interrupted_error = "Enrichment interrupted by API restart."
     label = "pool enrich"
-    default_jobs_dir = "data/pool/enrich_jobs"
+    default_jobs_dir = "pool/enrich_jobs"
     read_memory_first = True
 
     def __init__(self, *, max_jobs: int = 16, jobs_dir: str | Path | None = None) -> None:

@@ -126,11 +126,12 @@ def test_market_effective_date_eur_after_close():
 
 
 def test_market_effective_date_weekend():
-    # 2026-06-20 is Saturday
+    # 2026-06-20 is Saturday; Friday 06-19 is Juneteenth (NYSE closed).
     now_utc = dt.datetime(2026, 6, 20, 12, 0, tzinfo=dt.timezone.utc)
     date, is_closed = market_effective_date("USD", now_utc)
-    assert date == dt.date(2026, 6, 19)  # Friday
+    assert date == dt.date(2026, 6, 18)  # Thursday
     assert is_closed is True
+    assert market_effective_date("EUR", now_utc) == (dt.date(2026, 6, 19), True)
 
 
 # --- resolve_default_asof_date ---
@@ -187,9 +188,31 @@ def test_resolve_data_freshness_today_after_close():
     assert resolve_data_freshness("2026-02-19", now_utc, ["EUR"]) == "final_close"
 
 
-def test_resolve_data_freshness_invalid_date():
+def test_resolve_data_freshness_invalid_date_is_not_final():
     now_utc = dt.datetime(2026, 2, 19, 12, 0, tzinfo=dt.timezone.utc)
-    assert resolve_data_freshness("not-a-date", now_utc, ["EUR"]) == "final_close"
+    assert resolve_data_freshness("not-a-date", now_utc, ["EUR"]) == "intraday"
+
+
+# --- NYSE holidays (USD only) ---
+
+
+def test_usd_holiday_resolves_to_previous_trading_day():
+    # 2026-11-26 is Thanksgiving; at 17:00 New York the market never opened.
+    now_utc = dt.datetime(2026, 11, 26, 22, 0, tzinfo=dt.timezone.utc)
+    assert market_effective_date("USD", now_utc) == (dt.date(2026, 11, 25), True)
+    assert resolve_default_asof_date(now_utc, ["USD"]) == dt.date(2026, 11, 25)
+    assert resolve_data_freshness("2026-11-25", now_utc, ["USD"]) == "final_close"
+
+
+def test_usd_session_after_monday_holiday_looks_back_past_it():
+    # 2026-09-07 is Labor Day; Tuesday before the close points at Friday 09-04.
+    now_utc = dt.datetime(2026, 9, 8, 15, 0, tzinfo=dt.timezone.utc)
+    assert market_effective_date("USD", now_utc) == (dt.date(2026, 9, 4), False)
+
+
+def test_non_usd_markets_still_trade_on_us_holidays():
+    now_utc = dt.datetime(2026, 11, 26, 18, 0, tzinfo=dt.timezone.utc)
+    assert market_effective_date("EUR", now_utc) == (dt.date(2026, 11, 26), True)
 
 
 def test_latest_market_close_utc_uses_last_active_currency_close():
