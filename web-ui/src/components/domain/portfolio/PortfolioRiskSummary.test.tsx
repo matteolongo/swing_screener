@@ -17,6 +17,7 @@ describe('PortfolioRiskSummary', () => {
         maxLossStreak: 0, equityCurve: [], tagBreakdown: [], journalTagBreakdown: [],
         insight: { verdict: 'developing', reason: 'insufficient_history' } },
       analyticsMetadata: { heatStatus: 'danger', heatWarningPct: 4, heatMaxPct: 6, concentrationWarningPct: 60, tagMinSampleSize: 5 },
+      fxRateStatus: 'not_needed',
     }} />);
     expect(screen.getByText(t('portfolioRisk.openPositions'))).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();

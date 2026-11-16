@@ -59,6 +59,7 @@ interface PositionWithMetricsApiResponse extends PositionApiResponse {
   days_open?: number;
   time_stop_warning?: boolean;
   price_source?: string;
+  fx_rate_status?: FxRateStatus;
   r_uses_initial_risk?: boolean;
 }
 
@@ -87,6 +88,7 @@ interface PortfolioSummaryApiResponse {
   effective_account_size?: number;
   analytics: PortfolioAnalyticsApiResponse;
   analytics_metadata: PortfolioAnalyticsMetadataApiResponse;
+  fx_rate_status?: FxRateStatus;
 }
 
 interface PortfolioAnalyticsApiResponse {
@@ -138,8 +140,22 @@ export interface PositionWithMetrics extends Position {
   feesEur: number;
   daysOpen: number;
   timeStopWarning: boolean;
-  priceSource: 'live' | 'cached' | 'entry';
+  priceSource: PriceSource;
+  fxRateStatus: FxRateStatus;
   rUsesInitialRisk: boolean;
+}
+
+/** live: real-time quote; cached: last close or stored price; entry: no price
+ *  resolved, metrics use the entry price; recorded: closed-position exit price. */
+export type PriceSource = 'live' | 'cached' | 'entry' | 'recorded';
+export type FxRateStatus = 'not_needed' | 'available' | 'unavailable';
+export type EarningsLookupStatus = 'ok' | 'none' | 'unavailable';
+
+const PRICE_SOURCES: readonly PriceSource[] = ['live', 'cached', 'entry', 'recorded'];
+
+function toPriceSource(value: string | undefined): PriceSource {
+  // A missing or unknown label must not be presented as a live quote.
+  return PRICE_SOURCES.includes(value as PriceSource) ? (value as PriceSource) : 'cached';
 }
 
 export interface PortfolioSummary {
@@ -167,6 +183,7 @@ export interface PortfolioSummary {
   effectiveAccountSize: number;
   analytics: PortfolioAnalytics;
   analyticsMetadata: PortfolioAnalyticsMetadata;
+  fxRateStatus: FxRateStatus;
 }
 
 export interface PortfolioAnalytics {
@@ -211,6 +228,7 @@ interface EarningsProximityApiResponse {
   next_earnings_date?: string | null;
   days_until?: number | null;
   warning: boolean;
+  status?: EarningsLookupStatus;
 }
 
 export interface EarningsProximity {
@@ -218,6 +236,8 @@ export interface EarningsProximity {
   nextEarningsDate: string | null;
   daysUntil: number | null;
   warning: boolean;
+  /** unavailable means the lookup failed: earnings risk is unknown, not absent. */
+  status: EarningsLookupStatus;
 }
 
 export type OrderFilterStatus = OrderStatus | 'all';
@@ -366,12 +386,12 @@ export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
 export async function fetchEarningsProximity(ticker: string): Promise<EarningsProximity> {
   const normalizedTicker = ticker.trim().toUpperCase();
   if (!normalizedTicker) {
-    return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
+    return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false, status: 'none' };
   }
 
   const response = await apiFetch(API_ENDPOINTS.earningsProximity(normalizedTicker));
   if (!response.ok) {
-    return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
+    return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false, status: 'unavailable' };
   }
 
   const data: EarningsProximityApiResponse = await response.json();
@@ -380,6 +400,7 @@ export async function fetchEarningsProximity(ticker: string): Promise<EarningsPr
     nextEarningsDate: data.next_earnings_date ?? null,
     daysUntil: data.days_until ?? null,
     warning: data.warning,
+    status: data.status ?? (data.days_until != null ? 'ok' : 'none'),
   };
 }
 
@@ -541,7 +562,8 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
     feesEur: data.fees_eur ?? 0,
     daysOpen: data.days_open ?? 0,
     timeStopWarning: data.time_stop_warning ?? false,
-    priceSource: (data.price_source as 'live' | 'cached' | 'entry') ?? 'live',
+    priceSource: toPriceSource(data.price_source),
+    fxRateStatus: data.fx_rate_status ?? 'not_needed',
     rUsesInitialRisk: data.r_uses_initial_risk ?? false,
   };
 }
@@ -605,6 +627,7 @@ function transformPortfolioSummary(data: PortfolioSummaryApiResponse): Portfolio
       concentrationWarningPct: analyticsMetadata.concentration_warning_pct,
       tagMinSampleSize: analyticsMetadata.tag_min_sample_size,
     },
+    fxRateStatus: data.fx_rate_status ?? 'not_needed',
   };
 }
 

@@ -66,9 +66,10 @@ class CalendarService:
             except _SourceUnavailable as exc:
                 events.extend(exc.events)
                 warnings.append(CalendarSourceWarning(event_type=event_type, tickers=sorted(exc.tickers)))
-            except Exception:
-                # Provider exceptions may contain credential-bearing request URLs.
-                logger.info("Calendar %s source unavailable", event_type)
+            except Exception as exc:
+                # Provider exceptions may contain credential-bearing request URLs,
+                # so log only the exception type.
+                logger.warning("Calendar %s source unavailable: %s", event_type, type(exc).__name__)
                 warnings.append(CalendarSourceWarning(event_type=event_type))
         return CalendarEventsResponse(
             events=sorted(events, key=lambda e: e.date), days_ahead=days_ahead, warnings=warnings
@@ -261,8 +262,8 @@ class CalendarService:
                 for item in items
                 if item.get("time") and item.get("impact") == "high"
             ]
-        except Exception:
-            logger.info("Calendar economic source unavailable")
+        except Exception as exc:
+            logger.warning("Calendar economic source unavailable: %s", type(exc).__name__)
             raise _SourceUnavailable([], set()) from None
 
     def _fetch_ipo_events(self, start: dt.date, end: dt.date) -> list[CalendarEvent]:
@@ -294,8 +295,8 @@ class CalendarService:
                 for item in items
                 if item.get("date") and item.get("status") in {"priced", "filed"}
             ]
-        except Exception:
-            logger.info("Calendar IPO source unavailable")
+        except Exception as exc:
+            logger.warning("Calendar IPO source unavailable: %s", type(exc).__name__)
             raise _SourceUnavailable([], set()) from None
 
     def _fetch_dividend_events(

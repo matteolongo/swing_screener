@@ -61,3 +61,33 @@ def test_probe_all_runs_each_probeable(monkeypatch):
     results = svc.probe_all()
     probeable_ids = {d.id for d in svc.inventory() if d.probeable}
     assert {r.id for r in results} == probeable_ids
+
+
+def test_probe_result_is_timestamped_and_redacted(monkeypatch):
+    from api.services import datasources_service as module
+
+    class LeakyProvider:
+        @classmethod
+        def describe(cls):
+            return module.FinnhubEnrichmentClient.describe()
+
+        @classmethod
+        def probe(cls, canary):
+            return ProbeResult(
+                id="finnhub",
+                status="down",
+                error="Client error '401' for url 'https://finnhub.io/api/v1/quote?symbol=AAPL&token=sk_live_123'",
+            )
+
+    monkeypatch.setitem(module._PROBEABLE, "finnhub", LeakyProvider)
+    svc = DatasourcesService()
+
+    result = svc.probe_one("finnhub")
+
+    assert result.checked_at is not None
+    assert "sk_live_123" not in result.error
+    assert "token=***" in result.error
+    assert "symbol=AAPL" in result.error
+    assert dict(svc.inventory_with_probes())  # cached result is the stamped one
+    cached = next(p for d, p in svc.inventory_with_probes() if d.id == "finnhub")
+    assert cached.checked_at == result.checked_at

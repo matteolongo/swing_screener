@@ -55,7 +55,17 @@ SelectionResult(universe, ranked, board)
 | `ranking.py` | Weighted momentum score (`compute_hot_score`, `top_candidates`) |
 | `entries.py` | Entry signal detection (`breakout_signal`, `pullback_reclaim_signal`) |
 | `eval_cache.py` | Versioned per-symbol evaluation cache with input-provenance validation |
+| `screening_window.py` | Session resolution: default as-of date, `final_close`/`intraday` freshness, fetch window. USD sessions skip regular NYSE holidays (`utils/market_calendar.py`); other currencies skip weekends only. An unparseable as-of date is never `final_close`. |
 | `__init__.py` | Package exports |
+
+## Session freshness
+
+The API uses the earliest completed session across active currencies as its
+default scan date. It additionally checks each candidate against that currency's
+latest completed session before labelling it `current`. If another market traded
+after the shared date (for example, Europe on Thanksgiving), its older candidate
+bars remain `stale` and cannot receive entry approval tokens. Explicit historical
+requests retain the requested date as their comparison date.
 
 ## Evaluation cache identity
 

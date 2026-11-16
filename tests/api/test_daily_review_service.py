@@ -920,3 +920,44 @@ def test_pending_orders_review_only_includes_pending_entry_orders(tmp_path):
     assert [item.order_id for item in result] == ["ORD-PENDING-AAPL"]
     assert result[0].ticker == "AAPL"
     assert result[0].category == "still_valid"
+
+
+def test_failed_sections_are_reported_instead_of_reading_as_empty(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    """An empty section must be distinguishable from a section that failed to load."""
+    from unittest.mock import MagicMock
+
+    orders_repo = MagicMock()
+    orders_repo.list_orders.side_effect = RuntimeError("db down")
+    watchlist = MagicMock()
+    watchlist.list_items.side_effect = RuntimeError("file locked")
+    mock_screener_service._strategy_repo = MagicMock()
+    mock_screener_service._strategy_repo.get_active_strategy.side_effect = RuntimeError("bad yaml")
+    service = DailyReviewService(
+        mock_screener_service,
+        mock_portfolio_service,
+        watchlist_service=watchlist,
+        orders_repo=orders_repo,
+        data_dir=tmp_path,
+    )
+
+    review = service.generate_daily_review(top_n=10, include_candidates=False)
+
+    assert review.pending_orders_review == []
+    assert review.watchlist_near_trigger == []
+    assert [error.section for error in review.section_errors] == [
+        "watchlist",
+        "manage_config",
+        "pending_orders",
+    ]
+
+
+def test_healthy_review_has_no_section_errors(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    service = DailyReviewService(
+        mock_screener_service, mock_portfolio_service, data_dir=tmp_path
+    )
+
+    assert service.generate_daily_review(top_n=10).section_errors == []

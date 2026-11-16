@@ -43,7 +43,7 @@ describe('order lifecycle cache integration', () => {
           positionId: 'POS-1', ticker: 'AAPL', status: 'open', entryDate: '2026-10-13',
           entryPrice: 100, stopPrice: 95, shares: 5, pnl: 0, pnlPercent: 0, rNow: 0,
           entryValue: 500, currentValue: 500, perShareRisk: 5, totalRisk: 25,
-          feesEur: 0, daysOpen: 1, timeStopWarning: false, priceSource: 'live', rUsesInitialRisk: true,
+          feesEur: 0, daysOpen: 1, timeStopWarning: false, priceSource: 'live', fxRateStatus: 'not_needed', rUsesInitialRisk: true,
         }} /> : null}
       </>;
     }

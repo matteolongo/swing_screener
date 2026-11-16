@@ -507,6 +507,13 @@ class EarningsProximityResponse(BaseModel):
     warning: bool = Field(
         default=False, description="True when earnings are within the warning window"
     )
+    status: Literal["ok", "none", "unavailable"] = Field(
+        default="none",
+        description=(
+            "ok: an upcoming date was found; none: the provider reported no upcoming date; "
+            "unavailable: the lookup failed, so proximity is unknown"
+        ),
+    )
 
 
 class RegimeStats(BaseModel):
@@ -548,6 +555,10 @@ class OrdersSnapshotResponse(BaseModel):
     stale_after_days: int = 1
 
 
+PriceSource = Literal["live", "cached", "entry", "recorded"]
+FxRateStatus = Literal["not_needed", "available", "unavailable"]
+
+
 class PositionWithMetrics(Position):
     """Position with precomputed financial metrics."""
 
@@ -576,9 +587,16 @@ class PositionWithMetrics(Position):
         default=None,
         description="R-multiple adjusted for FX movement since entry (null when currencies match or no entry rate stored)",
     )
-    price_source: str = Field(
-        default="live",
-        description="Source of current price: 'live', 'cached', or 'entry'",
+    price_source: PriceSource = Field(
+        default="cached",
+        description=(
+            "live: real-time quote; cached: last daily close or stored price; "
+            "entry: no price resolved, metrics use the entry price; recorded: closed position exit price"
+        ),
+    )
+    fx_rate_status: FxRateStatus = Field(
+        default="not_needed",
+        description="EURUSD availability for this position's FX conversions and r_fx_adjusted",
     )
     r_uses_initial_risk: bool = Field(
         default=False,
@@ -589,6 +607,10 @@ class PositionWithMetrics(Position):
 class PositionsWithMetricsResponse(BaseModel):
     positions: list[PositionWithMetrics]
     asof: str
+    fx_rate_status: FxRateStatus = Field(
+        default="not_needed",
+        description="unavailable when EURUSD could not be fetched and 1.0 was used",
+    )
     snapshot_freshness: Literal["fresh", "stale"] = "fresh"
     stale_after_days: int = 1
 
@@ -625,9 +647,16 @@ class PositionMetrics(BaseModel):
         default=None,
         description="R-multiple adjusted for FX movement since entry",
     )
-    price_source: str = Field(
-        default="live",
-        description="Source of current price: 'live', 'cached', or 'entry'",
+    price_source: PriceSource = Field(
+        default="cached",
+        description=(
+            "live: real-time quote; cached: last daily close or stored price; "
+            "entry: no price resolved, metrics use the entry price; recorded: closed position exit price"
+        ),
+    )
+    fx_rate_status: FxRateStatus = Field(
+        default="not_needed",
+        description="EURUSD availability for this position's FX conversions and r_fx_adjusted",
     )
     r_uses_initial_risk: bool = Field(
         default=False,
@@ -681,6 +710,10 @@ class PortfolioSummary(BaseModel):
         description="Account size adjusted for realized P&L when mode=equity",
     )
     analytics: PortfolioAnalytics = Field(default_factory=lambda: PortfolioAnalytics())
+    fx_rate_status: FxRateStatus = Field(
+        default="not_needed",
+        description="unavailable when EURUSD could not be fetched and 1.0 was used in totals",
+    )
     analytics_metadata: PortfolioAnalyticsMetadata = Field(
         default_factory=lambda: PortfolioAnalyticsMetadata()
     )

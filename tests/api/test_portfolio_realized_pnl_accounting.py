@@ -37,6 +37,9 @@ class _FakePricing:
     def _eurusd_rate(self) -> float:
         return self.eurusd_rate
 
+    def eurusd_quote(self) -> tuple[float, bool]:
+        return self.eurusd_rate, True
+
 
 class _ConfigRepo:
     def __init__(self, *, account_currency: str = "EUR") -> None:

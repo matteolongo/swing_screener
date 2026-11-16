@@ -315,6 +315,15 @@ class OrdersService:
                 "Order conflicts with concurrently committed portfolio state."
             ) from exc
         self._uow.idempotency.complete(reservation, status_code=201, response=response)
+        self._uow.audit(
+            "create_order",
+            order_id=response.get("order_id"),
+            ticker=response.get("ticker"),
+            order_kind=response.get("order_kind"),
+            status=response.get("status"),
+            subject=subject,
+            idempotency_key=idempotency_key,
+        )
         return response
 
     def _create_order_impl(self, request: CreateOrderRequest) -> dict:
@@ -457,6 +466,8 @@ class OrdersService:
             raise NotFoundError(f"Order {order_id} not found")
         if order.get("status") != "submitted":
             raise ConflictError(f"Order {order_id} is already {order.get('status')}")
+        if self._uow is not None:
+            self._uow.audit("submit_order", order_id=order_id, ticker=order.get("ticker"))
         return {"order_id": order_id, "status": "submitted"}
 
     def cancel_order(self, order_id: str) -> dict:
@@ -468,6 +479,8 @@ class OrdersService:
             raise NotFoundError(f"Order {order_id} not found")
         if order.get("status") != "cancelled":
             raise ConflictError(f"Order {order_id} is already {order.get('status')}")
+        if self._uow is not None:
+            self._uow.audit("cancel_order", order_id=order_id, ticker=order.get("ticker"))
         return {"order_id": order_id, "status": "cancelled"}
 
     def fill_order(
@@ -516,6 +529,13 @@ class OrdersService:
             reservation,
             status_code=201,
             response=response.model_dump(mode="json"),
+        )
+        self._uow.audit(
+            "fill_order",
+            order_id=order_id,
+            position_id=response.position.position_id,
+            subject=subject,
+            idempotency_key=idempotency_key,
         )
         return response
 

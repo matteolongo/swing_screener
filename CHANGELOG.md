@@ -7,6 +7,59 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Tag every API response with `X-Request-ID` and stamp log lines with it; the
+  generic 500 body now includes `request_id`.
+- Log committed order and position mutations on the `swing_screener.audit`
+  logger, and log authentication, role, CSRF and rate-limit rejections.
+
+### Fixed
+
+- Log background screener, backtest and pool-enrichment job failures with
+  their traceback instead of only storing the message on the job.
+- Intelligence endpoints log unexpected failures and return a reference id
+  instead of the raw exception text.
+- `validation_failures_total` now counts request validation failures; the six
+  `intelligence_*` fields that were never written are removed from `/metrics`
+  and `/health`.
+- `/` and `/api` report the application version instead of a stale `3.0.0`.
+- In-process test migrations no longer disable existing loggers.
+- A position with no resolvable price is labelled `price_source="entry"` and
+  shows a "no price" badge instead of reading as flat; closed positions are
+  `recorded`, and position metrics no longer call a fallback price `live`.
+- Portfolio responses report `fx_rate_status`. A failed EURUSD fetch is no
+  longer cached as 1.0, hides FX-adjusted R and shows a warning on the
+  portfolio table.
+- The daily review reports `section_errors` when pending orders, the watchlist
+  or the strategy manage rules fail to load, and Today shows which parts were
+  not checked instead of "No items for today".
+- Intelligence "today" (analysis cache, chat, evidence cache) uses the US
+  market date instead of the UTC date, so a post-close analysis no longer
+  disappears at 00:00 UTC and gets regenerated.
+- Requests served from the intelligence cache no longer write a truncated
+  trace that hid the producing run; the persist step reports history and
+  metrics write failures; the metrics log is written under a file lock.
+- The analysis stepper no longer implies per-step progress mid-run, and the
+  trace panel shows the cached analysis's own run instead of an older attempt.
+- The Data Sources page shows why a probe is down and when it ran, and the
+  fallback feed shows when each fallback happened. Probe results carry
+  `checked_at`, and credential query parameters are redacted from probe
+  errors.
+- USD screening sessions skip regular NYSE holidays, so a holiday no longer
+  becomes the as-of date with every candidate marked stale. A malformed
+  `asof_date` is rejected with 422 instead of being treated as a final close.
+- Default mixed-market scans mark candidates stale when their market has a newer
+  completed session than the shared scan date, preventing outdated European bars
+  from receiving entry approval tokens on US holidays. Date validation also
+  rejects ISO week dates and other non-`YYYY-MM-DD` forms before screening starts.
+- Background job records follow `SWING_SCREENER_DATA_DIR` instead of the
+  process working directory.
+- `api/README.md` no longer lists five fundamentals routes that do not exist
+  and now documents five routes that do.
+- Earnings proximity reports `status`; a failed lookup is shown as unknown
+  instead of "no earnings" and is retried instead of cached for the day.
+
 ### Removed
 
 - Remove browser-local persistence mode and the stateless endpoints that only

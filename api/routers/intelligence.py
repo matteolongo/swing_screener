@@ -7,6 +7,7 @@ import os
 import re
 from datetime import datetime, timezone
 from threading import Lock
+from uuid import uuid4
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -50,6 +51,26 @@ from swing_screener.intelligence.tracing import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _internal_error(operation: str, exc: Exception) -> HTTPException:
+    """Log an unexpected failure with its traceback and return a correlatable 500.
+
+    The raw exception text can carry provider URLs or internals, so the client
+    gets an error id that matches the server log line instead.
+    """
+    error_id = uuid4().hex[:12]
+    logger.error(
+        "Intelligence %s failed (error_id=%s): %s",
+        operation,
+        error_id,
+        type(exc).__name__,
+        exc_info=exc,
+    )
+    return HTTPException(
+        status_code=500,
+        detail=f"Intelligence {operation} failed. Reference: {error_id}.",
+    )
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 
 
@@ -363,12 +384,14 @@ def sweep(
                         expected_fingerprint=analyzer.context_fingerprint(upper, item_req),
                     )
                     if cached is not None:
+                        if recorder is not None:
+                            recorder.discard()
                         analyzed.append(upper)
                         continue
                 analyzer.analyze(upper, item_req, past_positions=past_positions, recorder=recorder)
             analyzed.append(upper)
         except Exception as exc:
-            logger.warning("Sweep failed for %s: %s", item.ticker, exc)
+            logger.warning("Sweep failed for %s", item.ticker, exc_info=True)
             failed.append(SweepFailure(ticker=item.ticker.upper(), error=str(exc)))
     return SweepResponse(analyzed=analyzed, failed=failed)
 
@@ -414,9 +437,9 @@ def chat_with_symbol(ticker: str, request: IntelligenceChatRequest) -> Intellige
     except RuntimeError as exc:
         if "OPENAI_API_KEY" in str(exc):
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise _internal_error("chat", exc) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise _internal_error("chat", exc) from exc
 
 
 @router.post("/strategic-review", response_model=StrategicIntelligenceReport)
@@ -426,7 +449,7 @@ def strategic_review(request: StrategicReviewRequest) -> StrategicIntelligenceRe
     try:
         return _get_strategic_review_service().review(request)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise _internal_error("strategic review", exc) from exc
 
 
 @router.post("/position-review/{position_id}", response_model=PositionReviewResponse)
@@ -441,7 +464,7 @@ def review_position(
     except MissingPositionReviewContextError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise _internal_error("position review", exc) from exc
 
 
 @router.post("/{ticker}/position-review", response_model=PositionReviewResponse)
@@ -456,7 +479,7 @@ def review_symbol(
     except MissingPositionReviewContextError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise _internal_error("symbol review", exc) from exc
 
 
 @router.get("/{ticker}/latest", response_model=SymbolIntelligence)
@@ -522,6 +545,8 @@ def analyze_symbol(
                     expected_fingerprint=analyzer.context_fingerprint(upper, request),
                 )
                 if cached is not None:
+                    if recorder is not None:
+                        recorder.discard()
                     return cached
             return analyzer.analyze(
                 upper, request, past_positions=past_positions, recorder=recorder
@@ -529,7 +554,7 @@ def analyze_symbol(
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise _internal_error("analysis", exc) from exc
 
 
 @router.post("/position/{position_id}", response_model=SymbolIntelligence)
@@ -615,9 +640,11 @@ def analyze_position(
                     expected_fingerprint=analyzer.context_fingerprint(pos.ticker, request),
                 )
                 if cached is not None and _cached_position_context_matches(cached, position_context):
+                    if recorder is not None:
+                        recorder.discard()
                     return cached
             return analyzer.analyze(pos.ticker.upper(), request, recorder=recorder)
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise _internal_error("position analysis", exc) from exc

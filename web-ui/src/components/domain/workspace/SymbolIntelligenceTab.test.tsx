@@ -324,39 +324,14 @@ describe('SymbolIntelligenceTab guided flow', () => {
     ).toBeVisible();
   });
 
-  it('marks an in-flight trace step as running rather than complete', () => {
-    const runningTrace: RunTrace = {
-      runId: 'run-active',
-      ticker: 'AAPL',
-      startedAt: '2026-07-27T20:00:00Z',
-      finishedAt: null,
-      status: 'running',
-      error: null,
-      steps: [
-        {
-          name: 'format',
-          status: 'running' as RunTrace['steps'][number]['status'],
-          startedAt: '2026-07-27T20:00:01Z',
-          finishedAt: '',
-          durationMs: 0,
-          outputsSummary: {},
-          error: null,
-          model: null,
-          tokens: null,
-          sourceCounts: null,
-          promptHash: null,
-          promptPreview: null,
-        },
-      ],
-    };
-
+  it('does not claim per-step progress while a run is generating', () => {
     renderWithProviders(
-      <SymbolIntelligenceTab model={{ ...baseModel, trace: runningTrace }} />,
+      <SymbolIntelligenceTab model={{ ...baseModel, trace: null, isGenerating: true }} />,
     );
 
-    expect(screen.getByText(t('workspacePage.intelligence.steps.formatting'))).toHaveAttribute(
-      'data-status',
-      'running',
-    );
+    for (const step of ['enriching', 'prompting', 'generating', 'formatting', 'saving'] as const) {
+      expect(screen.getByText(t(`workspacePage.intelligence.steps.${step}`))).toHaveAttribute('data-status', 'running');
+    }
+    expect(screen.getByText(t('workspacePage.intelligence.pipelineNoLiveProgress'))).toBeInTheDocument();
   });
 });

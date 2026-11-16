@@ -13,6 +13,7 @@ from api.db.settings import DatabaseConfigurationError, DatabaseSettings
 def _config(database_url: str) -> Config:
     config = Config(str(Path(__file__).parents[2] / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", database_url)
+    config.attributes["configure_logger"] = False
     return config
 
 

@@ -8,7 +8,10 @@ add it to _PROBEABLE below.
 from __future__ import annotations
 
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import replace
+from datetime import datetime, timezone
 
 from swing_screener.data.providers.yfinance_provider import YfinanceProvider
 from swing_screener.data.providers.alpaca_provider import AlpacaDataProvider
@@ -51,6 +54,26 @@ INTELLIGENCE_SOURCES: list[SourceDescriptor] = []
 
 _DEFAULT_CANARY = {"us": "AAPL", "eu": "ASML.AS"}
 
+# Provider errors (e.g. httpx status errors) embed the request URL, and some
+# providers take the API key as a query parameter.
+_SECRET_QUERY_PARAM = re.compile(
+    r"(?i)([?&](?:token|apikey|api_key|key|access_key|secret|apiKey)=)[^&\s'\"]+"
+)
+
+
+def _redact(text: str | None) -> str | None:
+    return _SECRET_QUERY_PARAM.sub(r"\1***", text) if text else text
+
+
+def _stamped(result: ProbeResult) -> ProbeResult:
+    """Record when the probe ran and strip credentials from its error text."""
+    return replace(
+        result,
+        error=_redact(result.error),
+        detail=_redact(result.detail),
+        checked_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    )
+
 
 class DatasourcesService:
     def __init__(self) -> None:
@@ -75,10 +98,12 @@ class DatasourcesService:
     def probe_one(self, source_id: str) -> ProbeResult:
         cls = _PROBEABLE.get(source_id)
         if cls is None:
-            return ProbeResult(id=source_id, status="not_configured", detail="unknown or not probeable")
+            return _stamped(
+                ProbeResult(id=source_id, status="not_configured", detail="unknown or not probeable")
+            )
         descriptor = cls.describe()
         canary = self._canary_map().get(descriptor.canary_market or "us", _DEFAULT_CANARY["us"])
-        result = cls.probe(canary)
+        result = _stamped(cls.probe(canary))
         self._probe_cache[source_id] = result
         return result
 
@@ -92,8 +117,8 @@ class DatasourcesService:
                 try:
                     results.append(future.result())
                 except Exception as exc:  # pragma: no cover - defensive
-                    logger.warning("probe failed for %s: %s", sid, exc)
-                    results.append(ProbeResult(id=sid, status="down", error=str(exc)))
+                    logger.warning("probe failed for %s: %s", sid, type(exc).__name__)
+                    results.append(_stamped(ProbeResult(id=sid, status="down", error=str(exc))))
         return results
 
     def events(self, limit: int | None = None) -> list[FallbackEvent]:

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from api.models.recommendation import Recommendation
-from swing_screener.data.currencies import get_currency_definition, supported_currency_codes
+from swing_screener.data.currencies import (
+    get_currency_definition,
+    supported_currency_codes,
+)
 from swing_screener.data.symbol_pool import TaxonomyFilterSpec
 from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.recommendation.models import DecisionSummary
@@ -192,7 +196,11 @@ class ScreenerCandidate(BaseModel):
     @classmethod
     def validate_currency(cls, value: str) -> str:
         normalized = str(value).strip().upper()
-        return normalized if normalized == "UNKNOWN" else get_currency_definition(normalized).code
+        return (
+            normalized
+            if normalized == "UNKNOWN"
+            else get_currency_definition(normalized).code
+        )
 
 
 class TaxonomyFilter(BaseModel):
@@ -302,6 +310,22 @@ class ScreenerRequest(BaseModel):
         default=None,
         description="Named taxonomy preset id (config/taxonomy_presets.yaml).",
     )
+
+    @field_validator("asof_date")
+    @classmethod
+    def validate_asof_date(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or not str(value).strip():
+            return None
+        text = str(value).strip()
+        try:
+            parsed = dt.date.fromisoformat(text)
+        except ValueError as exc:
+            raise ValueError(
+                "asof_date must be a calendar date in YYYY-MM-DD format"
+            ) from exc
+        if parsed.isoformat() != text:
+            raise ValueError("asof_date must be a calendar date in YYYY-MM-DD format")
+        return text
 
     @field_validator("currencies")
     @classmethod

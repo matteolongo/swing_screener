@@ -256,8 +256,15 @@ export default function PortfolioTable() {
     [setAnalysisTab, setWorkspaceSelection, cancelOrderMutation, fillOrderMutation.isPending],
   );
 
+  const fxUnavailable = positions.some((position) => position.fxRateStatus === 'unavailable');
+
   return (
     <>
+      {fxUnavailable ? (
+        <p role="status" className="mb-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+          {t('positions.fxUnavailable')}
+        </p>
+      ) : null}
       <DataTable
         rows={rows}
         columns={columns}

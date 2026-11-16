@@ -42,7 +42,7 @@ export function buildPortfolioColumns(actions: PortfolioColumnActions): DataTabl
     },
     {
       key: 'netPnl',
-      header: 'Net P&L',
+      header: t('workspacePage.panels.portfolio.columns.netPnl'),
       align: 'right',
       render: (row) => {
         if (row.netPnl == null) return <span className="text-muted text-xs">—</span>;
@@ -55,43 +55,56 @@ export function buildPortfolioColumns(actions: PortfolioColumnActions): DataTabl
     },
     {
       key: 'entry',
-      header: 'Prices',
-      render: (row) => (
-        <div className="text-xs space-y-0.5 font-mono">
-          <div className="flex gap-1 text-muted">
-            <span>Entry</span>
-            <span className="text-foreground">{formatOptionalCurrency(row.entryPrice)}</span>
-          </div>
-          {row.currentPrice != null && row.currentPrice !== row.entryPrice ? (
-            <div className="flex gap-1 text-muted items-center">
-              <span>Now</span>
-              <span className={cn('text-foreground', row.position?.priceSource !== 'live' && 'text-warning')}>
-                {formatOptionalCurrency(row.currentPrice)}
-              </span>
-              {row.position?.priceSource !== 'live' && (
-                <span
-                  className="text-warning text-[10px] leading-none"
-                  title={t('positions.priceStaleTooltip')}
-                >
-                  {t('positions.priceStale')}
+      header: t('workspacePage.panels.portfolio.columns.prices'),
+      render: (row) => {
+        const priceSource = row.position?.priceSource;
+        // Always show the price the metrics used when it is not a live quote,
+        // even if it equals the entry price (an unpriced position reads flat).
+        const showNow = row.currentPrice != null
+          && (row.currentPrice !== row.entryPrice || (priceSource != null && priceSource !== 'live'));
+        const flagged = priceSource === 'cached' || priceSource === 'entry';
+        return (
+          <div className="text-xs space-y-0.5 font-mono">
+            <div className="flex gap-1 text-muted">
+              <span>{t('workspacePage.panels.portfolio.columns.entry')}</span>
+              <span className="text-foreground">{formatOptionalCurrency(row.entryPrice)}</span>
+            </div>
+            {showNow ? (
+              <div className="flex gap-1 text-muted items-center">
+                <span>{t('workspacePage.panels.portfolio.columns.now')}</span>
+                <span className={cn('text-foreground', flagged && 'text-warning')}>
+                  {formatOptionalCurrency(row.currentPrice)}
                 </span>
+                {flagged && (
+                  <span
+                    className="text-warning text-[10px] leading-none"
+                    title={t(priceSource === 'entry' ? 'positions.priceUnavailableTooltip' : 'positions.priceStaleTooltip')}
+                  >
+                    {t(priceSource === 'entry' ? 'positions.priceUnavailable' : 'positions.priceStale')}
+                  </span>
+                )}
+              </div>
+            ) : null}
+            <div className="flex gap-1 text-muted">
+              <span>{t('workspacePage.panels.portfolio.columns.stopShort')}</span>
+              {row.position?.rUsesInitialRisk && row.stopLoss != null && row.entryPrice != null && Math.abs(row.stopLoss - row.entryPrice) < 0.01 ? (
+                <span
+                  className="text-muted"
+                  title={t('workspacePage.panels.portfolio.columns.breakEvenTitle', { price: formatOptionalCurrency(row.stopLoss) })}
+                >
+                  {t('workspacePage.panels.portfolio.columns.breakEven')}
+                </span>
+              ) : (
+                <span className="text-danger">{formatOptionalCurrency(row.stopLoss)}</span>
               )}
             </div>
-          ) : null}
-          <div className="flex gap-1 text-muted">
-            <span>Stop</span>
-            {row.position?.rUsesInitialRisk && row.stopLoss != null && row.entryPrice != null && Math.abs(row.stopLoss - row.entryPrice) < 0.01 ? (
-              <span className="text-muted" title={`Break-even stop at ${formatOptionalCurrency(row.stopLoss)}`}>B/E</span>
-            ) : (
-              <span className="text-danger">{formatOptionalCurrency(row.stopLoss)}</span>
-            )}
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'shares',
-      header: 'Shares',
+      header: t('workspacePage.panels.portfolio.columns.shares'),
       align: 'right',
       render: (row) => (
         <span className="text-sm font-mono">{row.shares ?? '—'}</span>
@@ -99,7 +112,7 @@ export function buildPortfolioColumns(actions: PortfolioColumnActions): DataTabl
     },
     {
       key: 'r',
-      header: 'R',
+      header: t('workspacePage.panels.portfolio.columns.r'),
       align: 'right' as const,
       render: (row) => {
         if (!row.position) return <span className="text-muted text-xs">—</span>;

@@ -52,10 +52,13 @@ export function resolveRunId(
 ): string | null {
   if (hasFailedAttempt) return attemptedRunId;
   if (attemptedRunId) return attemptedRunId;
-  const modernRun = runs?.find((run) => run.clientAttemptId);
-  if (modernRun) return modernRun.runId;
+  // After a remount, surface the newest attempted run only when it failed:
+  // a successful run is what produced the cached analysis, whose own run_id
+  // is the authoritative trace (a newer sweep may have replaced it).
+  const latestAttempt = runs?.find((run) => run.clientAttemptId);
+  if (latestAttempt?.status === 'error') return latestAttempt.runId;
   if (cachedRunId) return cachedRunId;
-  return runs?.[0]?.runId ?? null;
+  return latestAttempt?.runId ?? runs?.[0]?.runId ?? null;
 }
 
 export function useIntelligenceAnalysisMutation() {
