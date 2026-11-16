@@ -289,6 +289,16 @@ Symbol pool (`/api/pool`):
 
 Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
 
+`asof_date` accepts a calendar date in `YYYY-MM-DD` format (surrounding whitespace
+is trimmed); ISO week dates, compact dates and timestamps return 422. Omitted,
+null or blank values select the default session. Default scans retain the shared
+as-of date, but a candidate is `current` only if its bar also matches its own
+currency's latest completed session. On a US-only holiday after Europe closes,
+the shared date points to the prior US session: older European candidates are
+`stale`, include their expected session in `degraded_reasons`, and cannot receive
+entry approval tokens. Run a European-only scan to use Europe's latest session.
+Explicit historical dates remain evaluated against the requested date.
+
 Scan-quality consumers must keep `total_screened` (resolved requested symbols),
 `total_with_market_data` (symbols with downloaded closes), and
 `total_returned_candidates` (after eligibility/filter/top-N selection) distinct.

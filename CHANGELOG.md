@@ -49,6 +49,10 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - USD screening sessions skip regular NYSE holidays, so a holiday no longer
   becomes the as-of date with every candidate marked stale. A malformed
   `asof_date` is rejected with 422 instead of being treated as a final close.
+- Default mixed-market scans mark candidates stale when their market has a newer
+  completed session than the shared scan date, preventing outdated European bars
+  from receiving entry approval tokens on US holidays. Date validation also
+  rejects ISO week dates and other non-`YYYY-MM-DD` forms before screening starts.
 - Background job records follow `SWING_SCREENER_DATA_DIR` instead of the
   process working directory.
 - `api/README.md` no longer lists five fundamentals routes that do not exist
