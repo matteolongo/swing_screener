@@ -40,7 +40,7 @@ from api.db.repositories import SqlPositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.portfolio.degiro_sync import DeGiroSyncResult, sync_degiro_holdings
 from api.services.portfolio_service import PortfolioService
-from api.services.orders_service import OrdersService
+from api.services.orders_service import OrdersService, resolve_risk_policy
 from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.snapshot_freshness import snapshot_freshness
 from swing_screener.intelligence.cache import read_from_cache
@@ -68,7 +68,7 @@ def _subject(request: Request) -> str:
 
 
 @router.get("/positions", response_model=PositionsWithMetricsResponse)
-async def get_positions(
+def get_positions(
     status: Optional[str] = None,
     service: PortfolioService = Depends(get_portfolio_service),
     config_repo: ConfigRepository = Depends(get_config_repo),
@@ -102,7 +102,7 @@ async def get_positions(
 
 
 @router.post("/positions", response_model=Position)
-async def create_position(
+def create_position(
     request: CreatePositionRequest,
     http_request: Request,
     idempotency_key: str = Depends(require_idempotency_key),
@@ -117,7 +117,7 @@ async def create_position(
 @router.get(
     "/positions/open/intelligence", response_model=list[OpenPositionIntelligenceSummary]
 )
-async def get_open_positions_intelligence(
+def get_open_positions_intelligence(
     service: PortfolioService = Depends(get_portfolio_service),
 ) -> list[OpenPositionIntelligenceSummary]:
     """Return cached intelligence + stop suggestion for all open positions."""
@@ -158,7 +158,7 @@ async def get_open_positions_intelligence(
 
 
 @router.get("/positions/{position_id}", response_model=Position)
-async def get_position(
+def get_position(
     position_id: str,
     service: PortfolioService = Depends(get_portfolio_service),
 ):
@@ -167,7 +167,7 @@ async def get_position(
 
 
 @router.get("/positions/{position_id}/metrics", response_model=PositionMetrics)
-async def get_position_metrics(
+def get_position_metrics(
     position_id: str,
     service: PortfolioService = Depends(get_portfolio_service),
 ):
@@ -176,7 +176,7 @@ async def get_position_metrics(
 
 
 @router.put("/positions/{position_id}/stop")
-async def update_position_stop(
+def update_position_stop(
     position_id: str,
     request: UpdateStopRequest,
     http_request: Request,
@@ -194,7 +194,7 @@ async def update_position_stop(
 
 
 @router.get("/positions/{position_id}/stop-suggestion", response_model=PositionUpdate)
-async def get_position_stop_suggestion(
+def get_position_stop_suggestion(
     position_id: str,
     service: PortfolioService = Depends(get_portfolio_service),
 ):
@@ -203,7 +203,7 @@ async def get_position_stop_suggestion(
 
 
 @router.get("/positions/{position_id}/stop-preview", response_model=PositionUpdate)
-async def get_position_stop_preview(
+def get_position_stop_preview(
     position_id: str,
     price: Optional[float] = Query(default=None, gt=0),
     service: PortfolioService = Depends(get_portfolio_service),
@@ -213,7 +213,7 @@ async def get_position_stop_preview(
 
 
 @router.patch("/positions/{position_id}/trail-method")
-async def update_position_trail_method(
+def update_position_trail_method(
     position_id: str,
     request: UpdateTrailMethodRequest,
     http_request: Request,
@@ -230,7 +230,7 @@ async def update_position_trail_method(
 
 
 @router.post("/stop-suggestion/compute", response_model=PositionUpdate)
-async def compute_position_stop_suggestion(
+def compute_position_stop_suggestion(
     request: StopSuggestionComputeRequest,
     service: PortfolioService = Depends(get_portfolio_service),
 ):
@@ -242,7 +242,7 @@ async def compute_position_stop_suggestion(
 
 
 @router.post("/positions/{position_id}/close")
-async def close_position(
+def close_position(
     position_id: str,
     request: ClosePositionRequest,
     http_request: Request,
@@ -259,7 +259,7 @@ async def close_position(
 
 
 @router.post("/positions/{position_id}/partial-close")
-async def partial_close_position(
+def partial_close_position(
     position_id: str,
     request: PartialCloseRequest,
     http_request: Request,
@@ -276,42 +276,21 @@ async def partial_close_position(
 
 
 @router.get("/summary", response_model=PortfolioSummary)
-async def get_portfolio_summary(
+def get_portfolio_summary(
     service: PortfolioService = Depends(get_portfolio_service),
     config_repo: ConfigRepository = Depends(get_config_repo),
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
 ):
     """Get aggregated portfolio metrics for all open positions."""
-    config_account_size = float(config_repo.get().risk.account_size)
-    account_size_mode = getattr(config_repo.get().risk, "account_size_mode", "equity")
-    default_config_account_size = float(
-        ConfigRepository.get_defaults().risk.account_size
-    )
-    account_size = config_account_size
-
-    if abs(config_account_size - default_config_account_size) <= 1e-9:
-        try:
-            active_strategy = strategy_repo.get_active_strategy()
-            strategy_account_size = float(
-                active_strategy.get("risk", {}).get("account_size", 0.0)
-            )
-            if strategy_account_size > 0:
-                account_size = strategy_account_size
-                account_size_mode = str(
-                    active_strategy.get("risk", {}).get(
-                        "account_size_mode", account_size_mode
-                    )
-                )
-        except (TypeError, ValueError):
-            pass
-
+    policy = resolve_risk_policy(strategy_repo, config_repo)
     return service.get_portfolio_summary(
-        account_size=account_size, account_size_mode=account_size_mode
+        account_size=float(policy["account_size"]),
+        account_size_mode=str(policy["account_size_mode"]),
     )
 
 
 @router.get("/earnings-proximity/{ticker}", response_model=EarningsProximityResponse)
-async def get_earnings_proximity(
+def get_earnings_proximity(
     ticker: str,
     service: PortfolioService = Depends(get_portfolio_service),
 ):
@@ -320,7 +299,7 @@ async def get_earnings_proximity(
 
 
 @router.get("/analytics/regime-breakdown", response_model=RegimeBreakdownResponse)
-async def get_regime_breakdown(
+def get_regime_breakdown(
     service: RegimeAnalyticsService = Depends(get_regime_analytics_service),
 ) -> RegimeBreakdownResponse:
     """Return closed-position performance grouped by market regime at entry date."""
@@ -332,7 +311,7 @@ async def get_regime_breakdown(
 
 
 @router.post("/orders", status_code=201)
-async def create_order(
+def create_order(
     request: CreateOrderRequest,
     http_request: Request,
     idempotency_key: str = Depends(require_idempotency_key),
@@ -345,7 +324,7 @@ async def create_order(
 
 
 @router.get("/orders/local", response_model=OrdersSnapshotResponse)
-async def list_local_orders(
+def list_local_orders(
     status: Optional[str] = None,
     service: OrdersService = Depends(get_orders_service),
     config_repo: ConfigRepository = Depends(get_config_repo),
@@ -363,7 +342,7 @@ async def list_local_orders(
 
 
 @router.patch("/orders/{order_id}/submit")
-async def submit_order(
+def submit_order(
     order_id: str,
     service: OrdersService = Depends(get_orders_service),
 ):
@@ -372,7 +351,7 @@ async def submit_order(
 
 
 @router.delete("/orders/{order_id}")
-async def cancel_order(
+def cancel_order(
     order_id: str,
     service: OrdersService = Depends(get_orders_service),
 ):
@@ -383,7 +362,7 @@ async def cancel_order(
 @router.post(
     "/orders/{order_id}/fill", status_code=201, response_model=FillOrderResponse
 )
-async def fill_order(
+def fill_order(
     order_id: str,
     request: FillOrderRequest,
     http_request: Request,
@@ -403,7 +382,7 @@ async def fill_order(
 
 
 @router.post("/sync-degiro", response_model=DeGiroSyncResult)
-async def sync_degiro(
+def sync_degiro(
     positions_repo: SqlPositionsRepository = Depends(get_positions_repo),
 ):
     """Fetch live DeGiro portfolio and reconcile against local positions.

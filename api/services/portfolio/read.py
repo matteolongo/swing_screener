@@ -23,6 +23,7 @@ from api.models.portfolio import (
 from api.repositories.config_repo import ConfigRepository
 from api.db.repositories import SqlPositionsRepository
 from api.services.portfolio._helpers import to_state_position
+from api.services.order_exposure import country_from_ticker
 from api.services.portfolio.pricing import PositionPricingService
 from swing_screener.data.currency import detect_currency
 from swing_screener.errors import NotFoundError
@@ -137,26 +138,12 @@ def _analytics_metadata(
     )
 
 
-def _country_from_ticker(ticker: str) -> str:
-    suffix_map = {
-        ".AS": "NL",
-        ".PA": "FR",
-        ".DE": "DE",
-        ".MC": "ES",
-        ".MI": "IT",
-        ".ST": "SE",
-        ".L": "UK",
-        ".BR": "BE",
-        ".LS": "PT",
-        ".HE": "FI",
-        ".CO": "DK",
-        ".OL": "NO",
-    }
-    upper = ticker.strip().upper()
-    for suffix, country in suffix_map.items():
-        if upper.endswith(suffix):
-            return country
-    return "US"
+def _position_currency(ticker: str, stored_quote_currency: object = None) -> str:
+    """Persisted quote currency when present, else detected from the ticker."""
+    stored = str(stored_quote_currency or "").strip().upper()
+    if stored and stored != "UNKNOWN":
+        return stored
+    return detect_currency(str(ticker or "").upper())
 
 
 def _compute_r_fx_adjusted(
@@ -187,11 +174,21 @@ def _to_account_currency(
     position_currency: str,
     account_currency: str,
     eurusd_rate: float,
+    account_to_quote_rate=None,
 ) -> float:
+    """Convert a quote-currency amount to the account currency.
+
+    EUR/USD uses ``eurusd_rate``. Any other pair uses the position's persisted
+    account-to-quote rate (``amount / rate``), the same rule order approval uses.
+    """
     quote = str(position_currency or "").strip().upper()
     account = str(account_currency or "EUR").strip().upper()
     if quote == account or quote in {"", "UNKNOWN"}:
         return amount
+    if {quote, account} != {"EUR", "USD"}:
+        stored_rate = _positive_float(account_to_quote_rate)
+        if stored_rate is not None:
+            return amount / stored_rate
     if eurusd_rate <= 0:
         logger.warning(
             "Invalid EURUSD rate %s; leaving %s amount unconverted",
@@ -308,12 +305,14 @@ def _realized_leg_pnl_account_currency(
         position_currency=position_currency,
         account_currency=account_currency,
         eurusd_rate=entry_rate,
+        account_to_quote_rate=entry_fx_rate,
     )
     exit_value = _to_account_currency(
         exit_price * shares,
         position_currency=position_currency,
         account_currency=account_currency,
         eurusd_rate=exit_rate,
+        account_to_quote_rate=_positive_float(exit_fx_rate) or entry_fx_rate,
     )
     return exit_value - entry_value
 
@@ -606,7 +605,7 @@ class PortfolioReadService:
         realized_pnl = 0.0
         for position in positions:
             entry_price = float(position.get("entry_price", 0.0))
-            position_currency = detect_currency(str(position.get("ticker", "")).upper())
+            position_currency = _position_currency(position.get("ticker"), position.get("quote_currency"))
             entry_fx_rate = position.get("entry_fx_rate")
 
             for event in position.get("partial_closes") or []:
@@ -678,7 +677,7 @@ class PortfolioReadService:
         )
         needs_eurusd = any(
             _needs_eurusd_rate(
-                detect_currency(str(position.get("ticker", "")).upper()),
+                _position_currency(position.get("ticker"), position.get("quote_currency")),
                 account_currency,
             )
             for position in all_positions
@@ -693,7 +692,7 @@ class PortfolioReadService:
         positions_response = self.list_positions(status="open")
         positions = positions_response.positions
         needs_open_eurusd = any(
-            _needs_eurusd_rate(detect_currency(position.ticker.upper()), account_currency)
+            _needs_eurusd_rate(_position_currency(position.ticker, position.quote_currency), account_currency)
             for position in positions
         )
         eurusd_rate, open_fx_status = self._eurusd(needs_open_eurusd)
@@ -750,30 +749,34 @@ class PortfolioReadService:
         positions_losing = 0
 
         for position in positions:
-            position_currency = detect_currency(position.ticker.upper())
+            position_currency = _position_currency(position.ticker, position.quote_currency)
             entry_value_account = _to_account_currency(
                 position.entry_value,
                 position_currency=position_currency,
                 account_currency=account_currency,
                 eurusd_rate=eurusd_rate,
+                account_to_quote_rate=position.entry_fx_rate,
             )
             current_value_account = _to_account_currency(
                 position.current_value,
                 position_currency=position_currency,
                 account_currency=account_currency,
                 eurusd_rate=eurusd_rate,
+                account_to_quote_rate=position.entry_fx_rate,
             )
             pnl_account = _to_account_currency(
                 position.pnl,
                 position_currency=position_currency,
                 account_currency=account_currency,
                 eurusd_rate=eurusd_rate,
+                account_to_quote_rate=position.entry_fx_rate,
             )
             risk_account = _to_account_currency(
                 position.total_risk,
                 position_currency=position_currency,
                 account_currency=account_currency,
                 eurusd_rate=eurusd_rate,
+                account_to_quote_rate=position.entry_fx_rate,
             )
 
             total_cost_basis += entry_value_account
@@ -856,13 +859,14 @@ class PortfolioReadService:
         for position in positions:
             risk_amount = _to_account_currency(
                 position.total_risk,
-                position_currency=detect_currency(position.ticker.upper()),
+                position_currency=_position_currency(position.ticker, position.quote_currency),
                 account_currency=account_currency,
                 eurusd_rate=eurusd_rate,
+                account_to_quote_rate=position.entry_fx_rate,
             )
             if risk_amount <= 0:
                 continue
-            country = _country_from_ticker(position.ticker)
+            country = country_from_ticker(position.ticker)
             country_risk[country] = country_risk.get(country, 0.0) + risk_amount
             country_count[country] = country_count.get(country, 0) + 1
 

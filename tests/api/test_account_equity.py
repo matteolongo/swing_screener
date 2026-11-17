@@ -90,3 +90,31 @@ def test_realized_pnl_includes_partial_close_proceeds(client_with_partial_close)
     data = client_with_partial_close.get("/api/portfolio/summary").json()
     # partial: (20-10)*60 = 600; final: (25-10)*40 = 600; total 1200.
     assert abs(data["realized_pnl"] - 1200.0) < 0.01
+
+
+def test_portfolio_summary_uses_the_same_account_size_as_order_approval(
+    client_with_closed_positions, override_dependencies
+):
+    """Heat on the summary must be measured against the account that gates orders."""
+    from api.dependencies import get_config_repo, get_strategy_repo
+    from api.repositories.config_repo import ConfigRepository
+
+    config = ConfigRepository.get_defaults()
+    config.risk.account_size = 20_000.0
+
+    class _StrategyRepo:
+        def get_active_strategy(self) -> dict:
+            return {"risk": {"account_size": 7_000.0, "account_size_mode": "base"}}
+
+    with override_dependencies(
+        {
+            get_config_repo: lambda: ConfigRepository(config),
+            get_strategy_repo: lambda: _StrategyRepo(),
+        }
+    ):
+        response = client_with_closed_positions.get("/api/portfolio/summary")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["account_size"] == 7_000.0
+    assert data["effective_account_size"] == 7_000.0

@@ -137,3 +137,62 @@ def test_portfolio_summary_converts_eur_positions_for_usd_account(monkeypatch):
 
     risk_by_country = {item.country: item.risk_amount for item in summary.concentration}
     assert risk_by_country["NL"] == pytest.approx(12.0, abs=0.01)
+
+
+def test_portfolio_summary_converts_other_currencies_with_persisted_rate(monkeypatch):
+    positions = [
+        {
+            "position_id": "POS-ERIC",
+            "ticker": "ERIC-B.ST",
+            "status": "open",
+            "entry_date": "2026-06-01",
+            "entry_price": 100.0,
+            "stop_price": 90.0,
+            "shares": 10,
+            "initial_risk": 10.0,
+            "quote_currency": "SEK",
+            "account_currency": "EUR",
+            "entry_fx_rate": 10.0,
+        },
+    ]
+    monkeypatch.setattr(portfolio_read, "detect_currency", lambda ticker: "UNKNOWN")
+
+    service = PortfolioReadService(
+        _FakePositionsRepo(positions),
+        _FakePricing({"ERIC-B.ST": 110.0}, eurusd_rate=1.2),
+        _FakeConfigRepo(),
+    )
+
+    summary = service.get_portfolio_summary(account_size=5000.0, account_size_mode="base")
+
+    assert summary.total_cost_basis == pytest.approx(100.0, abs=0.01)
+    assert summary.total_value == pytest.approx(110.0, abs=0.01)
+    assert summary.open_risk == pytest.approx(10.0, abs=0.01)
+    assert summary.concentration[0].country == "SE"
+    assert summary.concentration[0].risk_amount == pytest.approx(10.0, abs=0.01)
+
+
+def test_portfolio_summary_groups_swiss_tickers_as_ch(monkeypatch):
+    positions = [
+        {
+            "position_id": "POS-NESN",
+            "ticker": "NESN.SW",
+            "status": "open",
+            "entry_date": "2026-06-01",
+            "entry_price": 100.0,
+            "stop_price": 90.0,
+            "shares": 1,
+            "initial_risk": 10.0,
+        },
+    ]
+    monkeypatch.setattr(portfolio_read, "detect_currency", lambda ticker: "EUR")
+
+    service = PortfolioReadService(
+        _FakePositionsRepo(positions),
+        _FakePricing({"NESN.SW": 100.0}, eurusd_rate=1.2),
+        _FakeConfigRepo(),
+    )
+
+    summary = service.get_portfolio_summary(account_size=5000.0, account_size_mode="base")
+
+    assert [group.country for group in summary.concentration] == ["CH"]

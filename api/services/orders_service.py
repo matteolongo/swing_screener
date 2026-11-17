@@ -59,6 +59,40 @@ def _resolve_isin(ticker: str) -> Optional[str]:
     return None
 
 
+def resolve_risk_policy(
+    strategy_repo: StrategyRepository | None,
+    config_repo: ConfigRepository | None,
+) -> dict:
+    """Effective risk policy: active strategy first, then app config, then defaults.
+
+    Order approval and the portfolio summary both read account size here, so the
+    heat shown to the user is measured against the same account that gates orders.
+    """
+    strategy = strategy_repo.get_active_strategy() if strategy_repo else {}
+    risk = dict(strategy.get("risk") or {})
+    if config_repo is not None:
+        configured = config_repo.get().risk
+        risk.setdefault("account_size", configured.account_size)
+        risk.setdefault("account_size_mode", configured.account_size_mode)
+        risk.setdefault("risk_pct", configured.risk_pct)
+        risk.setdefault("max_position_pct", configured.max_position_pct)
+        risk.setdefault("max_fee_risk_pct", configured.max_fee_risk_pct)
+        risk.setdefault("max_portfolio_heat_pct", configured.max_portfolio_heat_pct)
+        risk.setdefault("max_concentration_pct", configured.max_concentration_pct)
+        risk.setdefault("account_currency", configured.account_currency)
+    risk.setdefault("account_size", 0.0)
+    risk.setdefault("account_size_mode", "equity")
+    risk.setdefault("risk_pct", 0.01)
+    risk.setdefault("min_rr", 2.0)
+    risk.setdefault("max_position_pct", 0.60)
+    risk.setdefault("commission_pct", 0.0)
+    risk.setdefault("max_fee_risk_pct", 0.20)
+    risk.setdefault("max_portfolio_heat_pct", 0.06)
+    risk.setdefault("max_concentration_pct", 60.0)
+    risk.setdefault("account_currency", "EUR")
+    return risk
+
+
 class OrdersService:
     def __init__(
         self,
@@ -83,47 +117,6 @@ class OrdersService:
         self._position_id_factory = position_id_factory or (
             lambda: f"POS-{uuid.uuid4().hex[:8].upper()}"
         )
-
-    @staticmethod
-    def _country(ticker: str) -> str:
-        suffix = ticker.upper().rsplit(".", 1)[-1] if "." in ticker else "US"
-        return {
-            "AS": "NL",
-            "DE": "DE",
-            "PA": "FR",
-            "MI": "IT",
-            "MC": "ES",
-            "L": "UK",
-            "SW": "CH",
-            "ST": "SE",
-            "CO": "DK",
-            "OL": "NO",
-        }.get(suffix, "US")
-
-    def _risk_policy(self) -> dict:
-        strategy = (
-            self._strategy_repo.get_active_strategy() if self._strategy_repo else {}
-        )
-        risk = dict(strategy.get("risk") or {})
-        if self._config_repo is not None:
-            configured = self._config_repo.get().risk
-            risk.setdefault("account_size", configured.account_size)
-            risk.setdefault("risk_pct", configured.risk_pct)
-            risk.setdefault("max_position_pct", configured.max_position_pct)
-            risk.setdefault("max_fee_risk_pct", configured.max_fee_risk_pct)
-            risk.setdefault("max_portfolio_heat_pct", configured.max_portfolio_heat_pct)
-            risk.setdefault("max_concentration_pct", configured.max_concentration_pct)
-            risk.setdefault("account_currency", configured.account_currency)
-        risk.setdefault("account_size", 0.0)
-        risk.setdefault("risk_pct", 0.01)
-        risk.setdefault("min_rr", 2.0)
-        risk.setdefault("max_position_pct", 0.60)
-        risk.setdefault("commission_pct", 0.0)
-        risk.setdefault("max_fee_risk_pct", 0.20)
-        risk.setdefault("max_portfolio_heat_pct", 0.06)
-        risk.setdefault("max_concentration_pct", 60.0)
-        risk.setdefault("account_currency", "EUR")
-        return risk
 
     def _approve_signed_entry_order(
         self, request: CreateOrderRequest, orders: list[dict], positions: list[dict]
@@ -187,7 +180,7 @@ class OrdersService:
         except ExposureContextError as exc:
             raise UnprocessableError(f"Order blocked: {exc}") from exc
 
-        raw = self._risk_policy()
+        raw = resolve_risk_policy(self._strategy_repo, self._config_repo)
         policy = EffectiveOrderPolicy(
             account_size=Decimal(str(raw["account_size"])),
             risk_pct=Decimal(str(raw["risk_pct"])),
