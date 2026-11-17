@@ -33,3 +33,34 @@ describe('portfolio columns actions', () => {
     expect(screen.queryByText(t('workspacePage.panels.portfolio.addOnEntry'))).not.toBeInTheDocument();
   });
 });
+
+function renderPrices(position: Record<string, unknown>, currentPrice: number) {
+  const cols = buildPortfolioColumns({
+    onCheckLive: () => {}, onUpdateStop: () => {}, onAnalyze: () => {}, onAddOnEntry: () => {},
+    onPartialClose: () => {}, onClosePosition: () => {}, onFillOrder: () => {}, onCancelOrder: () => {},
+    cancelPending: false, fillPending: false,
+  });
+  const pricesCol = cols.find((c) => c.key === 'entry')!;
+  const row = {
+    ticker: 'LRCX', status: 'open', entryPrice: 100, currentPrice, stopLoss: 95,
+    position: { positionId: 'POS-1', ticker: 'LRCX', rUsesInitialRisk: false, ...position },
+  } as any;
+  return render(<>{pricesCol.render!(row)}</>);
+}
+
+describe('portfolio columns prices', () => {
+  it('flags an unpriced position even though its price equals the entry', () => {
+    renderPrices({ priceSource: 'entry' }, 100);
+    expect(screen.getByText(t('workspacePage.panels.portfolio.columns.now'))).toBeInTheDocument();
+    expect(screen.getByText(t('positions.priceUnavailable'))).toHaveAttribute('title', t('positions.priceUnavailableTooltip'));
+  });
+
+  it('marks a cached price as stale and leaves a live quote unflagged', () => {
+    const { unmount } = renderPrices({ priceSource: 'cached' }, 110);
+    expect(screen.getByText(t('positions.priceStale'))).toBeInTheDocument();
+    unmount();
+    renderPrices({ priceSource: 'live' }, 110);
+    expect(screen.queryByText(t('positions.priceStale'))).not.toBeInTheDocument();
+    expect(screen.queryByText(t('positions.priceUnavailable'))).not.toBeInTheDocument();
+  });
+});

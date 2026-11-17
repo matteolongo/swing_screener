@@ -1998,3 +1998,39 @@ def test_screener_candidate_includes_52w_high_fields(monkeypatch):
     assert "dist_52w_high_pct" in candidate
     assert candidate["dist_52w_high_pct"] == pytest.approx(-0.03, abs=1e-4)
     assert candidate["near_52w_high"] is True
+
+
+@pytest.mark.parametrize(
+    "asof_date", ["2026-13-40", "2026-W47-1", "20261116", "2026-11-16T00:00:00"]
+)
+def test_run_rejects_malformed_asof_date(asof_date, monkeypatch, override_dependencies):
+    from api.dependencies import get_screener_service
+
+    monkeypatch.setenv("SCREENER_RUN_MODE", "sync")
+    service = MagicMock()
+    service.run_screener.return_value = ScreenerResponse(
+        candidates=[], asof_date="2026-11-16", total_screened=0
+    )
+    client = TestClient(app)
+    with override_dependencies({get_screener_service: lambda: service}):
+        response = client.post(
+            "/api/screener/run", json={"top": 5, "asof_date": asof_date}
+        )
+
+    assert response.status_code == 422
+    service.run_screener.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("2026-11-16", "2026-11-16"),
+        (" 2026-11-16 ", "2026-11-16"),
+        (None, None),
+        (" ", None),
+    ],
+)
+def test_screener_asof_date_preserves_calendar_dates_and_default(value, expected):
+    from api.models.screener import ScreenerRequest
+
+    assert ScreenerRequest(asof_date=value).asof_date == expected

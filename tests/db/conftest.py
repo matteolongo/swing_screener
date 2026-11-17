@@ -14,6 +14,7 @@ def database_url(tmp_path: Path) -> str:
     url = f"sqlite:///{tmp_path / 'portfolio.db'}"
     config = Config(str(Path(__file__).parents[2] / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", url)
+    config.attributes["configure_logger"] = False
     command.upgrade(config, "head")
     return url
 

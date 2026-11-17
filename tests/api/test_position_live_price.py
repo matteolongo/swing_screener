@@ -116,3 +116,46 @@ class TestPositionMetricsLiveQuote:
         assert response.status_code == 200
         data = response.json()
         assert data["price_source"] == "cached"
+
+
+class TestUnpricedAndClosedPositions:
+    def _provider_without_prices(self, monkeypatch):
+        mock_provider = MagicMock(spec=MarketDataProvider)
+        mock_provider.fetch_latest_price.side_effect = ConnectionError("no live quote")
+        mock_provider.fetch_ohlcv.return_value = pd.DataFrame()
+        mock_provider.get_provider_name.return_value = "mock"
+        monkeypatch.setattr(portfolio_service, "get_market_data_provider", lambda **kwargs: mock_provider)
+
+    def test_list_exposes_entry_price_used_when_no_price_resolves(self, tmp_path, monkeypatch):
+        _write_positions(monkeypatch, tmp_path, [OPEN_POSITION])
+        self._provider_without_prices(monkeypatch)
+
+        position = client.get("/api/portfolio/positions?status=open").json()["positions"][0]
+
+        assert position["price_source"] == "entry"
+        assert position["current_price"] == OPEN_POSITION["entry_price"]
+
+    def test_metrics_label_unpriced_open_position_as_entry(self, tmp_path, monkeypatch):
+        _write_positions(monkeypatch, tmp_path, [OPEN_POSITION])
+        self._provider_without_prices(monkeypatch)
+
+        data = client.get("/api/portfolio/positions/POS-LIVE001/metrics").json()
+
+        assert data["price_source"] == "entry"
+
+    def test_closed_position_is_labelled_recorded(self, tmp_path, monkeypatch):
+        closed = {
+            **OPEN_POSITION,
+            "position_id": "POS-CLOSED1",
+            "status": "closed",
+            "exit_price": 400.0,
+            "exit_date": "2026-06-20",
+        }
+        _write_positions(monkeypatch, tmp_path, [closed])
+        self._provider_without_prices(monkeypatch)
+
+        listed = client.get("/api/portfolio/positions?status=closed").json()["positions"][0]
+        metrics = client.get("/api/portfolio/positions/POS-CLOSED1/metrics").json()
+
+        assert listed["price_source"] == "recorded"
+        assert metrics["price_source"] == "recorded"

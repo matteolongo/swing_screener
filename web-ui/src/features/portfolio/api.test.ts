@@ -27,6 +27,20 @@ describe('portfolio api', () => {
     }), { status: 200 })));
     expect((await fetchPositions('open'))[0].version).toBe(7);
   });
+
+  it('never labels a position live without a live price_source from the server', async () => {
+    const base = { ticker: 'AAPL', status: 'open', entry_date: '2026-10-01', entry_price: 100, stop_price: 95, shares: 5 };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      positions: [
+        { ...base, position_id: 'POS-1' },
+        { ...base, position_id: 'POS-2', price_source: 'entry', fx_rate_status: 'unavailable' },
+        { ...base, position_id: 'POS-3', price_source: 'bogus' },
+      ],
+    }), { status: 200 })));
+    const positions = await fetchPositions('open');
+    expect(positions.map((p) => p.priceSource)).toEqual(['cached', 'entry', 'cached']);
+    expect(positions.map((p) => p.fxRateStatus)).toEqual(['not_needed', 'unavailable', 'not_needed']);
+  });
   beforeEach(() => {
     vi.unstubAllGlobals();
   });

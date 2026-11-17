@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date
 from pathlib import Path
 from typing import Any, TextIO
 
 from swing_screener.intelligence.models import SymbolIntelligence
 from swing_screener.settings.paths import data_dir
+from swing_screener.utils.date_helpers import market_today
 from swing_screener.utils.file_lock import FileLockTimeoutError, open_locked_text, read_json_with_lock
 
 _CACHE_SCHEMA_VERSION = 3
@@ -52,7 +53,7 @@ def _is_current_cache_entry(entry: Any) -> bool:
 
 
 def write_to_cache(ticker: str, result: SymbolIntelligence, for_date: date | None = None) -> None:
-    target_date = for_date or datetime.now(timezone.utc).date()
+    target_date = for_date or market_today()
     path = _cache_path(target_date)
     path.parent.mkdir(parents=True, exist_ok=True)
     upper = ticker.upper()
@@ -75,7 +76,7 @@ def read_from_cache(
     *,
     expected_fingerprint: str | None = None,
 ) -> SymbolIntelligence | None:
-    target_date = for_date or datetime.now(timezone.utc).date()
+    target_date = for_date or market_today()
     path = _cache_path(target_date)
     if not path.exists():
         return None

@@ -301,7 +301,7 @@ API keys go in environment variables, not the config file.
 
 ## Caching
 
-Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is set in `config/intelligence.yaml`. `cache.py` exposes `get_cached_analysis(ticker)` → returns `None` on miss or expiry.
+Results are stored in one file per US market date, `data/intelligence/sweep_<YYYY-MM-DD>.json`, keyed by ticker. "Today" is `market_today()` (America/New_York), the same date the rest of the app uses, so a post-close analysis stays today's until the next New York day rather than expiring at 00:00 UTC. The chat log and evidence cache use the same date. `cache.py` exposes `read_from_cache(ticker, for_date=None, expected_fingerprint=None)` (today's entry or `None`) and `read_latest_from_cache(ticker)` (newest across dates).
 
 `POST /api/intelligence/{ticker}` checks the cache first and returns the same-day result unless `force=true` is passed. `/sweep` applies the same cache-before-spend logic per symbol.
 
@@ -323,10 +323,16 @@ flowchart LR
 ```
 
 `data/intelligence/intelligence_metrics.json` is an append-only log (capped at
-500 entries) written by `metrics.py` after each analysis. Each entry is
-`{ts, ticker, tokens}`. A sudden `tokens: null` run pinpoints a call that did
-not complete; source coverage is visible through `inputs_used.sources` on the
-cached result and the per-date evidence cache.
+500 entries) written by `metrics.py` after each successful analysis, under an
+exclusive file lock. Each entry is `{ts, ticker, tokens}`. Failed runs never
+reach the persist node, so they are not in this log; `tokens: null` means the
+provider returned no usage metadata. Source coverage is visible through
+`inputs_used.sources` on the cached result and the per-date evidence cache.
+
+The persist step's `outputs_summary` reports `cache_written`,
+`history_appended` and `metrics_recorded` from what each writer actually did:
+the history and metrics writers degrade soft and return `False` on I/O failure,
+which the summary records with a `*_error` note instead of claiming success.
 
 ### Per-run trace
 
@@ -345,11 +351,13 @@ a client attempt ID; the trace and index persist that ID and the requested force
 mode so clients can resolve an exact concurrent or failed attempt. These fields
 are additive and absent from older run files. Each `SymbolIntelligence` result (and its
 cache entry) carries the `run_id` that produced it, so a cache hit still resolves
-its trace. Each step records status, timing, and an `outputs_summary`; steps that
+its trace. A request served from cache calls `recorder.discard()` and writes no
+trace of its own, so it cannot shadow or prune the producing run in the index. Each step records status, timing, and an `outputs_summary`; steps that
 have them also record model, token usage, `source_counts`, `prompt_hash` + a
 truncated `prompt_preview` (no full prompt), and any error. `source_counts` is the
 per-host tally of the web-search citations the run actually used (`result.sources`),
-not catalyst-evidence publishers. The enrichment steps record a compact
+not catalyst-evidence publishers. Token usage is recorded on the `search` and
+`format` steps; `postprocess` records their sum as `outputs_summary.total_tokens`. The enrichment steps record a compact
 `outputs_summary` (e.g. resolved `close`, fetched OHLCV rows) rather than timing
 alone, and the UI renders a detail tab only when its field is present.
 Tracing is fail-soft and controlled by `config.tracing.enabled` (default `true`).

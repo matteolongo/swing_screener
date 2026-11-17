@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -71,9 +72,36 @@ class _PortfolioStub:
         return type("Positions", (), {"positions": []})()
 
 
-def test_screener_candidate_exposes_quote_and_account_currency_money_fields(
+@pytest.mark.parametrize(
+    ("now", "requested_asof", "expected_asof", "eur_status"),
+    [
+        ("2026-11-26T22:00:00+00:00", None, "2026-11-25", "stale"),
+        ("2026-11-26T12:00:00+00:00", None, "2026-11-25", "current"),
+        ("2026-06-20T12:00:00+00:00", None, "2026-06-18", "stale"),
+        ("2026-04-16T22:00:00+00:00", None, "2026-04-16", "current"),
+        ("2026-11-26T22:00:00+00:00", "2026-11-24", "2026-11-24", "current"),
+    ],
+)
+def test_screener_candidate_currency_money_and_market_freshness(
     monkeypatch,
+    now,
+    requested_asof,
+    expected_asof,
+    eur_status,
 ):
+    frozen_now = dt.datetime.fromisoformat(now)
+
+    class FrozenDateTime(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return frozen_now.astimezone(tz)
+
+    monkeypatch.setattr(screener_service.dt, "datetime", FrozenDateTime)
+    provider = _mock_provider()
+    frame = _ohlcv()
+    frame.index = pd.date_range(end=expected_asof, periods=len(frame), freq="D")
+    provider.fetch_ohlcv.return_value = frame
+
     def fake_build_daily_report(*args, **kwargs):
         return pd.DataFrame(
             {
@@ -103,7 +131,7 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(
         )
 
     monkeypatch.setattr(
-        screener_service, "get_market_data_provider", lambda **kwargs: _mock_provider()
+        screener_service, "get_market_data_provider", lambda **kwargs: provider
     )
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(
@@ -126,17 +154,31 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(
     try:
         response = TestClient(app).post(
             "/api/screener/run",
-            json={"tickers": ["ABN.AS", "AAPL"], "top": 2},
+            json={
+                "tickers": ["ABN.AS", "AAPL"],
+                "currencies": ["USD", "EUR"],
+                "top": 2,
+                "asof_date": requested_asof,
+            },
         )
     finally:
         app.dependency_overrides.pop(get_portfolio_service, None)
 
     assert response.status_code == 200
+    assert response.json()["asof_date"] == expected_asof
+    assert response.json()["data_freshness"] == "final_close"
+    assert provider.fetch_ohlcv.call_args_list[0].kwargs["end_date"] == expected_asof
     candidates = {
         candidate["ticker"]: candidate for candidate in response.json()["candidates"]
     }
 
     eur = candidates["ABN.AS"]
+    assert eur["data_status"] == eur_status
+    if eur_status == "stale":
+        assert eur["approval_token"] is None
+        assert eur["degraded_reasons"]
+    else:
+        assert eur["degraded_reasons"] == []
     assert eur["quote_currency"] == "EUR"
     assert eur["account_currency"] == "EUR"
     assert eur["entry_quote"] == 35.42
@@ -156,6 +198,7 @@ def test_screener_candidate_exposes_quote_and_account_currency_money_fields(
     assert eur["recommendation"]["risk"]["account_currency"] == "EUR"
 
     usd = candidates["AAPL"]
+    assert usd["data_status"] == "current"
     assert usd["quote_currency"] == "USD"
     assert usd["account_currency"] == "EUR"
     assert usd["entry_quote"] == 181.0

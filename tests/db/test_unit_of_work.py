@@ -52,3 +52,28 @@ def test_portfolio_state_lock_compiles_for_postgres():
     sql = str(statement.compile(dialect=postgresql.dialect()))
 
     assert "FOR UPDATE" in sql
+
+
+def test_audit_events_are_logged_only_after_commit(runtime, caplog):
+    with caplog.at_level("INFO", logger="swing_screener.audit"):
+        with PortfolioUnitOfWork(runtime.session_factory) as uow:
+            uow.begin_write()
+            uow.orders.add_order(_order())
+            uow.audit("create_order", order_id="ORD-AAPL-001", subject="admin", note=None)
+            assert caplog.records == []
+
+    messages = [r.getMessage() for r in caplog.records]
+    assert messages == ["portfolio create_order committed order_id=ORD-AAPL-001 subject=admin"]
+
+
+def test_audit_events_are_logged_as_rolled_back_on_failure(runtime, caplog):
+    with caplog.at_level("INFO", logger="swing_screener.audit"):
+        with pytest.raises(RuntimeError, match="injected"):
+            with PortfolioUnitOfWork(runtime.session_factory) as uow:
+                uow.begin_write()
+                uow.audit("cancel_order", order_id="ORD-1")
+                raise RuntimeError("injected failure")
+
+    assert [(r.levelname, r.getMessage()) for r in caplog.records] == [
+        ("WARNING", "portfolio cancel_order rolled_back order_id=ORD-1")
+    ]

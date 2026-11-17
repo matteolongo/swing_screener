@@ -229,3 +229,18 @@ def test_openapi_declares_cookie_auth_only_for_protected_operations():
     ]
     assert schema["paths"]["/health/live"]["get"]["security"] == []
     assert schema["paths"]["/api/auth/session"]["get"]["security"] == []
+
+
+def test_rejections_are_logged_without_credentials(caplog):
+    client = _client()
+    _login(client, "viewer")
+
+    with caplog.at_level("WARNING", logger="api.security.middleware"):
+        assert client.put("/api/config").status_code == 403
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any(
+        "PUT /api/config" in m and "INSUFFICIENT_ROLE" in m and "viewer-subject" in m
+        for m in messages
+    )
+    assert not any("csrf-token" in m for m in messages)

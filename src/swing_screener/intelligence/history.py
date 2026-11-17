@@ -176,8 +176,11 @@ def append_history(
     *,
     max_entries: int,
     history_root: Path | None = None,
-) -> None:
+) -> bool:
     """Prepend an entry derived from `result`, capping the list at `max_entries`.
+
+    Returns False (after logging) when the history file could not be written,
+    so callers can report it instead of assuming success.
 
     A re-run on the same calendar day replaces that day's entry rather than
     stacking, so the digest stays a cross-day record instead of filling with
@@ -203,3 +206,5 @@ def append_history(
         logger.warning(
             "Failed to append intelligence history for %r", ticker, exc_info=True
         )
+        return False
+    return True

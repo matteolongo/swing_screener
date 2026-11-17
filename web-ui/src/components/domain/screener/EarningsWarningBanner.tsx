@@ -15,6 +15,15 @@ function warningMessage(daysUntil: number) {
 export default function EarningsWarningBanner({ ticker }: EarningsWarningBannerProps) {
   const { data } = useEarningsProximity(ticker);
 
+  if (data?.status === 'unavailable') {
+    return (
+      <div role="note" className="flex items-start gap-2 rounded-lg border border-border bg-foreground/5 px-3 py-2 text-sm text-muted">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>{t('earningsWarning.unavailable')}</span>
+      </div>
+    );
+  }
+
   if (!data?.warning || data.daysUntil == null) {
     return null;
   }

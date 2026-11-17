@@ -16,7 +16,8 @@ from swing_screener.utils.dataframe_helpers import get_close_matrix, sma
 | File | Purpose |
 |------|---------|
 | `helpers.py` | `normalize_tickers()`, `get_nested_dict()` |
-| `date_helpers.py` | Dynamic date calculation (lookback, YTD, ISO conversion) |
+| `date_helpers.py` | Dynamic date calculation (lookback, YTD, ISO conversion), `market_today()` |
+| `market_calendar.py` | Regular NYSE trading calendar: `is_us_trading_day(d)`, `previous_us_trading_day(d)`. Computed, stdlib-only; half-days count as trading days, unscheduled closures are not modelled. |
 | `file_lock.py` | Thread-safe JSON read/write using `portalocker` |
 | `dataframe_helpers.py` | OHLCV field extraction, SMA/EMA helpers |
 

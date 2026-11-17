@@ -145,6 +145,30 @@ Revision `20261112_0004` drops the one-time JSON import ledger
 on an earlier release before upgrading; this release no longer reads
 `data/orders.json` or `data/positions.json`.
 
+## Observability
+
+Every response carries an `X-Request-ID` header. A well-formed inbound value
+(1–64 of `A-Za-z0-9._-`, e.g. from a proxy) is reused; otherwise the API
+generates one. Application log lines are stamped `[req=<id>]`, and the generic
+500 body includes `request_id`, so a client-visible failure maps to its
+traceback. Intelligence endpoints return
+`Intelligence <operation> failed. Reference: <error_id>.` instead of the raw
+exception text; the same `error_id` appears in the server log.
+
+Authentication, role, CSRF and rate-limit rejections are logged at WARNING with
+method, path, status, code and session subject (never tokens). Committed
+order and position mutations (`create_order`, `submit_order`, `cancel_order`,
+`fill_order`, `create_position`, `update_position_stop`, `close_position`,
+`partial_close_position`, `update_trail_method`) are logged on the
+`swing_screener.audit` logger only after the transaction commits; a rollback
+logs them as `rolled_back`. Background screener, backtest and pool-enrichment
+job failures are logged with their traceback.
+
+`GET /metrics` returns process-local counters: `uptime_seconds`,
+`lock_contention_total` (JSON file-lock timeouts) and
+`validation_failures_total` (422 responses, from request parsing or from a
+model failing inside a handler). Each worker process keeps its own counters.
+
 ## API Surface (by router)
 Health:
 - `GET /`
@@ -260,10 +284,20 @@ Symbol pool (`/api/pool`):
 - `POST /api/pool/review-queue/{symbol}/restore` — reset the symbol's failure counter and return it to the active pool. Returns `{restored: bool}`.
 - `GET /api/pool/presets` — list taxonomy presets from `config/taxonomy_presets.yaml`. Returns `{presets: [{id, label, filter}]}`.
 - `POST /api/pool/rebuild` — re-merge the universe snapshots + instrument master into `symbol_pool.json` (the runtime equivalent of the base-build runbook in `data/README.md`). Structural fields (`index_memberships`, `exchange_mic`, `currency`, `region`, `instrument_type`, providers) are recomputed; yfinance enrichment is carried over for surviving symbols. The diff is computed before the file is written. Returns `{applied, additions, removals, modifications, summary}` where additions/removals are full symbol snapshots and modifications are `[{symbol, changes: [{field, before, after}]}]` (list fields compared order-insensitively). Returns `409` if another pool operation (rebuild/enrich) is already running.
-- `POST /api/pool/enrich` — launch a best-effort yfinance enrichment job over the current pool (`sector`, `market_cap_tier`, `liquidity_tier`, `instrument_type_detail`). Runs in a background thread; returns `{job_id}` immediately. Returns `409` if another pool operation is already running (pool writes are serialized). Jobs are disk-persisted under `data/pool/enrich_jobs/` and trimmed to the most recent 16.
+- `POST /api/pool/enrich` — launch a best-effort yfinance enrichment job over the current pool (`sector`, `market_cap_tier`, `liquidity_tier`, `instrument_type_detail`). Runs in a background thread; returns `{job_id}` immediately. Returns `409` if another pool operation is already running (pool writes are serialized). Jobs are disk-persisted under `<data dir>/pool/enrich_jobs/` (`SWING_SCREENER_DATA_DIR`, default `data/`) and trimmed to the most recent 16.
 - `GET /api/pool/enrich/{job_id}` — poll enrichment status. Returns `{status: running|done|failed, progress: {processed, total, failed}, error, diff}`. `diff` is `{modified: [{symbol, changes}], failed_symbols}` and is populated only when `status == done`. A job interrupted by an API restart is recovered as `failed` (not 404); unknown job id → 404.
 
 Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
+
+`asof_date` accepts a calendar date in `YYYY-MM-DD` format (surrounding whitespace
+is trimmed); ISO week dates, compact dates and timestamps return 422. Omitted,
+null or blank values select the default session. Default scans retain the shared
+as-of date, but a candidate is `current` only if its bar also matches its own
+currency's latest completed session. On a US-only holiday after Europe closes,
+the shared date points to the prior US session: older European candidates are
+`stale`, include their expected session in `degraded_reasons`, and cannot receive
+entry approval tokens. Run a European-only scan to use Europe's latest session.
+Explicit historical dates remain evaluated against the requested date.
 
 Scan-quality consumers must keep `total_screened` (resolved requested symbols),
 `total_with_market_data` (symbols with downloaded closes), and
@@ -283,6 +317,8 @@ Backtest (`/api/backtest`):
 Universes (`/api/universes`):
 - `GET /api/universes`
 - `GET /api/universes/{universe_id}`
+- `POST /api/universes/discover` — query a symbol-discovery provider (screens,
+  exchanges, currencies, MICs) and return matching symbols without saving.
 - `POST /api/universes/auto-refresh`
 - `POST /api/universes/refresh-all` — refresh every **registry** universe snapshot from its source (`apply=true` for each), aggregating per-universe diffs. Auto universes are skipped (they refresh via their own discovery path) and counted in `skipped_auto`. Per-universe failures are surfaced inline (`{id, error}`), never as a 500. Returns `{universes: [{id, applied, changed, current_member_count, proposed_member_count, additions, removals}], total_additions, total_removals, total_changed, skipped_auto}`.
 - `POST /api/universes/{universe_id}/refresh`
@@ -290,9 +326,22 @@ Universes (`/api/universes`):
 
 Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/positions` — includes additive server-derived
-  `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata.
+  `snapshot_freshness` (`fresh` or `stale`) and `stale_after_days` metadata,
+  plus `fx_rate_status` (below).
 - `GET /api/portfolio/positions/{position_id}`
 - `GET /api/portfolio/positions/{position_id}/metrics`
+- `GET /api/portfolio/positions/open/intelligence` — cached intelligence summary
+  plus the current stop suggestion for every open position.
+
+Position rows and metrics carry `price_source`, the price the metrics used:
+`live` (real-time quote), `cached` (last daily close or stored price),
+`entry` (nothing resolved; P&L and R use the entry price, and the list sets
+`current_price` to it) or `recorded` (closed position, exit price). They also
+carry `fx_rate_status`: `not_needed`, `available`, or `unavailable` when EURUSD
+could not be fetched. On `unavailable` conversions use 1.0, `r_fx_adjusted` is
+`null`, and the failure is not cached, so the next request retries. The list
+response and `GET /api/portfolio/summary` report the same status for the
+whole response.
 - `PUT /api/portfolio/positions/{position_id}/stop` — updates the position
   and its local linked stop record (`ORD-STOP-{position_id}`) in the same
   transaction. Ledger bookkeeping only; broker execution stays manual.
@@ -331,7 +380,9 @@ follow-up only after success, using these IDs.
   and with the position's persisted `entry_fx_rate`/`exit_fx_rate` for other
   pairs; concentration groups by the same ticker-suffix country map as order
   approval.
-- `GET /api/portfolio/earnings-proximity/{ticker}`
+- `GET /api/portfolio/earnings-proximity/{ticker}` — `status` is `ok` (upcoming
+  date found), `none` (provider reported no upcoming date) or `unavailable`
+  (lookup failed; earnings risk is unknown). `unavailable` is not cached.
 - `GET /api/portfolio/analytics/regime-breakdown` — classifies trades by benchmark
   trend at entry, then reuses canonical portfolio analytics for each group.
   `avg_r` and `expectancy` include every exit leg weighted by shares and measured
@@ -350,6 +401,11 @@ follow-up only after success, using these IDs.
   manual) and records it in the position's `exit_order_ids`. Filling a linked
   local exit records that exit as filled and reconciles its remaining linked
   protection in the same transaction; it never sends a broker instruction.
+- `PATCH /api/portfolio/orders/{order_id}/submit` — mark a pending order as
+  submitted to the broker (ledger bookkeeping; the order is placed manually).
+- `POST /api/portfolio/sync-degiro` — read the DeGiro portfolio and report held
+  positions not yet registered locally. It updates the ISIN map but never
+  creates positions or sends orders.
 - `DELETE /api/portfolio/orders/{order_id}` — cancel an unfilled draft, pending,
   or submitted order while preserving history.
 
@@ -366,6 +422,13 @@ code `position_evaluation_failed`, and a sanitized message. These failures are
 not reported as successful `positions_hold` actions;
 `summary.evaluation_error_count` counts them independently. Unexpected
 request-wide invariant failures still fail the request.
+
+`section_errors` lists review sections that could not be built, each with
+`section` (`pending_orders`, `watchlist` or `manage_config`), the code
+`section_unavailable` and a sanitized message. An empty section with no matching
+error means nothing to do; with an error it means not checked. `manage_config`
+means the active strategy's manage rules could not be read and the time-stop
+and trim checks used their defaults.
 
 Reporting candidate currency fields normalize against the canonical currency
 registry (`CHF`, `DKK`, `EUR`, `GBP`, `NOK`, `SEK`, `USD`). The explicit
@@ -396,13 +459,8 @@ Intelligence (`/api/intelligence`):
 - `POST /api/intelligence/position/{position_id}?force=false` — position-aware LLM analysis for an open position. Enriches with the same fundamentals and technicals a screener candidate gets, so the model has real data to manage the position. Returns cached result unless `force=true`. Returns 404 if position not found.
 
 Fundamentals (`/api/fundamentals`):
-- `GET /api/fundamentals/config`
-- `PUT /api/fundamentals/config`
-- `GET /api/fundamentals/snapshot/{symbol}` — `FundamentalSnapshotResponse` now also exposes optional Finnhub signals (`net_margin`, `insider_net_shares_90d`, `insider_transaction_count_90d`, `forward_eps_estimate`, `analyst_upgrade_downgrade_net_30d`).
-- `POST /api/fundamentals/refresh`
-- `POST /api/fundamentals/compare`
-- `POST /api/fundamentals/warmup`
-- `GET /api/fundamentals/warmup/{job_id}`
+- `GET /api/fundamentals/snapshot/{symbol}` — `refresh=true` bypasses the cache. — `FundamentalSnapshotResponse` now also exposes optional Finnhub signals (`net_margin`, `insider_net_shares_90d`, `insider_transaction_count_90d`, `forward_eps_estimate`, `analyst_upgrade_downgrade_net_30d`).
+- `POST /api/fundamentals/refresh` — refresh one symbol's snapshot.
 
 Watchlist (`/api/watchlist`):
 - `GET /api/watchlist`
@@ -441,7 +499,7 @@ Cache Management (`/api/cache`):
 
 Data Sources (`/api/datasources`) — read-only diagnostics, no config mutation:
 - `GET /api/datasources` — inventory of all known sources. Response: `{sources: [SourceDescriptorOut, ...]}`. Each `SourceDescriptorOut` has `id`, `display_name`, `domain`, `role` (`primary`/`fallback`/`enrichment`), `requires` (env var or pkg name; null if unconditional), `configured` (bool), `probeable` (bool), `canary_market` (`us`/`eu`/null), `note` (null or a free-text annotation), and `last_probe` (null or `ProbeResultOut` from the most recent probe run). One intelligence collector (`sec_edgar_catalysts`) appears with `probeable=true`. The enrichment pipeline injects curated SEC filings into the LLM prompt via `collect.py` (no new endpoint).
-- `POST /api/datasources/probe` — probe all probeable sources concurrently. Response: `[ProbeResultOut, ...]`. `ProbeResultOut` has `id`, `status` (`ok`/`down`/`not_configured`), `latency_ms`, `detail`, `sample` (small dict of live data), `error`.
+- `POST /api/datasources/probe` — probe all probeable sources concurrently. Response: `[ProbeResultOut, ...]`. `ProbeResultOut` has `id`, `status` (`ok`/`degraded`/`down`/`not_configured`), `latency_ms`, `detail`, `sample` (small dict of live data), `error` and `checked_at` (ISO-8601 UTC time the probe ran). Credential-like query parameters (`token`, `apikey`, `api_key`, `key`, `access_key`, `secret`) are redacted from `error` and `detail`. Probe results are kept in API process memory, so they reset on restart and differ per worker.
 - `POST /api/datasources/{source_id}/probe` — probe one source by id. Response: `ProbeResultOut` (same shape). Returns `not_configured` status (no exception) for unknown or non-probeable ids.
 - `GET /api/datasources/events?limit=N` — most recent fallback/stale-cache events recorded at runtime (default 100, max 200). Response: `{events: [FallbackEventOut, ...]}`. Each `FallbackEventOut` has `ts` (ISO-8601 UTC), `domain`, `from_provider`, `reason`, `fell_back_to` (null or id), `tickers` (list), `stale_asof` (null or date string). Events are in-memory only (not persisted; reset on server restart).
 

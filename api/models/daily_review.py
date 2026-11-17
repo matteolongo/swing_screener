@@ -137,6 +137,19 @@ class DailyReviewPositionEvaluationError(BaseModel):
     message: str = "Position evaluation could not be completed."
 
 
+class DailyReviewSectionError(BaseModel):
+    """A review section that could not be built.
+
+    An empty section with no matching error means "nothing to do"; with an
+    error it means "not checked". ``manage_config`` means the active strategy's
+    manage rules could not be read and time-stop/trim defaults were applied.
+    """
+
+    section: Literal["pending_orders", "watchlist", "manage_config"]
+    code: Literal["section_unavailable"] = "section_unavailable"
+    message: str
+
+
 class DailyReviewSummary(BaseModel):
     """Summary statistics for the daily review."""
 
@@ -179,6 +192,7 @@ class DailyReview(BaseModel):
     evaluation_errors: list[DailyReviewPositionEvaluationError] = Field(
         default_factory=list
     )
+    section_errors: list[DailyReviewSectionError] = Field(default_factory=list)
     summary: DailyReviewSummary
     pending_orders_review: list[PendingOrderReview] = Field(default_factory=list)
 

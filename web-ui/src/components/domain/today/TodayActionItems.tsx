@@ -38,6 +38,16 @@ export function TimeStopBadge({ daysOpen, rNow, show }: TimeStopBadgeProps) {
 
 export function EarningsBadge({ ticker }: { ticker: string }) {
   const { data } = useEarningsProximity(ticker);
+  if (data?.status === 'unavailable') {
+    return (
+      <span
+        className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground/5 text-muted shrink-0"
+        title={t('todayPage.actionList.earningsUnknownTitle')}
+      >
+        {t('todayPage.actionList.earningsUnknownBadge')}
+      </span>
+    );
+  }
   if (!data?.warning || data.daysUntil == null) return null;
   return (
     <span

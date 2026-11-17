@@ -4,11 +4,12 @@ import json
 import logging
 import tempfile
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date
 from pathlib import Path
 from typing import Callable
 
 from swing_screener.data.source_health import record_fallback
+from swing_screener.utils.date_helpers import market_today
 from swing_screener.intelligence.evidence import registry
 
 # Importing the collectors package auto-imports every collector module, whose
@@ -106,7 +107,7 @@ def read_latest_cached_evidence_summary(
 ) -> EvidenceCacheSummary | None:
     """Return metadata for the newest valid cache without collecting evidence."""
     root = cache_root or _CACHE_ROOT
-    current_date = current_date or datetime.now(timezone.utc).date()
+    current_date = current_date or market_today()
     cfg = cfg or load_evidence_config()
     normalized = ticker.strip().upper()
     if not normalized or not root.exists():
@@ -155,7 +156,7 @@ def collect_evidence(
     refresh_sources: bool = False,
     attempt_callback: Callable[[str, str, int], None] | None = None,
 ) -> list[SourceEvidence]:
-    asof_date = asof_date or datetime.now(timezone.utc).date()
+    asof_date = asof_date or market_today()
     cfg = cfg or load_evidence_config()
     cache_root = cache_root or _CACHE_ROOT
     ticker = ticker.strip().upper()

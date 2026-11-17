@@ -33,6 +33,9 @@ class _FakePricing:
     def _eurusd_rate(self) -> float:
         return self._rate
 
+    def eurusd_quote(self) -> tuple[float, bool]:
+        return self._rate, True
+
     @staticmethod
     def _fallback_price(position: dict) -> float:
         return float(position.get("current_price") or position.get("entry_price"))

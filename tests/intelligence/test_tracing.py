@@ -161,3 +161,16 @@ def test_new_recorder_returns_none_when_config_raises(monkeypatch):
         raise RuntimeError("config boom")
     monkeypatch.setattr(tracing, "tracing_enabled", _boom)
     assert tracing.new_recorder("AAPL") is None
+
+
+def test_discarded_recorder_is_not_persisted(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    from swing_screener.intelligence import tracing as tr
+
+    with tr.recording_run("AAPL") as recorder:
+        with tr.step(recorder, "enrich_request"):
+            pass
+        recorder.discard()
+
+    assert tr.read_run_trace(recorder.run_id) is None
+    assert tr.list_runs_for_ticker("AAPL") == []
