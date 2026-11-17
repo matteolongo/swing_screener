@@ -59,7 +59,7 @@ class AutoUniverseRefreshRequest(SymbolDiscoveryRequest):
 
 
 @router.get("")
-async def list_universes():
+def list_universes():
     try:
         return {"universes": list_package_universe_entries()}
     except Exception as exc:
@@ -145,7 +145,7 @@ def refresh_all():
 
 
 @router.get("/{universe_id}")
-async def get_universe(universe_id: str):
+def get_universe(universe_id: str):
     try:
         return get_package_universe_detail(universe_id)
     except ValueError as exc:
@@ -155,7 +155,7 @@ async def get_universe(universe_id: str):
 
 
 @router.post("/{universe_id}/refresh")
-async def refresh_universe(universe_id: str, request: UniverseRefreshRequest):
+def refresh_universe(universe_id: str, request: UniverseRefreshRequest):
     try:
         return refresh_package_universe(universe_id, apply=request.apply)
     except ValueError as exc:
@@ -167,7 +167,7 @@ async def refresh_universe(universe_id: str, request: UniverseRefreshRequest):
 
 
 @router.post("/{universe_id}/benchmark")
-async def update_universe_benchmark(universe_id: str, request: UniverseBenchmarkRequest):
+def update_universe_benchmark(universe_id: str, request: UniverseBenchmarkRequest):
     try:
         return update_package_universe_benchmark(universe_id, request.benchmark)
     except ValueError as exc:

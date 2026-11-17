@@ -325,6 +325,12 @@ follow-up only after success, using these IDs.
   localized insight copy; clients do not recreate R, threshold, sample-size,
   or insight policy.
   Metadata returns configured heat, concentration, and tag-sample limits.
+  `account_size` and `account_size_mode` come from the active strategy's
+  `risk` block (app config only as fallback), the same source order approval
+  uses. Money converts to the account currency with live EURUSD for EUR/USD
+  and with the position's persisted `entry_fx_rate`/`exit_fx_rate` for other
+  pairs; concentration groups by the same ticker-suffix country map as order
+  approval.
 - `GET /api/portfolio/earnings-proximity/{ticker}`
 - `GET /api/portfolio/analytics/regime-breakdown` — classifies trades by benchmark
   trend at entry, then reuses canonical portfolio analytics for each group.

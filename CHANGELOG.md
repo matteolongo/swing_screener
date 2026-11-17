@@ -37,6 +37,17 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Run portfolio and universe endpoints in the thread pool instead of on the
+  event loop, so a slow market-data or DeGiro call no longer blocks every other
+  request on a single-worker deployment.
+- Measure portfolio summary heat against the active strategy's account size
+  and mode, the same account that order approval checks. Before, the summary
+  used app config unless it still held the default value.
+- Group Swiss (`.SW`) tickers as `CH` in portfolio summary concentration
+  instead of `US`, using the same country map as order approval.
+- Convert open and closed positions quoted outside EUR/USD (SEK, GBP, CHF and
+  others) with their persisted FX rate in the portfolio summary instead of
+  adding raw quote-currency amounts to account totals.
 - Stop the fundamentals snapshot endpoint from failing with a 500 when a
   provider returns a NaN or infinite metric (seen on `SAN.MC`). Non-finite
   metrics now count as missing, so the affected pillar reads `unavailable`;
